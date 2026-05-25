@@ -27,7 +27,8 @@
     "rxjs": "^7.8.1",
     "drizzle-orm": "^0.30.0",
     "@libsql/client": "^0.6.0",
-    "@reader/shared-types": "workspace:*"
+    "@reader/shared-types": "workspace:*",
+    "@reader/storage-core": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
