@@ -1,0 +1,18 @@
+{
+  "name": "@reader/storage-core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "dexie": "^3.2.4",
+    "@reader/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@reader/tsconfig": "workspace:*",
+    "typescript": "latest"
+  }
+}
