@@ -1,6 +1,6 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { ChapterRepository } from './chapter.repository';
-import { LocalFileBlobStorage } from '@reader/storage-core';
+import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
 @Controller('books/:bookId/chapters')
 export class ChapterController {

@@ -28,7 +28,8 @@
     "drizzle-orm": "^0.30.0",
     "@libsql/client": "^0.6.0",
     "@reader/shared-types": "workspace:*",
-    "@reader/storage-core": "workspace:*"
+    "@reader/storage-core": "workspace:*",
+    "@reader/ai-core": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

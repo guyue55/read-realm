@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import * as path from 'path';
 import { BookController } from './book.controller';
 import { BookRepository } from './book.repository';
-import { LocalFileBlobStorage } from '@reader/storage-core';
+import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
 @Module({
   controllers: [BookController],
