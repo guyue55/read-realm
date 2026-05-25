@@ -7,6 +7,15 @@ import type { ReadingProgress, Bookmark } from '@reader/shared-types';
 import { THEMES } from '@/styles/themes';
 import { strings } from '@/lib/i18n';
 
+// Helper for debouncing scroll events
+function debounce<T extends (...args: unknown[]) => unknown>(func: T, wait: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [engine, setEngine] = useState<ReaderEngine | null>(null);
@@ -26,12 +35,34 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
+  // Automatic progress saving on scroll
+  useEffect(() => {
+    if (!chapter || !params.bookId || settings.pageMode !== 'scroll') return;
+
+    const handleScroll = debounce(() => {
+      const offset = window.scrollY;
+      if (offset > 0) {
+        db.progress.put({
+          bookId: params.bookId,
+          chapterId: chapter.id,
+          chapterIndex: chapter.index,
+          offset,
+          percentage: toc.length > 0 ? (chapter.index / toc.length) * 100 : 0,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }, 1000);
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [chapter, params.bookId, settings.pageMode, toc.length]);
+
   useEffect(() => {
     // Implement repositories using Dexie
     const chapterRepo = {
       getChapter: async (bookId: string, index: number) => {
         const c = await db.chapters.where({ bookId, index }).first();
-        return c ? { index: c.index, title: c.title, content: c.content } : null;
+        return c ? { id: c.id, index: c.index, title: c.title, content: c.content } : null;
       },
       getChapterCount: async (bookId: string) => {
         return await db.chapters.where('bookId').equals(bookId).count();
@@ -58,7 +89,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     
     reader.load().then(() => {
       setEngine(reader);
-      setChapter(reader.getCurrentChapter());
+      const currentChapter = reader.getCurrentChapter();
+      setChapter(currentChapter);
       const loadedSettings = reader.getSettings();
       setSettings({
         fontSize: loadedSettings.fontSize,
@@ -68,6 +100,15 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       });
       chapterRepo.getToc(params.bookId).then(setToc);
       db.bookmarks.where('bookId').equals(params.bookId).toArray().then(setBookmarks);
+
+      // Restore scroll position
+      db.progress.get(params.bookId).then(progress => {
+        if (currentChapter && progress && progress.chapterIndex === currentChapter.index && progress.offset > 0) {
+          setTimeout(() => {
+            window.scrollTo(0, progress.offset);
+          }, 100);
+        }
+      });
     });
   }, [params.bookId]);
 
@@ -203,6 +244,22 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
           className="whitespace-pre-wrap break-words" 
           dangerouslySetInnerHTML={{ __html: chapter.content }}
         />
+
+        {/* Navigation Buttons */}
+        <div className="mt-12 mb-8 flex justify-between items-center border-t border-gray-100 pt-8 px-4">
+          <button 
+            onClick={handlePrev}
+            className="flex-1 py-4 px-6 bg-gray-50 rounded-xl text-sm font-medium hover:bg-gray-100 active:scale-95 transition-all text-center mr-4"
+          >
+            {strings.reader.prevChapter}
+          </button>
+          <button 
+            onClick={handleNext}
+            className="flex-1 py-4 px-6 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 active:scale-95 transition-all text-center ml-4"
+          >
+            {strings.reader.nextChapter}
+          </button>
+        </div>
       </div>
 
       {/* Tap Zones Overlay */}
