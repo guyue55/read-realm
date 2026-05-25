@@ -7,8 +7,8 @@ export class BookController {
   constructor(private readonly bookRepository: BookRepository) {}
 
   @Post('import')
-  async importBook(@Body() body: { book: Book; chapters: any[] }) {
-    await this.bookRepository.importBook(body.book, body.chapters);
+  async importBook(@Body() body: { metadata: Book; chapters: any[] }) {
+    await this.bookRepository.importBook(body.metadata, body.chapters);
     return { success: true };
   }
 }
