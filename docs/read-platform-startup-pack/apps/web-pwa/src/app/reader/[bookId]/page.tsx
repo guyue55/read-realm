@@ -147,35 +147,43 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   };
 
   const handleNext = async () => {
-    if (engine && await engine.nextChapter()) {
-      const currentChapter = engine.getCurrentChapter();
-      setChapter(currentChapter);
-      window.scrollTo(0, 0);
-      if (contentRef.current) contentRef.current.scrollLeft = 0;
-      if (currentChapter) await saveCurrentProgress(currentChapter, 0);
+    if (engine) {
+      if (await engine.nextChapter()) {
+        const currentChapter = engine.getCurrentChapter();
+        setChapter(currentChapter);
+        window.scrollTo(0, 0);
+        if (contentRef.current) contentRef.current.scrollLeft = 0;
+        if (currentChapter) await saveCurrentProgress(currentChapter, 0);
+      } else {
+        alert(strings.reader.endOfBook);
+      }
     }
   };
 
   const handlePrev = async () => {
-    if (engine && await engine.previousChapter()) {
-      const currentChapter = engine.getCurrentChapter();
-      setChapter(currentChapter);
-      window.scrollTo(0, 0);
-      if (contentRef.current) contentRef.current.scrollLeft = 0;
-      if (currentChapter) await saveCurrentProgress(currentChapter, 0);
+    if (engine) {
+      if (await engine.previousChapter()) {
+        const currentChapter = engine.getCurrentChapter();
+        setChapter(currentChapter);
+        window.scrollTo(0, 0);
+        if (contentRef.current) contentRef.current.scrollLeft = 0;
+        if (currentChapter) await saveCurrentProgress(currentChapter, 0);
+      } else {
+        alert(strings.reader.startOfBook);
+      }
     }
   };
 
   const handlePageNext = async () => {
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
-      if (scrollLeft + clientWidth < scrollWidth - 5) { // 5px tolerance
+      if (Math.ceil(scrollLeft + clientWidth) < scrollWidth - 20) { 
         contentRef.current.scrollTo({ left: scrollLeft + clientWidth, behavior: 'smooth' });
         return;
       }
     } else if (!isPagination) {
       const nextY = window.scrollY + window.innerHeight * 0.8;
-      if (nextY < document.documentElement.scrollHeight - window.innerHeight) {
+      if (nextY < document.documentElement.scrollHeight - window.innerHeight - 20) {
          window.scrollTo({ top: nextY, behavior: 'smooth' });
          return;
       }
@@ -187,13 +195,13 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const handlePagePrev = async () => {
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth } = contentRef.current;
-      if (scrollLeft > 5) {
+      if (scrollLeft > 20) {
         contentRef.current.scrollTo({ left: scrollLeft - clientWidth, behavior: 'smooth' });
         return;
       }
     } else if (!isPagination) {
       const prevY = window.scrollY - window.innerHeight * 0.8;
-      if (prevY > 0) {
+      if (prevY > 20) {
         window.scrollTo({ top: prevY, behavior: 'smooth' });
         return;
       }
@@ -343,7 +351,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       <div 
         ref={contentRef}
         className={`relative max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
-          isPagination ? 'h-screen overflow-x-auto overflow-y-hidden columns-1 w-screen max-w-none px-8 py-12' : 'h-auto overflow-y-auto'
+          isPagination ? 'h-screen overflow-x-auto overflow-y-hidden w-screen max-w-none px-8 py-12' : 'h-auto overflow-y-auto'
         }`}
         style={{ 
           fontSize: `${settings.fontSize}px`, 
@@ -355,7 +363,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
         {/* We use dangerouslySetInnerHTML here because EPUB chapters contain sanitized HTML */}
         <div 
-          className="whitespace-pre-wrap break-words" 
+          className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4" 
           dangerouslySetInnerHTML={{ __html: chapter.content }}
         />
 
