@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { db } from '@reader/storage-core';
-import { parseTxtBook, parseEpubBook } from '@reader/parser-core';
 
 export default function Home() {
   const [status, setStatus] = useState<string>('Ready');
@@ -12,6 +11,10 @@ export default function Home() {
     if (!file) return;
 
     try {
+      setStatus('Loading parser...');
+      // Dynamic import to prevent build-time jsdom issues
+      const { parseTxtBook, parseEpubBook } = await import('@reader/parser-core');
+
       setStatus('Reading file...');
       const buffer = await file.arrayBuffer();
       
