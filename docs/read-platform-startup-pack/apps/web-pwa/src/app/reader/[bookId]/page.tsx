@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ReaderEngine, ChapterData } from '@reader/reader-core';
 import { db } from '@reader/storage-core';
-import type { ReadingProgress } from '@reader/shared-types';
+import type { ReadingProgress, Bookmark } from '@reader/shared-types';
 import { THEMES } from '@/styles/themes';
 
 export default function ReaderPage({ params }: { params: { bookId: string } }) {
@@ -19,6 +19,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [showSettings, setShowSettings] = useState(false);
   const [toc, setToc] = useState<{index: number, title: string}[]>([]);
   const [showToc, setShowToc] = useState(false);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [activeTab, setActiveTab] = useState<'toc' | 'bookmarks'>('toc');
 
   useEffect(() => {
     // Implement repositories using Dexie
@@ -61,6 +63,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         pageMode: loadedSettings.pageMode as 'scroll' | 'pagination'
       });
       chapterRepo.getToc(params.bookId).then(setToc);
+      db.bookmarks.where('bookId').equals(params.bookId).toArray().then(setBookmarks);
     });
   }, [params.bookId]);
 
@@ -85,6 +88,36 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       setShowToc(false);
       setShowMenu(false);
       window.scrollTo(0, 0);
+    }
+  };
+
+  const addBookmark = async () => {
+    if (!chapter) return;
+    const offset = window.scrollY;
+    const bookmark: Bookmark = {
+      id: Date.now().toString(),
+      bookId: params.bookId,
+      chapterIndex: chapter.index,
+      offset,
+      contentPreview: document.getSelection()?.toString().slice(0, 50) || 
+                      document.querySelector('div.whitespace-pre-wrap')?.textContent?.slice(0, 50) || '',
+      createdAt: new Date().toISOString(),
+    };
+    await db.bookmarks.add(bookmark);
+    setBookmarks([...bookmarks, bookmark]);
+    alert('已添加书签');
+  };
+
+  const jumpToBookmark = async (bookmark: Bookmark) => {
+    if (engine) {
+      await engine.loadChapter(bookmark.chapterIndex);
+      setChapter(engine.getCurrentChapter());
+      setShowToc(false);
+      setShowMenu(false);
+      // Wait for content to render then scroll
+      setTimeout(() => {
+        window.scrollTo(0, bookmark.offset);
+      }, 100);
     }
   };
 
@@ -162,7 +195,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       <div className={`fixed top-0 inset-x-0 h-12 bg-white shadow-sm z-20 flex items-center px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : '-translate-y-full'}`}>
         <button onClick={() => window.location.href = '/'} className="mr-4 text-sm font-medium">← 返回书架</button>
         <span className="truncate flex-1 text-sm font-bold text-center">{chapter.title}</span>
-        <div className="w-12"></div> {/* Spacer to center title */}
+        <button onClick={addBookmark} className="ml-4 text-sm font-medium text-blue-600">书签</button>
       </div>
 
       {/* Settings Sheet */}
@@ -244,21 +277,72 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       {/* ToC Drawer */}
       <div className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-white z-50 shadow-xl transition-transform duration-300 transform ${showToc ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-full flex flex-col">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="text-lg font-bold">目录</h2>
-            <span className="text-xs text-gray-500">{toc.length} 章节</span>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {toc.map((item) => (
-              <button
-                key={item.index}
-                onClick={() => jumpToChapter(item.index)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-50 flex items-center hover:bg-gray-50 active:bg-gray-100 ${chapter.index === item.index ? 'text-blue-600 font-bold' : 'text-gray-700'}`}
+          <div className="border-b">
+            <div className="flex p-2">
+              <button 
+                onClick={() => setActiveTab('toc')}
+                className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'toc' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
               >
-                <span className="text-xs text-gray-400 w-8 inline-block">{item.index + 1}</span>
-                <span className="flex-1 truncate text-sm">{item.title}</span>
+                目录
               </button>
-            ))}
+              <button 
+                onClick={() => setActiveTab('bookmarks')}
+                className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'bookmarks' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+              >
+                书签
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === 'toc' ? (
+              <div>
+                <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
+                  共 {toc.length} 章节
+                </div>
+                {toc.map((item) => (
+                  <button
+                    key={item.index}
+                    onClick={() => jumpToChapter(item.index)}
+                    className={`w-full text-left px-4 py-3 border-b border-gray-50 flex items-center hover:bg-gray-50 active:bg-gray-100 ${chapter.index === item.index ? 'text-blue-600 font-bold' : 'text-gray-700'}`}
+                  >
+                    <span className="text-xs text-gray-400 w-8 inline-block">{item.index + 1}</span>
+                    <span className="flex-1 truncate text-sm">{item.title}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
+                  共 {bookmarks.length} 个书签
+                </div>
+                {bookmarks.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 text-sm">
+                    暂无书签
+                  </div>
+                ) : (
+                  bookmarks.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((bookmark) => (
+                    <button
+                      key={bookmark.id}
+                      onClick={() => jumpToBookmark(bookmark)}
+                      className="w-full text-left px-4 py-4 border-b border-gray-50 hover:bg-gray-50 active:bg-gray-100"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-sm font-bold text-gray-800 truncate flex-1 mr-2">
+                          {toc[bookmark.chapterIndex]?.title || `第 ${bookmark.chapterIndex + 1} 章`}
+                        </span>
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                          {new Date(bookmark.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 line-clamp-2 italic">
+                        &quot;{bookmark.contentPreview || '无预览内容'}&quot;...
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
