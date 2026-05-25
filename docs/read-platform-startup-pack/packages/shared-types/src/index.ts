@@ -55,6 +55,18 @@ export const ReaderSettingsSchema = z.object({
   fontSize: z.number(),
   lineHeight: z.number(),
   theme: z.enum(['paper', 'sepia', 'green', 'dark', 'black']),
+  pageMode: z.enum(['scroll', 'pagination']), // NEW
 });
 
 export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
+
+export const BookmarkSchema = z.object({
+  id: z.string(),
+  bookId: z.string(),
+  chapterIndex: z.number(),
+  offset: z.number(),
+  contentPreview: z.string().optional(),
+  createdAt: z.string(),
+});
+
+export type Bookmark = z.infer<typeof BookmarkSchema>;

@@ -4,6 +4,7 @@ import {
   BookSchema,
   ReadingProgressSchema,
   ReaderSettingsSchema,
+  BookmarkSchema,
 } from './index';
 
 describe('Shared Types', () => {
@@ -46,8 +47,22 @@ describe('Shared Types Extensions', () => {
       fontFamily: 'sans-serif',
       fontSize: 18,
       lineHeight: 1.6,
-      theme: 'paper'
+      theme: 'paper',
+      pageMode: 'pagination'
     };
     expect(ReaderSettingsSchema.parse(settings).theme).toBe('paper');
+    expect(ReaderSettingsSchema.parse(settings).pageMode).toBe('pagination');
+  });
+
+  it('should validate Bookmark', () => {
+    const bookmark = {
+      id: 'bookmark-1',
+      bookId: 'book-1',
+      chapterIndex: 1,
+      offset: 100,
+      contentPreview: 'Some content...',
+      createdAt: new Date().toISOString()
+    };
+    expect(BookmarkSchema.parse(bookmark).id).toBe('bookmark-1');
   });
 });
