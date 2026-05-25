@@ -18,7 +18,8 @@ describe('ReaderEngine Settings', () => {
       fontFamily: 'sans-serif',
       fontSize: 18,
       lineHeight: 1.7,
-      theme: 'paper'
+      theme: 'paper',
+      pageMode: 'scroll'
     });
   });
 
