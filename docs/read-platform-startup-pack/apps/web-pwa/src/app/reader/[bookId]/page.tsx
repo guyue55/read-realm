@@ -5,6 +5,7 @@ import { ReaderEngine, ChapterData } from '@reader/reader-core';
 import { db } from '@reader/storage-core';
 import type { ReadingProgress, Bookmark } from '@reader/shared-types';
 import { THEMES } from '@/styles/themes';
+import { strings } from '@/lib/i18n';
 
 export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [chapter, setChapter] = useState<ChapterData | null>(null);
@@ -108,7 +109,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     };
     await db.bookmarks.add(bookmark);
     setBookmarks([...bookmarks, bookmark]);
-    alert('已添加书签');
+    alert(strings.reader.bookmarkAdded);
   };
 
   const jumpToBookmark = async (bookmark: Bookmark) => {
@@ -177,7 +178,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
   const isPagination = settings.pageMode === 'pagination';
 
-  if (!chapter) return <div className="p-8 text-center text-[#2F2A24]">Loading chapter...</div>;
+  if (!chapter) return <div className="p-8 text-center text-[#2F2A24]">{strings.reader.loading}</div>;
 
   return (
     <main 
@@ -221,16 +222,16 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
       {/* Top Toolbar */}
       <div className={`fixed top-0 inset-x-0 h-12 bg-white shadow-sm z-20 flex items-center px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : '-translate-y-full'}`}>
-        <button onClick={() => window.location.href = '/'} className="mr-4 text-sm font-medium">← 返回书架</button>
+        <button onClick={() => window.location.href = '/'} className="mr-4 text-sm font-medium">{strings.reader.backToShelf}</button>
         <span className="truncate flex-1 text-sm font-bold text-center">{chapter.title}</span>
-        <button onClick={handleSummarize} className="ml-4 text-sm font-medium text-purple-600">AI 总结</button>
-        <button onClick={addBookmark} className="ml-4 text-sm font-medium text-blue-600">书签</button>
+        <button onClick={handleSummarize} className="ml-4 text-sm font-medium text-purple-600">{strings.reader.aiSummary}</button>
+        <button onClick={addBookmark} className="ml-4 text-sm font-medium text-blue-600">{strings.reader.bookmark}</button>
       </div>
 
       {/* Settings Sheet */}
-      <div className={`fixed bottom-0 inset-x-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-30 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-300 ${showSettings ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className={`fixed bottom-0 inset-x-0 bg-white shadow-[0_-2px_10_rgba(0,0,0,0.1)] z-30 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-300 ${showSettings ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="flex items-center justify-between mb-8">
-          <span className="text-sm font-medium text-gray-500">字号</span>
+          <span className="text-sm font-medium text-gray-500">{strings.reader.fontSize}</span>
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button 
               onClick={() => updateFontSize(-2)}
@@ -249,7 +250,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         </div>
 
         <div className="flex items-center justify-between mb-8">
-          <span className="text-sm font-medium text-gray-500">背景</span>
+          <span className="text-sm font-medium text-gray-500">{strings.reader.background}</span>
           <div className="flex flex-1 justify-around ml-4">
             {Object.entries(THEMES).map(([name, colors]) => (
               <button
@@ -264,19 +265,19 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-medium text-gray-500">翻页模式</span>
+          <span className="text-sm font-medium text-gray-500">{strings.reader.pageMode}</span>
           <div className="flex items-center bg-gray-100 rounded-lg p-1 ml-4 flex-1">
             <button 
               onClick={() => updatePageMode('scroll')}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === 'scroll' ? 'bg-white shadow-sm font-bold text-blue-600' : 'text-gray-500'}`}
             >
-              上下滚动
+              {strings.reader.scroll}
             </button>
             <button 
               onClick={() => updatePageMode('pagination')}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === 'pagination' ? 'bg-white shadow-sm font-bold text-blue-600' : 'text-gray-500'}`}
             >
-              左右翻页
+              {strings.reader.pagination}
             </button>
           </div>
         </div>
@@ -288,12 +289,12 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
           onClick={() => { setShowToc(true); setShowMenu(false); }}
           className="text-sm"
         >
-          目录
+          {strings.reader.toc}
         </button>
-        <button className="text-sm">进度</button>
+        <button className="text-sm">{strings.reader.progress}</button>
         <button onClick={handleSummarize} className="text-sm text-purple-600 font-bold">AI</button>
-        <button onClick={() => { setShowSettings(true); setShowMenu(false); }} className={`text-sm ${showSettings ? 'text-blue-500 font-bold' : ''}`}>设置</button>
-        <button className="text-sm">夜间</button>
+        <button onClick={() => { setShowSettings(true); setShowMenu(false); }} className={`text-sm ${showSettings ? 'text-blue-500 font-bold' : ''}`}>{strings.reader.settings}</button>
+        <button className="text-sm">{strings.reader.nightMode}</button>
       </div>
 
       {/* ToC Drawer Overlay */}
@@ -313,13 +314,13 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
                 onClick={() => setActiveTab('toc')}
                 className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'toc' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
               >
-                目录
+                {strings.reader.toc}
               </button>
               <button 
                 onClick={() => setActiveTab('bookmarks')}
                 className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'bookmarks' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
               >
-                书签
+                {strings.reader.bookmarks}
               </button>
             </div>
           </div>
@@ -328,7 +329,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
             {activeTab === 'toc' ? (
               <div>
                 <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                  共 {toc.length} 章节
+                  {strings.reader.chapterCount.replace('{count}', toc.length.toString())}
                 </div>
                 {toc.map((item) => (
                   <button
@@ -344,11 +345,11 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
             ) : (
               <div>
                 <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                  共 {bookmarks.length} 个书签
+                  {strings.reader.bookmarkCount.replace('{count}', bookmarks.length.toString())}
                 </div>
                 {bookmarks.length === 0 ? (
                   <div className="p-8 text-center text-gray-400 text-sm">
-                    暂无书签
+                    {strings.reader.noBookmarks}
                   </div>
                 ) : (
                   bookmarks.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((bookmark) => (
@@ -366,7 +367,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 line-clamp-2 italic">
-                        &quot;{bookmark.contentPreview || '无预览内容'}&quot;...
+                        &quot;{bookmark.contentPreview || strings.reader.noPreview}&quot;...
                       </p>
                     </button>
                   ))
@@ -390,18 +391,18 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         <div className="h-full flex flex-col">
           <div className="p-4 border-b flex items-center justify-between bg-purple-50">
             <h2 className="font-bold text-purple-800 flex items-center">
-              <span className="mr-2">✨</span> AI 阅读助手
+              <span className="mr-2">✨</span> {strings.reader.aiAssistant}
             </h2>
             <button onClick={() => setShowAiPanel(false)} className="text-gray-400 p-1">✕</button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">本章总结</h3>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">{strings.reader.summaryTitle}</h3>
               {isAiLoading ? (
                 <div className="flex flex-col items-center py-12">
                   <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-                  <p className="text-sm text-gray-500">正在分析本章内容...</p>
+                  <p className="text-sm text-gray-500">{strings.reader.summarizing}</p>
                 </div>
               ) : (
                 <div className="prose prose-sm prose-purple">
@@ -410,14 +411,14 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
                       {aiSummary}
                     </div>
                   ) : (
-                    <p className="text-center py-8 text-gray-400 italic">点击工具栏的 AI 按钮生成总结</p>
+                    <p className="text-center py-8 text-gray-400 italic">{strings.reader.aiPrompt}</p>
                   )}
                 </div>
               )}
             </div>
 
             <div className="mt-8 border-t pt-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">快捷提问</h3>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">{strings.reader.quickQuestions}</h3>
               <div className="grid grid-cols-1 gap-2">
                 <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
                   解释本章的关键人物关系
@@ -433,10 +434,10 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
             <div className="flex items-center bg-white border rounded-full px-4 py-2 shadow-sm focus-within:border-purple-400 transition-colors">
               <input 
                 type="text" 
-                placeholder="问问 AI 助手..." 
+                placeholder={strings.reader.aiInputPlaceholder}
                 className="flex-1 bg-transparent border-none outline-none text-sm py-1"
               />
-              <button className="ml-2 text-purple-600 font-bold text-sm">发送</button>
+              <button className="ml-2 text-purple-600 font-bold text-sm">{strings.reader.send}</button>
             </div>
           </div>
         </div>
