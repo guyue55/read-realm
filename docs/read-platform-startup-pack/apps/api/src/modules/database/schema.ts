@@ -35,3 +35,16 @@ export const storageObjects = sqliteTable('storage_objects', {
   size: integer('size').notNull(),
   mimeType: text('mime_type').notNull(),
 });
+
+export const aiViews = sqliteTable('ai_views', {
+  id: text('id').primaryKey(),
+  bookId: text('book_id')
+    .notNull()
+    .references(() => books.id),
+  chapterIndex: integer('chapter_index').notNull(),
+  sourceHash: text('source_hash').notNull(),
+  summary: text('summary').notNull(),
+  model: text('model').notNull(),
+  promptVersion: text('prompt_version').notNull(),
+  createdAt: text('created_at').notNull(),
+});
