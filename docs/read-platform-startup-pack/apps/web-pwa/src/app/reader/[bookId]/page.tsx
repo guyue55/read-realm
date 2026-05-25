@@ -60,16 +60,17 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       }
     }, 1000);
 
+    const container = contentRef.current;
     if (settings.pageMode === 'scroll') {
       window.addEventListener('scroll', handleScroll);
-    } else if (settings.pageMode === 'pagination' && contentRef.current) {
-      contentRef.current.addEventListener('scroll', handleScroll);
+    } else if (settings.pageMode === 'pagination' && container) {
+      container.addEventListener('scroll', handleScroll);
     }
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      if (contentRef.current) {
-        contentRef.current.removeEventListener('scroll', handleScroll);
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
       }
     };
   }, [chapter, params.bookId, settings.pageMode, toc.length]);
