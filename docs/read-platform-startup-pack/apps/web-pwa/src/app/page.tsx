@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { db } from '@reader/storage-core';
-import { parseTxtBook } from '@reader/parser-core';
+import { parseTxtBook, parseEpubBook } from '@reader/parser-core';
 
 export default function Home() {
   const [status, setStatus] = useState<string>('Ready');
@@ -15,19 +15,25 @@ export default function Home() {
       setStatus('Reading file...');
       const buffer = await file.arrayBuffer();
       
-      setStatus('Parsing TXT...');
+      setStatus('Parsing file...');
       // Note: In real app, this should be in a Web Worker
-      const parsedBook = parseTxtBook(file.name, buffer);
+      let parsedBook;
+      if (file.name.toLowerCase().endsWith('.epub')) {
+        parsedBook = await parseEpubBook(file.name, buffer);
+      } else {
+        parsedBook = parseTxtBook(file.name, buffer);
+      }
       
       setStatus(`Parsed successfully! Chapters: ${parsedBook.chapters.length}`);
       
       // Save book metadata to Dexie
       const bookId = crypto.randomUUID();
+      const format = file.name.toLowerCase().endsWith('.epub') ? 'epub' : 'txt';
       await db.books.add({
         id: bookId,
         title: parsedBook.title,
         sourceType: 'upload',
-        format: 'txt',
+        format,
         status: 'to_read',
         tags: [],
         chapterCount: parsedBook.chapters.length,
@@ -65,7 +71,7 @@ export default function Home() {
         <p className="mb-4 text-center">Import Local Book</p>
         <input 
           type="file" 
-          accept=".txt" 
+          accept=".txt,.epub" 
           onChange={handleFileUpload}
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#E8E3DA] file:text-[#2D2A26] hover:file:bg-[#DDEBD6]"
         />
