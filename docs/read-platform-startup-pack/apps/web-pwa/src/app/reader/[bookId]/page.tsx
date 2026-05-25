@@ -16,6 +16,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     theme: 'paper' as 'paper' | 'sepia' | 'green' | 'dark' | 'black'
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [toc, setToc] = useState<{index: number, title: string}[]>([]);
+  const [showToc, setShowToc] = useState(false);
 
   useEffect(() => {
     // Implement repositories using Dexie
@@ -26,6 +28,13 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       },
       getChapterCount: async (bookId: string) => {
         return await db.chapters.where('bookId').equals(bookId).count();
+      },
+      getToc: async (bookId: string) => {
+        const chapters = await db.chapters
+          .where('bookId')
+          .equals(bookId)
+          .sortBy('index');
+        return chapters.map(c => ({ index: c.index, title: c.title }));
       }
     };
 
@@ -49,6 +58,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         lineHeight: loadedSettings.lineHeight,
         theme: loadedSettings.theme as 'paper' | 'sepia' | 'green' | 'dark' | 'black'
       });
+      chapterRepo.getToc(params.bookId).then(setToc);
     });
   }, [params.bookId]);
 
@@ -62,6 +72,16 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const handlePrev = async () => {
     if (engine && await engine.previousChapter()) {
       setChapter(engine.getCurrentChapter());
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const jumpToChapter = async (index: number) => {
+    if (engine) {
+      await engine.loadChapter(index);
+      setChapter(engine.getCurrentChapter());
+      setShowToc(false);
+      setShowMenu(false);
       window.scrollTo(0, 0);
     }
   };
@@ -166,11 +186,46 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       </div>
 
       {/* Bottom Toolbar */}
-      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : 'translate-y-full'}`}>
-        <button className="text-sm">目录</button>
+      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : '-translate-y-full'}`}>
+        <button 
+          onClick={() => { setShowToc(true); setShowMenu(false); }}
+          className="text-sm"
+        >
+          目录
+        </button>
         <button className="text-sm">进度</button>
         <button onClick={() => { setShowSettings(true); setShowMenu(false); }} className={`text-sm ${showSettings ? 'text-blue-500 font-bold' : ''}`}>设置</button>
         <button className="text-sm">夜间</button>
+      </div>
+
+      {/* ToC Drawer Overlay */}
+      {showToc && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+          onClick={() => setShowToc(false)}
+        />
+      )}
+
+      {/* ToC Drawer */}
+      <div className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-white z-50 shadow-xl transition-transform duration-300 transform ${showToc ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-full flex flex-col">
+          <div className="p-4 border-b flex items-center justify-between">
+            <h2 className="text-lg font-bold">目录</h2>
+            <span className="text-xs text-gray-500">{toc.length} 章节</span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {toc.map((item) => (
+              <button
+                key={item.index}
+                onClick={() => jumpToChapter(item.index)}
+                className={`w-full text-left px-4 py-3 border-b border-gray-50 flex items-center hover:bg-gray-50 active:bg-gray-100 ${chapter.index === item.index ? 'text-blue-600 font-bold' : 'text-gray-700'}`}
+              >
+                <span className="text-xs text-gray-400 w-8 inline-block">{item.index + 1}</span>
+                <span className="flex-1 truncate text-sm">{item.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </main>
   );
