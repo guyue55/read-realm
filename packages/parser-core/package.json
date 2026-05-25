@@ -1,0 +1,21 @@
+{
+  "name": "@reader/parser-core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@reader/shared-types": "workspace:*",
+    "@reader/content-utils": "workspace:*",
+    "jszip": "^3.10.1",
+    "isomorphic-dompurify": "^2.0.0",
+    "@xmldom/xmldom": "^0.8.10"
+  },
+  "devDependencies": {
+    "@reader/tsconfig": "workspace:*",
+    "typescript": "latest"
+  }
+}

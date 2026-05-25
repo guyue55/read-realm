@@ -1,0 +1,25 @@
+{
+  "name": "@reader/storage-core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./node": "./dist/node.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "dexie": "^3.2.4",
+    "@reader/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@reader/tsconfig": "workspace:*",
+    "typescript": "latest",
+    "vitest": "latest",
+    "@types/node": "^20.0.0"
+  }
+}

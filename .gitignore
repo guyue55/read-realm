@@ -7,3 +7,10 @@ coverage
 data/app.sqlite
 data/app.sqlite-*
 .DS_Store
+
+*.log
+
+.turbo/cache
+
+superpowers
+docs/
