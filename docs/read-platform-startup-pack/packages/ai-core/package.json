@@ -2,8 +2,12 @@
   "name": "@reader/ai-core",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
   "dependencies": {
     "openai": "^4.0.0"
   },
