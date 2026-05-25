@@ -66,6 +66,8 @@ export const strings = {
     chapterIndexLabel: '第 {index} 章',
     prevChapter: '上一章',
     nextChapter: '下一章',
+    startOfBook: '已是第一章',
+    endOfBook: '已是最后一章',
   }
 };
 
