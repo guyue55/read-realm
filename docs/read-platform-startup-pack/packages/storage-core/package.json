@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "dexie": "^3.2.4",
@@ -13,6 +14,8 @@
   },
   "devDependencies": {
     "@reader/tsconfig": "workspace:*",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "latest",
+    "@types/node": "^20.0.0"
   }
 }
