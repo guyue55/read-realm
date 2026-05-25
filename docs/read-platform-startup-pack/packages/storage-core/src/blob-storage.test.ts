@@ -1,21 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LocalFileBlobStorage } from './blob-storage';
-import { rm, mkdir } from 'fs/promises';
+import { rm, mkdtemp } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { tmpdir } from 'os';
 
 describe('LocalFileBlobStorage', () => {
-  const testDir = join(__dirname, '../test-storage');
+  let testDir: string;
 
   beforeEach(async () => {
-    if (existsSync(testDir)) {
-      await rm(testDir, { recursive: true, force: true });
-    }
-    await mkdir(testDir, { recursive: true });
+    testDir = await mkdtemp(join(tmpdir(), 'blob-storage-test-'));
   });
 
   afterEach(async () => {
-    if (existsSync(testDir)) {
+    if (testDir && existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
     }
   });
