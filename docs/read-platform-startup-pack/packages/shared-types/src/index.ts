@@ -38,3 +38,23 @@ export const BookSchema = z.object({
 });
 
 export type Book = z.infer<typeof BookSchema>;
+
+export const ReadingProgressSchema = z.object({
+  bookId: z.string(),
+  chapterId: z.string(),
+  chapterIndex: z.number(),
+  offset: z.number(),
+  percentage: z.number(),
+  updatedAt: z.string(),
+});
+
+export type ReadingProgress = z.infer<typeof ReadingProgressSchema>;
+
+export const ReaderSettingsSchema = z.object({
+  fontFamily: z.string(),
+  fontSize: z.number(),
+  lineHeight: z.number(),
+  theme: z.enum(['paper', 'sepia', 'green', 'dark', 'black']),
+});
+
+export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
