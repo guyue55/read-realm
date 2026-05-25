@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { DRIZZLE } from '../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
@@ -19,7 +20,13 @@ export class BookRepository {
       await tx.insert(schema.books).values(bookData as any);
       
       if (chapters.length > 0) {
-        await tx.insert(schema.chapters).values(chapters);
+        const chaptersToInsert = chapters.map((chapter) => ({
+          ...chapter,
+          bookId: book.id,
+          id: chapter.id || crypto.randomUUID(),
+          createdAt: chapter.createdAt || new Date().toISOString(),
+        }));
+        await tx.insert(schema.chapters).values(chaptersToInsert);
       }
     });
   }
