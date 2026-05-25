@@ -166,6 +166,42 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     }
   };
 
+  const handlePageNext = async () => {
+    if (isPagination && contentRef.current) {
+      const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
+      if (scrollLeft + clientWidth < scrollWidth - 5) { // 5px tolerance
+        contentRef.current.scrollTo({ left: scrollLeft + clientWidth, behavior: 'smooth' });
+        return;
+      }
+    } else if (!isPagination) {
+      const nextY = window.scrollY + window.innerHeight * 0.8;
+      if (nextY < document.documentElement.scrollHeight - window.innerHeight) {
+         window.scrollTo({ top: nextY, behavior: 'smooth' });
+         return;
+      }
+    }
+    // If we reached the end, go to next chapter
+    await handleNext();
+  };
+
+  const handlePagePrev = async () => {
+    if (isPagination && contentRef.current) {
+      const { scrollLeft, clientWidth } = contentRef.current;
+      if (scrollLeft > 5) {
+        contentRef.current.scrollTo({ left: scrollLeft - clientWidth, behavior: 'smooth' });
+        return;
+      }
+    } else if (!isPagination) {
+      const prevY = window.scrollY - window.innerHeight * 0.8;
+      if (prevY > 0) {
+        window.scrollTo({ top: prevY, behavior: 'smooth' });
+        return;
+      }
+    }
+    // If we reached the start, go to previous chapter
+    await handlePrev();
+  };
+
   const jumpToChapter = async (index: number) => {
     if (engine) {
       await engine.loadChapter(index);
@@ -302,7 +338,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         />
 
         {/* Navigation Buttons */}
-        <div className="mt-12 mb-8 flex justify-between items-center border-t border-gray-100 pt-8 px-4">
+        <div className="mt-12 mb-8 flex justify-between items-center border-t border-gray-100 pt-8 px-4 relative z-20">
           <button 
             onClick={handlePrev}
             className="flex-1 py-4 px-6 bg-gray-50 rounded-xl text-sm font-medium hover:bg-gray-100 active:scale-95 transition-all text-center mr-4"
@@ -320,9 +356,9 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
       {/* Tap Zones Overlay */}
       <div className="fixed inset-0 z-10 flex">
-        <div className="w-1/4 h-full" onClick={handlePrev} />
+        <div className="w-1/4 h-full" onClick={handlePagePrev} />
         <div className="w-2/4 h-full" onClick={handleMiddleTap} />
-        <div className="w-1/4 h-full" onClick={handleNext} />
+        <div className="w-1/4 h-full" onClick={handlePageNext} />
       </div>
 
       {/* Settings Backdrop */}
