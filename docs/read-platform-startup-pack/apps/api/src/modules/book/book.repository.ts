@@ -5,7 +5,7 @@ import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
 import { Book } from '@reader/shared-types';
 import { eq } from 'drizzle-orm';
-import { LocalFileBlobStorage } from '@reader/storage-core';
+import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
 @Injectable()
 export class BookRepository {

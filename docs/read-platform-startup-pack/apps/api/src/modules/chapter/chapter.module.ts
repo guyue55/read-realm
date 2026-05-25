@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import * as path from 'path';
 import { ChapterController } from './chapter.controller';
 import { ChapterRepository } from './chapter.repository';
-import { LocalFileBlobStorage } from '@reader/storage-core';
+import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
 @Module({
   controllers: [ChapterController],
@@ -19,5 +19,6 @@ import { LocalFileBlobStorage } from '@reader/storage-core';
       },
     },
   ],
+  exports: [ChapterRepository],
 })
 export class ChapterModule {}
