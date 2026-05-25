@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@reader/storage-core';
 import type { Book } from '@reader/shared-types';
+import { strings } from '@/lib/i18n';
 
 export default function Home() {
   const [status, setStatus] = useState<string>('Ready');
@@ -35,16 +36,16 @@ export default function Home() {
     if (!searchQuery.trim()) return;
     
     setIsGlobalSearching(true);
-    setStatus('Searching global database...');
+    setStatus(strings.shelf.searchingGlobal);
     try {
       const response = await fetch(`http://localhost:3001/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) throw new Error('Search failed');
       const results = await response.json();
       setGlobalResults(results);
-      setStatus(`Found ${results.length} global results.`);
+      setStatus(strings.shelf.foundResults.replace('{count}', results.length.toString()));
     } catch (e) {
       console.error('Global search failed', e);
-      setStatus('Global search failed. Is the backend running?');
+      setStatus(strings.shelf.searchFailed);
     } finally {
       setIsGlobalSearching(false);
     }
@@ -55,14 +56,14 @@ export default function Home() {
     if (!file) return;
 
     try {
-      setStatus('Loading parser...');
+      setStatus(strings.shelf.loadingParser);
       // Dynamic import to prevent build-time jsdom issues
       const { parseTxtBook, parseEpubBook } = await import('@reader/parser-core');
 
-      setStatus('Reading file...');
+      setStatus(strings.shelf.readingFile);
       const buffer = await file.arrayBuffer();
       
-      setStatus('Parsing file...');
+      setStatus(strings.shelf.parsingFile);
       // Note: In real app, this should be in a Web Worker
       let parsedBook;
       if (file.name.toLowerCase().endsWith('.epub')) {
@@ -71,7 +72,7 @@ export default function Home() {
         parsedBook = parseTxtBook(file.name, buffer);
       }
       
-      setStatus(`Parsed successfully! Chapters: ${parsedBook.chapters.length}`);
+      setStatus(strings.shelf.parseSuccess.replace('{count}', parsedBook.chapters.length.toString()));
       
       // Save book metadata to Dexie
       const bookId = crypto.randomUUID();
@@ -88,7 +89,7 @@ export default function Home() {
         updatedAt: new Date().toISOString(),
       });
 
-      setStatus('Saving chapters...');
+      setStatus(strings.shelf.savingChapters);
       const chaptersToSave = parsedBook.chapters.map((ch, index) => ({
         id: crypto.randomUUID(),
         bookId,
@@ -101,7 +102,7 @@ export default function Home() {
       }));
       await db.chapters.bulkAdd(chaptersToSave);
       
-      setStatus('Syncing to cloud...');
+      setStatus(strings.shelf.syncingCloud);
       try {
         await fetch('http://localhost:3001/books/import', {
           method: 'POST',
@@ -125,7 +126,7 @@ export default function Home() {
         console.error('Backend sync failed', e);
       }
 
-      setStatus(`Saved "${parsedBook.title}" to local library!`);
+      setStatus(strings.shelf.saveSuccess.replace('{title}', parsedBook.title));
       
     } catch (e) {
       const error = e as Error;
@@ -134,10 +135,10 @@ export default function Home() {
   };
 
   const handleDelete = async (bookId: string, title: string) => {
-    if (!confirm(`Delete "${title}"?`)) return;
+    if (!confirm(strings.shelf.deleteConfirm.replace('{title}', title))) return;
 
     try {
-      setStatus(`Deleting "${title}"...`);
+      setStatus(strings.shelf.deleting.replace('{title}', title));
       
       // 1. Delete local Dexie data
       await db.transaction('rw', [db.books, db.chapters, db.progress, db.bookmarks], async () => {
@@ -156,7 +157,7 @@ export default function Home() {
         console.error('Backend delete failed', e);
       }
 
-      setStatus(`Deleted "${title}" successfully.`);
+      setStatus(strings.shelf.deleteSuccess.replace('{title}', title));
     } catch (e) {
       const error = e as Error;
       setStatus(`Delete error: ${error.message}`);
@@ -165,11 +166,11 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-12 bg-[#F8F8F5] text-[#2F2A24]">
-      <h1 className="text-3xl font-bold mb-8">My Reading World</h1>
+      <h1 className="text-3xl font-bold mb-8">{strings.shelf.title}</h1>
       
       {/* Upload Section */}
       <div className="mb-12 w-full max-w-2xl border-2 border-dashed border-[#3A2D22] p-8 rounded-lg bg-white shadow-sm">
-        <p className="mb-4 text-center font-semibold">Import Local Book (.txt, .epub)</p>
+        <p className="mb-4 text-center font-semibold">{strings.shelf.importTitle}</p>
         <input 
           type="file" 
           accept=".txt,.epub" 
@@ -184,7 +185,7 @@ export default function Home() {
         <div className="relative flex-1">
           <input 
             type="text"
-            placeholder="Search local library or press Enter for global search..."
+            placeholder={strings.shelf.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch()}
@@ -207,7 +208,7 @@ export default function Home() {
           disabled={isGlobalSearching}
           className="px-6 py-2 bg-[#3A2D22] text-white rounded-lg font-semibold hover:bg-[#2A1F18] transition-colors disabled:bg-gray-400 shadow-sm"
         >
-          {isGlobalSearching ? 'Searching...' : 'Global Search'}
+          {isGlobalSearching ? strings.shelf.searchingGlobal : strings.shelf.globalSearch}
         </button>
       </div>
 
@@ -215,20 +216,20 @@ export default function Home() {
       <div className="w-full max-w-4xl">
         {/* Local Results */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Local Library ({books?.length || 0})</h2>
+          <h2 className="text-xl font-bold">{strings.shelf.libraryTitle} ({books?.length || 0})</h2>
           <div className="flex gap-2 text-sm">
-            <span className="text-gray-500 py-1">Sort by:</span>
+            <span className="text-gray-500 py-1">{strings.shelf.sortBy}</span>
             <button 
               onClick={() => setSortBy('title')}
               className={`px-3 py-1 rounded-full border ${sortBy === 'title' ? 'bg-[#3A2D22] text-white' : 'bg-white text-[#3A2D22] border-[#3A2D22]'}`}
             >
-              Title
+              {strings.shelf.sortTitle}
             </button>
             <button 
               onClick={() => setSortBy('createdAt')}
               className={`px-3 py-1 rounded-full border ${sortBy === 'createdAt' ? 'bg-[#3A2D22] text-white' : 'bg-white text-[#3A2D22] border-[#3A2D22]'}`}
             >
-              Recent
+              {strings.shelf.sortRecent}
             </button>
           </div>
         </div>
@@ -241,7 +242,7 @@ export default function Home() {
                   <h3 className="font-bold text-lg mb-2 line-clamp-2">{book.title}</h3>
                   <div className="flex gap-2 mb-4">
                     <span className="text-xs px-2 py-0.5 bg-[#E8E3DA] rounded uppercase">{book.format}</span>
-                    <span className="text-xs text-gray-500">{book.chapterCount} chapters</span>
+                    <span className="text-xs text-gray-500">{strings.reader.chapterCount.replace('{count}', book.chapterCount.toString())}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -249,14 +250,14 @@ export default function Home() {
                     onClick={() => window.location.href = `/reader/${book.id}`}
                     className="flex-1 bg-[#DDEBD6] text-[#2D2A26] py-2 rounded font-semibold hover:bg-[#CFE2C5] transition-colors"
                   >
-                    Read
+                    {strings.shelf.read}
                   </button>
                   <button 
                     onClick={() => handleDelete(book.id, book.title)}
                     className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
-                    title="Delete Book"
+                    title={strings.shelf.delete}
                   >
-                    Delete
+                    {strings.shelf.delete}
                   </button>
                 </div>
               </div>
@@ -264,7 +265,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-lg border border-gray-200 text-gray-400">
-            {searchQuery ? 'No local matches found.' : 'Your library is empty. Upload a book to get started!'}
+            {searchQuery ? strings.shelf.noMatches : strings.shelf.emptyLibrary}
           </div>
         )}
 
@@ -277,14 +278,14 @@ export default function Home() {
 
           return (
             <div className="mt-12 mb-8">
-              <h2 className="text-xl font-bold mb-6 text-gray-600 border-t pt-8">Global Search Results ({uniqueGlobalResults.length})</h2>
+              <h2 className="text-xl font-bold mb-6 text-gray-600 border-t pt-8">{strings.shelf.globalResultsTitle} ({uniqueGlobalResults.length})</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {uniqueGlobalResults.map((book) => (
                   <div key={book.id} className="bg-white p-6 rounded-lg shadow-sm border border-dashed border-gray-300 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
                     <div>
                       <h3 className="font-bold text-lg mb-2 line-clamp-2">{book.title}</h3>
                       <div className="flex gap-2 mb-4">
-                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded uppercase text-gray-500">Not in Library</span>
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded uppercase text-gray-500">{strings.shelf.notInLibrary}</span>
                         <span className="text-xs text-gray-500">{book.format}</span>
                       </div>
                     </div>
@@ -292,7 +293,7 @@ export default function Home() {
                       disabled
                       className="w-full bg-gray-100 text-gray-400 py-2 rounded font-semibold cursor-not-allowed"
                     >
-                      Found in Cloud
+                      {strings.shelf.foundInCloud}
                     </button>
                   </div>
                 ))}
