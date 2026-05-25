@@ -1,4 +1,4 @@
-import type { ReadingProgress } from '@reader/shared-types';
+import type { ReadingProgress, ReaderSettings } from '@reader/shared-types';
 
 export interface ChapterData {
   index: number;
@@ -20,6 +20,12 @@ export class ReaderEngine {
   private bookId: string;
   private currentChapter: ChapterData | null = null;
   private progress: ReadingProgress | null = null;
+  private settings: ReaderSettings = {
+    fontFamily: 'sans-serif',
+    fontSize: 18,
+    lineHeight: 1.7,
+    theme: 'paper'
+  };
 
   constructor(
     bookId: string,
@@ -27,6 +33,17 @@ export class ReaderEngine {
     private progressRepo: ProgressRepository
   ) {
     this.bookId = bookId;
+  }
+
+  getSettings(): ReaderSettings {
+    return { ...this.settings };
+  }
+
+  updateSettings(newSettings: Partial<ReaderSettings>): void {
+    this.settings = {
+      ...this.settings,
+      ...newSettings
+    };
   }
 
   async load(): Promise<void> {

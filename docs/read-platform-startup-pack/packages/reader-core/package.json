@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "@reader/shared-types": "workspace:*"
