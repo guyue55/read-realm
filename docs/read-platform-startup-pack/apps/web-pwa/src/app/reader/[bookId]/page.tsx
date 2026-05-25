@@ -32,9 +32,16 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [showToc, setShowToc] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [activeTab, setActiveTab] = useState<'toc' | 'bookmarks'>('toc');
+  const [showProgress, setShowProgress] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleNightModeToggle = () => {
+    const nextTheme = settings.theme === 'dark' ? 'paper' : 'dark';
+    updateTheme(nextTheme);
+  };
+
 
   // Automatic progress saving on scroll
   useEffect(() => {
@@ -462,18 +469,29 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
         </div>
       </div>
 
+      {/* Progress Sheet */}
+      <div className={`fixed bottom-0 inset-x-0 bg-white shadow-[0_-2px_10_rgba(0,0,0,0.1)] z-30 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-300 ${showProgress ? 'translate-y-0' : 'translate-y-full'}`}>
+         <h3 className="text-sm font-bold mb-4">阅读进度</h3>
+         <div className="w-full bg-gray-200 h-2 rounded-full mb-2">
+           <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(chapter?.index || 0) / (toc.length || 1) * 100}%` }} />
+         </div>
+         <p className="text-xs text-gray-500">已阅读 {(chapter?.index || 0) + 1} / {toc.length} 章</p>
+      </div>
+
       {/* Bottom Toolbar */}
-      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 pointer-events-auto ${showMenu ? 'translate-y-0' : 'translate-y-full'}`}>
         <button 
           onClick={() => { setShowToc(true); setShowMenu(false); }}
           className="text-sm"
         >
           {strings.reader.toc}
         </button>
-        <button className="text-sm">{strings.reader.progress}</button>
+        <button onClick={() => setShowProgress(!showProgress)} className="text-sm">{strings.reader.progress}</button>
         <button onClick={handleSummarize} className="text-sm text-purple-600 font-bold">AI</button>
         <button onClick={() => { setShowSettings(true); setShowMenu(false); }} className={`text-sm ${showSettings ? 'text-blue-500 font-bold' : ''}`}>{strings.reader.settings}</button>
-        <button className="text-sm">{strings.reader.nightMode}</button>
+        <button onClick={handleNightModeToggle} className="text-sm">
+          {strings.reader.nightMode}
+        </button>
       </div>
 
       {/* ToC Drawer Overlay */}
