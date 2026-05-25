@@ -21,6 +21,9 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [showToc, setShowToc] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [activeTab, setActiveTab] = useState<'toc' | 'bookmarks'>('toc');
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     // Implement repositories using Dexie
@@ -121,6 +124,31 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     }
   };
 
+  const handleSummarize = async () => {
+    if (!chapter) return;
+    setIsAiLoading(true);
+    setShowAiPanel(true);
+    setShowMenu(false);
+    try {
+      const response = await fetch('http://localhost:3001/ai/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: chapter.content,
+          bookId: params.bookId,
+          chapterIndex: chapter.index
+        })
+      });
+      const data = await response.json();
+      setAiSummary(data.summary);
+    } catch (error) {
+      console.error('AI Summarize failed:', error);
+      setAiSummary('AI 总结失败，请检查后端服务是否启动。');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handleMiddleTap = () => {
     setShowMenu(!showMenu);
     if (showSettings) setShowSettings(false);
@@ -195,6 +223,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       <div className={`fixed top-0 inset-x-0 h-12 bg-white shadow-sm z-20 flex items-center px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : '-translate-y-full'}`}>
         <button onClick={() => window.location.href = '/'} className="mr-4 text-sm font-medium">← 返回书架</button>
         <span className="truncate flex-1 text-sm font-bold text-center">{chapter.title}</span>
+        <button onClick={handleSummarize} className="ml-4 text-sm font-medium text-purple-600">AI 总结</button>
         <button onClick={addBookmark} className="ml-4 text-sm font-medium text-blue-600">书签</button>
       </div>
 
@@ -262,6 +291,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
           目录
         </button>
         <button className="text-sm">进度</button>
+        <button onClick={handleSummarize} className="text-sm text-purple-600 font-bold">AI</button>
         <button onClick={() => { setShowSettings(true); setShowMenu(false); }} className={`text-sm ${showSettings ? 'text-blue-500 font-bold' : ''}`}>设置</button>
         <button className="text-sm">夜间</button>
       </div>
@@ -343,6 +373,71 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* AI Panel Overlay */}
+      {showAiPanel && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/40 transition-opacity"
+          onClick={() => setShowAiPanel(false)}
+        />
+      )}
+
+      {/* AI Assistant Panel (Right Drawer) */}
+      <div className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-white z-50 shadow-xl transition-transform duration-300 transform ${showAiPanel ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="h-full flex flex-col">
+          <div className="p-4 border-b flex items-center justify-between bg-purple-50">
+            <h2 className="font-bold text-purple-800 flex items-center">
+              <span className="mr-2">✨</span> AI 阅读助手
+            </h2>
+            <button onClick={() => setShowAiPanel(false)} className="text-gray-400 p-1">✕</button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">本章总结</h3>
+              {isAiLoading ? (
+                <div className="flex flex-col items-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                  <p className="text-sm text-gray-500">正在分析本章内容...</p>
+                </div>
+              ) : (
+                <div className="prose prose-sm prose-purple">
+                  {aiSummary ? (
+                    <div className="bg-gray-50 p-4 rounded-xl text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {aiSummary}
+                    </div>
+                  ) : (
+                    <p className="text-center py-8 text-gray-400 italic">点击工具栏的 AI 按钮生成总结</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">快捷提问</h3>
+              <div className="grid grid-cols-1 gap-2">
+                <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
+                  解释本章的关键人物关系
+                </button>
+                <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
+                  这章有哪些重要的情节伏笔？
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-4 border-t bg-gray-50">
+            <div className="flex items-center bg-white border rounded-full px-4 py-2 shadow-sm focus-within:border-purple-400 transition-colors">
+              <input 
+                type="text" 
+                placeholder="问问 AI 助手..." 
+                className="flex-1 bg-transparent border-none outline-none text-sm py-1"
+              />
+              <button className="ml-2 text-purple-600 font-bold text-sm">发送</button>
+            </div>
           </div>
         </div>
       </div>
