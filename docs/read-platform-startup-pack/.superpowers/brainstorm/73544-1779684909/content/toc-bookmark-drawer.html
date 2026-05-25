@@ -1,0 +1,45 @@
+<h2>书签列表设计 (目录抽屉)</h2>
+<p class="subtitle">在现有的目录抽屉中集成书签功能</p>
+
+<div class="mockup">
+  <div class="mockup-header">目录 & 书签 抽屉</div>
+  <div class="mockup-body" style="background: #f8f9fa; padding: 0;">
+    <!-- Tab Bar -->
+    <div style="display: flex; border-bottom: 1px solid #ddd; background: white;">
+      <div style="flex: 1; text-align: center; padding: 12px; font-weight: bold; border-bottom: 2px solid transparent; color: #999;">目录</div>
+      <div style="flex: 1; text-align: center; padding: 12px; font-weight: bold; border-bottom: 2px solid #3b82f6; color: #3b82f6;">书签</div>
+    </div>
+    
+    <!-- Bookmark List Content -->
+    <div style="background: white; min-height: 300px;">
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 14px; font-weight: 500;">第一章：初识世界</div>
+          <div style="font-size: 12px; color: #999;">2024-05-25 10:30 · 偏移量: 450px</div>
+        </div>
+        <button style="color: #ef4444; background: none; border: none; font-size: 12px;">删除</button>
+      </div>
+      
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 14px; font-weight: 500;">第三章：神秘的信件</div>
+          <div style="font-size: 12px; color: #999;">2024-05-25 11:15 · 偏移量: 1200px</div>
+        </div>
+        <button style="color: #ef4444; background: none; border: none; font-size: 12px;">删除</button>
+      </div>
+      
+      <div style="padding: 24px; text-align: center; color: #ccc; font-size: 14px; display: none;">
+        暂无书签
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>交互逻辑确认</h3>
+  <ul>
+    <li>点击书签项：跳转到对应章节并滚动到记录的 offset。</li>
+    <li>点击“删除”：从本地数据库移除书签，并实时更新列表。</li>
+    <li>添加重复书签：如果同一章节同一位置已存在书签，是否允许重复添加？(建议允许，或者提示已存在)。</li>
+  </ul>
+</div>

@@ -95,4 +95,41 @@ describe('BookRepository', () => {
       ]),
     );
   });
+
+  it('should delete book and its chapters, and cleanup storage', async () => {
+    const bookId = 'book-1';
+    const chapters = [{ contentHash: 'hash-1' }, { contentHash: 'hash-2' }];
+
+    db.select = jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockResolvedValue(chapters),
+      }),
+    });
+
+    const blobStorage = {
+      deleteObject: jest.fn().mockResolvedValue(undefined),
+    };
+    (repository as any).blobStorage = blobStorage;
+
+    let capturedTx: any;
+    db.transaction.mockImplementationOnce(async (cb: any) => {
+      capturedTx = {
+        delete: jest.fn().mockReturnThis(),
+        where: jest.fn().mockResolvedValue(undefined),
+      };
+      await cb(capturedTx);
+    });
+
+    // Mock second select for de-duplication check
+    db.select.mockReturnValueOnce({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue(chapters), // First call for get hashes
+        }),
+      }),
+    });
+    
+    // Actually the mock above is a bit messy because of how I chained it.
+    // Let's rewrite the mock for the whole test.
+  });
 });

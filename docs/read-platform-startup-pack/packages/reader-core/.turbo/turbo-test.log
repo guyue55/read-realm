@@ -1,0 +1,24 @@
+
+
+> @reader/reader-core@0.1.0 test /Users/guyue/GitProject/我的阅读世界/docs/read-platform-startup-pack/packages/reader-core
+> vitest run
+
+[?25l
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90m/Users/guyue/GitProject/我的阅读世界/docs/read-platform-startup-pack/packages/reader-core[39m
+
+[?2026h
+[1m[33m ❯ [39m[22msrc/engine.test.ts[2m [queued][22m
+
+[2m Test Files [22m[1m[32m0 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m[1m[32m0 passed[39m[22m[90m (0)[39m
+[2m   Start at [22m13:36:10
+[2m   Duration [22m102ms
+[?2026l[K[1A[K[1A[K[1A[K[1A[K[1A[K[1A[K[1A[K [32m✓[39m src/engine.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m dist/engine.test.js [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 13:36:10
+[2m   Duration [22m 210ms[2m (transform 53ms, setup 0ms, import 90ms, tests 7ms, environment 0ms)[22m
+
+[?25h
