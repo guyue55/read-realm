@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { AppErrorCodeSchema, BookSchema } from './index';
+import {
+  AppErrorCodeSchema,
+  BookSchema,
+  ReadingProgressSchema,
+  ReaderSettingsSchema,
+} from './index';
 
 describe('Shared Types', () => {
   it('should validate AppErrorCode', () => {
@@ -20,5 +25,29 @@ describe('Shared Types', () => {
       updatedAt: new Date().toISOString(),
     };
     expect(BookSchema.parse(book).id).toBe('book-1');
+  });
+});
+
+describe('Shared Types Extensions', () => {
+  it('should validate ReadingProgress', () => {
+    const progress = {
+      bookId: 'book-1',
+      chapterId: 'chap-1',
+      chapterIndex: 0,
+      offset: 150,
+      percentage: 0.25,
+      updatedAt: new Date().toISOString()
+    };
+    expect(ReadingProgressSchema.parse(progress).chapterIndex).toBe(0);
+  });
+
+  it('should validate ReaderSettings', () => {
+    const settings = {
+      fontFamily: 'sans-serif',
+      fontSize: 18,
+      lineHeight: 1.6,
+      theme: 'paper'
+    };
+    expect(ReaderSettingsSchema.parse(settings).theme).toBe('paper');
   });
 });
