@@ -2,21 +2,53 @@
 
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@reader/storage-core/src/db';
+import { db } from '@reader/storage-core';
+import type { Book } from '@reader/shared-types';
 
 export default function Home() {
   const [status, setStatus] = useState<string>('Ready');
   const [sortBy, setSortBy] = useState<'title' | 'createdAt'>('createdAt');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [globalResults, setGlobalResults] = useState<Book[]>([]);
+  const [isGlobalSearching, setIsGlobalSearching] = useState(false);
 
   const books = useLiveQuery(async () => {
     const allBooks = await db.books.toArray();
-    return allBooks.sort((a, b) => {
+    
+    let filtered = allBooks;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = allBooks.filter(b => 
+        b.title.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered.sort((a, b) => {
       if (sortBy === 'title') {
         return a.title.localeCompare(b.title);
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [sortBy]);
+  }, [sortBy, searchQuery]);
+
+  const handleGlobalSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsGlobalSearching(true);
+    setStatus('Searching global database...');
+    try {
+      const response = await fetch(`http://localhost:3001/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) throw new Error('Search failed');
+      const results = await response.json();
+      setGlobalResults(results);
+      setStatus(`Found ${results.length} global results.`);
+    } catch (e) {
+      console.error('Global search failed', e);
+      setStatus('Global search failed. Is the backend running?');
+    } finally {
+      setIsGlobalSearching(false);
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -147,8 +179,41 @@ export default function Home() {
         <p className="mt-4 text-center font-mono text-xs text-gray-500">{status}</p>
       </div>
 
+      {/* Search Bar */}
+      <div className="w-full max-w-4xl mb-8 flex gap-2">
+        <div className="relative flex-1">
+          <input 
+            type="text"
+            placeholder="Search local library or press Enter for global search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch()}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#3A2D22] bg-white shadow-sm"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => {
+                setSearchQuery('');
+                setGlobalResults([]);
+              }}
+              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <button 
+          onClick={handleGlobalSearch}
+          disabled={isGlobalSearching}
+          className="px-6 py-2 bg-[#3A2D22] text-white rounded-lg font-semibold hover:bg-[#2A1F18] transition-colors disabled:bg-gray-400 shadow-sm"
+        >
+          {isGlobalSearching ? 'Searching...' : 'Global Search'}
+        </button>
+      </div>
+
       {/* Library Section */}
       <div className="w-full max-w-4xl">
+        {/* Local Results */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Local Library ({books?.length || 0})</h2>
           <div className="flex gap-2 text-sm">
@@ -199,9 +264,42 @@ export default function Home() {
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-lg border border-gray-200 text-gray-400">
-            Your library is empty. Upload a book to get started!
+            {searchQuery ? 'No local matches found.' : 'Your library is empty. Upload a book to get started!'}
           </div>
         )}
+
+        {/* Global Results Section */}
+        {(() => {
+          const localBookIds = new Set(books?.map(b => b.id) || []);
+          const uniqueGlobalResults = globalResults.filter(b => !localBookIds.has(b.id));
+          
+          if (uniqueGlobalResults.length === 0) return null;
+
+          return (
+            <div className="mt-12 mb-8">
+              <h2 className="text-xl font-bold mb-6 text-gray-600 border-t pt-8">Global Search Results ({uniqueGlobalResults.length})</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {uniqueGlobalResults.map((book) => (
+                  <div key={book.id} className="bg-white p-6 rounded-lg shadow-sm border border-dashed border-gray-300 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
+                    <div>
+                      <h3 className="font-bold text-lg mb-2 line-clamp-2">{book.title}</h3>
+                      <div className="flex gap-2 mb-4">
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 rounded uppercase text-gray-500">Not in Library</span>
+                        <span className="text-xs text-gray-500">{book.format}</span>
+                      </div>
+                    </div>
+                    <button 
+                      disabled
+                      className="w-full bg-gray-100 text-gray-400 py-2 rounded font-semibold cursor-not-allowed"
+                    >
+                      Found in Cloud
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </main>
   );
