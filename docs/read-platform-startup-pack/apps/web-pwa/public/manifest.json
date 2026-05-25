@@ -1,0 +1,21 @@
+{
+  "name": "我的阅读世界",
+  "short_name": "阅读世界",
+  "description": "个人小说聚合阅读平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F8F5",
+  "theme_color": "#F8F8F5",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
