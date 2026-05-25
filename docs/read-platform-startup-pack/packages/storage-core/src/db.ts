@@ -17,11 +17,11 @@ export class ReaderDatabase extends Dexie {
 
   constructor() {
     super('ReaderDatabase');
-    this.version(3).stores({
+    this.version(4).stores({
       books: 'id, title, createdAt, lastReadAt',
-      chapters: 'id, bookId, index',
+      chapters: 'id, [bookId+index], bookId, index', // Compound index added
       progress: 'bookId',
-      bookmarks: 'id, bookId, chapterIndex' // NEW
+      bookmarks: 'id, bookId, chapterIndex'
     });
   }
 }
