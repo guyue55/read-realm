@@ -320,7 +320,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       {/* Content Area */}
       <div 
         ref={contentRef}
-        className={`max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
+        className={`relative max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
           isPagination ? 'h-screen overflow-x-auto overflow-y-hidden columns-1 w-screen max-w-none px-8 py-12' : 'h-auto overflow-y-auto'
         }`}
         style={{ 
@@ -355,10 +355,10 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       </div>
 
       {/* Tap Zones Overlay */}
-      <div className="fixed inset-0 z-10 flex">
-        <div className="w-1/4 h-full" onClick={handlePagePrev} />
-        <div className="w-2/4 h-full" onClick={handleMiddleTap} />
-        <div className="w-1/4 h-full" onClick={handlePageNext} />
+      <div className="fixed inset-0 z-10 flex pointer-events-none">
+        <div className="w-1/4 h-full pointer-events-auto" onClick={handlePagePrev} />
+        <div className="w-2/4 h-full pointer-events-auto" onClick={handleMiddleTap} />
+        <div className="w-1/4 h-full pointer-events-auto" onClick={handlePageNext} />
       </div>
 
       {/* Settings Backdrop */}
