@@ -16,7 +16,9 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "API Status: OK (Test Error Type: FILE_TOO_LARGE)"', () => {
-      expect(appController.getHello()).toBe('API Status: OK (Test Error Type: FILE_TOO_LARGE)');
+      expect(appController.getHello()).toBe(
+        'API Status: OK (Test Error Type: FILE_TOO_LARGE)',
+      );
     });
   });
 });

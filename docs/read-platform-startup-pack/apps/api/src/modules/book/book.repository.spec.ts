@@ -71,22 +71,28 @@ describe('BookRepository', () => {
 
     // Verify book insertion (tags omitted)
     expect(capturedTx.insert).toHaveBeenCalledWith(schema.books);
-    expect(capturedTx.values).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'book-1',
-      title: 'Test Book',
-    }));
-    expect(capturedTx.values).not.toHaveBeenCalledWith(expect.objectContaining({
-      tags: expect.anything(),
-    }));
+    expect(capturedTx.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'book-1',
+        title: 'Test Book',
+      }),
+    );
+    expect(capturedTx.values).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        tags: expect.anything(),
+      }),
+    );
 
     // Verify chapters insertion with bookId set
     expect(capturedTx.insert).toHaveBeenCalledWith(schema.chapters);
-    expect(capturedTx.values).toHaveBeenCalledWith(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'ch-1',
-        bookId: 'book-1',
-        contentHash: 'hash-1',
-      }),
-    ]));
+    expect(capturedTx.values).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'ch-1',
+          bookId: 'book-1',
+          contentHash: 'hash-1',
+        }),
+      ]),
+    );
   });
 });

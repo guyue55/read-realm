@@ -11,7 +11,10 @@ import { LocalFileBlobStorage } from '@reader/storage-core';
     {
       provide: LocalFileBlobStorage,
       useFactory: () => {
-        const storagePath = path.resolve(process.cwd(), '../../data/storage/chapter_blobs/');
+        const storagePath = path.resolve(
+          process.cwd(),
+          '../../data/storage/chapter_blobs/',
+        );
         return new LocalFileBlobStorage(storagePath);
       },
     },

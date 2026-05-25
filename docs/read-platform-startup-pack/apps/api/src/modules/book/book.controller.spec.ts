@@ -40,10 +40,18 @@ describe('BookController', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const chapters = [{ id: 'ch1', title: 'Chapter 1', index: 0, contentHash: 'hash', createdAt: new Date().toISOString() }];
+    const chapters = [
+      {
+        id: 'ch1',
+        title: 'Chapter 1',
+        index: 0,
+        contentHash: 'hash',
+        createdAt: new Date().toISOString(),
+      },
+    ];
 
     // Mocking the request from frontend as "metadata" instead of "book"
-    await controller.importBook({ metadata: book, chapters } as any);
+    await controller.importBook({ metadata: book, chapters });
 
     // This is expected to fail with current implementation because it expects "body.book"
     expect(repository.importBook).toHaveBeenCalledWith(book, chapters);
