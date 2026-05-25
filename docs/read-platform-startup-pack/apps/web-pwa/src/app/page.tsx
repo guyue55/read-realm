@@ -57,6 +57,30 @@ export default function Home() {
       }));
       await db.chapters.bulkAdd(chaptersToSave);
       
+      setStatus('Syncing to cloud...');
+      try {
+        await fetch('http://localhost:3001/books/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            metadata: {
+              id: bookId,
+              title: parsedBook.title,
+              sourceType: 'upload',
+              format,
+              status: 'to_read',
+              tags: [],
+              chapterCount: parsedBook.chapters.length,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }, 
+            chapters: chaptersToSave 
+          })
+        });
+      } catch (e) {
+        console.error('Backend sync failed', e);
+      }
+
       setStatus(`Saved "${parsedBook.title}" to local library! Navigating...`);
       window.location.href = `/reader/${bookId}`;
       
