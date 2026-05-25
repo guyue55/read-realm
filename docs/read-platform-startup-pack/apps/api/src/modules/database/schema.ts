@@ -17,3 +17,19 @@ export const books = sqliteTable('books', {
   updatedAt: text('updated_at').notNull(),
   lastReadAt: text('last_read_at'),
 });
+
+export const chapters = sqliteTable('chapters', {
+  id: text('id').primaryKey(),
+  bookId: text('book_id').notNull().references(() => books.id),
+  index: integer('index').notNull(),
+  title: text('title').notNull(),
+  contentHash: text('content_hash').notNull(), // Pointer to BlobStorage key
+  createdAt: text('created_at').notNull(),
+});
+
+export const storageObjects = sqliteTable('storage_objects', {
+  hash: text('hash').primaryKey(),
+  path: text('path').notNull(),
+  size: integer('size').notNull(),
+  mimeType: text('mime_type').notNull(),
+});
