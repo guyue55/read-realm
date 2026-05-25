@@ -60,6 +60,10 @@ export const strings = {
     quickQuestions: '快捷提问',
     aiInputPlaceholder: '问问 AI 助手...',
     send: '发送',
+    aiError: 'AI 总结失败，请检查后端服务是否启动。',
+    questionCharacters: '解释本章的关键人物关系',
+    questionPlots: '这章有哪些重要的情节伏笔？',
+    chapterIndexLabel: '第 {index} 章',
     prevChapter: '上一章',
     nextChapter: '下一章',
   }

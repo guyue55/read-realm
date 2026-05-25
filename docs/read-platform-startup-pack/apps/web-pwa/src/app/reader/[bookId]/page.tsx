@@ -239,7 +239,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       setAiSummary(data.summary);
     } catch (error) {
       console.error('AI Summarize failed:', error);
-      setAiSummary('AI 总结失败，请检查后端服务是否启动。');
+      setAiSummary(strings.reader.aiError);
     } finally {
       setIsAiLoading(false);
     }
@@ -472,7 +472,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
                     >
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-sm font-bold text-gray-800 truncate flex-1 mr-2">
-                          {toc[bookmark.chapterIndex]?.title || `第 ${bookmark.chapterIndex + 1} 章`}
+                          {toc[bookmark.chapterIndex]?.title || strings.reader.chapterIndexLabel.replace('{index}', (bookmark.chapterIndex + 1).toString())}
                         </span>
                         <span className="text-[10px] text-gray-400 whitespace-nowrap">
                           {new Date(bookmark.createdAt).toLocaleDateString()}
@@ -533,10 +533,10 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">{strings.reader.quickQuestions}</h3>
               <div className="grid grid-cols-1 gap-2">
                 <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
-                  解释本章的关键人物关系
+                  {strings.reader.questionCharacters}
                 </button>
                 <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
-                  这章有哪些重要的情节伏笔？
+                  {strings.reader.questionPlots}
                 </button>
               </div>
             </div>
