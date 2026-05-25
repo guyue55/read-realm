@@ -14,7 +14,8 @@
     "next": "14.2.35",
     "@reader/shared-types": "workspace:*",
     "@reader/storage-core": "workspace:*",
-    "@reader/parser-core": "workspace:*"
+    "@reader/parser-core": "workspace:*",
+    "@reader/reader-core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5",

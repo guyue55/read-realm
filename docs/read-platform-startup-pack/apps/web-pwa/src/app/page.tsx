@@ -22,8 +22,9 @@ export default function Home() {
       setStatus(`Parsed successfully! Chapters: ${parsedBook.chapters.length}`);
       
       // Save book metadata to Dexie
+      const bookId = crypto.randomUUID();
       await db.books.add({
-        id: crypto.randomUUID(),
+        id: bookId,
         title: parsedBook.title,
         sourceType: 'upload',
         format: 'txt',
@@ -33,8 +34,22 @@ export default function Home() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+
+      setStatus('Saving chapters...');
+      const chaptersToSave = parsedBook.chapters.map((ch, index) => ({
+        id: crypto.randomUUID(),
+        bookId,
+        index,
+        title: ch.title,
+        content: ch.content,
+        wordCount: ch.content.length,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+      await db.chapters.bulkAdd(chaptersToSave);
       
-      setStatus(`Saved "${parsedBook.title}" to local library!`);
+      setStatus(`Saved "${parsedBook.title}" to local library! Navigating...`);
+      window.location.href = `/reader/${bookId}`;
       
     } catch (e) {
       const error = e as Error;
