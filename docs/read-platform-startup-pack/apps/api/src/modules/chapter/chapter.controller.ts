@@ -15,7 +15,10 @@ export class ChapterController {
     @Param('index') index: string,
   ) {
     const chapterIndex = parseInt(index, 10);
-    const chapter = await this.chapterRepository.findByIndex(bookId, chapterIndex);
+    const chapter = await this.chapterRepository.findByIndex(
+      bookId,
+      chapterIndex,
+    );
 
     if (!chapter) {
       throw new NotFoundException('Chapter not found');

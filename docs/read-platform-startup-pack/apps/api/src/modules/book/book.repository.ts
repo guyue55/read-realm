@@ -7,18 +7,19 @@ import { Book } from '@reader/shared-types';
 
 @Injectable()
 export class BookRepository {
-  constructor(
-    @Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
-  async importBook(book: Book, chapters: (typeof schema.chapters.$inferInsert)[]) {
+  async importBook(
+    book: Book,
+    chapters: (typeof schema.chapters.$inferInsert)[],
+  ) {
     await this.db.transaction(async (tx) => {
       // Omit tags if it's not in the schema
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { tags, ...bookData } = book;
-      
-      await tx.insert(schema.books).values(bookData as any);
-      
+
+      await tx.insert(schema.books).values(bookData);
+
       if (chapters.length > 0) {
         const chaptersToInsert = chapters.map((chapter) => ({
           ...chapter,

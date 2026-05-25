@@ -20,7 +20,9 @@ export const books = sqliteTable('books', {
 
 export const chapters = sqliteTable('chapters', {
   id: text('id').primaryKey(),
-  bookId: text('book_id').notNull().references(() => books.id),
+  bookId: text('book_id')
+    .notNull()
+    .references(() => books.id),
   index: integer('index').notNull(),
   title: text('title').notNull(),
   contentHash: text('content_hash').notNull(), // Pointer to BlobStorage key

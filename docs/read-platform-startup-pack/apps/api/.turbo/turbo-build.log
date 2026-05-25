@@ -3,3 +3,15 @@
 > api@0.0.1 build /Users/guyue/GitProject/我的阅读世界/docs/read-platform-startup-pack/apps/api
 > nest build
 
+[96msrc/modules/search/search.repository.ts[0m:[93m15[0m:[93m35[0m - [91merror[0m[90m TS2339: [0mProperty 'execute' does not exist on type 'LibSQLDatabase<typeof import("/Users/guyue/GitProject/\u6211\u7684\u9605\u8BFB\u4E16\u754C/docs/read-platform-startup-pack/apps/api/src/modules/database/schema")>'.
+
+[7m15[0m     const results = await this.db.execute({
+[7m  [0m [91m                                  ~~~~~~~[0m
+[96msrc/modules/search/search.repository.ts[0m:[93m20[0m:[93m35[0m - [91merror[0m[90m TS7006: [0mParameter 'row' implicitly has an 'any' type.
+
+[7m20[0m     const ids = results.rows.map((row) => row.id as string);
+[7m  [0m [91m                                  ~~~[0m
+
+Found 2 error(s).
+
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
