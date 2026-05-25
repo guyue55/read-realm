@@ -13,7 +13,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [settings, setSettings] = useState({
     fontSize: 18,
     lineHeight: 1.7,
-    theme: 'paper' as 'paper' | 'sepia' | 'green' | 'dark' | 'black'
+    theme: 'paper' as 'paper' | 'sepia' | 'green' | 'dark' | 'black',
+    pageMode: 'scroll' as 'scroll' | 'pagination'
   });
   const [showSettings, setShowSettings] = useState(false);
   const [toc, setToc] = useState<{index: number, title: string}[]>([]);
@@ -56,7 +57,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       setSettings({
         fontSize: loadedSettings.fontSize,
         lineHeight: loadedSettings.lineHeight,
-        theme: loadedSettings.theme as 'paper' | 'sepia' | 'green' | 'dark' | 'black'
+        theme: loadedSettings.theme as 'paper' | 'sepia' | 'green' | 'dark' | 'black',
+        pageMode: loadedSettings.pageMode as 'scroll' | 'pagination'
       });
       chapterRepo.getToc(params.bookId).then(setToc);
     });
@@ -104,7 +106,15 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     engine?.updateSettings(newSettings);
   };
 
+  const updatePageMode = (mode: 'scroll' | 'pagination') => {
+    const newSettings = { ...settings, pageMode: mode };
+    setSettings(newSettings);
+    engine?.updateSettings(newSettings);
+  };
+
   const currentThemeColors = THEMES[settings.theme as keyof typeof THEMES] || THEMES.paper;
+
+  const isPagination = settings.pageMode === 'pagination';
 
   if (!chapter) return <div className="p-8 text-center text-[#2F2A24]">Loading chapter...</div>;
 
@@ -115,8 +125,15 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     >
       {/* Content Area */}
       <div 
-        className="max-w-[760px] mx-auto px-4 pt-12 pb-12 h-screen overflow-y-auto"
-        style={{ fontSize: `${settings.fontSize}px`, lineHeight: settings.lineHeight }}
+        className={`max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
+          isPagination ? 'h-screen overflow-x-auto overflow-y-hidden columns-1 w-screen max-w-none px-8 py-12' : 'h-auto overflow-y-auto'
+        }`}
+        style={{ 
+          fontSize: `${settings.fontSize}px`, 
+          lineHeight: settings.lineHeight,
+          columnWidth: isPagination ? 'calc(100vw - 64px)' : 'auto',
+          columnGap: '64px'
+        }}
       >
         <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
         {/* We use dangerouslySetInnerHTML here because EPUB chapters contain sanitized HTML */}
@@ -169,7 +186,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-8">
           <span className="text-sm font-medium text-gray-500">背景</span>
           <div className="flex flex-1 justify-around ml-4">
             {Object.entries(THEMES).map(([name, colors]) => (
@@ -183,10 +200,28 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
             ))}
           </div>
         </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm font-medium text-gray-500">翻页模式</span>
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 ml-4 flex-1">
+            <button 
+              onClick={() => updatePageMode('scroll')}
+              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === 'scroll' ? 'bg-white shadow-sm font-bold text-blue-600' : 'text-gray-500'}`}
+            >
+              上下滚动
+            </button>
+            <button 
+              onClick={() => updatePageMode('pagination')}
+              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === 'pagination' ? 'bg-white shadow-sm font-bold text-blue-600' : 'text-gray-500'}`}
+            >
+              左右翻页
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Bottom Toolbar */}
-      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 ${showMenu ? 'translate-y-0' : 'translate-y-full'}`}>
         <button 
           onClick={() => { setShowToc(true); setShowMenu(false); }}
           className="text-sm"
