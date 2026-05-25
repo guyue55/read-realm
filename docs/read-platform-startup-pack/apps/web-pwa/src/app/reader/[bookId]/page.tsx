@@ -301,9 +301,31 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   };
 
   const updatePageMode = (mode: 'scroll' | 'pagination') => {
+    if (!chapter) return;
+
+    // 1. Calculate current percentage
+    let percentage = 0;
+    if (settings.pageMode === 'scroll') {
+      percentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight || 1);
+    } else if (contentRef.current) {
+      percentage = contentRef.current.scrollLeft / (contentRef.current.scrollWidth - contentRef.current.clientWidth || 1);
+    }
+
+    // 2. Update settings
     const newSettings = { ...settings, pageMode: mode };
     setSettings(newSettings);
     engine?.updateSettings(newSettings);
+
+    // 3. Restore position after re-render (Next.js/React takes a moment to update layout)
+    setTimeout(() => {
+      if (mode === 'scroll') {
+        const targetY = percentage * (document.documentElement.scrollHeight - window.innerHeight);
+        window.scrollTo(0, targetY);
+      } else if (contentRef.current) {
+        const targetX = percentage * (contentRef.current.scrollWidth - contentRef.current.clientWidth);
+        contentRef.current.scrollLeft = targetX;
+      }
+    }, 150); // Slightly more delay for stability
   };
 
   const currentThemeColors = THEMES[settings.theme as keyof typeof THEMES] || THEMES.paper;
