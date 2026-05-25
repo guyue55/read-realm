@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ReaderEngine, ChapterData } from '@reader/reader-core';
 import { db } from '@reader/storage-core';
 import type { ReadingProgress, Bookmark } from '@reader/shared-types';
@@ -20,6 +20,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [engine, setEngine] = useState<ReaderEngine | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState({
     fontSize: 18,
     lineHeight: 1.7,
@@ -37,10 +38,16 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
   // Automatic progress saving on scroll
   useEffect(() => {
-    if (!chapter || !params.bookId || settings.pageMode !== 'scroll') return;
+    if (!chapter || !params.bookId) return;
 
     const handleScroll = debounce(() => {
-      const offset = window.scrollY;
+      let offset = 0;
+      if (settings.pageMode === 'scroll') {
+        offset = window.scrollY;
+      } else if (settings.pageMode === 'pagination' && contentRef.current) {
+        offset = contentRef.current.scrollLeft;
+      }
+
       if (offset > 0) {
         db.progress.put({
           bookId: params.bookId,
@@ -53,8 +60,18 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       }
     }, 1000);
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    if (settings.pageMode === 'scroll') {
+      window.addEventListener('scroll', handleScroll);
+    } else if (settings.pageMode === 'pagination' && contentRef.current) {
+      contentRef.current.addEventListener('scroll', handleScroll);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (contentRef.current) {
+        contentRef.current.removeEventListener('scroll', handleScroll);
+      }
+    };
   }, [chapter, params.bookId, settings.pageMode, toc.length]);
 
   useEffect(() => {
@@ -105,40 +122,71 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       db.progress.get(params.bookId).then(progress => {
         if (currentChapter && progress && progress.chapterIndex === currentChapter.index && progress.offset > 0) {
           setTimeout(() => {
-            window.scrollTo(0, progress.offset);
+            if (loadedSettings.pageMode === 'scroll') {
+              window.scrollTo(0, progress.offset);
+            } else if (loadedSettings.pageMode === 'pagination' && contentRef.current) {
+              contentRef.current.scrollLeft = progress.offset;
+            }
           }, 100);
         }
       });
     });
   }, [params.bookId]);
 
+  const saveCurrentProgress = async (chapterData: ChapterData, offset: number) => {
+    if (!params.bookId) return;
+    await db.progress.put({
+      bookId: params.bookId,
+      chapterId: chapterData.id,
+      chapterIndex: chapterData.index,
+      offset,
+      percentage: toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   const handleNext = async () => {
     if (engine && await engine.nextChapter()) {
-      setChapter(engine.getCurrentChapter());
+      const currentChapter = engine.getCurrentChapter();
+      setChapter(currentChapter);
       window.scrollTo(0, 0);
+      if (contentRef.current) contentRef.current.scrollLeft = 0;
+      if (currentChapter) await saveCurrentProgress(currentChapter, 0);
     }
   };
 
   const handlePrev = async () => {
     if (engine && await engine.previousChapter()) {
-      setChapter(engine.getCurrentChapter());
+      const currentChapter = engine.getCurrentChapter();
+      setChapter(currentChapter);
       window.scrollTo(0, 0);
+      if (contentRef.current) contentRef.current.scrollLeft = 0;
+      if (currentChapter) await saveCurrentProgress(currentChapter, 0);
     }
   };
 
   const jumpToChapter = async (index: number) => {
     if (engine) {
       await engine.loadChapter(index);
-      setChapter(engine.getCurrentChapter());
+      const currentChapter = engine.getCurrentChapter();
+      setChapter(currentChapter);
       setShowToc(false);
       setShowMenu(false);
       window.scrollTo(0, 0);
+      if (contentRef.current) contentRef.current.scrollLeft = 0;
+      if (currentChapter) await saveCurrentProgress(currentChapter, 0);
     }
   };
 
   const addBookmark = async () => {
     if (!chapter) return;
-    const offset = window.scrollY;
+    let offset = 0;
+    if (settings.pageMode === 'scroll') {
+      offset = window.scrollY;
+    } else if (settings.pageMode === 'pagination' && contentRef.current) {
+      offset = contentRef.current.scrollLeft;
+    }
+
     const bookmark: Bookmark = {
       id: Date.now().toString(),
       bookId: params.bookId,
@@ -156,12 +204,18 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const jumpToBookmark = async (bookmark: Bookmark) => {
     if (engine) {
       await engine.loadChapter(bookmark.chapterIndex);
-      setChapter(engine.getCurrentChapter());
+      const currentChapter = engine.getCurrentChapter();
+      setChapter(currentChapter);
       setShowToc(false);
       setShowMenu(false);
       // Wait for content to render then scroll
-      setTimeout(() => {
-        window.scrollTo(0, bookmark.offset);
+      setTimeout(async () => {
+        if (settings.pageMode === 'scroll') {
+          window.scrollTo(0, bookmark.offset);
+        } else if (settings.pageMode === 'pagination' && contentRef.current) {
+          contentRef.current.scrollLeft = bookmark.offset;
+        }
+        if (currentChapter) await saveCurrentProgress(currentChapter, bookmark.offset);
       }, 100);
     }
   };
@@ -228,6 +282,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     >
       {/* Content Area */}
       <div 
+        ref={contentRef}
         className={`max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
           isPagination ? 'h-screen overflow-x-auto overflow-y-hidden columns-1 w-screen max-w-none px-8 py-12' : 'h-auto overflow-y-auto'
         }`}
