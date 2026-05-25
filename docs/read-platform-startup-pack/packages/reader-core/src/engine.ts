@@ -1,6 +1,7 @@
 import type { ReadingProgress, ReaderSettings } from '@reader/shared-types';
 
 export interface ChapterData {
+  id: string;
   index: number;
   title: string;
   content: string;

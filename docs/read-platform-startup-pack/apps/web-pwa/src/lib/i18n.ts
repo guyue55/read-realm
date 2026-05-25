@@ -60,6 +60,8 @@ export const strings = {
     quickQuestions: '快捷提问',
     aiInputPlaceholder: '问问 AI 助手...',
     send: '发送',
+    prevChapter: '上一章',
+    nextChapter: '下一章',
   }
 };
 
