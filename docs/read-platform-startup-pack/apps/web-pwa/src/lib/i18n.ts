@@ -1,0 +1,62 @@
+/**
+ * 集中化的 i18n 字典，包含所有中文 UI 字符串。
+ * 用于 MVP 本地执行版本的 UI 国际化。
+ */
+export const strings = {
+  shelf: {
+    title: '我的阅读世界',
+    importTitle: '导入本地书籍 (.txt, .epub)',
+    loadingParser: '加载解析器...',
+    readingFile: '读取文件中...',
+    parsingFile: '正在解析...',
+    parseSuccess: '解析成功！章节数：{count}',
+    savingChapters: '正在保存章节...',
+    syncingCloud: '同步到云端...',
+    saveSuccess: '已成功保存 "{title}" 到书架！',
+    searchPlaceholder: '搜索本地书架，或按回车全网搜索...',
+    globalSearch: '全网搜索',
+    searchingGlobal: '正在搜索云端数据库...',
+    foundResults: '找到 {count} 条结果。',
+    searchFailed: '搜索失败，后端服务是否启动？',
+    libraryTitle: '我的书架',
+    sortBy: '排序：',
+    sortTitle: '书名',
+    sortRecent: '时间',
+    read: '阅读',
+    delete: '删除',
+    deleteConfirm: '确认删除 "{title}" 吗？',
+    deleting: '正在删除 "{title}"...',
+    deleteSuccess: '已成功删除 "{title}"。',
+    noMatches: '未找到匹配的本地书籍。',
+    emptyLibrary: '书架空空如也，导入一本书开始阅读吧！',
+    globalResultsTitle: '全网搜索结果',
+    notInLibrary: '不在书架',
+    foundInCloud: '云端结果',
+  },
+  reader: {
+    loading: '正在加载章节...',
+    backToShelf: '← 返回书架',
+    aiSummary: 'AI 总结',
+    bookmark: '书签',
+    bookmarkAdded: '已添加书签',
+    toc: '目录',
+    bookmarks: '书签',
+    noBookmarks: '暂无书签',
+    chapterCount: '共 {count} 章节',
+    bookmarkCount: '共 {count} 个书签',
+    noPreview: '无预览内容',
+    fontSize: '字号',
+    background: '背景',
+    pageMode: '翻页模式',
+    scroll: '上下滚动',
+    pagination: '左右翻页',
+    aiAssistant: 'AI 阅读助手',
+    summarizing: '正在分析本章内容...',
+    aiPrompt: '点击工具栏的 AI 按钮生成总结',
+    quickQuestions: '快捷提问',
+    aiInputPlaceholder: '问问 AI 助手...',
+    send: '发送',
+  }
+};
+
+export type Strings = typeof strings;
