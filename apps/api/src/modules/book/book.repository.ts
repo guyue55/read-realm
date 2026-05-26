@@ -1,9 +1,8 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { DRIZZLE } from '../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
-import { Book } from '@reader/shared-types';
+import { Book, createId } from '@reader/shared-types';
 import { eq } from 'drizzle-orm';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
@@ -29,7 +28,7 @@ export class BookRepository {
         const chaptersToInsert = chapters.map((chapter) => ({
           ...chapter,
           bookId: book.id,
-          id: chapter.id || crypto.randomUUID(),
+          id: chapter.id || createId(),
           createdAt: chapter.createdAt || new Date().toISOString(),
         }));
         await tx.insert(schema.chapters).values(chaptersToInsert);
