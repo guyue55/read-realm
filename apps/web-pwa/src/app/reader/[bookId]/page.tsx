@@ -13,8 +13,12 @@ import {
   saveReaderSettings,
   type ReaderSettingsState,
 } from "@/lib/reader-settings";
+import { TocDrawer } from "@/components/reader/TocDrawer";
+import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
+import { SettingsSheet } from "@/components/reader/SettingsSheet";
+import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
+import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 
-// Helper for debouncing scroll events
 function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
@@ -31,50 +35,25 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const [engine, setEngine] = useState<ReaderEngine | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [settings, setSettings] = useState<ReaderSettingsState>(
-    DEFAULT_READER_SETTINGS,
-  );
-  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<ReaderSettingsState>(DEFAULT_READER_SETTINGS);
+  
+  // Mobile Overlay States
+  const [activePanel, setActivePanel] = useState<"toc" | "progress" | "ai" | "settings" | null>(null);
+  
+  // Data States
   const [toc, setToc] = useState<{ index: number; title: string }[]>([]);
-  const [showToc, setShowToc] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [activeTab, setActiveTab] = useState<"toc" | "bookmarks">("toc");
-  const [showProgress, setShowProgress] = useState(false);
-  const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const togglePanel = (panel: "toc" | "progress" | "ai" | "settings") => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
 
   const handleNightModeToggle = () => {
     const nextTheme = settings.theme === "dark" ? "paper" : "dark";
     updateTheme(nextTheme);
-  };
-
-  const toggleSettings = () => {
-    setShowSettings(!showSettings);
-    setShowProgress(false);
-    setShowToc(false);
-    setShowAiPanel(false);
-  };
-
-  const toggleProgress = () => {
-    setShowProgress(!showProgress);
-    setShowSettings(false);
-    setShowToc(false);
-    setShowAiPanel(false);
-  };
-
-  const toggleToc = () => {
-    setShowToc(!showToc);
-    setShowSettings(false);
-    setShowProgress(false);
-    setShowAiPanel(false);
-  };
-
-  const toggleAiPanel = () => {
-    setShowAiPanel(!showAiPanel);
-    setShowSettings(false);
-    setShowProgress(false);
-    setShowToc(false);
   };
 
   useEffect(() => {
@@ -83,7 +62,8 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     const handleScroll = debounce(() => {
       let offset = 0;
       if (settings.pageMode === "scroll") {
-        offset = window.scrollY;
+        // Desktop or Mobile scroll
+        offset = contentRef.current?.scrollTop || window.scrollY;
       } else if (settings.pageMode === "pagination" && contentRef.current) {
         offset = contentRef.current.scrollLeft;
       }
@@ -101,48 +81,36 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     }, 1000);
 
     const container = contentRef.current;
-    if (settings.pageMode === "scroll") {
-      window.addEventListener("scroll", handleScroll);
-    } else if (settings.pageMode === "pagination" && container) {
+    if (container) {
       container.addEventListener("scroll", handleScroll);
+    } else if (settings.pageMode === "scroll") {
+       window.addEventListener("scroll", handleScroll);
     }
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
       if (container) {
         container.removeEventListener("scroll", handleScroll);
       }
+      window.removeEventListener("scroll", handleScroll);
     };
   }, [chapter, params.bookId, settings.pageMode, toc.length]);
 
   useEffect(() => {
-    // Implement repositories using Dexie
     const chapterRepo = {
       getChapter: async (bookId: string, index: number) => {
         const c = await db.chapters.where({ bookId, index }).first();
-        return c
-          ? { id: c.id, index: c.index, title: c.title, content: c.content }
-          : null;
+        return c ? { id: c.id, index: c.index, title: c.title, content: c.content } : null;
       },
-      getChapterCount: async (bookId: string) => {
-        return await db.chapters.where("bookId").equals(bookId).count();
-      },
+      getChapterCount: async (bookId: string) => await db.chapters.where("bookId").equals(bookId).count(),
       getToc: async (bookId: string) => {
-        const chapters = await db.chapters
-          .where("bookId")
-          .equals(bookId)
-          .sortBy("index");
+        const chapters = await db.chapters.where("bookId").equals(bookId).sortBy("index");
         return chapters.map((c) => ({ index: c.index, title: c.title }));
       },
     };
 
     const progressRepo = {
-      getProgress: async (bookId: string) => {
-        return (await db.progress.get(bookId)) || null;
-      },
-      saveProgress: async (progress: ReadingProgress) => {
-        await db.progress.put(progress);
-      },
+      getProgress: async (bookId: string) => (await db.progress.get(bookId)) || null,
+      saveProgress: async (progress: ReadingProgress) => { await db.progress.put(progress); },
     };
 
     const reader = new ReaderEngine(params.bookId, chapterRepo, progressRepo);
@@ -155,28 +123,19 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       reader.updateSettings(loadedSettings);
       setSettings(loadedSettings);
       chapterRepo.getToc(params.bookId).then(setToc);
-      db.bookmarks
-        .where("bookId")
-        .equals(params.bookId)
-        .toArray()
-        .then(setBookmarks);
+      db.bookmarks.where("bookId").equals(params.bookId).toArray().then(setBookmarks);
 
-      // Restore scroll position
       db.progress.get(params.bookId).then((progress) => {
-        if (
-          currentChapter &&
-          progress &&
-          progress.chapterIndex === currentChapter.index &&
-          progress.offset > 0
-        ) {
+        if (currentChapter && progress && progress.chapterIndex === currentChapter.index && progress.offset > 0) {
           setTimeout(() => {
-            if (loadedSettings.pageMode === "scroll") {
-              window.scrollTo(0, progress.offset);
-            } else if (
-              loadedSettings.pageMode === "pagination" &&
-              contentRef.current
-            ) {
-              contentRef.current.scrollLeft = progress.offset;
+            if (contentRef.current) {
+                if (loadedSettings.pageMode === "scroll") {
+                    contentRef.current.scrollTop = progress.offset;
+                } else {
+                    contentRef.current.scrollLeft = progress.offset;
+                }
+            } else {
+                window.scrollTo(0, progress.offset);
             }
           }, 100);
         }
@@ -184,10 +143,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     });
   }, [params.bookId]);
 
-  const saveCurrentProgress = async (
-    chapterData: ChapterData,
-    offset: number,
-  ) => {
+  const saveCurrentProgress = async (chapterData: ChapterData, offset: number) => {
     if (!params.bookId) return;
     await db.progress.put({
       bookId: params.bookId,
@@ -199,99 +155,78 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     });
   };
 
-  const handleNext = async () => {
-    if (engine) {
-      if (await engine.nextChapter()) {
-        const currentChapter = engine.getCurrentChapter();
-        setChapter(currentChapter);
-        window.scrollTo(0, 0);
-        if (contentRef.current) contentRef.current.scrollLeft = 0;
-        if (currentChapter) await saveCurrentProgress(currentChapter, 0);
-      } else {
-        alert(strings.reader.endOfBook);
-      }
-    }
-  };
-
-  const handlePrev = async () => {
-    if (engine) {
-      if (await engine.previousChapter()) {
-        const currentChapter = engine.getCurrentChapter();
-        setChapter(currentChapter);
-        window.scrollTo(0, 0);
-        if (contentRef.current) contentRef.current.scrollLeft = 0;
-        if (currentChapter) await saveCurrentProgress(currentChapter, 0);
-      } else {
-        alert(strings.reader.startOfBook);
-      }
-    }
-  };
-
-  const handlePageNext = async () => {
-    if (isPagination && contentRef.current) {
-      const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
-      if (Math.ceil(scrollLeft + clientWidth) < scrollWidth - 20) {
-        contentRef.current.scrollTo({
-          left: scrollLeft + clientWidth,
-          behavior: "smooth",
-        });
-        return;
-      }
-    } else if (!isPagination) {
-      const nextY = window.scrollY + window.innerHeight * 0.8;
-      if (
-        nextY <
-        document.documentElement.scrollHeight - window.innerHeight - 20
-      ) {
-        window.scrollTo({ top: nextY, behavior: "smooth" });
-        return;
-      }
-    }
-    // If we reached the end, go to next chapter
-    await handleNext();
-  };
-
-  const handlePagePrev = async () => {
-    if (isPagination && contentRef.current) {
-      const { scrollLeft, clientWidth } = contentRef.current;
-      if (scrollLeft > 20) {
-        contentRef.current.scrollTo({
-          left: scrollLeft - clientWidth,
-          behavior: "smooth",
-        });
-        return;
-      }
-    } else if (!isPagination) {
-      const prevY = window.scrollY - window.innerHeight * 0.8;
-      if (prevY > 20) {
-        window.scrollTo({ top: prevY, behavior: "smooth" });
-        return;
-      }
-    }
-    // If we reached the start, go to previous chapter
-    await handlePrev();
-  };
-
   const jumpToChapter = async (index: number) => {
     if (engine) {
       await engine.loadChapter(index);
       const currentChapter = engine.getCurrentChapter();
       setChapter(currentChapter);
-      setShowToc(false);
+      setActivePanel(null);
       setShowMenu(false);
-      window.scrollTo(0, 0);
-      if (contentRef.current) contentRef.current.scrollLeft = 0;
+      if (contentRef.current) {
+          contentRef.current.scrollTop = 0;
+          contentRef.current.scrollLeft = 0;
+      }
       if (currentChapter) await saveCurrentProgress(currentChapter, 0);
     }
+  };
+
+  const handleNext = async () => {
+      if (engine && chapter && chapter.index < toc.length - 1) {
+          await jumpToChapter(chapter.index + 1);
+      } else {
+          alert(strings.reader.endOfBook);
+      }
+  };
+  
+  const handlePrev = async () => {
+      if (engine && chapter && chapter.index > 0) {
+          await jumpToChapter(chapter.index - 1);
+      } else {
+          alert(strings.reader.startOfBook);
+      }
+  };
+
+  const handlePageNext = async () => {
+    const isPagination = settings.pageMode === "pagination";
+    if (isPagination && contentRef.current) {
+      const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
+      if (Math.ceil(scrollLeft + clientWidth) < scrollWidth - 20) {
+        contentRef.current.scrollTo({ left: scrollLeft + clientWidth, behavior: "smooth" });
+        return;
+      }
+    } else if (!isPagination && contentRef.current) {
+      const { scrollTop, clientHeight, scrollHeight } = contentRef.current;
+      if (scrollTop + clientHeight < scrollHeight - 20) {
+        contentRef.current.scrollTo({ top: scrollTop + clientHeight * 0.8, behavior: "smooth" });
+        return;
+      }
+    }
+    await handleNext();
+  };
+
+  const handlePagePrev = async () => {
+    const isPagination = settings.pageMode === "pagination";
+    if (isPagination && contentRef.current) {
+      const { scrollLeft, clientWidth } = contentRef.current;
+      if (scrollLeft > 20) {
+        contentRef.current.scrollTo({ left: scrollLeft - clientWidth, behavior: "smooth" });
+        return;
+      }
+    } else if (!isPagination && contentRef.current) {
+      const { scrollTop, clientHeight } = contentRef.current;
+      if (scrollTop > 20) {
+        contentRef.current.scrollTo({ top: scrollTop - clientHeight * 0.8, behavior: "smooth" });
+        return;
+      }
+    }
+    await handlePrev();
   };
 
   const addBookmark = async () => {
     if (!chapter) return;
     let offset = 0;
-    if (settings.pageMode === "scroll") {
-      offset = window.scrollY;
-    } else if (settings.pageMode === "pagination" && contentRef.current) {
-      offset = contentRef.current.scrollLeft;
+    if (contentRef.current) {
+        offset = settings.pageMode === "scroll" ? contentRef.current.scrollTop : contentRef.current.scrollLeft;
     }
 
     const bookmark: Bookmark = {
@@ -299,12 +234,7 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       bookId: params.bookId,
       chapterIndex: chapter.index,
       offset,
-      contentPreview:
-        document.getSelection()?.toString().slice(0, 50) ||
-        document
-          .querySelector("div.whitespace-pre-wrap")
-          ?.textContent?.slice(0, 50) ||
-        "",
+      contentPreview: document.getSelection()?.toString().slice(0, 50) || document.querySelector(".reader-content")?.textContent?.slice(0, 50) || "",
       createdAt: new Date().toISOString(),
     };
     await db.bookmarks.add(bookmark);
@@ -317,17 +247,17 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
       await engine.loadChapter(bookmark.chapterIndex);
       const currentChapter = engine.getCurrentChapter();
       setChapter(currentChapter);
-      setShowToc(false);
+      setActivePanel(null);
       setShowMenu(false);
-      // Wait for content to render then scroll
       setTimeout(async () => {
-        if (settings.pageMode === "scroll") {
-          window.scrollTo(0, bookmark.offset);
-        } else if (settings.pageMode === "pagination" && contentRef.current) {
-          contentRef.current.scrollLeft = bookmark.offset;
+        if (contentRef.current) {
+            if (settings.pageMode === "scroll") {
+                contentRef.current.scrollTop = bookmark.offset;
+            } else {
+                contentRef.current.scrollLeft = bookmark.offset;
+            }
         }
-        if (currentChapter)
-          await saveCurrentProgress(currentChapter, bookmark.offset);
+        if (currentChapter) await saveCurrentProgress(currentChapter, bookmark.offset);
       }, 100);
     }
   };
@@ -335,17 +265,13 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
   const handleSummarize = async () => {
     if (!chapter) return;
     setIsAiLoading(true);
-    setShowAiPanel(true);
+    setActivePanel("ai");
     setShowMenu(false);
     try {
       const response = await fetch(apiUrl("/ai/summarize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: chapter.content,
-          bookId: params.bookId,
-          chapterIndex: chapter.index,
-        }),
+        body: JSON.stringify({ text: chapter.content, bookId: params.bookId, chapterIndex: chapter.index }),
       });
       const data = await response.json();
       setAiSummary(data.summary);
@@ -355,11 +281,6 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
     } finally {
       setIsAiLoading(false);
     }
-  };
-
-  const handleMiddleTap = () => {
-    setShowMenu(!showMenu);
-    if (showSettings) setShowSettings(false);
   };
 
   const updateFontSize = (delta: number) => {
@@ -379,458 +300,175 @@ export default function ReaderPage({ params }: { params: { bookId: string } }) {
 
   const updatePageMode = (mode: "scroll" | "pagination") => {
     if (!chapter) return;
-
-    // 1. Calculate current percentage
     let percentage = 0;
-    if (settings.pageMode === "scroll") {
-      percentage =
-        window.scrollY /
-        (document.documentElement.scrollHeight - window.innerHeight || 1);
-    } else if (contentRef.current) {
-      percentage =
-        contentRef.current.scrollLeft /
-        (contentRef.current.scrollWidth - contentRef.current.clientWidth || 1);
+    if (contentRef.current) {
+        if (settings.pageMode === "scroll") {
+            percentage = contentRef.current.scrollTop / (contentRef.current.scrollHeight - contentRef.current.clientHeight || 1);
+        } else {
+            percentage = contentRef.current.scrollLeft / (contentRef.current.scrollWidth - contentRef.current.clientWidth || 1);
+        }
     }
-
-    // 2. Update settings
     const newSettings = { ...settings, pageMode: mode };
     setSettings(newSettings);
     saveReaderSettings(newSettings);
     engine?.updateSettings(newSettings);
 
-    // 3. Restore position after re-render (Next.js/React takes a moment to update layout)
     setTimeout(() => {
-      if (mode === "scroll") {
-        const targetY =
-          percentage *
-          (document.documentElement.scrollHeight - window.innerHeight);
-        window.scrollTo(0, targetY);
-      } else if (contentRef.current) {
-        const targetX =
-          percentage *
-          (contentRef.current.scrollWidth - contentRef.current.clientWidth);
-        contentRef.current.scrollLeft = targetX;
+      if (contentRef.current) {
+          if (mode === "scroll") {
+              contentRef.current.scrollTop = percentage * (contentRef.current.scrollHeight - contentRef.current.clientHeight);
+          } else {
+              contentRef.current.scrollLeft = percentage * (contentRef.current.scrollWidth - contentRef.current.clientWidth);
+          }
       }
-    }, 150); // Slightly more delay for stability
+    }, 150);
   };
 
+  if (!chapter) return <div className="flex h-screen items-center justify-center text-[#2F2A24]">{strings.reader.loading}</div>;
+
   const currentThemeColors = THEMES[settings.theme] || THEMES.paper;
-
   const isPagination = settings.pageMode === "pagination";
-
-  if (!chapter)
-    return (
-      <div className="p-8 text-center text-[#2F2A24]">
-        {strings.reader.loading}
-      </div>
-    );
 
   return (
     <main
-      className="min-h-screen relative overflow-hidden transition-colors duration-300"
-      style={{
-        backgroundColor: currentThemeColors.bg,
-        color: currentThemeColors.text,
-      }}
+      className="fixed inset-0 overflow-hidden transition-colors duration-300 xl:grid xl:grid-cols-[240px_minmax(0,1fr)_338px] xl:max-w-[1280px] xl:mx-auto"
+      style={{ backgroundColor: currentThemeColors.bg, color: currentThemeColors.text }}
     >
-      {/* Content Area */}
-      <div
-        ref={contentRef}
-        className={`relative max-w-[760px] mx-auto px-4 pt-12 pb-12 transition-all duration-300 ${
-          isPagination
-            ? "h-screen overflow-x-auto overflow-y-hidden w-screen max-w-none px-8 py-12"
-            : "h-auto overflow-y-auto"
-        }`}
-        style={{
-          fontSize: `${settings.fontSize}px`,
-          lineHeight: settings.lineHeight,
-          columnWidth: isPagination ? "calc(100vw - 64px)" : "auto",
-          columnGap: "64px",
-        }}
-      >
-        <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
-        {/* We use dangerouslySetInnerHTML here because EPUB chapters contain sanitized HTML */}
-        <div
-          className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4"
-          dangerouslySetInnerHTML={{ __html: chapter.content }}
-        />
-
-        {/* Navigation Buttons */}
-        <div className="mt-12 mb-8 flex justify-between items-center border-t border-gray-100 pt-8 px-4 relative z-20">
-          <button
-            onClick={handlePrev}
-            className="flex-1 py-4 px-6 bg-gray-50 rounded-xl text-sm font-medium hover:bg-gray-100 active:scale-95 transition-all text-center mr-4"
-          >
-            {strings.reader.prevChapter}
-          </button>
-          <button
-            onClick={handleNext}
-            className="flex-1 py-4 px-6 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 active:scale-95 transition-all text-center ml-4"
-          >
-            {strings.reader.nextChapter}
-          </button>
-        </div>
-      </div>
-
-      {/* Tap Zones Overlay */}
-      <div className="fixed inset-0 z-10 flex pointer-events-none">
-        <div
-          className="w-1/4 h-full pointer-events-auto"
-          onClick={handlePagePrev}
-        />
-        <div
-          className="w-2/4 h-full pointer-events-auto"
-          onClick={handleMiddleTap}
-        />
-        <div
-          className="w-1/4 h-full pointer-events-auto"
-          onClick={handlePageNext}
+      {/* Desktop TOC Sidebar (Hidden on Mobile) */}
+      <div className="hidden xl:block h-full">
+        <TocDrawer
+            toc={toc} bookmarks={bookmarks} currentChapterIndex={chapter.index}
+            activeTab={activeTab} setActiveTab={setActiveTab}
+            onJumpToChapter={jumpToChapter} onJumpToBookmark={jumpToBookmark}
         />
       </div>
 
-      {/* Settings Backdrop */}
-      {showSettings && (
+      {/* Main Reading Area (Center Column on Desktop) */}
+      <div className="relative h-full flex flex-col w-full bg-inherit">
+        {/* Desktop Top Toolbar */}
+        <div className="hidden xl:block">
+            <ReaderTopBar
+                title={chapter.title} isVisible={true} isDesktop={true}
+                onBack={() => window.location.href = "/"}
+                onSummarize={handleSummarize} onBookmark={addBookmark} onSettings={() => setActivePanel("settings")}
+            />
+        </div>
+
+        {/* Mobile Top Toolbar Overlay */}
+        <div className="xl:hidden">
+            <ReaderTopBar
+                title={chapter.title} isVisible={showMenu} isDesktop={false}
+                onBack={() => window.location.href = "/"}
+                onSummarize={handleSummarize} onBookmark={addBookmark} onSettings={() => togglePanel("settings")}
+            />
+        </div>
+
+        {/* Scrollable / Paginable Content Canvas */}
         <div
-          className="fixed inset-0 z-30 bg-black/20"
-          onClick={() => setShowSettings(false)}
-        />
-      )}
-
-      {/* Top Toolbar */}
-      <div
-        className={`fixed top-0 inset-x-0 h-12 bg-white shadow-sm z-20 flex items-center px-4 transition-transform duration-200 ${showMenu ? "translate-y-0" : "-translate-y-full"}`}
-      >
-        <button
-          onClick={() => (window.location.href = "/")}
-          className="mr-4 text-sm font-medium"
+          ref={contentRef}
+          className={`flex-1 relative ${
+            isPagination
+              ? "overflow-x-auto overflow-y-hidden"
+              : "overflow-y-auto overflow-x-hidden"
+          } transition-all duration-300`}
+          style={{ scrollBehavior: "smooth" }}
         >
-          {strings.reader.backToShelf}
-        </button>
-        <span className="truncate flex-1 text-sm font-bold text-center">
-          {chapter.title}
-        </span>
-        <button
-          onClick={handleSummarize}
-          className="ml-4 text-sm font-medium text-purple-600"
-        >
-          {strings.reader.aiSummary}
-        </button>
-        <button
-          onClick={addBookmark}
-          className="ml-4 text-sm font-medium text-blue-600"
-        >
-          {strings.reader.bookmark}
-        </button>
-        <button
-          onClick={toggleSettings}
-          className="ml-4 text-sm font-medium text-gray-700"
-        >
-          {strings.reader.settings}
-        </button>
-      </div>
-
-      {/* Settings Sheet */}
-      <div
-        className={`fixed bottom-0 inset-x-0 bg-white shadow-[0_-2px_10_rgba(0,0,0,0.1)] z-40 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-300 ${showSettings ? "translate-y-0" : "translate-y-full"}`}
-      >
-        <div className="flex items-center justify-between mb-8">
-          <span className="text-sm font-medium text-gray-500">
-            {strings.reader.fontSize}
-          </span>
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => updateFontSize(-2)}
-              className="w-12 h-8 flex items-center justify-center text-xl font-bold"
-            >
-              A-
-            </button>
-            <span className="w-12 text-center font-bold">
-              {settings.fontSize}
-            </span>
-            <button
-              onClick={() => updateFontSize(2)}
-              className="w-12 h-8 flex items-center justify-center text-xl font-bold"
-            >
-              A+
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-8">
-          <span className="text-sm font-medium text-gray-500">
-            {strings.reader.background}
-          </span>
-          <div className="flex flex-1 justify-around ml-4">
-            {Object.entries(THEMES).map(([name, colors]) => (
-              <button
-                key={name}
-                onClick={() => updateTheme(name as ThemeName)}
-                className={`w-10 h-10 rounded-full border-2 transition-all ${settings.theme === name ? "border-blue-500 scale-110" : "border-transparent"}`}
-                style={{ backgroundColor: colors.bg }}
-                title={strings.reader.themeNames[name as ThemeName]}
-                aria-label={strings.reader.themeNames[name as ThemeName]}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-medium text-gray-500">
-            {strings.reader.pageMode}
-          </span>
-          <div className="flex items-center bg-gray-100 rounded-lg p-1 ml-4 flex-1">
-            <button
-              onClick={() => updatePageMode("scroll")}
-              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === "scroll" ? "bg-white shadow-sm font-bold text-blue-600" : "text-gray-500"}`}
-            >
-              {strings.reader.scroll}
-            </button>
-            <button
-              onClick={() => updatePageMode("pagination")}
-              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${settings.pageMode === "pagination" ? "bg-white shadow-sm font-bold text-blue-600" : "text-gray-500"}`}
-            >
-              {strings.reader.pagination}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Sheet */}
-      <div
-        className={`fixed bottom-0 inset-x-0 bg-white shadow-[0_-2px_10_rgba(0,0,0,0.1)] z-40 px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-300 ${showProgress ? "translate-y-0" : "translate-y-full"}`}
-      >
-        <h3 className="text-sm font-bold mb-4">阅读进度</h3>
-        <div className="w-full bg-gray-200 h-2 rounded-full mb-2">
           <div
-            className="bg-blue-600 h-2 rounded-full"
+            className={`max-w-[820px] mx-auto px-6 pt-12 pb-[120px] xl:px-12`}
             style={{
-              width: `${((chapter?.index || 0) / (toc.length || 1)) * 100}%`,
+                fontSize: `${settings.fontSize}px`,
+                lineHeight: settings.lineHeight,
+                columnWidth: isPagination ? "calc(100vw - 48px)" : "auto",
+                columnGap: "48px",
+                height: isPagination ? "100%" : "auto"
             }}
-          />
-        </div>
-        <p className="text-xs text-gray-500">
-          已阅读 {(chapter?.index || 0) + 1} / {toc.length} 章
-        </p>
-      </div>
-
-      {/* Bottom Toolbar */}
-      <div
-        className={`fixed bottom-0 inset-x-0 h-[calc(56px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white shadow-[0_-1px_3px_rgba(0,0,0,0.1)] z-20 flex items-center justify-around px-4 transition-transform duration-200 pointer-events-auto ${showMenu ? "translate-y-0" : "translate-y-full"}`}
-      >
-        <button
-          onClick={toggleToc}
-          className="text-sm active:scale-95 transition-transform"
-        >
-          {strings.reader.toc}
-        </button>
-        <button
-          onClick={toggleProgress}
-          className="text-sm active:scale-95 transition-transform"
-        >
-          {strings.reader.progress}
-        </button>
-        <button
-          onClick={toggleAiPanel}
-          className="text-sm text-purple-600 font-bold active:scale-95 transition-transform"
-        >
-          AI
-        </button>
-        <button
-          onClick={toggleSettings}
-          className={`text-sm active:scale-95 transition-transform ${showSettings ? "text-blue-500 font-bold" : ""}`}
-        >
-          {strings.reader.settings}
-        </button>
-        <button
-          onClick={handleNightModeToggle}
-          className="text-sm active:scale-95 transition-transform"
-        >
-          {strings.reader.nightMode}
-        </button>
-      </div>
-
-      {/* ToC Drawer Overlay */}
-      {showToc && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 transition-opacity"
-          onClick={() => setShowToc(false)}
-        />
-      )}
-
-      {/* ToC Drawer */}
-      <div
-        className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-white z-50 shadow-xl transition-transform duration-300 transform ${showToc ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <div className="h-full flex flex-col">
-          <div className="border-b">
-            <div className="flex p-2">
-              <button
-                onClick={() => setActiveTab("toc")}
-                className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === "toc" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500"}`}
-              >
-                {strings.reader.toc}
-              </button>
-              <button
-                onClick={() => setActiveTab("bookmarks")}
-                className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === "bookmarks" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500"}`}
-              >
-                {strings.reader.bookmarks}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {activeTab === "toc" ? (
-              <div>
-                <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                  {strings.reader.chapterCount.replace(
-                    "{count}",
-                    toc.length.toString(),
-                  )}
+          >
+            <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
+            <div
+              className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4"
+              dangerouslySetInnerHTML={{ __html: chapter.content }}
+            />
+            {/* Nav Buttons (Scroll mode end) */}
+            {!isPagination && (
+                <div className="mt-12 flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10">
+                    <button onClick={handlePrev} className="px-6 py-3 bg-[rgba(80,65,45,0.04)] rounded-full text-sm hover:bg-[rgba(80,65,45,0.08)] transition-colors">{strings.reader.prevChapter}</button>
+                    <button onClick={handleNext} className="px-6 py-3 bg-[#EEF2E9] text-[#678055] font-bold rounded-full text-sm hover:bg-[#DDEBD6] transition-colors">{strings.reader.nextChapter}</button>
                 </div>
-                {toc.map((item) => (
-                  <button
-                    key={item.index}
-                    onClick={() => jumpToChapter(item.index)}
-                    className={`w-full text-left px-4 py-3 border-b border-gray-50 flex items-center hover:bg-gray-50 active:bg-gray-100 ${chapter.index === item.index ? "text-blue-600 font-bold" : "text-gray-700"}`}
-                  >
-                    <span className="text-xs text-gray-400 w-8 inline-block">
-                      {item.index + 1}
-                    </span>
-                    <span className="flex-1 truncate text-sm">
-                      {item.title}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <div className="p-4 bg-gray-50 text-xs text-gray-500 uppercase font-bold tracking-wider">
-                  {strings.reader.bookmarkCount.replace(
-                    "{count}",
-                    bookmarks.length.toString(),
-                  )}
-                </div>
-                {bookmarks.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400 text-sm">
-                    {strings.reader.noBookmarks}
-                  </div>
-                ) : (
-                  bookmarks
-                    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-                    .map((bookmark) => (
-                      <button
-                        key={bookmark.id}
-                        onClick={() => jumpToBookmark(bookmark)}
-                        className="w-full text-left px-4 py-4 border-b border-gray-50 hover:bg-gray-50 active:bg-gray-100"
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-sm font-bold text-gray-800 truncate flex-1 mr-2">
-                            {toc[bookmark.chapterIndex]?.title ||
-                              strings.reader.chapterIndexLabel.replace(
-                                "{index}",
-                                (bookmark.chapterIndex + 1).toString(),
-                              )}
-                          </span>
-                          <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                            {new Date(bookmark.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 line-clamp-2 italic">
-                          &quot;
-                          {bookmark.contentPreview || strings.reader.noPreview}
-                          &quot;...
-                        </p>
-                      </button>
-                    ))
-                )}
-              </div>
             )}
           </div>
         </div>
-      </div>
 
-      {/* AI Panel Overlay */}
-      {showAiPanel && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 transition-opacity"
-          onClick={() => setShowAiPanel(false)}
-        />
-      )}
+        {/* Mobile Tap Zones */}
+        <div className="absolute inset-0 z-10 flex pointer-events-none xl:hidden">
+          <div className="w-1/4 h-full pointer-events-auto" onClick={handlePagePrev} />
+          <div className="w-2/4 h-full pointer-events-auto" onClick={() => { setShowMenu(!showMenu); setActivePanel(null); }} />
+          <div className="w-1/4 h-full pointer-events-auto" onClick={handlePageNext} />
+        </div>
 
-      {/* AI Assistant Panel (Right Drawer) */}
-      <div
-        className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-white z-50 shadow-xl transition-transform duration-300 transform ${showAiPanel ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="h-full flex flex-col">
-          <div className="p-4 border-b flex items-center justify-between bg-purple-50">
-            <h2 className="font-bold text-purple-800 flex items-center">
-              <span className="mr-2">✨</span> {strings.reader.aiAssistant}
-            </h2>
-            <button
-              onClick={() => setShowAiPanel(false)}
-              className="text-gray-400 p-1"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="mb-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-                {strings.reader.summaryTitle}
-              </h3>
-              {isAiLoading ? (
-                <div className="flex flex-col items-center py-12">
-                  <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
-                  <p className="text-sm text-gray-500">
-                    {strings.reader.summarizing}
-                  </p>
-                </div>
-              ) : (
-                <div className="prose prose-sm prose-purple">
-                  {aiSummary ? (
-                    <div className="bg-gray-50 p-4 rounded-xl text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {aiSummary}
-                    </div>
-                  ) : (
-                    <p className="text-center py-8 text-gray-400 italic">
-                      {strings.reader.aiPrompt}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 border-t pt-6">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-                {strings.reader.quickQuestions}
-              </h3>
-              <div className="grid grid-cols-1 gap-2">
-                <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
-                  {strings.reader.questionCharacters}
-                </button>
-                <button className="text-left p-3 text-sm bg-purple-50 hover:bg-purple-100 rounded-lg text-purple-700 transition-colors">
-                  {strings.reader.questionPlots}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-t bg-gray-50">
-            <div className="flex items-center bg-white border rounded-full px-4 py-2 shadow-sm focus-within:border-purple-400 transition-colors">
-              <input
-                type="text"
-                placeholder={strings.reader.aiInputPlaceholder}
-                className="flex-1 bg-transparent border-none outline-none text-sm py-1"
-              />
-              <button className="ml-2 text-purple-600 font-bold text-sm">
-                {strings.reader.send}
-              </button>
-            </div>
-          </div>
+        {/* Mobile Bottom Bar Overlay */}
+        <div className="xl:hidden">
+            <ReaderBottomBar
+                isVisible={showMenu} activePanel={activePanel}
+                onToggleToc={() => togglePanel("toc")}
+                onToggleProgress={() => togglePanel("progress")}
+                onToggleAi={() => handleSummarize()}
+                onToggleSettings={() => togglePanel("settings")}
+                onToggleNightMode={handleNightModeToggle}
+            />
         </div>
       </div>
+
+      {/* Desktop AI Sidebar (Right Column) */}
+      <div className="hidden xl:block h-full">
+         <AIReaderPanel isAiLoading={isAiLoading} aiSummary={aiSummary} isMobileDrawer={false} />
+      </div>
+
+      {/* Mobile Drawers & Overlays (Hidden on Desktop) */}
+      <div className="xl:hidden">
+          {/* Backdrop */}
+          {activePanel && (
+            <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setActivePanel(null)} />
+          )}
+
+          {/* TOC Drawer */}
+          <div className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-white z-50 shadow-xl transition-transform duration-300 ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}>
+            <TocDrawer toc={toc} bookmarks={bookmarks} currentChapterIndex={chapter.index} activeTab={activeTab} setActiveTab={setActiveTab} onJumpToChapter={jumpToChapter} onJumpToBookmark={jumpToBookmark} isMobileDrawer={true} onClose={() => setActivePanel(null)} />
+          </div>
+
+          {/* AI Drawer */}
+          <div className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-white z-50 shadow-xl transition-transform duration-300 ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}>
+            <AIReaderPanel isAiLoading={isAiLoading} aiSummary={aiSummary} isMobileDrawer={true} onClose={() => setActivePanel(null)} />
+          </div>
+
+          {/* Settings Sheet */}
+          <div className={`fixed bottom-0 inset-x-0 bg-white z-50 transition-transform duration-300 rounded-t-[24px] overflow-hidden ${activePanel === "settings" ? "translate-y-0" : "translate-y-full"}`}>
+            <SettingsSheet settings={settings} updateFontSize={updateFontSize} updateTheme={updateTheme} updatePageMode={updatePageMode} isMobileSheet={true} onClose={() => setActivePanel(null)} />
+          </div>
+
+          {/* Progress Sheet */}
+          <div className={`fixed bottom-0 inset-x-0 bg-[rgba(255,252,245,0.96)] z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] transition-transform duration-300 shadow-[0_-4px_20px_rgba(80,65,45,0.08)] rounded-t-[24px] ${activePanel === "progress" ? "translate-y-0" : "translate-y-full"}`}>
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-[#2F2A24]">阅读进度</h3>
+                <button onClick={() => setActivePanel(null)} className="text-[#6F665B] p-1">✕</button>
+             </div>
+             <div className="w-full bg-[rgba(80,65,45,0.08)] h-2 rounded-full mb-4">
+               <div className="bg-[#678055] h-2 rounded-full" style={{ width: `${((chapter?.index || 0) / (toc.length || 1)) * 100}%` }} />
+             </div>
+             <div className="flex justify-between text-sm text-[#6F665B]">
+               <span>{chapter?.title}</span>
+               <span>{(chapter?.index || 0) + 1} / {toc.length} 章</span>
+             </div>
+          </div>
+      </div>
+      
+      {/* Desktop Settings Modal Overlay */}
+      {activePanel === "settings" && (
+         <div className="hidden xl:flex fixed inset-0 z-50 bg-black/20 items-center justify-center" onClick={() => setActivePanel(null)}>
+             <div onClick={e => e.stopPropagation()}>
+                <SettingsSheet settings={settings} updateFontSize={updateFontSize} updateTheme={updateTheme} updatePageMode={updatePageMode} isMobileSheet={false} />
+             </div>
+         </div>
+      )}
     </main>
   );
 }

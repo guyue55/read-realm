@@ -9,7 +9,15 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // your existing config
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/library',
+        permanent: false,
+      },
+    ]
+  },
 };
 
 export default withPWA(nextConfig);
