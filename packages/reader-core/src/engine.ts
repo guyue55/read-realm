@@ -29,6 +29,10 @@ export class ReaderEngine {
     pageMode: 'scroll'
   };
 
+  // Cache for instant navigation (LRU-like approach)
+  private cache = new Map<number, ChapterData>();
+  private readonly MAX_CACHE_SIZE = 5;
+
   constructor(
     bookId: string,
     private chapterRepo: ChapterRepository,
@@ -54,8 +58,39 @@ export class ReaderEngine {
     await this.loadChapter(targetIndex);
   }
 
+  private async fetchChapter(index: number): Promise<ChapterData | null> {
+    if (this.cache.has(index)) {
+      return this.cache.get(index) || null;
+    }
+    const data = await this.chapterRepo.getChapter(this.bookId, index);
+    if (data) {
+      if (this.cache.size >= this.MAX_CACHE_SIZE) {
+        // Remove the oldest entry (Map iterates in insertion order)
+        const firstKey = this.cache.keys().next().value;
+        if (firstKey !== undefined) {
+          this.cache.delete(firstKey);
+        }
+      }
+      this.cache.set(index, data);
+    }
+    return data;
+  }
+
+  // Preloads adjacent chapters in the background
+  private preloadAdjacent(index: number): void {
+    Promise.all([
+      this.fetchChapter(index + 1),
+      index > 0 ? this.fetchChapter(index - 1) : Promise.resolve(null)
+    ]).catch((err) => {
+      console.warn("Preload failed", err);
+    });
+  }
+
   async loadChapter(index: number): Promise<void> {
-    this.currentChapter = await this.chapterRepo.getChapter(this.bookId, index);
+    this.currentChapter = await this.fetchChapter(index);
+    if (this.currentChapter) {
+      this.preloadAdjacent(index);
+    }
   }
 
   getCurrentChapter(): ChapterData | null {

@@ -74,8 +74,8 @@ export const strings = {
       paper: '纸张',
       sepia: '暖黄',
       green: '护眼',
+      warmGray: '暖灰',
       dark: '深色',
-      black: '纯黑',
     },
   },
   settings: {

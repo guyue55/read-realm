@@ -54,7 +54,7 @@ export const ReaderSettingsSchema = z.object({
   fontFamily: z.string(),
   fontSize: z.number(),
   lineHeight: z.number(),
-  theme: z.enum(["paper", "sepia", "green", "dark", "black"]),
+  theme: z.enum(["paper", "sepia", "green", "warmGray", "dark"]),
   pageMode: z.enum(["scroll", "pagination"]), // NEW
 });
 
