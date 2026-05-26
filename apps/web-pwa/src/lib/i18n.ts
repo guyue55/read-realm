@@ -32,6 +32,7 @@ export const strings = {
     globalResultsTitle: '搜索结果',
     notInLibrary: '不在书架',
     foundInCloud: '云端结果',
+    settings: '设置',
   },
   reader: {
     loading: '正在加载章节...',
@@ -68,6 +69,24 @@ export const strings = {
     nextChapter: '下一章',
     startOfBook: '已是第一章',
     endOfBook: '已是最后一章',
+    openSettings: '打开设置',
+    themeNames: {
+      paper: '纸张',
+      sepia: '暖黄',
+      green: '护眼',
+      dark: '深色',
+      black: '纯黑',
+    },
+  },
+  settings: {
+    title: '阅读设置',
+    subtitle: '这些设置会应用到阅读页，并在刷新或打开其他书籍后保留。',
+    backToShelf: '返回书架',
+    theme: '主题',
+    themeHint: '选择适合当前环境的阅读背景。',
+    previewTitle: '预览',
+    previewText: '一页安静的文字，应该像灯下摊开的纸，也可以像夜里柔和的屏幕。',
+    saved: '已保存',
   }
 };
 

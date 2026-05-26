@@ -6,7 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { ChapterRepository } from '../chapter/chapter.repository';
 import { OpenAIProvider } from '@reader/ai-core';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
-import * as crypto from 'crypto';
+import { createId } from '@reader/shared-types';
 
 @Injectable()
 export class AiService {
@@ -18,7 +18,10 @@ export class AiService {
   ) {}
 
   async summarize(bookId: string, chapterIndex: number) {
-    const chapter = await this.chapterRepository.findByIndex(bookId, chapterIndex);
+    const chapter = await this.chapterRepository.findByIndex(
+      bookId,
+      chapterIndex,
+    );
     if (!chapter) {
       throw new NotFoundException('Chapter not found');
     }
@@ -45,7 +48,7 @@ export class AiService {
 
     // Save to cache
     const aiView = {
-      id: crypto.randomUUID(),
+      id: createId(),
       bookId,
       chapterIndex,
       sourceHash: chapter.contentHash,
