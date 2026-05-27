@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions 社区讨论
+    url: https://github.com/guyue/novel-reader-platform/discussions
+    about: 用于技术咨询、日常闲聊、配置分享、提问求助。
+  - name: 📖 开发者文档 / 启动包说明
+    url: https://github.com/guyue/novel-reader-platform/tree/main/docs
+    about: 在提问或开发之前，请查阅 docs 文件夹中的开发与技术基线设计。

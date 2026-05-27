@@ -16,9 +16,7 @@ const navItems = [
   {
     label: "发现",
     href: "/search",
-    icon: (
-      <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm5.5-2.5L21 21" />
-    ),
+    icon: <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm5.5-2.5L21 21" />,
   },
   {
     label: "书架",
@@ -150,7 +148,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <main className="min-h-screen flex-1 md:pl-32">
+      <main className="min-h-screen flex-1 pb-[calc(78px+env(safe-area-inset-bottom))] md:pb-0 md:pl-32">
         <header className="sticky top-0 z-30 border-b border-[var(--ui-border)] bg-[rgba(248,246,240,0.82)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
@@ -173,7 +171,9 @@ export function AppShell({
               </div>
             </div>
             {rightNodes && (
-              <div className="flex shrink-0 items-center gap-2">{rightNodes}</div>
+              <div className="flex shrink-0 items-center gap-2">
+                {rightNodes}
+              </div>
             )}
           </div>
         </header>
@@ -184,6 +184,28 @@ export function AppShell({
           {children}
         </div>
       </main>
+
+      <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid grid-cols-4 rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden">
+        {navItems.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== "/library" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`ui-focus-ring flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[16px] text-xs font-semibold transition-colors ${
+                active
+                  ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent)]"
+                  : "text-[var(--ui-muted)] hover:bg-white/70 hover:text-[var(--ui-text)]"
+              }`}
+            >
+              <NavIcon>{item.icon}</NavIcon>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

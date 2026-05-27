@@ -41,9 +41,7 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
         ? "pagination"
         : DEFAULT_READER_SETTINGS.pageMode,
     uiMode:
-      candidate.uiMode === "simple"
-        ? "simple"
-        : DEFAULT_READER_SETTINGS.uiMode,
+      candidate.uiMode === "simple" ? "simple" : DEFAULT_READER_SETTINGS.uiMode,
   };
 }
 
@@ -62,5 +60,8 @@ export function loadReaderSettings(): ReaderSettingsState {
 
 export function saveReaderSettings(settings: ReaderSettingsState): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeSettings(settings)));
+  window.localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(normalizeSettings(settings)),
+  );
 }

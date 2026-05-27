@@ -1,0 +1,72 @@
+# Docker Ignore: 排除本地依赖、编译缓存与不相关文件，保持构建上下文纯净高效
+
+# ------------------------------------------
+# 1. 依赖与临时编译产物 (Dependencies & Outputs)
+# ------------------------------------------
+node_modules
+**/node_modules
+.pnpm-store
+.next
+**/.next
+dist
+**/dist
+out
+**/out
+.turbo
+**/.turbo
+.pnpm-debug.log
+pnpm-lock.yaml
+
+# ------------------------------------------
+# 2. 缓存与运行历史 (Caches & History)
+# ------------------------------------------
+.eslintcache
+.stylelintcache
+.tsbuildinfo
+*.tsbuildinfo
+**/*.tsbuildinfo
+.node_repl_history
+
+# ------------------------------------------
+# 3. 本地配置文件、密钥及 IDE 设置 (Local Settings & Secrets)
+# ------------------------------------------
+.env
+.env*.local
+.env.local
+.vscode
+.git
+.gitignore
+.github
+
+# ------------------------------------------
+# 4. 平台运行时临时数据 (Databases & Runtime Data)
+# ------------------------------------------
+data/*
+!data/.gitkeep
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ------------------------------------------
+# 5. 文档与设计稿（构建镜像不需要的非生产资源）
+# ------------------------------------------
+docs/
+adr/
+UI/
+fixtures/
+templates/
+README.md
+LICENSE
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+
+# ------------------------------------------
+# 6. 系统临时文件 (OS System Files)
+# ------------------------------------------
+.DS_Store
+**/.DS_Store
+*.log
+ehthumbs.db
+Thumbs.db

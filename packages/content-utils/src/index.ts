@@ -1,1 +1,1 @@
-export { detectAndDecode } from './encoding';
+export { detectAndDecode } from "./encoding";

@@ -1,5 +1,5 @@
-import { writeFile, readFile, mkdir, unlink } from 'fs/promises';
-import { join, dirname } from 'path';
+import { writeFile, readFile, mkdir, unlink } from "fs/promises";
+import { join, dirname } from "path";
 
 export class LocalFileBlobStorage {
   constructor(private baseDir: string) {}
@@ -21,7 +21,7 @@ export class LocalFileBlobStorage {
       await unlink(fullPath);
     } catch (error) {
       // Ignore if file doesn't exist
-      if ((error as any).code !== 'ENOENT') {
+      if ((error as any).code !== "ENOENT") {
         throw error;
       }
     }

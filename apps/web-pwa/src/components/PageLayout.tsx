@@ -13,7 +13,13 @@ export interface PageLayoutProps {
   headerContent?: React.ReactNode; // For the desktop header in default mode
 }
 
-export function PageLayout({ title, onBack, rightNodes, children, headerContent }: PageLayoutProps) {
+export function PageLayout({
+  title,
+  onBack,
+  rightNodes,
+  children,
+  headerContent,
+}: PageLayoutProps) {
   const [uiMode, setUiMode] = useState<"default" | "simple">("default");
   const [mounted, setMounted] = useState(false);
 
@@ -49,11 +55,16 @@ export function PageLayout({ title, onBack, rightNodes, children, headerContent 
           {/* Desktop Rich Header */}
           <header className="hidden xl:flex items-center gap-8 mb-12">
             {onBack && (
-              <button onClick={onBack} className="text-sm font-medium text-[#6F665B] hover:text-[#2F2A24]">
+              <button
+                onClick={onBack}
+                className="text-sm font-medium text-[#6F665B] hover:text-[#2F2A24]"
+              >
                 ← 返回
               </button>
             )}
-            <h2 className="text-2xl font-bold text-[#2F2A24] font-serif shrink-0">{title}</h2>
+            <h2 className="text-2xl font-bold text-[#2F2A24] font-serif shrink-0">
+              {title}
+            </h2>
             {headerContent}
           </header>
 

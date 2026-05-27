@@ -55,7 +55,9 @@ export function TocDrawer({
             {strings.reader.bookmarks}
           </button>
           {isMobileDrawer && onClose && (
-             <button onClick={onClose} className="px-2 text-[#6F665B]">✕</button>
+            <button onClick={onClose} className="px-2 text-[#6F665B]">
+              ✕
+            </button>
           )}
         </div>
       </div>
@@ -64,10 +66,15 @@ export function TocDrawer({
         {activeTab === "toc" ? (
           <div>
             <div className="p-4 bg-[rgba(80,65,45,0.04)] text-xs text-[#6F665B] uppercase font-bold tracking-wider">
-              {strings.reader.chapterCount.replace("{count}", toc.length.toString())}
+              {strings.reader.chapterCount.replace(
+                "{count}",
+                toc.length.toString(),
+              )}
             </div>
             {toc.map((item) => {
-              const quality = item.content ? analyzeChapterQuality(item.content, item.title) : null;
+              const quality = item.content
+                ? analyzeChapterQuality(item.content, item.title)
+                : null;
               return (
                 <button
                   key={item.index}
@@ -81,10 +88,15 @@ export function TocDrawer({
                   <span className="text-xs text-[#6F665B] w-8 inline-block opacity-70 shrink-0">
                     {item.index + 1}
                   </span>
-                  <span className="flex-1 truncate text-sm mr-2">{item.title}</span>
+                  <span className="flex-1 truncate text-sm mr-2">
+                    {item.title}
+                  </span>
                   {quality && (
                     <span className="shrink-0">
-                      <QualityBadge issueType={quality.issueType} severity={quality.severity} />
+                      <QualityBadge
+                        issueType={quality.issueType}
+                        severity={quality.severity}
+                      />
                     </span>
                   )}
                 </button>
@@ -94,7 +106,10 @@ export function TocDrawer({
         ) : (
           <div>
             <div className="p-4 bg-[rgba(80,65,45,0.04)] text-xs text-[#6F665B] uppercase font-bold tracking-wider">
-              {strings.reader.bookmarkCount.replace("{count}", bookmarks.length.toString())}
+              {strings.reader.bookmarkCount.replace(
+                "{count}",
+                bookmarks.length.toString(),
+              )}
             </div>
             {bookmarks.length === 0 ? (
               <div className="p-8 text-center text-[#6F665B] text-sm">
@@ -114,7 +129,7 @@ export function TocDrawer({
                         {toc[bookmark.chapterIndex]?.title ||
                           strings.reader.chapterIndexLabel.replace(
                             "{index}",
-                            (bookmark.chapterIndex + 1).toString()
+                            (bookmark.chapterIndex + 1).toString(),
                           )}
                       </span>
                       <span className="text-[10px] text-[#6F665B] whitespace-nowrap">
@@ -122,7 +137,9 @@ export function TocDrawer({
                       </span>
                     </div>
                     <p className="text-xs text-[#6F665B] line-clamp-2 italic">
-                      &quot;{bookmark.contentPreview || strings.reader.noPreview}&quot;...
+                      &quot;
+                      {bookmark.contentPreview || strings.reader.noPreview}
+                      &quot;...
                     </p>
                   </button>
                 ))

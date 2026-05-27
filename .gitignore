@@ -1,16 +1,105 @@
+# ==========================================
+# 我的阅读世界 - Monorepo Git Ignore 配置规范
+# ==========================================
+
+# ------------------------------------------
+# 1. 依赖与第三方存储 (Dependencies)
+# ------------------------------------------
 node_modules
-.next
+**/node_modules
+.pnpm-store
+
+# ------------------------------------------
+# 2. 多端编译与打包产物 (Build Outputs)
+# ------------------------------------------
 dist
-coverage
+**/dist
+.next
+**/.next
+out
+**/out
+build
+**/build
+.turbo
+**/.turbo
+
+# ------------------------------------------
+# 3. 各种缓存与调试日志 (Caches and Logs)
+# ------------------------------------------
+*.log
+*.log*
+pnpm-debug.log*
+.eslintcache
+.stylelintcache
+.tsbuildinfo
+*.tsbuildinfo
+.node_repl_history
+.npm
+.cache
+.parcel-cache
+
+# ------------------------------------------
+# 4. 环境变量与本地密钥 (Environments and Secrets)
+# ------------------------------------------
 .env
 .env.local
-data/app.sqlite
-data/app.sqlite-*
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.local
+.env*.local
+
+# ------------------------------------------
+# 5. SQLite 数据库与运行时本地数据 (Databases & Runtime Data)
+# ------------------------------------------
+data/*
+!data/.gitkeep
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ------------------------------------------
+# 6. 编辑器与集成开发环境 (IDEs and Editors)
+# ------------------------------------------
+.idea/
+.project
+.classpath
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# 过滤本地 VS Code 自定义配置，但保留团队共享的核心配置
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vscode/*.local
+
+# ------------------------------------------
+# 7. 操作系统级系统文件 (OS System Files)
+# ------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-*.log
+# ------------------------------------------
+# 8. 测试与测试覆盖率 (Testing & Coverage)
+# ------------------------------------------
+coverage
+**/coverage
+.nyc_output
 
-.turbo/cache
-
+# ------------------------------------------
+# 9. 本地/辅助工具特定排除 (Specific Local Excludes)
+# ------------------------------------------
 superpowers
-docs/

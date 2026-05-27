@@ -26,7 +26,8 @@ export function BookCover({
   className = "",
   compact = false,
 }: BookCoverProps) {
-  const [base, accent, foil] = coverPalettes[hashTitle(title) % coverPalettes.length];
+  const [base, accent, foil] =
+    coverPalettes[hashTitle(title) % coverPalettes.length];
   const displayTitle = title.replace(/\s+/g, "").slice(0, compact ? 4 : 6);
 
   return (

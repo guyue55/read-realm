@@ -1,4 +1,4 @@
-import type { ReadingProgress, ReaderSettings } from '@reader/shared-types';
+import type { ReadingProgress, ReaderSettings } from "@reader/shared-types";
 
 export interface ChapterData {
   id: string;
@@ -22,12 +22,12 @@ export class ReaderEngine {
   private currentChapter: ChapterData | null = null;
   private progress: ReadingProgress | null = null;
   private settings: ReaderSettings = {
-    fontFamily: 'sans-serif',
+    fontFamily: "sans-serif",
     fontSize: 18,
     lineHeight: 1.7,
-    theme: 'paper',
-    pageMode: 'scroll',
-    uiMode: 'default'
+    theme: "paper",
+    pageMode: "scroll",
+    uiMode: "default",
   };
 
   // Cache for instant navigation (LRU-like approach)
@@ -37,7 +37,7 @@ export class ReaderEngine {
   constructor(
     bookId: string,
     private chapterRepo: ChapterRepository,
-    private progressRepo: ProgressRepository
+    private progressRepo: ProgressRepository,
   ) {
     this.bookId = bookId;
   }
@@ -49,7 +49,7 @@ export class ReaderEngine {
   updateSettings(newSettings: Partial<ReaderSettings>): void {
     this.settings = {
       ...this.settings,
-      ...newSettings
+      ...newSettings,
     };
   }
 
@@ -81,7 +81,7 @@ export class ReaderEngine {
   private preloadAdjacent(index: number): void {
     Promise.all([
       this.fetchChapter(index + 1),
-      index > 0 ? this.fetchChapter(index - 1) : Promise.resolve(null)
+      index > 0 ? this.fetchChapter(index - 1) : Promise.resolve(null),
     ]).catch((err) => {
       console.warn("Preload failed", err);
     });

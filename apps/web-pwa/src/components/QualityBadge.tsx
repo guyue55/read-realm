@@ -31,9 +31,13 @@ export function QualityBadge({ issueType, severity }: QualityBadgeProps) {
 // Utility to check chapter quality
 export function analyzeChapterQuality(
   content: string,
-  title: string
+  title: string,
 ): { issueType: QualityIssueType; severity: "warning" | "error" } | null {
-  if (!title || title.trim() === "" || title.startsWith("第") && title.length < 4 && content.length < 50) {
+  if (
+    !title ||
+    title.trim() === "" ||
+    (title.startsWith("第") && title.length < 4 && content.length < 50)
+  ) {
     return { issueType: "missing_title", severity: "error" };
   }
   if (content.length < 200) {
@@ -41,7 +45,7 @@ export function analyzeChapterQuality(
   }
   // Simple heuristic for repeating garbage
   if (content.match(/(.{20,})\1{3,}/)) {
-     return { issueType: "formatting", severity: "error" };
+    return { issueType: "formatting", severity: "error" };
   }
   return null;
 }
