@@ -1,1 +1,0 @@
-export { detectAndDecode } from './encoding';

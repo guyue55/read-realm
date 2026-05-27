@@ -1,0 +1,38 @@
+﻿ID,Epic,Story,Task,Priority,Sprint,Estimate,Dependencies,AcceptanceCriteria,Status
+E00-T01,工程骨架,初始化仓库,创建 pnpm workspace / turbo / tsconfig.base,P0,Sprint 0,0.5d,,pnpm install && pnpm lint 可运行,Ready
+E00-T02,工程骨架,应用骨架,创建 web-pwa/api/worker 三个 app,P0,Sprint 0,0.5d,E00-T01,目录结构符合基准线,Ready
+E00-T03,工程骨架,核心包骨架,创建 shared-types/reader-core/parser-core 等 package,P0,Sprint 0,0.5d,E00-T01,所有 package 可被 TypeScript 引用,Ready
+E00-T04,工程骨架,本地数据目录,创建 data/app.sqlite 与 storage 目录规范,P0,Sprint 0,0.5d,E00-T02,data/storage 子目录完整,Ready
+E01-T01,共享类型,核心模型,定义 Book/Chapter/ChapterMeta,P0,Sprint 1,0.5d,E00-T03,类型无实现依赖,Ready
+E01-T02,共享类型,阅读模型,定义 ReadingProgress/ReaderSettings,P0,Sprint 1,0.5d,E01-T01,支持 anchor 而非页码,Ready
+E01-T03,共享类型,导入模型,定义 ImportTask/ImportStage/ImportEvent,P0,Sprint 1,0.5d,E01-T01,状态机覆盖解析流程,Ready
+E02-T01,前端书架,Dexie schema,建立 books/chapters/progress/settings 表,P0,Sprint 1,1d,E01-T01,可写入并读取本地书籍元数据,Ready
+E02-T02,前端书架,书架页,实现书架列表/继续阅读卡/导入入口,P0,Sprint 1,1d,E02-T01,空状态与有书状态可用,Ready
+E03-T01,TXT 解析,文件读取,File API + 分片读取,P0,Sprint 2,1d,E01-T03,大文件不阻塞主线程,Ready
+E03-T02,TXT 解析,编码识别,UTF-8/GBK/GB18030/Big5 解码策略,P0,Sprint 2,1d,E03-T01,四类 fixtures 可识别或提示选择,Ready
+E03-T03,TXT 解析,章节识别,候选行评分 + 正则组合,P0,Sprint 2,2d,E03-T02,常见章节格式可切章,Ready
+E03-T04,TXT 解析,解析预览,展示书籍信息/目录/异常/正文预览,P0,Sprint 2,1d,E03-T03,可确认入库或重新识别,Ready
+E05-T01,阅读器核心,ReaderEngine,实现阅读会话与章节加载接口,P0,Sprint 3,1d,E01-T02,不依赖 React/Dexie/API,Ready
+E05-T02,阅读器核心,滚动阅读,实现 ReaderCanvas 滚动模式,P0,Sprint 3,1d,E05-T01,可阅读章节正文,Ready
+E05-T03,阅读器核心,进度保存,节流保存 chapterIndex/offset/percentage/anchor,P0,Sprint 3,1d,E05-T02,刷新恢复位置,Ready
+E05-T04,阅读器核心,目录导航,TocDrawer + 当前章定位 + 上下章,P0,Sprint 3,1d,E05-T03,打开目录定位当前章,Ready
+E04-T01,EPUB 解析,解包与 OPF,JSZip + container.xml + OPF,P0,Sprint 4,1d,E03-T04,可提取标题/作者/spine,Ready
+E04-T02,EPUB 解析,目录解析,nav.xhtml / NCX 解析,P0,Sprint 4,1d,E04-T01,EPUB fixtures 可生成 TOC,Ready
+E04-T03,EPUB 解析,章节提取,章节 HTML 清理并转 Chapter[],P0,Sprint 4,1d,E04-T02,进入统一阅读器,Ready
+E06-T01,移动阅读,点击区,左25/中50/右25 tap zones,P0,Sprint 5,1d,E05-T02,手机端点击行为稳定,Ready
+E06-T02,移动阅读,底部菜单,目录/进度/设置/夜间/书签/更多,P0,Sprint 5,1d,E06-T01,菜单不遮挡安全区,Ready
+E06-T03,移动阅读,设置 Sheet,字号/行高/主题即时预览,P0,Sprint 5,1d,E06-T02,设置变更实时生效,Ready
+E07-T01,PWA 离线,Manifest/SW,PWA manifest + service worker,P0,Sprint 5,1d,E02-T02,可安装并缓存 app shell,Ready
+E07-T02,PWA 离线,OPFS 原文件,上传原文件保存到 OPFS,P0,Sprint 6,1d,E03-T01,重新打开可读取原文件元数据,Ready
+E05-T05,阅读器核心,分页模式,基础左右分页,P0,Sprint 6,2d,E05-T03,可左右翻页并保存进度,Ready
+E05-T06,阅读器核心,书签,当前位置书签添加/取消,P0,Sprint 6,0.5d,E05-T03,书签可在本地持久化,Ready
+E08-T01,本地后端,NestJS API,API 模块骨架,P0,Sprint 7,1d,E00-T02,服务可启动并健康检查,Ready
+E08-T02,本地后端,SQLite schema,Drizzle migration 初版,P0,Sprint 7,1.5d,E01-T01,核心表可创建,Ready
+E09-T01,本地后端,BlobStorage,LocalFileBlobStorage 实现,P0,Sprint 7,1d,E08-T02,章节/原文件可落盘,Ready
+E09-T02,本地后端,TaskQueue,SQLite task_queue + worker 轮询,P0,Sprint 8,1.5d,E08-T02,任务可重试/失败记录,Ready
+E10-T01,URL 解析,前端 Readability,粘贴 URL 前端尝试解析,P0,Sprint 8,1d,E03-T04,普通文章页可预览,Ready
+E10-T02,URL 解析,后端代理,fetch 代理 + 安全限制,P0,Sprint 8,1.5d,E09-T02,CORS 失败可兜底,Ready
+E11-T01,AI 摘要,AIProvider,当前章摘要接口抽象,P0,Sprint 9,1d,E05-T02,AIView 不覆盖原文,Ready
+E11-T02,AI 摘要,缓存去重,sourceHash + promptVersion + model 缓存,P0,Sprint 9,1d,E11-T01,重复请求复用结果,Ready
+E12-T01,测试验收,E2E,上传 TXT -> 阅读 -> 刷新恢复,P0,Sprint 9,1d,E05-T03,核心 E2E 通过,Ready
+E12-T02,测试验收,发布检查,MVP 验收清单全量检查,P0,Sprint 9,1d,E12-T01,形成发布候选报告,Ready

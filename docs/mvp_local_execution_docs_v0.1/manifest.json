@@ -1,0 +1,19 @@
+{
+  "name": "novel_mvp_local_execution_docs",
+  "version": "0.1",
+  "generated_at": "2026-05-25",
+  "root_path": "/mnt/data/novel_mvp_local_execution_docs_v0.1",
+  "files": [
+    "00-mvp-local-baseline.md",
+    "01-development-plan.md",
+    "02-backlog-implementation-plan.md",
+    "03-engineering-execution-rules.md",
+    "04-acceptance-and-test-plan.md",
+    "05-risk-and-decision-log.md",
+    "06-definition-of-ready-done.md",
+    "07-delivery-roadmap.md",
+    "README.md",
+    "backlog.csv"
+  ],
+  "file_count": 10
+}
