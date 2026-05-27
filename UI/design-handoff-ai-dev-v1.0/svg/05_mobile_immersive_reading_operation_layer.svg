@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+<title id="title">Mobile 沉浸阅读与操作层   Board 5 / 9</title><desc id="desc">Fully editable vector recreation. No embedded raster image.</desc>
+<defs>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5A4935" flood-opacity="0.14"/></filter>
+  <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5A4935" flood-opacity="0.12"/></filter>
+  <linearGradient id="coverDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D2224"/><stop offset="0.55" stop-color="#28343A"/><stop offset="1" stop-color="#0D0F10"/></linearGradient>
+  <linearGradient id="coverWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D7B6"/><stop offset="1" stop-color="#8C6B45"/></linearGradient>
+  <linearGradient id="coverGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDEBD6"/><stop offset="1" stop-color="#668256"/></linearGradient>
+  <style><![CDATA[
+    .bg{fill:#F7F1E6}.board-title{font:700 32px ui-serif,serif;fill:#2F2A24}.subtitle{font:14px ui-sans-serif,sans-serif;fill:#756A5E}.label{font:600 13px ui-sans-serif,sans-serif;fill:#2F2A24}.small{font:12px ui-sans-serif,sans-serif;fill:#766E64}.tiny{font:10px ui-sans-serif,sans-serif;fill:#8B8277}.body{font:16px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.body-small{font:13px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.h1{font:700 20px ui-serif,serif;fill:#2F2A24}.h2{font:700 16px ui-serif,serif;fill:#2F2A24}.panel{fill:#FFFDF8;stroke:#DED6C8;stroke-width:1.1}.soft{fill:#FAF7EF;stroke:#E2D9CA}.pill{fill:#EEF2E9;stroke:#CDD8C5}.green{fill:#678055}.muted{fill:#7B7164}.line{stroke:#DED6C8;stroke-width:1;fill:none}.darkText{fill:#1E2424}.navText{font:600 12px ui-sans-serif,sans-serif;fill:#556A48}.mono{font:11px ui-monospace,monospace;fill:#786E63}.editable-layer{vector-effect:non-scaling-stroke}.phone{fill:#0A0A0B;stroke:#242424;stroke-width:3}.screen{fill:#FBF6EC}.darkPanel{fill:#151A1B;stroke:#2C3632}.darkText2{fill:#D6D1C4}.link{fill:#678055}.chip{fill:#F1E8D7;stroke:#DBCDB6}.warn{fill:#FFF4DB;stroke:#E5C57F}.error{fill:#FFF0EC;stroke:#DCA79A}.ok{fill:#EDF4E8;stroke:#BFD0B4}
+  ]]></style>
+</defs>
+<rect x="0" y="0" width="1448" height="1086" fill="#F7F1E6"/>
+<text x="30" y="42" class="board-title">Mobile 沉浸阅读与操作层   Board 5 / 9</text>
+<text x="1418" y="34" class="subtitle" text-anchor="end">个人小说聚合阅读平台 · 沉浸阅读 · 智能相伴</text>
+<g id="panel_1" class="editable-layer">
+<rect x="32" y="72" width="335" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="90" r="12" fill="#678055"/>
+<text x="50" y="95" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">1</text>
+<text x="70" y="96" class="h2">沉浸阅读态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="78" y="115" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="90" y="133" width="216" height="344" rx="32" class="screen"/>
+<text x="108" y="167" class="tiny" style="fill:#111">9:41</text>
+<text x="273" y="167" class="tiny" style="fill:#111">▮▮</text>
+<text x="108" y="199" class="h2">第一章 穿越</text>
+</g>
+<text x="122" y="221" class="body-small">第一章 穿越</text>
+<text x="122" y="247" class="body-small">燕冲突，机缘微鸣。</text>
+<text x="122" y="273" class="body-small">星火点点，神明陨。</text>
+<text x="122" y="299" class="body-small">他身披旧甲，一位从倾念处反噬</text>
+<text x="122" y="325" class="body-small">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="122" y="351" class="body-small">众生里的真实一面。</text>
+<text x="122" y="377" class="body-small">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="122" y="403" class="body-small">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<text x="118" y="447" class="tiny">12:34</text>
+<text x="266" y="447" class="tiny">68%</text>
+<g id="panel_2" class="editable-layer">
+<rect x="382" y="72" width="335" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="400" cy="90" r="12" fill="#678055"/>
+<text x="400" y="95" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">2</text>
+<text x="420" y="96" class="h2">点击区翻页</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="428" y="115" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="440" y="133" width="216" height="344" rx="32" class="screen"/>
+<text x="458" y="167" class="tiny" style="fill:#111">9:41</text>
+<text x="623" y="167" class="tiny" style="fill:#111">▮▮</text>
+<text x="458" y="199" class="h2">阅读触控</text>
+</g>
+<rect x="440" y="198" width="54.0" height="254" fill="rgba(103,128,85,.10)" stroke="#BFD0B4" stroke-width="1"/>
+<rect x="494.0" y="198" width="108.0" height="254" fill="rgba(154,106,58,.10)" stroke="#D8C8AF" stroke-width="1"/>
+<rect x="602.0" y="198" width="54.0" height="254" fill="rgba(103,128,85,.10)" stroke="#BFD0B4" stroke-width="1"/>
+<text x="467.0" y="343" class="tiny" text-anchor="middle">上一页</text>
+<text x="548.0" y="343" class="tiny" text-anchor="middle">菜单</text>
+<text x="629.0" y="343" class="tiny" text-anchor="middle">下一页</text>
+<g id="panel_3" class="editable-layer">
+<rect x="732" y="72" width="335" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="750" cy="90" r="12" fill="#678055"/>
+<text x="750" y="95" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">3</text>
+<text x="770" y="96" class="h2">底部菜单态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="778" y="115" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="790" y="133" width="216" height="344" rx="32" class="screen"/>
+<text x="808" y="167" class="tiny" style="fill:#111">9:41</text>
+<text x="973" y="167" class="tiny" style="fill:#111">▮▮</text>
+<text x="808" y="199" class="h2">第一章 穿越</text>
+</g>
+<text x="820" y="213" class="body-small">第一章 穿越</text>
+<text x="820" y="239" class="body-small">燕冲突，机缘微鸣。</text>
+<text x="820" y="265" class="body-small">星火点点，神明陨。</text>
+<text x="820" y="291" class="body-small">他身披旧甲，一位从倾念处反噬</text>
+<rect x="790" y="338" width="216" height="160" rx="26" fill="rgba(255,253,248,.96)" stroke="#DED6C8" stroke-width="1"/>
+<text x="828" y="393" class="tiny" text-anchor="middle">目录</text>
+<text x="900" y="393" class="tiny" text-anchor="middle">进度</text>
+<text x="972" y="393" class="tiny" text-anchor="middle">设置</text>
+<text x="828" y="438" class="tiny" text-anchor="middle">夜间</text>
+<text x="900" y="438" class="tiny" text-anchor="middle">书签</text>
+<text x="972" y="438" class="tiny" text-anchor="middle">更多</text>
+<g id="panel_4" class="editable-layer">
+<rect x="1082" y="72" width="335" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="1100" cy="90" r="12" fill="#678055"/>
+<text x="1100" y="95" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">4</text>
+<text x="1120" y="96" class="h2">设置半屏面板</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="1128" y="115" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="1140" y="133" width="216" height="344" rx="32" class="screen"/>
+<text x="1158" y="167" class="tiny" style="fill:#111">9:41</text>
+<text x="1323" y="167" class="tiny" style="fill:#111">▮▮</text>
+<text x="1158" y="199" class="h2">设置</text>
+</g>
+<rect x="1140" y="283" width="216" height="220" rx="26" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1168" y="328" class="small">字号</text>
+<rect x="1225" y="320" width="100" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="1275" cy="322" r="5" fill="#678055"/>
+<text x="1168" y="368" class="small">行高</text>
+<rect x="1225" y="360" width="100" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="1275" cy="362" r="5" fill="#678055"/>
+<text x="1168" y="408" class="small">边距</text>
+<rect x="1225" y="400" width="100" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="1275" cy="402" r="5" fill="#678055"/>
+<text x="1168" y="448" class="small">背景</text>
+<rect x="1225" y="440" width="100" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="1275" cy="442" r="5" fill="#678055"/>
+<g id="panel_5" class="editable-layer">
+<rect x="32" y="555" width="435" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="573" r="12" fill="#678055"/>
+<text x="50" y="578" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">5</text>
+<text x="70" y="579" class="h2">目录抽屉态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="112" y="590" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="124" y="608" width="216" height="344" rx="32" class="screen"/>
+<text x="142" y="642" class="tiny" style="fill:#111">9:41</text>
+<text x="307" y="642" class="tiny" style="fill:#111">▮▮</text>
+<text x="142" y="674" class="h2">目录</text>
+</g>
+<text x="154" y="678" class="tiny">第1章  章节标题</text>
+<text x="154" y="706" class="tiny">第2章  章节标题</text>
+<rect x="142" y="716" width="180" height="24" rx="6" fill="#E7EDE0"/>
+<text x="154" y="734" class="tiny">第3章  章节标题</text>
+<text x="154" y="762" class="tiny">第4章  章节标题</text>
+<text x="154" y="790" class="tiny">第5章  章节标题</text>
+<text x="154" y="818" class="tiny">第6章  章节标题</text>
+<text x="154" y="846" class="tiny">第7章  章节标题</text>
+<text x="154" y="874" class="tiny">第8章  章节标题</text>
+<text x="154" y="902" class="tiny">第9章  章节标题</text>
+<g id="panel_6" class="editable-layer">
+<rect x="500" y="555" width="435" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="518" cy="573" r="12" fill="#678055"/>
+<text x="518" y="578" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">6</text>
+<text x="538" y="579" class="h2">夜间阅读态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="580" y="590" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="592" y="608" width="216" height="344" rx="32" class="screen"/>
+<text x="610" y="642" class="tiny" style="fill:#111">9:41</text>
+<text x="775" y="642" class="tiny" style="fill:#111">▮▮</text>
+<text x="610" y="674" class="h2">夜间</text>
+</g>
+<rect x="592" y="608" width="216" height="344" rx="32" fill="#1E1E1E"/>
+<text x="626" y="698" class="body-small" style="fill:#CFCFCF">第一章 穿越</text>
+<text x="626" y="724" class="body-small" style="fill:#CFCFCF">燕冲突，机缘微鸣。</text>
+<text x="626" y="750" class="body-small" style="fill:#CFCFCF">星火点点，神明陨。</text>
+<text x="626" y="776" class="body-small" style="fill:#CFCFCF">他身披旧甲，一位从倾念处反噬</text>
+<text x="626" y="802" class="body-small" style="fill:#CFCFCF">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="626" y="828" class="body-small" style="fill:#CFCFCF">众生里的真实一面。</text>
+<text x="626" y="854" class="body-small" style="fill:#CFCFCF">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="626" y="880" class="body-small" style="fill:#CFCFCF">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<g id="panel_7" class="editable-layer">
+<rect x="968" y="555" width="450" height="460" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="986" cy="573" r="12" fill="#678055"/>
+<text x="986" y="578" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">7</text>
+<text x="1006" y="579" class="h2">AI 助读面板</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="1050" y="590" width="240" height="380" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="1062" y="608" width="216" height="344" rx="32" class="screen"/>
+<text x="1080" y="642" class="tiny" style="fill:#111">9:41</text>
+<text x="1245" y="642" class="tiny" style="fill:#111">▮▮</text>
+<text x="1080" y="674" class="h2">AI 助读</text>
+</g>
+<rect x="1086" y="688" width="168" height="48" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1102" y="710" class="small">当前章摘要</text>
+<text x="1102" y="726" class="tiny">不覆盖原文，仅作辅助视图</text>
+<rect x="1086" y="756" width="168" height="48" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1102" y="778" class="small">前情提要</text>
+<text x="1102" y="794" class="tiny">不覆盖原文，仅作辅助视图</text>
+<rect x="1086" y="824" width="168" height="48" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1102" y="846" class="small">人物关系</text>
+<text x="1102" y="862" class="tiny">不覆盖原文，仅作辅助视图</text>
+<rect x="1086" y="892" width="168" height="48" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1102" y="914" class="small">设定/术语表</text>
+<text x="1102" y="930" class="tiny">不覆盖原文，仅作辅助视图</text>
+</svg>

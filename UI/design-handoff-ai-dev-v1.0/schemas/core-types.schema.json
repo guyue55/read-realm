@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reader handoff core types excerpt",
+  "definitions": {
+    "Book": {
+      "type": "object",
+      "required": ["id", "title", "sourceType", "format", "chapters"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "sourceType": {
+          "enum": ["upload", "url", "search", "bookSource", "manual"]
+        },
+        "format": {
+          "enum": ["txt", "epub", "html", "md", "pdf", "docx", "mobi", "azw3"]
+        },
+        "chapters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Chapter"
+          }
+        }
+      }
+    },
+    "Chapter": {
+      "type": "object",
+      "required": ["id", "index", "title", "content", "wordCount", "hash"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "wordCount": {
+          "type": "integer"
+        },
+        "sourceUrl": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        }
+      }
+    },
+    "ReadingProgress": {
+      "type": "object",
+      "required": ["bookId", "chapterId", "percentage", "updatedAt"],
+      "properties": {
+        "bookId": {
+          "type": "string"
+        },
+        "chapterId": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "anchor": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

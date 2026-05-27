@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+<title id="title">Web 沉浸式阅读工作区   Board 4 / 9</title><desc id="desc">Fully editable vector recreation. No embedded raster image.</desc>
+<defs>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5A4935" flood-opacity="0.14"/></filter>
+  <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5A4935" flood-opacity="0.12"/></filter>
+  <linearGradient id="coverDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D2224"/><stop offset="0.55" stop-color="#28343A"/><stop offset="1" stop-color="#0D0F10"/></linearGradient>
+  <linearGradient id="coverWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D7B6"/><stop offset="1" stop-color="#8C6B45"/></linearGradient>
+  <linearGradient id="coverGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDEBD6"/><stop offset="1" stop-color="#668256"/></linearGradient>
+  <style><![CDATA[
+    .bg{fill:#F7F1E6}.board-title{font:700 32px ui-serif,serif;fill:#2F2A24}.subtitle{font:14px ui-sans-serif,sans-serif;fill:#756A5E}.label{font:600 13px ui-sans-serif,sans-serif;fill:#2F2A24}.small{font:12px ui-sans-serif,sans-serif;fill:#766E64}.tiny{font:10px ui-sans-serif,sans-serif;fill:#8B8277}.body{font:16px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.body-small{font:13px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.h1{font:700 20px ui-serif,serif;fill:#2F2A24}.h2{font:700 16px ui-serif,serif;fill:#2F2A24}.panel{fill:#FFFDF8;stroke:#DED6C8;stroke-width:1.1}.soft{fill:#FAF7EF;stroke:#E2D9CA}.pill{fill:#EEF2E9;stroke:#CDD8C5}.green{fill:#678055}.muted{fill:#7B7164}.line{stroke:#DED6C8;stroke-width:1;fill:none}.darkText{fill:#1E2424}.navText{font:600 12px ui-sans-serif,sans-serif;fill:#556A48}.mono{font:11px ui-monospace,monospace;fill:#786E63}.editable-layer{vector-effect:non-scaling-stroke}.phone{fill:#0A0A0B;stroke:#242424;stroke-width:3}.screen{fill:#FBF6EC}.darkPanel{fill:#151A1B;stroke:#2C3632}.darkText2{fill:#D6D1C4}.link{fill:#678055}.chip{fill:#F1E8D7;stroke:#DBCDB6}.warn{fill:#FFF4DB;stroke:#E5C57F}.error{fill:#FFF0EC;stroke:#DCA79A}.ok{fill:#EDF4E8;stroke:#BFD0B4}
+  ]]></style>
+</defs>
+<rect x="0" y="0" width="1448" height="1086" fill="#F7F1E6"/>
+<text x="30" y="42" class="board-title">Web 沉浸式阅读工作区   Board 4 / 9</text>
+<text x="1418" y="34" class="subtitle" text-anchor="end">个人小说聚合阅读平台 · 沉浸阅读 · 智能相伴</text>
+<g id="panel_1" class="editable-layer">
+<rect x="30" y="74" width="1388" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="48" cy="92" r="12" fill="#678055"/>
+<text x="48" y="97" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">1</text>
+<text x="68" y="98" class="h2">桌面三栏阅读</text>
+</g>
+<g id="web_reader_workspace" class="editable-layer">
+<rect x="55" y="118" width="1338" height="320" rx="12" fill="#FBF6EC" stroke="#DCD2C4" stroke-width="1" filter="url(#softShadow)"/>
+<g id="sidebar_navigation" class="editable-layer">
+<rect x="55" y="118" width="92" height="320" rx="12" fill="#FBF8F0" stroke="#E4D9C9" stroke-width="1"/>
+<text x="81" y="153" class="h2" style="fill:#526047">墨问</text>
+<circle cx="78" cy="183" r="4" fill="#678055"/>
+<text x="91" y="187" class="tiny" style="fill:#526047">书架</text>
+<circle cx="78" cy="219" r="4" fill="#678055"/>
+<text x="91" y="223" class="tiny" style="fill:#526047">发现</text>
+<circle cx="78" cy="255" r="4" fill="#678055"/>
+<text x="91" y="259" class="tiny" style="fill:#526047">导入</text>
+<circle cx="78" cy="291" r="4" fill="#678055"/>
+<text x="91" y="295" class="tiny" style="fill:#526047">标签</text>
+<circle cx="78" cy="327" r="4" fill="#678055"/>
+<text x="91" y="331" class="tiny" style="fill:#526047">同步</text>
+<circle cx="78" cy="363" r="4" fill="#678055"/>
+<text x="91" y="367" class="tiny" style="fill:#526047">设置</text>
+<circle cx="81" cy="393" r="12" fill="#678055"/>
+<text x="100" y="389" class="tiny" style="fill:#526047">连续阅读 18 天</text>
+<text x="100" y="405" class="tiny" style="fill:#526047">本地 2.4GB</text>
+</g>
+<rect x="147" y="118" width="1246" height="320" fill="#FEFAF1"/>
+<rect x="147" y="118" width="190" height="320" fill="#F4EBDD" stroke="#D9CFBE" stroke-width="1"/>
+<text x="167" y="156" class="label" style="fill:#2E2A24">目录</text>
+<text x="167" y="188" class="tiny" style="fill:#675E52">第1章  穿越</text>
+<rect x="159" y="202" width="150" height="25" rx="6" fill="#E7EDE0"/>
+<text x="167" y="222" class="tiny" style="fill:#675E52">第2章  神秘时代</text>
+<text x="167" y="256" class="tiny" style="fill:#675E52">第3章  风起</text>
+<text x="167" y="290" class="tiny" style="fill:#675E52">第4章  梦会</text>
+<text x="167" y="324" class="tiny" style="fill:#675E52">第5章  月落</text>
+<text x="167" y="358" class="tiny" style="fill:#675E52">第6章  穿越</text>
+<text x="167" y="392" class="tiny" style="fill:#675E52">第7章  神秘时代</text>
+<text x="167" y="426" class="tiny" style="fill:#675E52">第8章  风起</text>
+<text x="167" y="460" class="tiny" style="fill:#675E52">第9章  梦会</text>
+<rect x="337" y="118" width="821" height="320" fill="#FFFDF7"/>
+<text x="659.0" y="178" class="h1" text-anchor="middle" style="fill:#2E2A24">第一章 穿越</text>
+<text x="505" y="223" class="body" style="fill:#302A24">第一章 穿越</text>
+<text x="505" y="255" class="body" style="fill:#302A24">燕冲突，机缘微鸣。</text>
+<text x="505" y="287" class="body" style="fill:#302A24">星火点点，神明陨。</text>
+<text x="505" y="319" class="body" style="fill:#302A24">他身披旧甲，一位从倾念处反噬</text>
+<text x="505" y="351" class="body" style="fill:#302A24">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="505" y="383" class="body" style="fill:#302A24">众生里的真实一面。</text>
+<text x="505" y="415" class="body" style="fill:#302A24">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="505" y="447" class="body" style="fill:#302A24">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<text x="505" y="479" class="body" style="fill:#302A24">第一章 穿越</text>
+<text x="505" y="511" class="body" style="fill:#302A24">燕冲突，机缘微鸣。</text>
+<text x="644.0" y="418" class="tiny" text-anchor="middle" style="fill:#8B8277">12:34        68%</text>
+<rect x="1158" y="118" width="235" height="320" fill="#FBF8F0" stroke="#D8CEBF" stroke-width="1"/>
+<text x="1176" y="156" class="label" style="fill:#2E2A24">AI 助读</text>
+<rect x="1176" y="188" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="1188" y="212" class="small" style="fill:#2E2A24">本章摘要</text>
+<text x="1188" y="232" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1176" y="276" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="1188" y="300" class="small" style="fill:#2E2A24">伏笔提示</text>
+<text x="1188" y="320" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1176" y="364" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="1188" y="388" class="small" style="fill:#2E2A24">人物问答</text>
+<text x="1188" y="408" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1176" y="452" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="1188" y="476" class="small" style="fill:#2E2A24">前情提要</text>
+<text x="1188" y="496" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+</g>
+<g id="panel_2" class="editable-layer">
+<rect x="30" y="500" width="440" height="520" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="48" cy="518" r="12" fill="#678055"/>
+<text x="48" y="523" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">2</text>
+<text x="68" y="524" class="h2">正文排版控制</text>
+</g>
+<text x="155" y="575" class="body">第一章 穿越</text>
+<text x="155" y="609" class="body">燕冲突，机缘微鸣。</text>
+<text x="155" y="643" class="body">星火点点，神明陨。</text>
+<text x="155" y="677" class="body">他身披旧甲，一位从倾念处反噬</text>
+<text x="155" y="711" class="body">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="155" y="745" class="body">众生里的真实一面。</text>
+<text x="155" y="779" class="body">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="155" y="813" class="body">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<text x="75" y="820" class="small">字号</text>
+<rect x="160" y="810" width="180" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="240" cy="812" r="6" fill="#678055"/>
+<text x="360" y="820" class="tiny">20px</text>
+<text x="75" y="852" class="small">行高</text>
+<rect x="160" y="842" width="180" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="252" cy="844" r="6" fill="#678055"/>
+<text x="360" y="852" class="tiny">1.70</text>
+<text x="75" y="884" class="small">段距</text>
+<rect x="160" y="874" width="180" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="264" cy="876" r="6" fill="#678055"/>
+<text x="360" y="884" class="tiny">0.5em</text>
+<text x="75" y="916" class="small">边距</text>
+<rect x="160" y="906" width="180" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="276" cy="908" r="6" fill="#678055"/>
+<text x="360" y="916" class="tiny">48px</text>
+<text x="75" y="948" class="small">正文宽度</text>
+<rect x="160" y="938" width="180" height="4" rx="2" fill="#D8D1C6"/>
+<circle cx="288" cy="940" r="6" fill="#678055"/>
+<text x="360" y="948" class="tiny">760px</text>
+<g id="panel_3" class="editable-layer">
+<rect x="500" y="500" width="440" height="520" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="518" cy="518" r="12" fill="#678055"/>
+<text x="518" y="523" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">3</text>
+<text x="538" y="524" class="h2">AI / 笔记侧栏</text>
+</g>
+<rect x="540" y="575" width="330" height="56" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="565" y="599" class="h2">本章摘要</text>
+<text x="565" y="618" class="tiny">点击可定位到正文锚点</text>
+<rect x="540" y="653" width="330" height="56" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="565" y="677" class="h2">人物卡：萧远</text>
+<text x="565" y="696" class="tiny">点击可定位到正文锚点</text>
+<rect x="540" y="731" width="330" height="56" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="565" y="755" class="h2">伏笔：青铜钥匙</text>
+<text x="565" y="774" class="tiny">点击可定位到正文锚点</text>
+<rect x="540" y="809" width="330" height="56" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="565" y="833" class="h2">前情提要</text>
+<text x="565" y="852" class="tiny">点击可定位到正文锚点</text>
+<rect x="540" y="887" width="330" height="56" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="565" y="911" class="h2">笔记与书签</text>
+<text x="565" y="930" class="tiny">点击可定位到正文锚点</text>
+<g id="panel_4" class="editable-layer">
+<rect x="970" y="500" width="448" height="520" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="988" cy="518" r="12" fill="#678055"/>
+<text x="988" y="523" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">4</text>
+<text x="1008" y="524" class="h2">搜索与回退栈</text>
+</g>
+<rect x="1010" y="575" width="340" height="34" rx="17" fill="#FFF" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="596" class="tiny">书内搜索：青铜钥匙</text>
+<rect x="1010" y="635" width="340" height="48" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="654" class="small">第12章 · 命中片段</text>
+<text x="1030" y="672" class="tiny">……青铜钥匙在夜色中微微发热……</text>
+<rect x="1010" y="700" width="340" height="48" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="719" class="small">第13章 · 命中片段</text>
+<text x="1030" y="737" class="tiny">……青铜钥匙在夜色中微微发热……</text>
+<rect x="1010" y="765" width="340" height="48" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="784" class="small">第14章 · 命中片段</text>
+<text x="1030" y="802" class="tiny">……青铜钥匙在夜色中微微发热……</text>
+<rect x="1010" y="830" width="340" height="48" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="849" class="small">第15章 · 命中片段</text>
+<text x="1030" y="867" class="tiny">……青铜钥匙在夜色中微微发热……</text>
+<rect x="1010" y="895" width="340" height="48" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1030" y="914" class="small">第16章 · 命中片段</text>
+<text x="1030" y="932" class="tiny">……青铜钥匙在夜色中微微发热……</text>
+</svg>

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+<title id="title">状态页、异常与恢复   Board 6 / 9</title><desc id="desc">Fully editable vector recreation. No embedded raster image.</desc>
+<defs>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5A4935" flood-opacity="0.14"/></filter>
+  <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5A4935" flood-opacity="0.12"/></filter>
+  <linearGradient id="coverDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D2224"/><stop offset="0.55" stop-color="#28343A"/><stop offset="1" stop-color="#0D0F10"/></linearGradient>
+  <linearGradient id="coverWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D7B6"/><stop offset="1" stop-color="#8C6B45"/></linearGradient>
+  <linearGradient id="coverGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDEBD6"/><stop offset="1" stop-color="#668256"/></linearGradient>
+  <style><![CDATA[
+    .bg{fill:#F7F1E6}.board-title{font:700 32px ui-serif,serif;fill:#2F2A24}.subtitle{font:14px ui-sans-serif,sans-serif;fill:#756A5E}.label{font:600 13px ui-sans-serif,sans-serif;fill:#2F2A24}.small{font:12px ui-sans-serif,sans-serif;fill:#766E64}.tiny{font:10px ui-sans-serif,sans-serif;fill:#8B8277}.body{font:16px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.body-small{font:13px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.h1{font:700 20px ui-serif,serif;fill:#2F2A24}.h2{font:700 16px ui-serif,serif;fill:#2F2A24}.panel{fill:#FFFDF8;stroke:#DED6C8;stroke-width:1.1}.soft{fill:#FAF7EF;stroke:#E2D9CA}.pill{fill:#EEF2E9;stroke:#CDD8C5}.green{fill:#678055}.muted{fill:#7B7164}.line{stroke:#DED6C8;stroke-width:1;fill:none}.darkText{fill:#1E2424}.navText{font:600 12px ui-sans-serif,sans-serif;fill:#556A48}.mono{font:11px ui-monospace,monospace;fill:#786E63}.editable-layer{vector-effect:non-scaling-stroke}.phone{fill:#0A0A0B;stroke:#242424;stroke-width:3}.screen{fill:#FBF6EC}.darkPanel{fill:#151A1B;stroke:#2C3632}.darkText2{fill:#D6D1C4}.link{fill:#678055}.chip{fill:#F1E8D7;stroke:#DBCDB6}.warn{fill:#FFF4DB;stroke:#E5C57F}.error{fill:#FFF0EC;stroke:#DCA79A}.ok{fill:#EDF4E8;stroke:#BFD0B4}
+  ]]></style>
+</defs>
+<rect x="0" y="0" width="1448" height="1086" fill="#F7F1E6"/>
+<text x="30" y="42" class="board-title">状态页、异常与恢复   Board 6 / 9</text>
+<text x="1418" y="34" class="subtitle" text-anchor="end">个人小说聚合阅读平台 · 沉浸阅读 · 智能相伴</text>
+<g id="panel_1" class="editable-layer">
+<rect x="45" y="90" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="63" cy="108" r="12" fill="#678055"/>
+<text x="63" y="113" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">1</text>
+<text x="83" y="114" class="h2">空书架</text>
+</g>
+<circle cx="255" cy="235" r="55" fill="#EEF2E9" stroke="#D7CBB9" stroke-width="1"/>
+<text x="255" y="250" class="h1" text-anchor="middle" style="fill:#678055">＋</text>
+<text x="255" y="320" class="h1" text-anchor="middle">空书架</text>
+<text x="255" y="350" class="small" text-anchor="middle">拖入一本 TXT / EPUB，开始你的私人书库</text>
+<rect x="190" y="395" width="130" height="34" rx="17" fill="#678055"/>
+<text x="255" y="417" class="small" text-anchor="middle" style="fill:#fff">选择文件</text>
+<g id="panel_2" class="editable-layer">
+<rect x="505" y="90" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="523" cy="108" r="12" fill="#678055"/>
+<text x="523" y="113" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">2</text>
+<text x="543" y="114" class="h2">解析中</text>
+</g>
+<circle cx="715" cy="235" r="55" fill="#F8EBD1" stroke="#D7CBB9" stroke-width="1"/>
+<text x="715" y="250" class="h1" text-anchor="middle" style="fill:#9A6A3A">…</text>
+<text x="715" y="320" class="h1" text-anchor="middle">解析中</text>
+<text x="715" y="350" class="small" text-anchor="middle">正在识别章节、净化正文、生成目录</text>
+<rect x="650" y="395" width="130" height="34" rx="17" fill="#678055"/>
+<text x="715" y="417" class="small" text-anchor="middle" style="fill:#fff">查看进度</text>
+<g id="panel_3" class="editable-layer">
+<rect x="965" y="90" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="983" cy="108" r="12" fill="#678055"/>
+<text x="983" y="113" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">3</text>
+<text x="1003" y="114" class="h2">解析失败</text>
+</g>
+<circle cx="1175" cy="235" r="55" fill="#FFF0EC" stroke="#D7CBB9" stroke-width="1"/>
+<text x="1175" y="250" class="h1" text-anchor="middle" style="fill:#9A6A3A">!</text>
+<text x="1175" y="320" class="h1" text-anchor="middle">解析失败</text>
+<text x="1175" y="350" class="small" text-anchor="middle">无法稳定识别章节，请手动修正或按单章导入</text>
+<rect x="1110" y="395" width="130" height="34" rx="17" fill="#678055"/>
+<text x="1175" y="417" class="small" text-anchor="middle" style="fill:#fff">手动修正</text>
+<g id="panel_4" class="editable-layer">
+<rect x="45" y="550" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="63" cy="568" r="12" fill="#678055"/>
+<text x="63" y="573" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">4</text>
+<text x="83" y="574" class="h2">弱网离线</text>
+</g>
+<circle cx="255" cy="695" r="55" fill="#EEF2E9" stroke="#D7CBB9" stroke-width="1"/>
+<text x="255" y="710" class="h1" text-anchor="middle" style="fill:#678055">↻</text>
+<text x="255" y="780" class="h1" text-anchor="middle">弱网离线</text>
+<text x="255" y="810" class="small" text-anchor="middle">当前网络不可用，已缓存章节可继续阅读</text>
+<rect x="190" y="855" width="130" height="34" rx="17" fill="#678055"/>
+<text x="255" y="877" class="small" text-anchor="middle" style="fill:#fff">查看缓存</text>
+<g id="panel_5" class="editable-layer">
+<rect x="505" y="550" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="523" cy="568" r="12" fill="#678055"/>
+<text x="523" y="573" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">5</text>
+<text x="543" y="574" class="h2">同步冲突</text>
+</g>
+<circle cx="715" cy="695" r="55" fill="#FFF4DB" stroke="#D7CBB9" stroke-width="1"/>
+<text x="715" y="710" class="h1" text-anchor="middle" style="fill:#9A6A3A">⇄</text>
+<text x="715" y="780" class="h1" text-anchor="middle">同步冲突</text>
+<text x="715" y="810" class="small" text-anchor="middle">本地与 API 数据不一致，请选择保留策略</text>
+<rect x="650" y="855" width="130" height="34" rx="17" fill="#678055"/>
+<text x="715" y="877" class="small" text-anchor="middle" style="fill:#fff">合并数据</text>
+<g id="panel_6" class="editable-layer">
+<rect x="965" y="550" width="420" height="400" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="983" cy="568" r="12" fill="#678055"/>
+<text x="983" y="573" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">6</text>
+<text x="1003" y="574" class="h2">存储不足</text>
+</g>
+<circle cx="1175" cy="695" r="55" fill="#FFF0EC" stroke="#D7CBB9" stroke-width="1"/>
+<text x="1175" y="710" class="h1" text-anchor="middle" style="fill:#9A6A3A">!</text>
+<text x="1175" y="780" class="h1" text-anchor="middle">存储不足</text>
+<text x="1175" y="810" class="small" text-anchor="middle">本地空间不足，建议清理旧缓存或原文件</text>
+<rect x="1110" y="855" width="130" height="34" rx="17" fill="#678055"/>
+<text x="1175" y="877" class="small" text-anchor="middle" style="fill:#fff">清理空间</text>
+</svg>

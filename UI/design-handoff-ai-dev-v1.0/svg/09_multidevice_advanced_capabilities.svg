@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+<title id="title">多端与高级能力路线   Board 9 / 9</title><desc id="desc">Fully editable vector recreation. No embedded raster image.</desc>
+<defs>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5A4935" flood-opacity="0.14"/></filter>
+  <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5A4935" flood-opacity="0.12"/></filter>
+  <linearGradient id="coverDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D2224"/><stop offset="0.55" stop-color="#28343A"/><stop offset="1" stop-color="#0D0F10"/></linearGradient>
+  <linearGradient id="coverWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D7B6"/><stop offset="1" stop-color="#8C6B45"/></linearGradient>
+  <linearGradient id="coverGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDEBD6"/><stop offset="1" stop-color="#668256"/></linearGradient>
+  <style><![CDATA[
+    .bg{fill:#F7F1E6}.board-title{font:700 32px ui-serif,serif;fill:#2F2A24}.subtitle{font:14px ui-sans-serif,sans-serif;fill:#756A5E}.label{font:600 13px ui-sans-serif,sans-serif;fill:#2F2A24}.small{font:12px ui-sans-serif,sans-serif;fill:#766E64}.tiny{font:10px ui-sans-serif,sans-serif;fill:#8B8277}.body{font:16px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.body-small{font:13px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.h1{font:700 20px ui-serif,serif;fill:#2F2A24}.h2{font:700 16px ui-serif,serif;fill:#2F2A24}.panel{fill:#FFFDF8;stroke:#DED6C8;stroke-width:1.1}.soft{fill:#FAF7EF;stroke:#E2D9CA}.pill{fill:#EEF2E9;stroke:#CDD8C5}.green{fill:#678055}.muted{fill:#7B7164}.line{stroke:#DED6C8;stroke-width:1;fill:none}.darkText{fill:#1E2424}.navText{font:600 12px ui-sans-serif,sans-serif;fill:#556A48}.mono{font:11px ui-monospace,monospace;fill:#786E63}.editable-layer{vector-effect:non-scaling-stroke}.phone{fill:#0A0A0B;stroke:#242424;stroke-width:3}.screen{fill:#FBF6EC}.darkPanel{fill:#151A1B;stroke:#2C3632}.darkText2{fill:#D6D1C4}.link{fill:#678055}.chip{fill:#F1E8D7;stroke:#DBCDB6}.warn{fill:#FFF4DB;stroke:#E5C57F}.error{fill:#FFF0EC;stroke:#DCA79A}.ok{fill:#EDF4E8;stroke:#BFD0B4}
+  ]]></style>
+</defs>
+<rect x="0" y="0" width="1448" height="1086" fill="#F7F1E6"/>
+<text x="30" y="42" class="board-title">多端与高级能力路线   Board 9 / 9</text>
+<text x="1418" y="34" class="subtitle" text-anchor="end">个人小说聚合阅读平台 · 沉浸阅读 · 智能相伴</text>
+<g id="panel_1" class="editable-layer">
+<rect x="32" y="72" width="1366" height="260" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="90" r="12" fill="#678055"/>
+<text x="50" y="95" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">1</text>
+<text x="70" y="96" class="h2">阶段路线图</text>
+</g>
+<circle cx="90" cy="185" r="42" fill="#678055" stroke="#D8C8AF" stroke-width="1"/>
+<text x="90" y="179" class="small" text-anchor="middle" style="fill:#fff">Phase 1</text>
+<text x="90" y="197" class="tiny" text-anchor="middle" style="fill:#fff">Web/PWA MVP</text>
+<text x="90" y="270" class="small" text-anchor="middle">上传、解析、阅读、离线</text>
+<path d="M135,185 L365,185" fill="none" stroke="#678055" stroke-width="2"/>
+<circle cx="410" cy="185" r="42" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="410" y="179" class="small" text-anchor="middle" style="fill:#2E2A24">Phase 2</text>
+<text x="410" y="197" class="tiny" text-anchor="middle" style="fill:#2E2A24">小程序轻端</text>
+<text x="410" y="270" class="small" text-anchor="middle">书架、续读、提醒</text>
+<path d="M455,185 L685,185" fill="none" stroke="#678055" stroke-width="2"/>
+<circle cx="730" cy="185" r="42" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="730" y="179" class="small" text-anchor="middle" style="fill:#2E2A24">Phase 3</text>
+<text x="730" y="197" class="tiny" text-anchor="middle" style="fill:#2E2A24">移动 App</text>
+<text x="730" y="270" class="small" text-anchor="middle">TTS、音量键、系统文件</text>
+<path d="M775,185 L1005,185" fill="none" stroke="#678055" stroke-width="2"/>
+<circle cx="1050" cy="185" r="42" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="1050" y="179" class="small" text-anchor="middle" style="fill:#2E2A24">Phase 4</text>
+<text x="1050" y="197" class="tiny" text-anchor="middle" style="fill:#2E2A24">桌面端</text>
+<text x="1050" y="270" class="small" text-anchor="middle">批量导入、转换、管理</text>
+<g id="panel_2" class="editable-layer">
+<rect x="32" y="365" width="420" height="620" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="383" r="12" fill="#678055"/>
+<text x="50" y="388" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">2</text>
+<text x="70" y="389" class="h2">共享核心包</text>
+</g>
+<rect x="70" y="430" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="138" y="457" class="mono" text-anchor="middle">shared-types</text>
+<rect x="240" y="430" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="308" y="457" class="mono" text-anchor="middle">reader-core</text>
+<rect x="70" y="510" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="138" y="537" class="mono" text-anchor="middle">parser-core</text>
+<rect x="240" y="510" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="308" y="537" class="mono" text-anchor="middle">storage-core</text>
+<rect x="70" y="590" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="138" y="617" class="mono" text-anchor="middle">sync-core</text>
+<rect x="240" y="590" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="308" y="617" class="mono" text-anchor="middle">viewport-core</text>
+<rect x="70" y="670" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="138" y="697" class="mono" text-anchor="middle">gesture-core</text>
+<rect x="240" y="670" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="308" y="697" class="mono" text-anchor="middle">rules-engine</text>
+<rect x="70" y="750" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="138" y="777" class="mono" text-anchor="middle">ai-core</text>
+<rect x="240" y="750" width="135" height="44" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="308" y="777" class="mono" text-anchor="middle">ui-reader</text>
+<g id="panel_3" class="editable-layer">
+<rect x="490" y="365" width="420" height="620" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="508" cy="383" r="12" fill="#678055"/>
+<text x="508" y="388" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">3</text>
+<text x="528" y="389" class="h2">本地轻量后端 → 生产扩展</text>
+</g>
+<rect x="535" y="445" width="120" height="42" rx="10" fill="#EEF2E9" stroke="#CDD8C5" stroke-width="1"/>
+<text x="595" y="471" class="small" text-anchor="middle">SQLite</text>
+<path d="M665,466 L735,466" fill="none" stroke="#678055" stroke-width="2"/>
+<rect x="745" y="445" width="130" height="42" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="810" y="471" class="small" text-anchor="middle">PostgreSQL</text>
+<rect x="535" y="535" width="120" height="42" rx="10" fill="#EEF2E9" stroke="#CDD8C5" stroke-width="1"/>
+<text x="595" y="561" class="small" text-anchor="middle">本地文件</text>
+<path d="M665,556 L735,556" fill="none" stroke="#678055" stroke-width="2"/>
+<rect x="745" y="535" width="130" height="42" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="810" y="561" class="small" text-anchor="middle">S3 / R2 / MinIO</text>
+<rect x="535" y="625" width="120" height="42" rx="10" fill="#EEF2E9" stroke="#CDD8C5" stroke-width="1"/>
+<text x="595" y="651" class="small" text-anchor="middle">SQLite Task</text>
+<path d="M665,646 L735,646" fill="none" stroke="#678055" stroke-width="2"/>
+<rect x="745" y="625" width="130" height="42" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="810" y="651" class="small" text-anchor="middle">BullMQ + Redis</text>
+<rect x="535" y="715" width="120" height="42" rx="10" fill="#EEF2E9" stroke="#CDD8C5" stroke-width="1"/>
+<text x="595" y="741" class="small" text-anchor="middle">SQLite FTS5</text>
+<path d="M665,736 L735,736" fill="none" stroke="#678055" stroke-width="2"/>
+<rect x="745" y="715" width="130" height="42" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="810" y="741" class="small" text-anchor="middle">Meilisearch</text>
+<rect x="535" y="805" width="120" height="42" rx="10" fill="#EEF2E9" stroke="#CDD8C5" stroke-width="1"/>
+<text x="595" y="831" class="small" text-anchor="middle">AI Provider</text>
+<path d="M665,826 L735,826" fill="none" stroke="#678055" stroke-width="2"/>
+<rect x="745" y="805" width="130" height="42" rx="10" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="810" y="831" class="small" text-anchor="middle">独立 AI Service</text>
+<g id="panel_4" class="editable-layer">
+<rect x="948" y="365" width="450" height="620" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="966" cy="383" r="12" fill="#678055"/>
+<text x="966" y="388" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">4</text>
+<text x="986" y="389" class="h2">高级能力预留</text>
+</g>
+<rect x="990" y="445" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="474" class="h2">书源规则与搜索 Provider</text>
+<rect x="990" y="520" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="549" class="h2">章节质量检测 / 补源</text>
+<rect x="990" y="595" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="624" class="h2">全文搜索 / 笔记导出</text>
+<rect x="990" y="670" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="699" class="h2">TTS / 翻译 / 词典</text>
+<rect x="990" y="745" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="774" class="h2">人物关系 / 时间线</text>
+<rect x="990" y="820" width="330" height="48" rx="12" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="1015" y="849" class="h2">写作工作台</text>
+</svg>

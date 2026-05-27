@@ -1,0 +1,218 @@
+[
+  {
+    "id": "M01",
+    "slug": "mobile-library",
+    "name": "移动端书架首页",
+    "route": "/library",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M02",
+    "slug": "mobile-import",
+    "name": "移动端导入解析页",
+    "route": "/import",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M03",
+    "slug": "mobile-parse-preview",
+    "name": "移动端解析预览页",
+    "route": "/import/preview/:taskId",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M04",
+    "slug": "mobile-reader-immersive",
+    "name": "移动端沉浸阅读态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M05",
+    "slug": "mobile-reader-menu",
+    "name": "移动端阅读菜单态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M06",
+    "slug": "mobile-reader-settings",
+    "name": "移动端阅读设置态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M07",
+    "slug": "mobile-toc-drawer",
+    "name": "移动端目录抽屉态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M08",
+    "slug": "mobile-reader-night",
+    "name": "移动端夜间阅读态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M09",
+    "slug": "mobile-ai-panel",
+    "name": "移动端 AI 面板态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M10",
+    "slug": "mobile-empty-offline",
+    "name": "移动端空状态/离线态",
+    "route": "/library or /reader/:bookId",
+    "platform": "mobile",
+    "type": "state"
+  },
+  {
+    "id": "M11",
+    "slug": "mobile-book-detail",
+    "name": "移动端书籍详情页",
+    "route": "/book/:bookId",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M12",
+    "slug": "mobile-progress-sheet",
+    "name": "移动端阅读进度面板",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "reader-state"
+  },
+  {
+    "id": "M13",
+    "slug": "mobile-notes-bookmarks",
+    "name": "移动端书签笔记页",
+    "route": "/notes or /reader/:bookId/notes",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M14",
+    "slug": "mobile-discovery-search",
+    "name": "移动端发现搜索页",
+    "route": "/search",
+    "platform": "mobile",
+    "type": "page"
+  },
+  {
+    "id": "M15",
+    "slug": "mobile-long-text-stress",
+    "name": "移动端长文本压力页",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "stress"
+  },
+  {
+    "id": "M16",
+    "slug": "mobile-narrow-screen-stress",
+    "name": "移动端极窄屏压力页",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "type": "stress"
+  },
+  {
+    "id": "W01",
+    "slug": "web-library",
+    "name": "Web 书架首页",
+    "route": "/library",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W02",
+    "slug": "web-import-parse",
+    "name": "Web 导入解析页",
+    "route": "/import",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W03",
+    "slug": "web-parse-preview",
+    "name": "Web 解析预览页",
+    "route": "/import/preview/:taskId",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W04",
+    "slug": "web-reader-workspace",
+    "name": "Web 三栏阅读工作区",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "type": "reader-state"
+  },
+  {
+    "id": "W05",
+    "slug": "web-reader-night-settings",
+    "name": "Web 夜间阅读设置页",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "type": "reader-state"
+  },
+  {
+    "id": "W06",
+    "slug": "web-quality-state",
+    "name": "Web 解析质量/状态页",
+    "route": "/import/preview/:taskId",
+    "platform": "web",
+    "type": "state"
+  },
+  {
+    "id": "W07",
+    "slug": "web-book-detail",
+    "name": "Web 书籍详情页",
+    "route": "/book/:bookId",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W08",
+    "slug": "web-discovery-search",
+    "name": "Web 发现搜索页",
+    "route": "/search",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W09",
+    "slug": "web-settings-storage",
+    "name": "Web 设置与存储页",
+    "route": "/settings",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W10",
+    "slug": "web-notes-ai-assets",
+    "name": "Web 笔记与 AI 资产页",
+    "route": "/notes",
+    "platform": "web",
+    "type": "page"
+  },
+  {
+    "id": "W11",
+    "slug": "web-wide-screen-stress",
+    "name": "Web 宽屏压力页",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "type": "stress"
+  }
+]

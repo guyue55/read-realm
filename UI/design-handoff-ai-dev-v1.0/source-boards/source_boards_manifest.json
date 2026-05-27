@@ -1,0 +1,173 @@
+{
+  "createdAt": "2026-05-25T11:34:25.631972Z",
+  "purpose": "PNG source boards used to generate/edit the editable SVG suite, added for AI development handoff traceability.",
+  "canonicalBoards": [
+    {
+      "board": 1,
+      "title": "核心主流程总览",
+      "canonicalPng": "source-boards/canonical-board-png/01_core_flow_overview.png",
+      "sourceOriginalFile": "ui界面设计展示板.png",
+      "pairedSvg": "svg/01_core_flow_overview.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "d193fea367c61632be48b842dad964c883c92571de82e46205680806c33af2d6"
+    },
+    {
+      "board": 2,
+      "title": "书架、发现与书籍详情",
+      "canonicalPng": "source-boards/canonical-board-png/02_bookshelf_discovery_detail.png",
+      "sourceOriginalFile": "数字小说平台界面设计展示.png",
+      "pairedSvg": "svg/02_bookshelf_discovery_detail.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "9a7fd8e8127cbd5d2f79b06e9244c5049b467be5a75685430df074289676b9ae"
+    },
+    {
+      "board": 3,
+      "title": "导入、解析与内容治理",
+      "canonicalPng": "source-boards/canonical-board-png/03_import_parse_content_governance.png",
+      "sourceOriginalFile": "界面设计与内容导入演示.png",
+      "pairedSvg": "svg/03_import_parse_content_governance.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "c860f93456a103ade5f6aa88dfd5c959f67e5e53cd6607a459446c0f5a4a36f0"
+    },
+    {
+      "board": 4,
+      "title": "Web 沉浸阅读工作区",
+      "canonicalPng": "source-boards/canonical-board-png/04_web_immersive_reading_workspace.png",
+      "sourceOriginalFile": "网页沉浸式阅读设计展示.png",
+      "pairedSvg": "svg/04_web_immersive_reading_workspace.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "fe7dde165a9028e59ec8904c846be00520df5b7f8293d2986ae8754d3549fa3c"
+    },
+    {
+      "board": 5,
+      "title": "Mobile 沉浸阅读与操作层",
+      "canonicalPng": "source-boards/canonical-board-png/05_mobile_immersive_reading_operation_layer.png",
+      "sourceOriginalFile": "移动阅读应用ui设计展示.png",
+      "pairedSvg": "svg/05_mobile_immersive_reading_operation_layer.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "e49df282d1673d09739656822fc92cc3fc4b41fbb9ee2d8069b4c7dfe206a2d8"
+    },
+    {
+      "board": 6,
+      "title": "状态页、异常与恢复",
+      "canonicalPng": "source-boards/canonical-board-png/06_states_exceptions_recovery.png",
+      "sourceOriginalFile": "状态页与异常恢复设计展示.png",
+      "pairedSvg": "svg/06_states_exceptions_recovery.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "1953411c100ce2982fdf18555615391f494e18dd6da424808edd4aff78538f54"
+    },
+    {
+      "board": 7,
+      "title": "AI 阅读增强",
+      "canonicalPng": "source-boards/canonical-board-png/07_ai_reading_enhancement.png",
+      "sourceOriginalFile": "ai_阅读增强功能界面设计.png",
+      "pairedSvg": "svg/07_ai_reading_enhancement.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "4a48a5d67f0b4fbf95a4124616099c192017da071351904a6906ddb7a9200179"
+    },
+    {
+      "board": 8,
+      "title": "个人中心、设置与同步",
+      "canonicalPng": "source-boards/canonical-board-png/08_profile_settings_sync.png",
+      "sourceOriginalFile": "个人中心与应用界面设计.png",
+      "pairedSvg": "svg/08_profile_settings_sync.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "e15e40e969cd9d6aef305de091e890625aee64eee076044219e97722e990e739"
+    },
+    {
+      "board": 9,
+      "title": "多端场景与高级能力",
+      "canonicalPng": "source-boards/canonical-board-png/09_multidevice_advanced_capabilities.png",
+      "sourceOriginalFile": "多端书籍平台ui展示.png",
+      "pairedSvg": "svg/09_multidevice_advanced_capabilities.svg",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "9e534dc4e0fb9c8f7f1d482a9d9c5338821674708ebf443e9c64f7cb959e7f5c"
+    }
+  ],
+  "rawPngFiles": [
+    {
+      "file": "source-boards/raw-png/ai_阅读增强功能界面设计.png",
+      "originalFile": "ai_阅读增强功能界面设计.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "4a48a5d67f0b4fbf95a4124616099c192017da071351904a6906ddb7a9200179"
+    },
+    {
+      "file": "source-boards/raw-png/imagegen.png",
+      "originalFile": "imagegen.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "9e534dc4e0fb9c8f7f1d482a9d9c5338821674708ebf443e9c64f7cb959e7f5c"
+    },
+    {
+      "file": "source-boards/raw-png/ui界面设计展示板.png",
+      "originalFile": "ui界面设计展示板.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "d193fea367c61632be48b842dad964c883c92571de82e46205680806c33af2d6"
+    },
+    {
+      "file": "source-boards/raw-png/个人中心与应用界面设计.png",
+      "originalFile": "个人中心与应用界面设计.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "e15e40e969cd9d6aef305de091e890625aee64eee076044219e97722e990e739"
+    },
+    {
+      "file": "source-boards/raw-png/多端书籍平台ui展示.png",
+      "originalFile": "多端书籍平台ui展示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "9e534dc4e0fb9c8f7f1d482a9d9c5338821674708ebf443e9c64f7cb959e7f5c"
+    },
+    {
+      "file": "source-boards/raw-png/数字小说平台界面设计展示.png",
+      "originalFile": "数字小说平台界面设计展示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "9a7fd8e8127cbd5d2f79b06e9244c5049b467be5a75685430df074289676b9ae"
+    },
+    {
+      "file": "source-boards/raw-png/状态页与异常恢复设计展示.png",
+      "originalFile": "状态页与异常恢复设计展示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "1953411c100ce2982fdf18555615391f494e18dd6da424808edd4aff78538f54"
+    },
+    {
+      "file": "source-boards/raw-png/界面设计与内容导入演示.png",
+      "originalFile": "界面设计与内容导入演示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "c860f93456a103ade5f6aa88dfd5c959f67e5e53cd6607a459446c0f5a4a36f0"
+    },
+    {
+      "file": "source-boards/raw-png/移动阅读应用ui设计展示.png",
+      "originalFile": "移动阅读应用ui设计展示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "e49df282d1673d09739656822fc92cc3fc4b41fbb9ee2d8069b4c7dfe206a2d8"
+    },
+    {
+      "file": "source-boards/raw-png/网页沉浸式阅读设计展示.png",
+      "originalFile": "网页沉浸式阅读设计展示.png",
+      "width": 1448,
+      "height": 1086,
+      "sha256": "fe7dde165a9028e59ec8904c846be00520df5b7f8293d2986ae8754d3549fa3c"
+    }
+  ],
+  "notes": [
+    "canonical-board-png/ contains normalized names paired to svg/*.svg.",
+    "raw-png/ preserves all detected original PNG files in /mnt/data, including duplicates.",
+    "SVG is still visual reference/editable backup; frontend implementation must use React components and design tokens, not embed SVG as UI."
+  ]
+}

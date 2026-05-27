@@ -1,0 +1,407 @@
+[
+  {
+    "id": "M01",
+    "page": "移动端书架首页",
+    "route": "/library",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M02",
+    "page": "移动端导入解析页",
+    "route": "/import",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M03",
+    "page": "移动端解析预览页",
+    "route": "/import/preview/:taskId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M04",
+    "page": "移动端沉浸阅读态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M05",
+    "page": "移动端阅读菜单态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M06",
+    "page": "移动端阅读设置态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M07",
+    "page": "移动端目录抽屉态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M08",
+    "page": "移动端夜间阅读态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M09",
+    "page": "移动端 AI 面板态",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M10",
+    "page": "移动端空状态/离线态",
+    "route": "/library or /reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M11",
+    "page": "移动端书籍详情页",
+    "route": "/book/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M12",
+    "page": "移动端阅读进度面板",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M13",
+    "page": "移动端书签笔记页",
+    "route": "/notes or /reader/:bookId/notes",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M14",
+    "page": "移动端发现搜索页",
+    "route": "/search",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M15",
+    "page": "移动端长文本压力页",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "M16",
+    "page": "移动端极窄屏压力页",
+    "route": "/reader/:bookId",
+    "platform": "mobile",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W01",
+    "page": "Web 书架首页",
+    "route": "/library",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W02",
+    "page": "Web 导入解析页",
+    "route": "/import",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W03",
+    "page": "Web 解析预览页",
+    "route": "/import/preview/:taskId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W04",
+    "page": "Web 三栏阅读工作区",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W05",
+    "page": "Web 夜间阅读设置页",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W06",
+    "page": "Web 解析质量/状态页",
+    "route": "/import/preview/:taskId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W07",
+    "page": "Web 书籍详情页",
+    "route": "/book/:bookId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W08",
+    "page": "Web 发现搜索页",
+    "route": "/search",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W09",
+    "page": "Web 设置与存储页",
+    "route": "/settings",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W10",
+    "page": "Web 笔记与 AI 资产页",
+    "route": "/notes",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  },
+  {
+    "id": "W11",
+    "page": "Web 宽屏压力页",
+    "route": "/reader/:bookId",
+    "platform": "web",
+    "checks": [
+      "不挤压",
+      "不变形",
+      "内容完整",
+      "圆角柔和",
+      "层级自然",
+      "沉浸优先"
+    ],
+    "status": "handoff-required"
+  }
+]

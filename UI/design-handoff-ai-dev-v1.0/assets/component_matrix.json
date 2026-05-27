@@ -1,0 +1,116 @@
+[
+  {
+    "component": "BookCard",
+    "input": "book, progress, displayMode",
+    "states": "默认/无封面/离线/选中/错误封面",
+    "usedIn": "书架、搜索、书籍详情推荐区"
+  },
+  {
+    "component": "ContinueReadingCard",
+    "input": "book, progress, lastReadAt",
+    "states": "有进度/无进度/离线可读/缓存缺失",
+    "usedIn": "书架首页"
+  },
+  {
+    "component": "ImportDropzone",
+    "input": "acceptedFormats, maxSize",
+    "states": "空/拖拽悬停/校验失败/上传中",
+    "usedIn": "导入页"
+  },
+  {
+    "component": "ImportProgress",
+    "input": "task",
+    "states": "排队/解析中/成功/失败/可取消",
+    "usedIn": "导入页、解析页"
+  },
+  {
+    "component": "ParsePreviewChapterList",
+    "input": "chapters, qualityIssues",
+    "states": "正常/可编辑/异常章/删除候选/空目录",
+    "usedIn": "解析预览页"
+  },
+  {
+    "component": "ReaderCanvas",
+    "input": "chapter, readerSettings, progress",
+    "states": "加载中/正文/空章/错误/夜间/离线",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "ReaderTopBar",
+    "input": "book, chapter, visibility",
+    "states": "隐藏/显示/返回/更多",
+    "usedIn": "阅读菜单态"
+  },
+  {
+    "component": "ReaderBottomBar",
+    "input": "actions, safeArea",
+    "states": "隐藏/显示/禁用/夜间",
+    "usedIn": "阅读菜单态"
+  },
+  {
+    "component": "TapZoneLayer",
+    "input": "viewport, readingMode",
+    "states": "上一页区/菜单区/下一页区/禁用",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "TocDrawer",
+    "input": "chapters, currentChapterId, issues",
+    "states": "当前章/异常章/搜索结果/空目录",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "SettingsSheet",
+    "input": "readerSettings",
+    "states": "字号/行高/边距/主题/亮度/实时预览",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "ProgressSheet",
+    "input": "progress, chapters",
+    "states": "拖动/跳章/章末/离线",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "AIReaderPanel",
+    "input": "chapter, aiViews",
+    "states": "摘要/前情/人物/术语/加载/失败",
+    "usedIn": "阅读页"
+  },
+  {
+    "component": "QualityBadge",
+    "input": "issueType, severity",
+    "states": "缺章/重复/广告/乱码/低质量",
+    "usedIn": "解析预览、目录"
+  },
+  {
+    "component": "OfflineBadge",
+    "input": "cacheStatus",
+    "states": "已缓存/未缓存/缓存中/失败",
+    "usedIn": "书架、阅读页"
+  },
+  {
+    "component": "SearchResultCard",
+    "input": "result, source",
+    "states": "本地/链接/书源/不可解析",
+    "usedIn": "发现搜索页"
+  },
+  {
+    "component": "StorageStatusCard",
+    "input": "quota, usage",
+    "states": "正常/接近上限/清理中/失败",
+    "usedIn": "设置页"
+  },
+  {
+    "component": "EmptyState",
+    "input": "title, action",
+    "states": "空书架/无结果/无笔记/无缓存",
+    "usedIn": "状态页"
+  },
+  {
+    "component": "ErrorState",
+    "input": "errorCode, retry",
+    "states": "解析失败/网络失败/格式不支持/恢复失败",
+    "usedIn": "状态页"
+  }
+]

@@ -1,0 +1,82 @@
+{
+  "version": "0.2",
+  "type": "true-vector-editable-svg",
+  "width": 1448,
+  "height": 1086,
+  "count": 9,
+  "noEmbeddedRaster": true,
+  "files": [
+    {
+      "file": "svg-vector-editable/01_core_flow_overview.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 354
+    },
+    {
+      "file": "svg-vector-editable/02_bookshelf_discovery_detail.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 244
+    },
+    {
+      "file": "svg-vector-editable/03_import_parse_content_governance.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 156
+    },
+    {
+      "file": "svg-vector-editable/04_web_immersive_reading_workspace.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 143
+    },
+    {
+      "file": "svg-vector-editable/05_mobile_immersive_reading_operation_layer.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 151
+    },
+    {
+      "file": "svg-vector-editable/06_states_exceptions_recovery.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 69
+    },
+    {
+      "file": "svg-vector-editable/07_ai_reading_enhancement.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 126
+    },
+    {
+      "file": "svg-vector-editable/08_profile_settings_sync.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 120
+    },
+    {
+      "file": "svg-vector-editable/09_multidevice_advanced_capabilities.svg",
+      "width": 1448,
+      "height": 1086,
+      "editable": true,
+      "embeddedRaster": false,
+      "approxElementCount": 99
+    }
+  ]
+}

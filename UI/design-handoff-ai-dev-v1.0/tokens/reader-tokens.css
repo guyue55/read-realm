@@ -1,0 +1,18 @@
+:root {
+  --reader-bg-paper: #f8f8f5;
+  --reader-bg-sepia: #f4ecd8;
+  --reader-bg-green: #ddebd6;
+  --reader-bg-warm-gray: #e8e3da;
+  --reader-bg-dark: #1e1e1e;
+  --reader-text-primary: #2f2a24;
+  --reader-text-secondary: #6f665b;
+  --reader-accent: #9a6a3a;
+  --reader-radius-card: 16px;
+  --reader-radius-sheet: 24px;
+  --reader-font-size-mobile: 18px;
+  --reader-font-size-desktop: 20px;
+  --reader-line-height: 1.65;
+  --reader-mobile-margin-x: 20px;
+  --reader-desktop-content-max-width: 760px;
+  --reader-desktop-canvas-width: 1280px;
+}

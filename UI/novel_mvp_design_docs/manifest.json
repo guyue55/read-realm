@@ -1,0 +1,19 @@
+{
+  "package": "novel_mvp_design_docs",
+  "title": "MVP 版设计文档包",
+  "generated_at": "2026-05-25T15:00:14.331371",
+  "files": [
+    "README.md",
+    "docs/architecture/01-tech-stack-architecture.md",
+    "docs/design/01-ui-design-development-spec.md",
+    "docs/product/01-requirements-design.md",
+    "docs/product/02-functional-design.md",
+    "docs/sources/source-ai-design-handoff-summary.md",
+    "docs/sources/source-ai-dev-input-summary.md",
+    "docs/sources/source-mvp-local-dev-plan-summary.md",
+    "docs/sources/source-product-and-search-plan.md",
+    "docs/sources/source-reading-function-research.md",
+    "docs/sources/source-reading-ui-research.md",
+    "docs/sources/source-reading-ui-summary.md"
+  ]
+}

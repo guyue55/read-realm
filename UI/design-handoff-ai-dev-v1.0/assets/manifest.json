@@ -1,0 +1,368 @@
+{
+  "handoffVersion": "1.0",
+  "designBaseline": "v1.9 page-by-page polished (documented latest)",
+  "availableSvgSource": "novel_ui_true_vector_svg_v0.2.zip",
+  "generatedAt": "2026-05-25",
+  "pages": [
+    {
+      "id": "M01",
+      "slug": "mobile-library",
+      "name": "移动端书架首页",
+      "route": "/library",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "M02",
+      "slug": "mobile-import",
+      "name": "移动端导入解析页",
+      "route": "/import",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "03_import_parse_content_governance.svg"
+    },
+    {
+      "id": "M03",
+      "slug": "mobile-parse-preview",
+      "name": "移动端解析预览页",
+      "route": "/import/preview/:taskId",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "03_import_parse_content_governance.svg"
+    },
+    {
+      "id": "M04",
+      "slug": "mobile-reader-immersive",
+      "name": "移动端沉浸阅读态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M05",
+      "slug": "mobile-reader-menu",
+      "name": "移动端阅读菜单态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M06",
+      "slug": "mobile-reader-settings",
+      "name": "移动端阅读设置态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M07",
+      "slug": "mobile-toc-drawer",
+      "name": "移动端目录抽屉态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M08",
+      "slug": "mobile-reader-night",
+      "name": "移动端夜间阅读态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M09",
+      "slug": "mobile-ai-panel",
+      "name": "移动端 AI 面板态",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "07_ai_reading_enhancement.svg"
+    },
+    {
+      "id": "M10",
+      "slug": "mobile-empty-offline",
+      "name": "移动端空状态/离线态",
+      "route": "/library or /reader/:bookId",
+      "platform": "mobile",
+      "type": "state",
+      "svg_ref": "06_states_exceptions_recovery.svg"
+    },
+    {
+      "id": "M11",
+      "slug": "mobile-book-detail",
+      "name": "移动端书籍详情页",
+      "route": "/book/:bookId",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "M12",
+      "slug": "mobile-progress-sheet",
+      "name": "移动端阅读进度面板",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "reader-state",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M13",
+      "slug": "mobile-notes-bookmarks",
+      "name": "移动端书签笔记页",
+      "route": "/notes or /reader/:bookId/notes",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M14",
+      "slug": "mobile-discovery-search",
+      "name": "移动端发现搜索页",
+      "route": "/search",
+      "platform": "mobile",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "M15",
+      "slug": "mobile-long-text-stress",
+      "name": "移动端长文本压力页",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "stress",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "M16",
+      "slug": "mobile-narrow-screen-stress",
+      "name": "移动端极窄屏压力页",
+      "route": "/reader/:bookId",
+      "platform": "mobile",
+      "type": "stress",
+      "svg_ref": "05_mobile_immersive_reading_operation_layer.svg"
+    },
+    {
+      "id": "W01",
+      "slug": "web-library",
+      "name": "Web 书架首页",
+      "route": "/library",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "W02",
+      "slug": "web-import-parse",
+      "name": "Web 导入解析页",
+      "route": "/import",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "03_import_parse_content_governance.svg"
+    },
+    {
+      "id": "W03",
+      "slug": "web-parse-preview",
+      "name": "Web 解析预览页",
+      "route": "/import/preview/:taskId",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "03_import_parse_content_governance.svg"
+    },
+    {
+      "id": "W04",
+      "slug": "web-reader-workspace",
+      "name": "Web 三栏阅读工作区",
+      "route": "/reader/:bookId",
+      "platform": "web",
+      "type": "reader-state",
+      "svg_ref": "04_web_immersive_reading_workspace.svg"
+    },
+    {
+      "id": "W05",
+      "slug": "web-reader-night-settings",
+      "name": "Web 夜间阅读设置页",
+      "route": "/reader/:bookId",
+      "platform": "web",
+      "type": "reader-state",
+      "svg_ref": "04_web_immersive_reading_workspace.svg"
+    },
+    {
+      "id": "W06",
+      "slug": "web-quality-state",
+      "name": "Web 解析质量/状态页",
+      "route": "/import/preview/:taskId",
+      "platform": "web",
+      "type": "state",
+      "svg_ref": "06_states_exceptions_recovery.svg"
+    },
+    {
+      "id": "W07",
+      "slug": "web-book-detail",
+      "name": "Web 书籍详情页",
+      "route": "/book/:bookId",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "W08",
+      "slug": "web-discovery-search",
+      "name": "Web 发现搜索页",
+      "route": "/search",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "02_bookshelf_discovery_detail.svg"
+    },
+    {
+      "id": "W09",
+      "slug": "web-settings-storage",
+      "name": "Web 设置与存储页",
+      "route": "/settings",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "08_profile_settings_sync.svg"
+    },
+    {
+      "id": "W10",
+      "slug": "web-notes-ai-assets",
+      "name": "Web 笔记与 AI 资产页",
+      "route": "/notes",
+      "platform": "web",
+      "type": "page",
+      "svg_ref": "07_ai_reading_enhancement.svg"
+    },
+    {
+      "id": "W11",
+      "slug": "web-wide-screen-stress",
+      "name": "Web 宽屏压力页",
+      "route": "/reader/:bookId",
+      "platform": "web",
+      "type": "stress",
+      "svg_ref": "04_web_immersive_reading_workspace.svg"
+    }
+  ],
+  "components": [
+    {
+      "name": "BookCard",
+      "input": "book, progress, displayMode",
+      "states": "默认/无封面/离线/选中/错误封面",
+      "usedIn": "书架、搜索、书籍详情推荐区"
+    },
+    {
+      "name": "ContinueReadingCard",
+      "input": "book, progress, lastReadAt",
+      "states": "有进度/无进度/离线可读/缓存缺失",
+      "usedIn": "书架首页"
+    },
+    {
+      "name": "ImportDropzone",
+      "input": "acceptedFormats, maxSize",
+      "states": "空/拖拽悬停/校验失败/上传中",
+      "usedIn": "导入页"
+    },
+    {
+      "name": "ImportProgress",
+      "input": "task",
+      "states": "排队/解析中/成功/失败/可取消",
+      "usedIn": "导入页、解析页"
+    },
+    {
+      "name": "ParsePreviewChapterList",
+      "input": "chapters, qualityIssues",
+      "states": "正常/可编辑/异常章/删除候选/空目录",
+      "usedIn": "解析预览页"
+    },
+    {
+      "name": "ReaderCanvas",
+      "input": "chapter, readerSettings, progress",
+      "states": "加载中/正文/空章/错误/夜间/离线",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "ReaderTopBar",
+      "input": "book, chapter, visibility",
+      "states": "隐藏/显示/返回/更多",
+      "usedIn": "阅读菜单态"
+    },
+    {
+      "name": "ReaderBottomBar",
+      "input": "actions, safeArea",
+      "states": "隐藏/显示/禁用/夜间",
+      "usedIn": "阅读菜单态"
+    },
+    {
+      "name": "TapZoneLayer",
+      "input": "viewport, readingMode",
+      "states": "上一页区/菜单区/下一页区/禁用",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "TocDrawer",
+      "input": "chapters, currentChapterId, issues",
+      "states": "当前章/异常章/搜索结果/空目录",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "SettingsSheet",
+      "input": "readerSettings",
+      "states": "字号/行高/边距/主题/亮度/实时预览",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "ProgressSheet",
+      "input": "progress, chapters",
+      "states": "拖动/跳章/章末/离线",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "AIReaderPanel",
+      "input": "chapter, aiViews",
+      "states": "摘要/前情/人物/术语/加载/失败",
+      "usedIn": "阅读页"
+    },
+    {
+      "name": "QualityBadge",
+      "input": "issueType, severity",
+      "states": "缺章/重复/广告/乱码/低质量",
+      "usedIn": "解析预览、目录"
+    },
+    {
+      "name": "OfflineBadge",
+      "input": "cacheStatus",
+      "states": "已缓存/未缓存/缓存中/失败",
+      "usedIn": "书架、阅读页"
+    },
+    {
+      "name": "SearchResultCard",
+      "input": "result, source",
+      "states": "本地/链接/书源/不可解析",
+      "usedIn": "发现搜索页"
+    },
+    {
+      "name": "StorageStatusCard",
+      "input": "quota, usage",
+      "states": "正常/接近上限/清理中/失败",
+      "usedIn": "设置页"
+    },
+    {
+      "name": "EmptyState",
+      "input": "title, action",
+      "states": "空书架/无结果/无笔记/无缓存",
+      "usedIn": "状态页"
+    },
+    {
+      "name": "ErrorState",
+      "input": "errorCode, retry",
+      "states": "解析失败/网络失败/格式不支持/恢复失败",
+      "usedIn": "状态页"
+    }
+  ],
+  "tokens": "tokens/readerTokens.json"
+}

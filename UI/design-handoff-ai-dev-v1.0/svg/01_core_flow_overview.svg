@@ -1,0 +1,398 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+<title id="title">核心主流程总览   Board 1 / 9</title><desc id="desc">Fully editable vector recreation. No embedded raster image.</desc>
+<defs>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#5A4935" flood-opacity="0.14"/></filter>
+  <filter id="smallShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5A4935" flood-opacity="0.12"/></filter>
+  <linearGradient id="coverDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D2224"/><stop offset="0.55" stop-color="#28343A"/><stop offset="1" stop-color="#0D0F10"/></linearGradient>
+  <linearGradient id="coverWarm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D7B6"/><stop offset="1" stop-color="#8C6B45"/></linearGradient>
+  <linearGradient id="coverGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDEBD6"/><stop offset="1" stop-color="#668256"/></linearGradient>
+  <style><![CDATA[
+    .bg{fill:#F7F1E6}.board-title{font:700 32px ui-serif,serif;fill:#2F2A24}.subtitle{font:14px ui-sans-serif,sans-serif;fill:#756A5E}.label{font:600 13px ui-sans-serif,sans-serif;fill:#2F2A24}.small{font:12px ui-sans-serif,sans-serif;fill:#766E64}.tiny{font:10px ui-sans-serif,sans-serif;fill:#8B8277}.body{font:16px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.body-small{font:13px 'KaiTi','STKaiti','Noto Serif CJK SC',serif;fill:#2F2A24}.h1{font:700 20px ui-serif,serif;fill:#2F2A24}.h2{font:700 16px ui-serif,serif;fill:#2F2A24}.panel{fill:#FFFDF8;stroke:#DED6C8;stroke-width:1.1}.soft{fill:#FAF7EF;stroke:#E2D9CA}.pill{fill:#EEF2E9;stroke:#CDD8C5}.green{fill:#678055}.muted{fill:#7B7164}.line{stroke:#DED6C8;stroke-width:1;fill:none}.darkText{fill:#1E2424}.navText{font:600 12px ui-sans-serif,sans-serif;fill:#556A48}.mono{font:11px ui-monospace,monospace;fill:#786E63}.editable-layer{vector-effect:non-scaling-stroke}.phone{fill:#0A0A0B;stroke:#242424;stroke-width:3}.screen{fill:#FBF6EC}.darkPanel{fill:#151A1B;stroke:#2C3632}.darkText2{fill:#D6D1C4}.link{fill:#678055}.chip{fill:#F1E8D7;stroke:#DBCDB6}.warn{fill:#FFF4DB;stroke:#E5C57F}.error{fill:#FFF0EC;stroke:#DCA79A}.ok{fill:#EDF4E8;stroke:#BFD0B4}
+  ]]></style>
+</defs>
+<rect x="0" y="0" width="1448" height="1086" fill="#F7F1E6"/>
+<text x="30" y="42" class="board-title">核心主流程总览   Board 1 / 9</text>
+<text x="1418" y="34" class="subtitle" text-anchor="end">个人小说聚合阅读平台 · 沉浸阅读 · 智能相伴</text>
+<g id="panel_1" class="editable-layer">
+<rect x="32" y="70" width="540" height="350" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="88" r="12" fill="#678055"/>
+<text x="50" y="93" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">1</text>
+<text x="70" y="94" class="h2">Web 书架页</text>
+</g>
+<g id="sidebar_navigation" class="editable-layer">
+<rect x="50" y="105" width="92" height="290" rx="12" fill="#FBF8F0" stroke="#E4D9C9" stroke-width="1"/>
+<text x="76" y="140" class="h2" style="fill:#526047">墨问</text>
+<rect x="64" y="157" width="64" height="26" rx="7" fill="#E7EDE0"/>
+<circle cx="73" cy="170" r="4" fill="#678055"/>
+<text x="86" y="174" class="tiny" style="fill:#526047">书架</text>
+<circle cx="73" cy="206" r="4" fill="#678055"/>
+<text x="86" y="210" class="tiny" style="fill:#526047">发现</text>
+<circle cx="73" cy="242" r="4" fill="#678055"/>
+<text x="86" y="246" class="tiny" style="fill:#526047">导入</text>
+<circle cx="73" cy="278" r="4" fill="#678055"/>
+<text x="86" y="282" class="tiny" style="fill:#526047">标签</text>
+<circle cx="73" cy="314" r="4" fill="#678055"/>
+<text x="86" y="318" class="tiny" style="fill:#526047">同步</text>
+<circle cx="73" cy="350" r="4" fill="#678055"/>
+<text x="86" y="354" class="tiny" style="fill:#526047">设置</text>
+<circle cx="76" cy="350" r="12" fill="#678055"/>
+<text x="95" y="346" class="tiny" style="fill:#526047">连续阅读 18 天</text>
+<text x="95" y="362" class="tiny" style="fill:#526047">本地 2.4GB</text>
+</g>
+<g id="top_bar" class="editable-layer">
+<text x="160" y="130" class="h2">书架</text>
+<rect x="310" y="110" width="70" height="28" rx="14" fill="#F4EFE5" stroke="#E4D8C8" stroke-width="1"/>
+<text x="328" y="129" class="tiny">搜索 书名、作者或标签</text>
+<circle cx="446" cy="124" r="5" fill="#7E8E6B"/>
+<circle cx="476" cy="124" r="5" fill="#C6A75B"/>
+<circle cx="506" cy="124" r="5" fill="#B76054"/>
+</g>
+<text x="160" y="170" class="label">继续阅读</text>
+<g id="cover_论枭主_165" class="editable-layer">
+<rect x="165" y="185" width="54" height="78" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="170" y="190" width="44" height="68" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="192.0" y="216.2" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">论枭主</text>
+<path d="M175.8,239.6 C184.44,225.56 200.1,255.2 209.28,227.9" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="235" y="205" class="small">论枭主</text>
+<rect x="235" y="230" width="110" height="6" rx="3" fill="#D8D4CA"/>
+<rect x="235" y="230" width="70" height="6" rx="3" fill="#678055"/>
+<text x="360" y="234" class="tiny">68%</text>
+<g id="cover_论枭主_160" class="editable-layer">
+<rect x="160" y="285" width="58" height="86" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="165" y="290" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="189.0" y="319.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">论枭主</text>
+<path d="M171.6,345.2 C180.88,329.72 197.7,362.4 207.56,332.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="160" y="389" class="tiny">论枭主</text>
+<text x="160" y="405" class="tiny" style="fill:#7B7164">已读 20%</text>
+<g id="cover_反余年_258" class="editable-layer">
+<rect x="258" y="285" width="58" height="86" rx="6" fill="url(#coverWarm)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="263" y="290" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="287.0" y="319.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">反余年</text>
+<path d="M269.6,345.2 C278.88,329.72 295.7,362.4 305.56,332.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="258" y="389" class="tiny">反余年</text>
+<text x="258" y="405" class="tiny" style="fill:#7B7164">已读 27%</text>
+<g id="cover_大明行人_356" class="editable-layer">
+<rect x="356" y="285" width="58" height="86" rx="6" fill="url(#coverGreen)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="361" y="290" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="385.0" y="319.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">大明行人</text>
+<path d="M367.6,345.2 C376.88,329.72 393.7,362.4 403.56,332.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="356" y="389" class="tiny">大明行人</text>
+<text x="356" y="405" class="tiny" style="fill:#7B7164">已读 34%</text>
+<g id="cover_凡人修仙_454" class="editable-layer">
+<rect x="454" y="285" width="58" height="86" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="459" y="290" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="483.0" y="319.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">凡人修仙</text>
+<path d="M465.6,345.2 C474.88,329.72 491.7,362.4 501.56,332.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="454" y="389" class="tiny">凡人修仙</text>
+<text x="454" y="405" class="tiny" style="fill:#7B7164">已读 41%</text>
+<g id="panel_2" class="editable-layer">
+<rect x="585" y="70" width="300" height="350" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="603" cy="88" r="12" fill="#678055"/>
+<text x="603" y="93" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">2</text>
+<text x="623" y="94" class="h2">Mobile 书架页</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="615" y="105" width="225" height="300" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="627" y="123" width="201" height="264" rx="32" class="screen"/>
+<text x="645" y="157" class="tiny" style="fill:#111">9:41</text>
+<text x="795" y="157" class="tiny" style="fill:#111">▮▮</text>
+<text x="645" y="189" class="h2">书架</text>
+</g>
+<g id="cover_论枭主_647" class="editable-layer">
+<rect x="647" y="198" width="54" height="78" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="652" y="203" width="44" height="68" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="674.0" y="229.2" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">论枭主</text>
+<path d="M657.8,252.6 C666.44,238.56 682.1,268.2 691.28,240.9" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="713" y="218" class="small">论枭主</text>
+<text x="713" y="243" class="h2">68%</text>
+<rect x="777" y="241" width="54" height="24" rx="12" fill="#678055"/>
+<text x="804" y="257" class="tiny" text-anchor="middle" style="fill:#fff">继续阅读</text>
+<g id="cover_论枭主_647" class="editable-layer">
+<rect x="647" y="303" width="58" height="86" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="652" y="308" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="676.0" y="337.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">论枭主</text>
+<path d="M658.6,363.2 C667.88,347.72 684.7,380.4 694.56,350.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="647" y="407" class="tiny">论枭主</text>
+<text x="647" y="423" class="tiny" style="fill:#7B7164">已读 20%</text>
+<g id="cover_反余年_745" class="editable-layer">
+<rect x="745" y="303" width="58" height="86" rx="6" fill="url(#coverWarm)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="750" y="308" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="774.0" y="337.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">反余年</text>
+<path d="M756.6,363.2 C765.88,347.72 782.7,380.4 792.56,350.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="745" y="407" class="tiny">反余年</text>
+<text x="745" y="423" class="tiny" style="fill:#7B7164">已读 27%</text>
+<g id="cover_大明行人_843" class="editable-layer">
+<rect x="843" y="303" width="58" height="86" rx="6" fill="url(#coverGreen)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="848" y="308" width="48" height="76" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="872.0" y="337.4" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">大明行人</text>
+<path d="M854.6,363.2 C863.88,347.72 880.7,380.4 890.56,350.3" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="843" y="407" class="tiny">大明行人</text>
+<text x="843" y="423" class="tiny" style="fill:#7B7164">已读 34%</text>
+<g id="panel_3" class="editable-layer">
+<rect x="900" y="70" width="500" height="350" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="918" cy="88" r="12" fill="#678055"/>
+<text x="918" y="93" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">3</text>
+<text x="938" y="94" class="h2">Web 导入页</text>
+</g>
+<g id="sidebar_navigation" class="editable-layer">
+<rect x="918" y="105" width="92" height="290" rx="12" fill="#FBF8F0" stroke="#E4D9C9" stroke-width="1"/>
+<text x="944" y="140" class="h2" style="fill:#526047">墨问</text>
+<circle cx="941" cy="170" r="4" fill="#678055"/>
+<text x="954" y="174" class="tiny" style="fill:#526047">书架</text>
+<circle cx="941" cy="206" r="4" fill="#678055"/>
+<text x="954" y="210" class="tiny" style="fill:#526047">发现</text>
+<rect x="932" y="229" width="64" height="26" rx="7" fill="#E7EDE0"/>
+<circle cx="941" cy="242" r="4" fill="#678055"/>
+<text x="954" y="246" class="tiny" style="fill:#526047">导入</text>
+<circle cx="941" cy="278" r="4" fill="#678055"/>
+<text x="954" y="282" class="tiny" style="fill:#526047">标签</text>
+<circle cx="941" cy="314" r="4" fill="#678055"/>
+<text x="954" y="318" class="tiny" style="fill:#526047">同步</text>
+<circle cx="941" cy="350" r="4" fill="#678055"/>
+<text x="954" y="354" class="tiny" style="fill:#526047">设置</text>
+<circle cx="944" cy="350" r="12" fill="#678055"/>
+<text x="963" y="346" class="tiny" style="fill:#526047">连续阅读 18 天</text>
+<text x="963" y="362" class="tiny" style="fill:#526047">本地 2.4GB</text>
+</g>
+<g id="top_bar" class="editable-layer">
+<text x="1028" y="130" class="h2">导入书籍</text>
+<circle cx="1274" cy="124" r="5" fill="#7E8E6B"/>
+<circle cx="1304" cy="124" r="5" fill="#C6A75B"/>
+<circle cx="1334" cy="124" r="5" fill="#B76054"/>
+</g>
+<rect x="1030" y="165" width="330" height="92" rx="10" fill="#FAF7EF" stroke="#B8AA98" stroke-width="1"/>
+<text x="1195" y="205" class="small" text-anchor="middle">拖拽文件到此处，或点击选择文件</text>
+<rect x="1030" y="282" width="280" height="28" rx="6" fill="#FFF" stroke="#DED6C8" stroke-width="1"/>
+<rect x="1320" y="282" width="42" height="28" rx="6" fill="#678055"/>
+<text x="1341" y="301" class="tiny" text-anchor="middle" style="fill:#fff">解析</text>
+<g id="panel_4" class="editable-layer">
+<rect x="32" y="435" width="450" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="453" r="12" fill="#678055"/>
+<text x="50" y="458" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">4</text>
+<text x="70" y="459" class="h2">Web 解析预览页</text>
+</g>
+<g id="cover_论枭主_55" class="editable-layer">
+<rect x="55" y="505" width="62" height="88" rx="6" fill="url(#coverDark)" stroke="#44382F" stroke-width="0.8" filter="url(#smallShadow)"/>
+<rect x="60" y="510" width="52" height="78" rx="5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+<text x="86.0" y="540.2" class="small" text-anchor="middle" style="fill:#F3ECE0;font-weight:700">论枭主</text>
+<path d="M67.4,566.6 C77.32,550.76 95.30000000000001,584.2 105.84,553.4" fill="none" stroke="#C9B177" stroke-width="2" opacity="0.7"/>
+</g>
+<text x="135" y="515" class="h2">论枭主</text>
+<text x="135" y="540" class="small">作者：泛旧时光</text>
+<rect x="135" y="585" width="150" height="50" rx="8" class="ok"/>
+<text x="150" y="615" class="small">内容质量：优秀</text>
+<rect x="223" y="480" width="220" height="220" rx="8" fill="#FFFDF8" stroke="#DED6C8" stroke-width="1"/>
+<text x="245" y="515" class="tiny">1   第1章 章节标题</text>
+<text x="245" y="545" class="tiny">2   第2章 章节标题</text>
+<text x="245" y="575" class="tiny">3   第3章 章节标题</text>
+<text x="245" y="605" class="tiny">4   第4章 章节标题</text>
+<text x="245" y="635" class="tiny">5   第5章 章节标题</text>
+<text x="245" y="665" class="tiny">6   第6章 章节标题</text>
+<g id="panel_5" class="editable-layer">
+<rect x="495" y="435" width="520" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="513" cy="453" r="12" fill="#678055"/>
+<text x="513" y="458" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">5</text>
+<text x="533" y="459" class="h2">Web 阅读页</text>
+</g>
+<g id="web_reader_workspace" class="editable-layer">
+<rect x="510" y="470" width="485" height="230" rx="12" fill="#FBF6EC" stroke="#DCD2C4" stroke-width="1" filter="url(#softShadow)"/>
+<g id="sidebar_navigation" class="editable-layer">
+<rect x="510" y="470" width="92" height="230" rx="12" fill="#FBF8F0" stroke="#E4D9C9" stroke-width="1"/>
+<text x="536" y="505" class="h2" style="fill:#526047">墨问</text>
+<circle cx="533" cy="535" r="4" fill="#678055"/>
+<text x="546" y="539" class="tiny" style="fill:#526047">书架</text>
+<circle cx="533" cy="571" r="4" fill="#678055"/>
+<text x="546" y="575" class="tiny" style="fill:#526047">发现</text>
+<circle cx="533" cy="607" r="4" fill="#678055"/>
+<text x="546" y="611" class="tiny" style="fill:#526047">导入</text>
+<circle cx="533" cy="643" r="4" fill="#678055"/>
+<text x="546" y="647" class="tiny" style="fill:#526047">标签</text>
+<circle cx="533" cy="679" r="4" fill="#678055"/>
+<text x="546" y="683" class="tiny" style="fill:#526047">同步</text>
+<circle cx="533" cy="715" r="4" fill="#678055"/>
+<text x="546" y="719" class="tiny" style="fill:#526047">设置</text>
+<circle cx="536" cy="655" r="12" fill="#678055"/>
+<text x="555" y="651" class="tiny" style="fill:#526047">连续阅读 18 天</text>
+<text x="555" y="667" class="tiny" style="fill:#526047">本地 2.4GB</text>
+</g>
+<rect x="602" y="470" width="393" height="230" fill="#FEFAF1"/>
+<rect x="602" y="470" width="190" height="230" fill="#F4EBDD" stroke="#D9CFBE" stroke-width="1"/>
+<text x="622" y="508" class="label" style="fill:#2E2A24">目录</text>
+<text x="622" y="540" class="tiny" style="fill:#675E52">第1章  穿越</text>
+<rect x="614" y="554" width="150" height="25" rx="6" fill="#E7EDE0"/>
+<text x="622" y="574" class="tiny" style="fill:#675E52">第2章  神秘时代</text>
+<text x="622" y="608" class="tiny" style="fill:#675E52">第3章  风起</text>
+<text x="622" y="642" class="tiny" style="fill:#675E52">第4章  梦会</text>
+<text x="622" y="676" class="tiny" style="fill:#675E52">第5章  月落</text>
+<text x="622" y="710" class="tiny" style="fill:#675E52">第6章  穿越</text>
+<text x="622" y="744" class="tiny" style="fill:#675E52">第7章  神秘时代</text>
+<text x="622" y="778" class="tiny" style="fill:#675E52">第8章  风起</text>
+<text x="622" y="812" class="tiny" style="fill:#675E52">第9章  梦会</text>
+<rect x="792" y="470" width="-32" height="230" fill="#FFFDF7"/>
+<text x="687.5" y="530" class="h1" text-anchor="middle" style="fill:#2E2A24">第一章 穿越</text>
+<text x="960" y="575" class="body" style="fill:#302A24">第一章 穿越</text>
+<text x="960" y="607" class="body" style="fill:#302A24">燕冲突，机缘微鸣。</text>
+<text x="960" y="639" class="body" style="fill:#302A24">星火点点，神明陨。</text>
+<text x="960" y="671" class="body" style="fill:#302A24">他身披旧甲，一位从倾念处反噬</text>
+<text x="960" y="703" class="body" style="fill:#302A24">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="960" y="735" class="body" style="fill:#302A24">众生里的真实一面。</text>
+<text x="960" y="767" class="body" style="fill:#302A24">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="960" y="799" class="body" style="fill:#302A24">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<text x="960" y="831" class="body" style="fill:#302A24">第一章 穿越</text>
+<text x="960" y="863" class="body" style="fill:#302A24">燕冲突，机缘微鸣。</text>
+<text x="672.5" y="680" class="tiny" text-anchor="middle" style="fill:#8B8277">12:34        68%</text>
+<rect x="760" y="470" width="235" height="230" fill="#FBF8F0" stroke="#D8CEBF" stroke-width="1"/>
+<text x="778" y="508" class="label" style="fill:#2E2A24">AI 助读</text>
+<rect x="778" y="540" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="790" y="564" class="small" style="fill:#2E2A24">本章摘要</text>
+<text x="790" y="584" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="778" y="628" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="790" y="652" class="small" style="fill:#2E2A24">伏笔提示</text>
+<text x="790" y="672" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="778" y="716" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="790" y="740" class="small" style="fill:#2E2A24">人物问答</text>
+<text x="790" y="760" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="778" y="804" width="195" height="62" rx="8" fill="#F1E8D7" stroke="#D8C8AF" stroke-width="1"/>
+<text x="790" y="828" class="small" style="fill:#2E2A24">前情提要</text>
+<text x="790" y="848" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+</g>
+<g id="panel_6" class="editable-layer">
+<rect x="1030" y="435" width="370" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="1048" cy="453" r="12" fill="#678055"/>
+<text x="1048" y="458" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">6</text>
+<text x="1068" y="459" class="h2">Mobile 阅读页</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="1060" y="465" width="290" height="250" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="1072" y="483" width="266" height="214" rx="32" class="screen"/>
+<text x="1090" y="517" class="tiny" style="fill:#111">9:41</text>
+<text x="1305" y="517" class="tiny" style="fill:#111">▮▮</text>
+<text x="1090" y="549" class="h2">第一章 穿越</text>
+</g>
+<text x="1112" y="553" class="body-small">第一章 穿越</text>
+<text x="1112" y="579" class="body-small">燕冲突，机缘微鸣。</text>
+<text x="1112" y="605" class="body-small">星火点点，神明陨。</text>
+<text x="1112" y="631" class="body-small">他身披旧甲，一位从倾念处反噬</text>
+<text x="1112" y="657" class="body-small">神话中苏醒的凡人，睁开眼，看到了</text>
+<rect x="1104" y="657" width="202" height="4" rx="2" fill="#D7D0C6"/>
+<circle cx="1217" cy="659" r="5" fill="#678055"/>
+<g id="panel_7" class="editable-layer">
+<rect x="32" y="745" width="405" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="50" cy="763" r="12" fill="#678055"/>
+<text x="50" y="768" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">7</text>
+<text x="70" y="769" class="h2">Mobile 菜单态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="70" y="775" width="300" height="250" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="82" y="793" width="276" height="214" rx="32" class="screen"/>
+<text x="100" y="827" class="tiny" style="fill:#111">9:41</text>
+<text x="325" y="827" class="tiny" style="fill:#111">▮▮</text>
+<text x="100" y="859" class="h2">第一章 穿越</text>
+</g>
+<rect x="82" y="903" width="276" height="130" rx="24" fill="rgba(255,253,248,.94)" stroke="#DED6C8" stroke-width="1"/>
+<rect x="127" y="928" width="186" height="5" rx="3" fill="#D7D0C6"/>
+<circle cx="217" cy="930" r="6" fill="#678055"/>
+<text x="127" y="968" class="tiny">目录</text>
+<text x="192" y="968" class="tiny">进度</text>
+<text x="257" y="968" class="tiny">书签</text>
+<text x="127" y="1010" class="tiny">笔记</text>
+<text x="192" y="1010" class="tiny">AI 助读</text>
+<text x="257" y="1010" class="tiny">夜间</text>
+<g id="panel_8" class="editable-layer">
+<rect x="450" y="745" width="390" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="468" cy="763" r="12" fill="#678055"/>
+<text x="468" y="768" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">8</text>
+<text x="488" y="769" class="h2">Mobile 目录抽屉态</text>
+</g>
+<g id="phone_frame" class="editable-layer">
+<rect x="490" y="775" width="260" height="250" rx="42" class="phone" filter="url(#softShadow)"/>
+<rect x="502" y="793" width="236" height="214" rx="32" class="screen"/>
+<text x="520" y="827" class="tiny" style="fill:#111">9:41</text>
+<text x="705" y="827" class="tiny" style="fill:#111">▮▮</text>
+<text x="520" y="859" class="h2">目录</text>
+</g>
+<text x="530" y="868" class="tiny">第1章  章节标题</text>
+<text x="530" y="895" class="tiny">第2章  章节标题</text>
+<text x="530" y="922" class="tiny">第3章  章节标题</text>
+<text x="530" y="949" class="tiny">第4章  章节标题</text>
+<text x="530" y="976" class="tiny">第5章  章节标题</text>
+<text x="530" y="1003" class="tiny">第6章  章节标题</text>
+<text x="530" y="1030" class="tiny">第7章  章节标题</text>
+<g id="panel_9" class="editable-layer">
+<rect x="850" y="745" width="550" height="300" rx="12" class="panel" filter="url(#softShadow)"/>
+<circle cx="868" cy="763" r="12" fill="#678055"/>
+<text x="868" y="768" class="tiny" text-anchor="middle" style="fill:#fff;font-weight:700">9</text>
+<text x="888" y="769" class="h2">夜间模式与设置页</text>
+</g>
+<g id="web_reader_workspace" class="editable-layer">
+<rect x="865" y="775" width="515" height="230" rx="12" fill="#141819" stroke="#2D3432" stroke-width="1" filter="url(#softShadow)"/>
+<g id="sidebar_navigation" class="editable-layer">
+<rect x="865" y="775" width="92" height="230" rx="12" fill="#111616" stroke="#2C3632" stroke-width="1"/>
+<text x="891" y="810" class="h2" style="fill:#D8D2C6">墨问</text>
+<circle cx="888" cy="840" r="4" fill="#678055"/>
+<text x="901" y="844" class="tiny" style="fill:#D8D2C6">书架</text>
+<circle cx="888" cy="876" r="4" fill="#678055"/>
+<text x="901" y="880" class="tiny" style="fill:#D8D2C6">发现</text>
+<circle cx="888" cy="912" r="4" fill="#678055"/>
+<text x="901" y="916" class="tiny" style="fill:#D8D2C6">导入</text>
+<circle cx="888" cy="948" r="4" fill="#678055"/>
+<text x="901" y="952" class="tiny" style="fill:#D8D2C6">标签</text>
+<circle cx="888" cy="984" r="4" fill="#678055"/>
+<text x="901" y="988" class="tiny" style="fill:#D8D2C6">同步</text>
+<circle cx="888" cy="1020" r="4" fill="#678055"/>
+<text x="901" y="1024" class="tiny" style="fill:#D8D2C6">设置</text>
+<circle cx="891" cy="960" r="12" fill="#678055"/>
+<text x="910" y="956" class="tiny" style="fill:#D8D2C6">连续阅读 18 天</text>
+<text x="910" y="972" class="tiny" style="fill:#D8D2C6">本地 2.4GB</text>
+</g>
+<rect x="957" y="775" width="423" height="230" fill="#1F2524"/>
+<rect x="957" y="775" width="190" height="230" fill="#171D1C" stroke="#26312E" stroke-width="1"/>
+<text x="977" y="813" class="label" style="fill:#D6D1C4">目录</text>
+<text x="977" y="845" class="tiny" style="fill:#D6D1C4">第1章  穿越</text>
+<rect x="969" y="859" width="150" height="25" rx="6" fill="#263329"/>
+<text x="977" y="879" class="tiny" style="fill:#D6D1C4">第2章  神秘时代</text>
+<text x="977" y="913" class="tiny" style="fill:#D6D1C4">第3章  风起</text>
+<text x="977" y="947" class="tiny" style="fill:#D6D1C4">第4章  梦会</text>
+<text x="977" y="981" class="tiny" style="fill:#D6D1C4">第5章  月落</text>
+<text x="977" y="1015" class="tiny" style="fill:#D6D1C4">第6章  穿越</text>
+<text x="977" y="1049" class="tiny" style="fill:#D6D1C4">第7章  神秘时代</text>
+<text x="977" y="1083" class="tiny" style="fill:#D6D1C4">第8章  风起</text>
+<text x="977" y="1117" class="tiny" style="fill:#D6D1C4">第9章  梦会</text>
+<rect x="1147" y="775" width="-2" height="230" fill="#141819"/>
+<text x="1057.5" y="835" class="h1" text-anchor="middle" style="fill:#D6D1C4">第一章 穿越</text>
+<text x="1315" y="880" class="body" style="fill:#D6D1C4">第一章 穿越</text>
+<text x="1315" y="912" class="body" style="fill:#D6D1C4">燕冲突，机缘微鸣。</text>
+<text x="1315" y="944" class="body" style="fill:#D6D1C4">星火点点，神明陨。</text>
+<text x="1315" y="976" class="body" style="fill:#D6D1C4">他身披旧甲，一位从倾念处反噬</text>
+<text x="1315" y="1008" class="body" style="fill:#D6D1C4">神话中苏醒的凡人，睁开眼，看到了</text>
+<text x="1315" y="1040" class="body" style="fill:#D6D1C4">众生里的真实一面。</text>
+<text x="1315" y="1072" class="body" style="fill:#D6D1C4">枪枪，大地；日眠、飞蛾、弦外仍；</text>
+<text x="1315" y="1104" class="body" style="fill:#D6D1C4">粮食、古卜、诅咒，朝向人，尘归尘。</text>
+<text x="1315" y="1136" class="body" style="fill:#D6D1C4">第一章 穿越</text>
+<text x="1315" y="1168" class="body" style="fill:#D6D1C4">燕冲突，机缘微鸣。</text>
+<text x="1042.5" y="985" class="tiny" text-anchor="middle" style="fill:#8B8277">12:34        68%</text>
+<rect x="1145" y="775" width="235" height="230" fill="#171D1C" stroke="#2B3331" stroke-width="1"/>
+<text x="1163" y="813" class="label" style="fill:#D6D1C4">AI 助读</text>
+<rect x="1163" y="845" width="195" height="62" rx="8" fill="#202725" stroke="#33413C" stroke-width="1"/>
+<text x="1175" y="869" class="small" style="fill:#D6D1C4">本章摘要</text>
+<text x="1175" y="889" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1163" y="933" width="195" height="62" rx="8" fill="#202725" stroke="#33413C" stroke-width="1"/>
+<text x="1175" y="957" class="small" style="fill:#D6D1C4">伏笔提示</text>
+<text x="1175" y="977" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1163" y="1021" width="195" height="62" rx="8" fill="#202725" stroke="#33413C" stroke-width="1"/>
+<text x="1175" y="1045" class="small" style="fill:#D6D1C4">人物问答</text>
+<text x="1175" y="1065" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+<rect x="1163" y="1109" width="195" height="62" rx="8" fill="#202725" stroke="#33413C" stroke-width="1"/>
+<text x="1175" y="1133" class="small" style="fill:#D6D1C4">前情提要</text>
+<text x="1175" y="1153" class="tiny" style="fill:#948C80">萧远初入异世，线索逐步展开。</text>
+</g>
+</svg>
