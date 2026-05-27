@@ -1,0 +1,60 @@
+name: ✨ 功能需求 (Feature Request)
+description: 为“我的阅读世界”提出新的功能构想或体验优化建议
+title: "[Feature]: "
+labels: ["enhancement", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        非常感谢你对“我的阅读世界”提出的新功能建议！
+        优秀的社区反馈能让我们的阅读平台走得更远。请描述你想增加的新特性。
+
+  - type: select
+    id: feature-scope
+    attributes:
+      label: 功能影响的范围 (Scope of Feature)
+      description: 你的建议主要涉及哪个模块？
+      options:
+        - 阅读体验 (阅读排版、字体、主题、翻页动画等)
+        - 解析器能力 (EPUB/TXT 解析、智能目录拆分、排版过滤等)
+        - 净化规则 (书源净化、过滤特定无用文本、智能广告拦截等)
+        - 数据同步 (SQLite 跨端同步、WebDAV 同步、本地备份等)
+        - 其他应用端 (Tauri 桌面版/Capacitor 手机端/微信小程序)
+        - 其它
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: 该功能解决什么问题？(Is your feature request related to a problem?)
+      description: 请清晰地描述你当前的困扰。例如：“我目前在暗色模式下看书，觉得默认的暗色调偏蓝，眼睛看久了会累……”
+      placeholder: 请在此描述面临的痛点或问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 理想的解决方案是什么？(Describe the solution you'd like)
+      description: 你希望这个功能如何工作，它的用户体验和实现逻辑应该是怎么样的？
+      placeholder: 请在此描述你希望看到的方案。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: 你考虑过哪些替代方案？(Describe alternatives you've considered)
+      description: 是否有通过其他折中办法解决过这个问题？
+      placeholder: 如果有的话，请在此填写。
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 其他背景信息/草图 (Additional Context)
+      description: 如果有手绘草图、参考软件的交互录屏或图片，请附在这里。
+    validations:
+      required: false

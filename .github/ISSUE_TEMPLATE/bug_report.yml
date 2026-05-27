@@ -1,0 +1,81 @@
+name: 🐛 Bug 报告 (Bug Report)
+description: 提交运行或开发“我的阅读世界”时遇到的异常或错误
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你抽出时间提交 Bug 报告！
+        在提交之前，请确保你已经搜索了已有的 Issue 或 Discussions，避免提交重复的问题。
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: 提交前自检 (Prerequisites)
+      description: 请确认以下几点
+      options:
+        - label: 我已经搜索过已有的 Issue，确认该 Bug 目前还没有人提交。
+          required: true
+        - label: 我使用的是最新版本的代码/发布包，或者确认该问题在最新版本中依然存在。
+          required: true
+
+  - type: select
+    id: environment
+    attributes:
+      label: 发生异常的应用端 (Target Application)
+      description: 请选择你正在使用或开发并发生 Bug 的子应用。
+      options:
+        - apps/web-pwa (Next.js 客户端)
+        - apps/api (NestJS 服务端)
+        - apps/desktop-tauri (Tauri 桌面端)
+        - apps/mobile-capacitor (Capacitor 移动端)
+        - apps/miniapp-lite (小程序轻量版)
+        - packages/* (共享核心依赖包，如 rules-engine, parser-core)
+        - 其它/不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: 实际行为与预期行为 (Expected & Actual Behavior)
+      placeholder: |
+        - 期待的行为：例如，导入 TXT 小说后应该自动解析并渲染出目录。
+        - 实际的行为：例如，导入 TXT 小说后，页面显示空白，控制台报错 "Cannot read properties of undefined (reading 'split')"。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 复现步骤 (Reproduction Steps)
+      description: 请提供能够稳定复现该 Bug 的步骤。
+      placeholder: |
+        1. 打开 `apps/web-pwa` 客户端页面
+        2. 点击“导入书籍”，选择一个体积大于 50MB 的 TXT 文件
+        3. 页面卡顿 5 秒后崩溃
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: 环境信息 (Environment Details)
+      description: 你的本地开发环境或测试设备的硬件/软件信息。
+      placeholder: |
+        - OS: macOS Sequoia 15.1 / Windows 11
+        - Browser: Chrome 124.0.0 / Safari 18.0
+        - Node.js Version (开发环境): v20.11.0
+        - pnpm Version (开发环境): v9.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 附加信息/截图/日志 (Additional Context / Screenshot / Logs)
+      description: 任何可以帮助我们定位问题的日志截图、错误调用栈（Stack Trace）。
+      placeholder: 可以直接拖拽图片到这里，或粘贴控制台 Error 日志。
+    validations:
+      required: false

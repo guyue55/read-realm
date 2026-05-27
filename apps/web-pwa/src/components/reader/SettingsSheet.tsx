@@ -22,8 +22,10 @@ export function SettingsSheet({
   isMobileSheet = false,
   onClose,
 }: SettingsSheetProps) {
-  const isDark = settings.theme === 'dark';
-  const bgClass = isDark ? "bg-[#232323] text-[#CFCFCF]" : "bg-white text-[#2F2A24]";
+  const isDark = settings.theme === "dark";
+  const bgClass = isDark
+    ? "bg-[#232323] text-[#CFCFCF]"
+    : "bg-white text-[#2F2A24]";
   const inputBgClass = isDark ? "bg-[#1E1E1E]" : "bg-[#F8F8F5]";
   const activeBtnBg = isDark ? "bg-[#333333]" : "bg-white";
   const textColor = isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]";
@@ -36,21 +38,27 @@ export function SettingsSheet({
   return (
     <div className={containerClasses}>
       {isMobileSheet && (
-        <div className={`flex justify-between items-center mb-6 p-6 pb-0 ${bgClass}`}>
-          <h3 className={`font-bold ${textColor}`}>{strings.reader.settings}</h3>
+        <div
+          className={`flex justify-between items-center mb-6 p-6 pb-0 ${bgClass}`}
+        >
+          <h3 className={`font-bold ${textColor}`}>
+            {strings.reader.settings}
+          </h3>
           {onClose && (
-            <button onClick={onClose} className={`${mutedText} p-1`}>✕</button>
+            <button onClick={onClose} className={`${mutedText} p-1`}>
+              ✕
+            </button>
           )}
         </div>
       )}
 
-      <div className={`flex flex-col gap-6 ${isMobileSheet ? 'px-6' : ''}`}>
+      <div className={`flex flex-col gap-6 ${isMobileSheet ? "px-6" : ""}`}>
         {updateUiMode && (
           <div className="flex items-center justify-between pb-4 border-b border-[rgba(80,65,45,0.08)]">
-            <span className={`text-sm font-medium ${mutedText}`}>
-              UI 主题
-            </span>
-            <div className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}>
+            <span className={`text-sm font-medium ${mutedText}`}>UI 主题</span>
+            <div
+              className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
+            >
               <button
                 onClick={() => updateUiMode("default")}
                 className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
@@ -78,7 +86,9 @@ export function SettingsSheet({
           <span className={`text-sm font-medium ${mutedText}`}>
             {strings.reader.fontSize}
           </span>
-          <div className={`flex items-center ${inputBgClass} rounded-lg p-1 border border-[rgba(80,65,45,0.08)]`}>
+          <div
+            className={`flex items-center ${inputBgClass} rounded-lg p-1 border border-[rgba(80,65,45,0.08)]`}
+          >
             <button
               onClick={() => updateFontSize(-2)}
               className={`w-12 h-8 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded transition-colors`}
@@ -123,7 +133,9 @@ export function SettingsSheet({
           <span className={`text-sm font-medium ${mutedText}`}>
             {strings.reader.pageMode}
           </span>
-          <div className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}>
+          <div
+            className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
+          >
             <button
               onClick={() => updatePageMode("scroll")}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${

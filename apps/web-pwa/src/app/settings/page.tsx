@@ -169,10 +169,15 @@ export default function SettingsPage() {
           </section>
 
           <section className="ui-card rounded-[18px] p-5 md:p-6">
-            <h2 className="mb-4 text-lg font-bold">{strings.settings.previewTitle}</h2>
+            <h2 className="mb-4 text-lg font-bold">
+              {strings.settings.previewTitle}
+            </h2>
             <div
               className="rounded-[16px] border border-[rgba(80,65,45,0.12)] p-6 shadow-sm"
-              style={{ backgroundColor: currentTheme.bg, color: currentTheme.text }}
+              style={{
+                backgroundColor: currentTheme.bg,
+                color: currentTheme.text,
+              }}
             >
               <h3 className="font-reading-title mb-4 text-2xl font-semibold">
                 {strings.settings.previewTitle}
@@ -191,7 +196,9 @@ export default function SettingsPage() {
                   正常
                 </span>
               </div>
-              <p className="text-sm text-[var(--ui-muted)]">本地缓存 2.40 GB / 10 GB</p>
+              <p className="text-sm text-[var(--ui-muted)]">
+                本地缓存 2.40 GB / 10 GB
+              </p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-[rgba(80,65,45,0.08)]">
                 <div className="h-full w-1/4 rounded-full bg-[var(--ui-accent)]" />
               </div>

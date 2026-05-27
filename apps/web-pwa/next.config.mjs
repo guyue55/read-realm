@@ -1,8 +1,8 @@
-import withPWAInit from 'next-pwa';
+import withPWAInit from "next-pwa";
 
 const withPWA = withPWAInit({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
 });
@@ -12,11 +12,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/',
-        destination: '/library',
+        source: "/",
+        destination: "/library",
         permanent: false,
       },
-    ]
+    ];
   },
 };
 

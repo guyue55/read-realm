@@ -1,5 +1,5 @@
-import Dexie, { Table } from 'dexie';
-import type { Book, ReadingProgress, Bookmark } from '@reader/shared-types';
+import Dexie, { Table } from "dexie";
+import type { Book, ReadingProgress, Bookmark } from "@reader/shared-types";
 
 export interface LocalChapter {
   id: string;
@@ -24,13 +24,13 @@ export class ReaderDatabase extends Dexie {
   importTasks!: Table<ImportTask, string>;
 
   constructor() {
-    super('ReaderDatabase');
+    super("ReaderDatabase");
     this.version(5).stores({
-      books: 'id, title, createdAt, lastReadAt',
-      chapters: 'id, [bookId+index], bookId, index',
-      progress: 'bookId',
-      bookmarks: 'id, bookId, chapterIndex',
-      importTasks: 'id'
+      books: "id, title, createdAt, lastReadAt",
+      chapters: "id, [bookId+index], bookId, index",
+      progress: "bookId",
+      bookmarks: "id, bookId, chapterIndex",
+      importTasks: "id",
     });
   }
 }

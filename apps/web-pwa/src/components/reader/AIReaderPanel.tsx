@@ -19,7 +19,7 @@ export function AIReaderPanel({
   const containerClasses = isMobileDrawer
     ? "h-full flex flex-col"
     : "h-full flex flex-col bg-transparent text-inherit";
-    
+
   const bubbleBg = isDark ? "bg-[rgba(0,0,0,0.2)]" : "bg-white";
 
   return (
@@ -29,7 +29,10 @@ export function AIReaderPanel({
           <span className="mr-2">✨</span> {strings.reader.aiAssistant}
         </h2>
         {isMobileDrawer && onClose && (
-          <button onClick={onClose} className="text-[#6F665B] p-1 hover:text-inherit">
+          <button
+            onClick={onClose}
+            className="text-[#6F665B] p-1 hover:text-inherit"
+          >
             ✕
           </button>
         )}
@@ -43,12 +46,16 @@ export function AIReaderPanel({
           {isAiLoading ? (
             <div className="flex flex-col items-center py-12">
               <div className="w-8 h-8 border-4 border-[#E8E3DA] border-t-[#9A6A3A] rounded-full animate-spin mb-4"></div>
-              <p className="text-sm text-[#6F665B]">{strings.reader.summarizing}</p>
+              <p className="text-sm text-[#6F665B]">
+                {strings.reader.summarizing}
+              </p>
             </div>
           ) : (
             <div className="text-sm">
               {aiSummary ? (
-                <div className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm`}>
+                <div
+                  className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm`}
+                >
                   {aiSummary}
                 </div>
               ) : (
@@ -65,10 +72,14 @@ export function AIReaderPanel({
             {strings.reader.quickQuestions}
           </h3>
           <div className="grid grid-cols-1 gap-2">
-            <button className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}>
+            <button
+              className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
+            >
               {strings.reader.questionCharacters}
             </button>
-            <button className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}>
+            <button
+              className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
+            >
               {strings.reader.questionPlots}
             </button>
           </div>
@@ -76,7 +87,9 @@ export function AIReaderPanel({
       </div>
 
       <div className="p-4 border-t border-[rgba(80,65,45,0.12)] bg-transparent">
-        <div className={`flex items-center ${bubbleBg} border border-[rgba(80,65,45,0.12)] rounded-full px-4 py-2 shadow-sm focus-within:border-[#9A6A3A] transition-colors`}>
+        <div
+          className={`flex items-center ${bubbleBg} border border-[rgba(80,65,45,0.12)] rounded-full px-4 py-2 shadow-sm focus-within:border-[#9A6A3A] transition-colors`}
+        >
           <input
             type="text"
             placeholder={strings.reader.aiInputPlaceholder}

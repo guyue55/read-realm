@@ -7,7 +7,11 @@ import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 
-export default function PreviewPage({ params }: { params: { taskId: string } }) {
+export default function PreviewPage({
+  params,
+}: {
+  params: { taskId: string };
+}) {
   const [task, setTask] = useState<ImportTask | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -24,11 +28,15 @@ export default function PreviewPage({ params }: { params: { taskId: string } }) 
     if (!task) return;
     setSaving(true);
     try {
-      await db.transaction("rw", [db.books, db.chapters, db.importTasks], async () => {
-        await db.books.add(task.bookMetadata);
-        await db.chapters.bulkAdd(task.chapters);
-        await db.importTasks.delete(task.id);
-      });
+      await db.transaction(
+        "rw",
+        [db.books, db.chapters, db.importTasks],
+        async () => {
+          await db.books.add(task.bookMetadata);
+          await db.chapters.bulkAdd(task.chapters);
+          await db.importTasks.delete(task.id);
+        },
+      );
       router.push("/library");
     } catch (e) {
       setError(`保存失败: ${(e as Error).message}`);
@@ -51,7 +59,9 @@ export default function PreviewPage({ params }: { params: { taskId: string } }) 
             !
           </div>
           <h2 className="mb-2 text-xl font-bold">解析失败</h2>
-          <p className="mb-6 text-sm leading-6 text-[var(--ui-muted)]">{error}</p>
+          <p className="mb-6 text-sm leading-6 text-[var(--ui-muted)]">
+            {error}
+          </p>
           <button
             onClick={() => router.push("/import")}
             className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white"
@@ -77,26 +87,26 @@ export default function PreviewPage({ params }: { params: { taskId: string } }) 
 
   return (
     <AppShell
-        title="解析预览"
-        subtitle={`共 ${task.chapters.length} 章 · ${issueCount} 个质量提醒`}
-        rightNodes={
-          <>
-            <button
-              onClick={handleDiscard}
-              className="ui-focus-ring hidden rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white sm:inline-flex"
-            >
-              放弃
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={saving}
-              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
-            >
-              {saving ? "保存中..." : "加入书架"}
-            </button>
-          </>
-        }
-      >
+      title="解析预览"
+      subtitle={`共 ${task.chapters.length} 章 · ${issueCount} 个质量提醒`}
+      rightNodes={
+        <>
+          <button
+            onClick={handleDiscard}
+            className="ui-focus-ring hidden rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white sm:inline-flex"
+          >
+            放弃
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
+          >
+            {saving ? "保存中..." : "加入书架"}
+          </button>
+        </>
+      }
+    >
       <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="ui-card h-fit rounded-[18px] p-5">
           <div className="flex gap-4">
@@ -159,7 +169,10 @@ export default function PreviewPage({ params }: { params: { taskId: string } }) 
                     {ch.content.length} 字
                   </span>
                   {quality ? (
-                    <QualityBadge issueType={quality.issueType} severity={quality.severity} />
+                    <QualityBadge
+                      issueType={quality.issueType}
+                      severity={quality.severity}
+                    />
                   ) : (
                     <span className="text-xs font-semibold text-[var(--ui-accent)]">
                       优秀

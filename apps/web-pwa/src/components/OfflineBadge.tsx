@@ -32,7 +32,17 @@ export function OfflineBadge() {
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in pointer-events-none">
       <div className="bg-[#FFF4DB] border border-[#E5C57F] text-[#9A6A3A] px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold tracking-wide">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <line x1="1" y1="1" x2="23" y2="23"></line>
           <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
           <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>

@@ -7,9 +7,14 @@ export interface ReaderBottomBarProps {
   onToggleAi: () => void;
   onToggleSettings: () => void;
   onToggleNightMode: () => void;
+  onBookmark: () => void;
+  onPagePrev: () => void;
+  onPageNext: () => void;
+  onSeekProgress: (progress: number) => void;
   isVisible: boolean;
   activePanel?: "toc" | "progress" | "ai" | "settings" | null;
   isDark?: boolean;
+  progress?: number;
 }
 
 export function ReaderBottomBar({
@@ -18,67 +23,121 @@ export function ReaderBottomBar({
   onToggleAi,
   onToggleSettings,
   onToggleNightMode,
+  onBookmark,
+  onPagePrev,
+  onPageNext,
+  onSeekProgress,
   isVisible,
   activePanel,
   isDark = false,
+  progress = 0,
 }: ReaderBottomBarProps) {
-  const bgClass = isDark ? "bg-[rgba(35,35,35,0.96)]" : "bg-[rgba(255,252,245,0.96)]";
-  const borderClass = isDark ? "border-[rgba(255,255,255,0.1)]" : "border-[rgba(80,65,45,0.12)]";
-  const shadowClass = isDark ? "shadow-[0_-2px_10px_rgba(0,0,0,0.5)]" : "shadow-[0_-2px_10px_rgba(80,65,45,0.05)]";
-  
-  const iconColor = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
-  const activeColor = isDark ? "text-[#D8D2C6]" : "text-[#678055]";
-  const aiColor = isDark ? "text-[#D2A66A]" : "text-[#9A6A3A]";
+  const safeProgress = Math.max(0, Math.min(100, progress));
+  const shellClass = isDark
+    ? "border-[rgba(255,255,255,0.12)] bg-[rgba(35,35,35,0.96)] text-[#CFCFCF] shadow-[0_18px_60px_rgba(0,0,0,0.38)]"
+    : "border-[rgba(80,65,45,0.12)] bg-[rgba(255,252,245,0.96)] text-[#2F2A24] shadow-[0_18px_60px_rgba(47,42,36,0.18)]";
+  const mutedClass = isDark ? "text-[#9D978D]" : "text-[#6F665B]";
+  const activeClass = isDark
+    ? "bg-[rgba(216,210,198,0.1)] text-[#D8D2C6]"
+    : "bg-[#EEF2E9] text-[#5F7D52]";
+
+  const actions = [
+    {
+      label: strings.reader.toc,
+      glyph: "☰",
+      active: activePanel === "toc",
+      onClick: onToggleToc,
+    },
+    {
+      label: strings.reader.bookmark,
+      glyph: "☆",
+      active: false,
+      onClick: onBookmark,
+    },
+    {
+      label: strings.reader.progress,
+      glyph: "◷",
+      active: activePanel === "progress",
+      onClick: onToggleProgress,
+    },
+    {
+      label: "AI",
+      glyph: "AI",
+      active: activePanel === "ai",
+      onClick: onToggleAi,
+    },
+    {
+      label: strings.reader.settings,
+      glyph: "⚙",
+      active: activePanel === "settings",
+      onClick: onToggleSettings,
+    },
+    {
+      label: strings.reader.nightMode,
+      glyph: "☾",
+      active: false,
+      onClick: onToggleNightMode,
+    },
+  ];
 
   return (
     <div
-      className={`fixed bottom-0 inset-x-0 h-[calc(60px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] ${bgClass} border-t ${borderClass} z-20 flex items-center justify-around px-4 transition-transform duration-200 pointer-events-auto ${shadowClass} ${
-        isVisible ? "translate-y-0" : "translate-y-full"
+      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl transition-all duration-200 sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
+        isVisible
+          ? "translate-y-0 opacity-100 pointer-events-auto"
+          : "translate-y-6 opacity-0 pointer-events-none"
       }`}
     >
-      <button
-        onClick={onToggleToc}
-        className={`text-sm flex flex-col items-center gap-1 active:scale-95 transition-transform ${
-          activePanel === "toc" ? `${activeColor} font-bold` : iconColor
-        }`}
-      >
-        <span>☰</span>
-        <span className="text-[10px]">{strings.reader.toc}</span>
-      </button>
-      <button
-        onClick={onToggleProgress}
-        className={`text-sm flex flex-col items-center gap-1 active:scale-95 transition-transform ${
-          activePanel === "progress" ? `${activeColor} font-bold` : iconColor
-        }`}
-      >
-        <span>◤</span>
-        <span className="text-[10px]">{strings.reader.progress}</span>
-      </button>
-      <button
-        onClick={onToggleAi}
-        className={`text-sm flex flex-col items-center gap-1 active:scale-95 transition-transform ${
-          activePanel === "ai" ? `${aiColor} font-bold` : iconColor
-        }`}
-      >
-        <span>✨</span>
-        <span className="text-[10px]">AI</span>
-      </button>
-      <button
-        onClick={onToggleSettings}
-        className={`text-sm flex flex-col items-center gap-1 active:scale-95 transition-transform ${
-          activePanel === "settings" ? `${activeColor} font-bold` : iconColor
-        }`}
-      >
-        <span>⚙</span>
-        <span className="text-[10px]">{strings.reader.settings}</span>
-      </button>
-      <button
-        onClick={onToggleNightMode}
-        className={`text-sm flex flex-col items-center gap-1 active:scale-95 transition-transform ${iconColor}`}
-      >
-        <span>☾</span>
-        <span className="text-[10px]">{strings.reader.nightMode}</span>
-      </button>
+      <div className="mb-3 grid grid-cols-[32px_minmax(0,1fr)_32px_42px] items-center gap-2">
+        <button
+          onClick={onPagePrev}
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          aria-label="上一页"
+        >
+          ‹
+        </button>
+        <input
+          aria-label="拖动阅读进度"
+          type="range"
+          min={0}
+          max={100}
+          step={0.1}
+          value={safeProgress}
+          onChange={(event) =>
+            onSeekProgress(Number(event.currentTarget.value))
+          }
+          className="h-6 w-full accent-[#5F7D52]"
+        />
+        <button
+          onClick={onPageNext}
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          aria-label="下一页"
+        >
+          ›
+        </button>
+        <span className={`text-right text-xs font-semibold ${mutedClass}`}>
+          {Math.round(safeProgress)}%
+        </span>
+      </div>
+
+      <div className="grid grid-cols-6 gap-1">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            onClick={action.onClick}
+            className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold transition-all active:scale-95 ${
+              action.active
+                ? activeClass
+                : `${mutedClass} hover:bg-[rgba(80,65,45,0.05)]`
+            }`}
+          >
+            <span className="flex h-5 min-w-5 items-center justify-center text-sm font-bold">
+              {action.glyph}
+            </span>
+            <span className="max-w-full truncate">{action.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

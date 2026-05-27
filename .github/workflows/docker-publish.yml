@@ -1,0 +1,128 @@
+name: Docker Multi-Arch Build & Cleanup
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - "v*" # 触发标签发布，如 v1.0.0
+
+permissions:
+  contents: read
+  packages: write # 必须，用于推送镜像和删除过期容器版本
+
+jobs:
+  # ==========================================
+  # 任务 1: 后端 NestJS 服务端容器构建
+  # ==========================================
+  build-and-push-api:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 建立 QEMU 模拟器以支持 ARM64 多架构编译
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 建立 Docker Buildx 虚拟构建器
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 登录到 GitHub Container Registry (GHCR)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 自动生成符合规范的镜像标签元数据
+      - name: Extract API Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/novel-reader-api
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,prefix=sha-
+
+      # 多架构打包并推送至 GHCR
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./api.Dockerfile
+          platforms: linux/amd64,linux/arm64 # 多架构支持 (Intel/AMD 与 ARMv8 芯片)
+          push: true
+          tags: ${{ id.meta.outputs.tags }}
+          labels: ${{ id.meta.outputs.labels }}
+          cache-from: type=gha # 开启 GitHub Action 级别的层缓存
+          cache-to: type=gha,mode=max
+
+      # 留存策略清理：清除因最新版本覆盖而失去 Tag 的旧镜像
+      - name: Delete Old Untagged API Versions
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true # 容错，防止因新库无旧版本可删而导致工作流中断
+        with:
+          package-name: "novel-reader-api"
+          package-type: "container"
+          min-versions-to-keep: 3 # 每个分支保留最新的 3 个旧版本
+          delete-only-untagged-versions: "true" # 仅清理无 Tag 镜像，有 Release Tag (如 v0.1.0) 的永久保留
+
+  # ==========================================
+  # 任务 2: 前端 Next.js PWA 客户端容器构建
+  # ==========================================
+  build-and-push-web:
+    name: Build & Push Web-PWA Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Web Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/novel-reader-web-pwa
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,prefix=sha-
+
+      - name: Build and Push Web Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./web-pwa.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ id.meta.outputs.tags }}
+          labels: ${{ id.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Delete Old Untagged Web Versions
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: "novel-reader-web-pwa"
+          package-type: "container"
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: "true"
