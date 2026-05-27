@@ -26,7 +26,8 @@ export class ReaderEngine {
     fontSize: 18,
     lineHeight: 1.7,
     theme: 'paper',
-    pageMode: 'scroll'
+    pageMode: 'scroll',
+    uiMode: 'default'
   };
 
   // Cache for instant navigation (LRU-like approach)

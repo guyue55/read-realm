@@ -128,7 +128,7 @@ describe('BookRepository', () => {
         }),
       }),
     });
-    
+
     // Actually the mock above is a bit messy because of how I chained it.
     // Let's rewrite the mock for the whole test.
   });

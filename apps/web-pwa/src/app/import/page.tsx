@@ -4,15 +4,14 @@ import { useState } from "react";
 import { createId } from "@reader/shared-types";
 import { db } from "@reader/storage-core";
 import { useRouter } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
 
 export default function ImportPage() {
   const [status, setStatus] = useState<string>("等待导入");
   const [isProcessing, setIsProcessing] = useState(false);
   const router = useRouter();
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFile = async (file: File) => {
     if (!file) return;
 
     setIsProcessing(true);
@@ -74,20 +73,69 @@ export default function ImportPage() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await handleFile(file);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file && !isProcessing) await handleFile(file);
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8F8F5] flex flex-col">
-      <AppHeader
+    <AppShell
         title="导入书籍"
-        onBack={() => router.push("/library")}
-      />
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col items-center mt-4">
-        <div className="w-full max-w-2xl flex flex-col gap-6">
-          <div className="border-2 border-dashed border-[#DED6C8] rounded-[16px] bg-[#FFFDF8] p-12 text-center shadow-sm relative hover:border-[#678055] transition-colors">
-            <div className="w-16 h-16 bg-[#EEF2E9] border border-[#CDD8C5] rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl text-[#678055] font-bold">↑</span>
+        subtitle="本地文件、链接解析与内容治理"
+        rightNodes={
+          <button
+            onClick={() => router.push("/library")}
+            className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white"
+          >
+            返回书架
+          </button>
+        }
+      >
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="ui-card rounded-[18px] p-4 md:p-6">
+          <div className="mb-5 inline-flex rounded-full border border-[var(--ui-border)] bg-white/64 p-1 text-sm">
+            <button className="rounded-full bg-[var(--ui-accent)] px-4 py-1.5 font-semibold text-white">
+              本地文件
+            </button>
+            <button className="rounded-full px-4 py-1.5 font-semibold text-[var(--ui-muted)]">
+              URL 解析
+            </button>
+          </div>
+
+          <label
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleDrop}
+            className="ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-8 text-center transition-colors hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+          >
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm">
+              <svg
+                aria-hidden="true"
+                className="h-8 w-8"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
+                <path d="M14 3v5h5" />
+                <path d="M12 17V10" />
+                <path d="m9 13 3-3 3 3" />
+              </svg>
             </div>
-            <h2 className="text-xl font-bold mb-2 text-[#2F2A24]">本地上传</h2>
-            <p className="text-[#6F665B] mb-6 text-sm">TXT / EPUB / HTML / MD</p>
+            <h2 className="text-xl font-bold text-[var(--ui-text)]">
+              拖拽文件到此处，或点击选择文件
+            </h2>
+            <p className="mt-2 text-sm text-[var(--ui-muted)]">
+              支持 TXT、EPUB 格式，解析后先进入章节预览页
+            </p>
             
             <input
               type="file"
@@ -97,32 +145,46 @@ export default function ImportPage() {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
             />
             
-            <div className="px-6 py-2 bg-[#678055] text-white rounded-full font-semibold mx-auto inline-block shadow-sm">
+            <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm">
               选择文件
             </div>
             
             {isProcessing && (
-              <div className="mt-6 text-[#9A6A3A] font-semibold flex items-center justify-center gap-2">
-                <span className="animate-spin text-xl">↻</span>
+              <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(154,106,58,0.18)] border-t-[var(--ui-warm)]" />
                 {status}
               </div>
             )}
             {!isProcessing && status !== "等待导入" && (
-              <p className="mt-4 text-[#DCA79A] text-sm font-medium">{status}</p>
+              <p className="mt-4 text-sm font-medium text-[var(--ui-danger)]">
+                {status}
+              </p>
             )}
-          </div>
+          </label>
+        </section>
           
-          <div className="border border-[rgba(80,65,45,0.12)] rounded-[16px] bg-[#FFFDF8] p-8 flex items-center justify-between shadow-sm opacity-50">
+        <aside className="flex flex-col gap-4">
+          <div className="ui-card rounded-[16px] p-5">
+            <h2 className="text-base font-bold text-[var(--ui-text)]">导入说明</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--ui-muted)]">
+              <li>TXT 会根据章节标题自动拆分。</li>
+              <li>EPUB 会读取目录与正文结构。</li>
+              <li>确认前不会写入正式书架。</li>
+            </ul>
+          </div>
+
+          <div className="ui-soft-card rounded-[16px] p-5">
             <div>
-              <h2 className="text-lg font-bold mb-1 text-[#2F2A24]">粘贴链接</h2>
-              <p className="text-[#6F665B] text-sm">前端尝试 + 后端兜底（即将支持）</p>
-            </div>
-            <div className="w-12 h-12 bg-[#E8E3DA] rounded-full flex items-center justify-center text-xl text-[#6F665B]">
-              🔗
+              <h2 className="mb-1 text-base font-bold text-[var(--ui-text)]">
+                粘贴链接
+              </h2>
+              <p className="text-sm leading-6 text-[var(--ui-muted)]">
+                URL 解析入口会保留在默认主题中，后续可接后端解析队列。
+              </p>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </aside>
+      </div>
+    </AppShell>
   );
 }

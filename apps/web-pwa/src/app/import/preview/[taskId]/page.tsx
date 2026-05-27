@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { db, type ImportTask } from "@reader/storage-core";
 import { useRouter } from "next/navigation";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
+import { BookCover } from "@/components/BookCover";
 
 export default function PreviewPage({ params }: { params: { taskId: string } }) {
   const [task, setTask] = useState<ImportTask | null>(null);
@@ -44,78 +45,132 @@ export default function PreviewPage({ params }: { params: { taskId: string } }) 
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[#F8F8F5] text-[#2F2A24]">
-        <div className="bg-[#FFF0EC] border border-[#DCA79A] p-8 rounded-[16px] text-center max-w-md">
-          <h2 className="text-xl font-bold mb-2">解析失败</h2>
-          <p className="text-[#6F665B] mb-6">{error}</p>
-          <button onClick={() => router.push("/import")} className="px-6 py-2 bg-[#678055] text-white rounded-full font-semibold">返回导入页</button>
+      <AppShell title="解析失败" subtitle="导入任务未能完成">
+        <div className="ui-card mx-auto max-w-md rounded-[16px] p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF0EC] text-[var(--ui-danger)]">
+            !
+          </div>
+          <h2 className="mb-2 text-xl font-bold">解析失败</h2>
+          <p className="mb-6 text-sm leading-6 text-[var(--ui-muted)]">{error}</p>
+          <button
+            onClick={() => router.push("/import")}
+            className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white"
+          >
+            返回导入页
+          </button>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!task) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8 bg-[#F8F8F5]">
-        <div className="animate-spin text-[#678055] text-2xl">↻</div>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--ui-bg)] p-8">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-[rgba(95,125,82,0.18)] border-t-[var(--ui-accent)]" />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8F8F5] flex flex-col">
-      <AppHeader
-        title="解析预览"
-        onBack={handleDiscard}
-        rightNodes={
-          <button
-            onClick={handleConfirm}
-            disabled={saving}
-            className="rounded-full border border-[#CDD8C5] bg-[#678055] text-white px-4 md:px-6 py-1.5 md:py-2 text-sm font-semibold hover:bg-[#526047] disabled:opacity-50 shadow-sm"
-          >
-            {saving ? "保存中..." : "加入书架"}
-          </button>
-        }
-      />
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col items-center">
-        <div className="w-full max-w-3xl flex justify-between items-center mb-6 mt-2">
-          <p className="text-[#6F665B] text-sm">
-            共 {task.chapters.length} 章 · 质量检测：<span className="text-[#678055] font-semibold">通过</span>
-          </p>
-        </div>
+  const issueCount = task.chapters.filter((chapter) =>
+    analyzeChapterQuality(chapter.content, chapter.title),
+  ).length;
 
-        <div className="w-full max-w-3xl bg-[#FFFDF8] border border-[#DED6C8] rounded-[16px] shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-[#DED6C8] bg-white flex gap-6 items-center">
-            <div className="w-16 h-24 bg-[#1E1E1E] rounded-[6px] shadow-sm flex items-center justify-center text-white text-xs font-bold px-2 text-center break-words">
-              {task.bookMetadata.title}
-            </div>
-            <div>
-              <h2 className="text-xl font-bold mb-2 text-[#2F2A24]">{task.bookMetadata.title}</h2>
-              <p className="text-[#6F665B] text-sm">来源：{task.bookMetadata.format.toUpperCase()} 上传</p>
+  return (
+    <AppShell
+        title="解析预览"
+        subtitle={`共 ${task.chapters.length} 章 · ${issueCount} 个质量提醒`}
+        rightNodes={
+          <>
+            <button
+              onClick={handleDiscard}
+              className="ui-focus-ring hidden rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white sm:inline-flex"
+            >
+              放弃
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={saving}
+              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
+            >
+              {saving ? "保存中..." : "加入书架"}
+            </button>
+          </>
+        }
+      >
+      <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="ui-card h-fit rounded-[18px] p-5">
+          <div className="flex gap-4">
+            <BookCover
+              title={task.bookMetadata.title}
+              className="h-[144px] w-[96px]"
+            />
+            <div className="min-w-0 flex-1">
+              <h2 className="line-clamp-2 text-xl font-bold text-[var(--ui-text)]">
+                {task.bookMetadata.title}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--ui-muted)]">
+                {task.bookMetadata.format.toUpperCase()} 上传
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-[rgba(80,65,45,0.05)] p-2">
+                  <p className="text-[var(--ui-quiet)]">章节</p>
+                  <p className="mt-1 font-bold">{task.chapters.length}</p>
+                </div>
+                <div className="rounded-lg bg-[rgba(80,65,45,0.05)] p-2">
+                  <p className="text-[var(--ui-quiet)]">质量</p>
+                  <p className="mt-1 font-bold text-[var(--ui-accent)]">
+                    {issueCount ? `${issueCount} 项` : "通过"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div className="p-2 max-h-[500px] overflow-y-auto">
+          <div className="mt-5 rounded-[14px] bg-[rgba(248,246,240,0.76)] p-4 text-sm leading-6 text-[var(--ui-muted)]">
+            章节结构会先在这里检查。确认导入后，才会写入本地书架和正文缓存。
+          </div>
+        </aside>
+
+        <section className="ui-card overflow-hidden rounded-[18px]">
+          <div className="grid grid-cols-[minmax(0,1fr)_96px_92px] border-b border-[var(--ui-border)] bg-white/55 px-4 py-3 text-xs font-semibold text-[var(--ui-muted)]">
+            <span>章节</span>
+            <span>字数</span>
+            <span>质量</span>
+          </div>
+
+          <div className="reader-scrollbar max-h-[calc(100vh-190px)] overflow-y-auto p-2">
             {task.chapters.map((ch) => {
               const quality = analyzeChapterQuality(ch.content, ch.title);
               return (
-                <div key={ch.index} className="flex items-center justify-between p-3 hover:bg-[#F4ECD8] rounded-lg transition-colors border-b border-[#F8F8F5] last:border-0">
-                  <div className="flex items-center gap-4 flex-1">
-                    <span className="text-[#9A6A3A] font-mono text-xs w-8 text-right shrink-0">{ch.index + 1}</span>
-                    <span className="text-sm font-medium truncate mr-2 text-[#2F2A24]">{ch.title}</span>
-                    {quality && (
-                      <span className="shrink-0">
-                        <QualityBadge issueType={quality.issueType} severity={quality.severity} />
-                      </span>
-                    )}
+                <div
+                  key={ch.index}
+                  className={`grid grid-cols-[minmax(0,1fr)_96px_92px] items-center gap-2 rounded-xl px-3 py-3 text-sm transition-colors hover:bg-[var(--ui-accent-soft)] ${
+                    quality ? "bg-[#FFF6F1]" : ""
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="w-8 shrink-0 text-right font-mono text-xs text-[var(--ui-warm)]">
+                      {ch.index + 1}
+                    </span>
+                    <span className="truncate font-medium text-[var(--ui-text)]">
+                      {ch.title}
+                    </span>
                   </div>
-                  <span className="text-[#6F665B] text-xs shrink-0">{ch.content.length} 字</span>
+                  <span className="text-xs text-[var(--ui-muted)]">
+                    {ch.content.length} 字
+                  </span>
+                  {quality ? (
+                    <QualityBadge issueType={quality.issueType} severity={quality.severity} />
+                  ) : (
+                    <span className="text-xs font-semibold text-[var(--ui-accent)]">
+                      优秀
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
-        </div>
-      </main>
-    </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }
