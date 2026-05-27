@@ -28,7 +28,7 @@ export function TocDrawer({
 }: TocDrawerProps) {
   const containerClasses = isMobileDrawer
     ? "h-full flex flex-col"
-    : "h-full flex flex-col border-r border-[rgba(80,65,45,0.12)] bg-[#F8F8F5]"; // paper bg
+    : "h-full flex flex-col bg-transparent"; // inherit bg from parent
 
   return (
     <div className={containerClasses}>
@@ -75,7 +75,7 @@ export function TocDrawer({
                   className={`w-full text-left px-4 py-3 border-b border-[rgba(80,65,45,0.04)] flex items-center hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)] ${
                     currentChapterIndex === item.index
                       ? "text-[#678055] font-bold"
-                      : "text-[#2F2A24]"
+                      : "text-inherit"
                   }`}
                 >
                   <span className="text-xs text-[#6F665B] w-8 inline-block opacity-70 shrink-0">
@@ -110,7 +110,7 @@ export function TocDrawer({
                     className="w-full text-left px-4 py-4 border-b border-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)]"
                   >
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-bold text-[#2F2A24] truncate flex-1 mr-2">
+                      <span className="text-sm font-bold text-inherit truncate flex-1 mr-2">
                         {toc[bookmark.chapterIndex]?.title ||
                           strings.reader.chapterIndexLabel.replace(
                             "{index}",

@@ -8,6 +8,7 @@ export interface SettingsSheetProps {
   updateFontSize: (delta: number) => void;
   updateTheme: (theme: ThemeName) => void;
   updatePageMode: (mode: "scroll" | "pagination") => void;
+  updateUiMode?: (mode: "default" | "simple") => void;
   isMobileSheet?: boolean;
   onClose?: () => void;
 }
@@ -17,42 +18,79 @@ export function SettingsSheet({
   updateFontSize,
   updateTheme,
   updatePageMode,
+  updateUiMode,
   isMobileSheet = false,
   onClose,
 }: SettingsSheetProps) {
+  const isDark = settings.theme === 'dark';
+  const bgClass = isDark ? "bg-[#232323] text-[#CFCFCF]" : "bg-white text-[#2F2A24]";
+  const inputBgClass = isDark ? "bg-[#1E1E1E]" : "bg-[#F8F8F5]";
+  const activeBtnBg = isDark ? "bg-[#333333]" : "bg-white";
+  const textColor = isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]";
+  const mutedText = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
+
   const containerClasses = isMobileSheet
-    ? "h-full bg-white flex flex-col"
-    : "bg-white rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full";
+    ? `h-full flex flex-col ${bgClass}`
+    : `${bgClass} rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full`;
 
   return (
     <div className={containerClasses}>
       {isMobileSheet && (
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-[#2F2A24]">{strings.reader.settings}</h3>
+        <div className={`flex justify-between items-center mb-6 p-6 pb-0 ${bgClass}`}>
+          <h3 className={`font-bold ${textColor}`}>{strings.reader.settings}</h3>
           {onClose && (
-            <button onClick={onClose} className="text-[#6F665B] p-1">✕</button>
+            <button onClick={onClose} className={`${mutedText} p-1`}>✕</button>
           )}
         </div>
       )}
 
-      <div className="flex flex-col gap-6">
+      <div className={`flex flex-col gap-6 ${isMobileSheet ? 'px-6' : ''}`}>
+        {updateUiMode && (
+          <div className="flex items-center justify-between pb-4 border-b border-[rgba(80,65,45,0.08)]">
+            <span className={`text-sm font-medium ${mutedText}`}>
+              UI 主题
+            </span>
+            <div className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}>
+              <button
+                onClick={() => updateUiMode("default")}
+                className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                  settings.uiMode === "default"
+                    ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                    : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
+                }`}
+              >
+                默认 (丰富)
+              </button>
+              <button
+                onClick={() => updateUiMode("simple")}
+                className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                  settings.uiMode === "simple"
+                    ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                    : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
+                }`}
+              >
+                简洁
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#6F665B]">
+          <span className={`text-sm font-medium ${mutedText}`}>
             {strings.reader.fontSize}
           </span>
-          <div className="flex items-center bg-[#F8F8F5] rounded-lg p-1 border border-[rgba(80,65,45,0.08)]">
+          <div className={`flex items-center ${inputBgClass} rounded-lg p-1 border border-[rgba(80,65,45,0.08)]`}>
             <button
               onClick={() => updateFontSize(-2)}
-              className="w-12 h-8 flex items-center justify-center text-xl font-bold text-[#2F2A24] hover:bg-[#E8E3DA] rounded transition-colors"
+              className={`w-12 h-8 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded transition-colors`}
             >
               A-
             </button>
-            <span className="w-12 text-center font-bold text-[#2F2A24]">
+            <span className={`w-12 text-center font-bold ${textColor}`}>
               {settings.fontSize}
             </span>
             <button
               onClick={() => updateFontSize(2)}
-              className="w-12 h-8 flex items-center justify-center text-xl font-bold text-[#2F2A24] hover:bg-[#E8E3DA] rounded transition-colors"
+              className={`w-12 h-8 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded transition-colors`}
             >
               A+
             </button>
@@ -60,7 +98,7 @@ export function SettingsSheet({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#6F665B]">
+          <span className={`text-sm font-medium ${mutedText}`}>
             {strings.reader.background}
           </span>
           <div className="flex flex-1 justify-end gap-3 ml-4">
@@ -82,16 +120,16 @@ export function SettingsSheet({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#6F665B]">
+          <span className={`text-sm font-medium ${mutedText}`}>
             {strings.reader.pageMode}
           </span>
-          <div className="flex items-center bg-[#F8F8F5] rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]">
+          <div className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}>
             <button
               onClick={() => updatePageMode("scroll")}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                 settings.pageMode === "scroll"
-                  ? "bg-white shadow-sm font-bold text-[#678055]"
-                  : "text-[#6F665B] hover:bg-[#E8E3DA]"
+                  ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                  : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
               }`}
             >
               {strings.reader.scroll}
@@ -100,8 +138,8 @@ export function SettingsSheet({
               onClick={() => updatePageMode("pagination")}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                 settings.pageMode === "pagination"
-                  ? "bg-white shadow-sm font-bold text-[#678055]"
-                  : "text-[#6F665B] hover:bg-[#E8E3DA]"
+                  ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                  : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
               }`}
             >
               {strings.reader.pagination}

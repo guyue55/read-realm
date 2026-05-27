@@ -17,9 +17,7 @@ export class SearchRepository {
       ORDER BY rank
     `);
 
-    const ids = results.map(
-      (row: { id: string }) => row.id,
-    );
+    const ids = results.map((row: { id: string }) => row.id);
 
     if (ids.length === 0) return [];
 

@@ -10,7 +10,7 @@ export interface BookCardProps {
 
 export function BookCard({ book, onRead, onDelete }: BookCardProps) {
   return (
-    <div className="bg-white p-6 rounded-[16px] shadow-sm border border-[rgba(80,65,45,0.12)] flex flex-col justify-between hover:shadow-md transition-shadow">
+    <div className="bg-white p-6 rounded-[20px] shadow-[0_4px_16px_rgba(80,65,45,0.06)] border border-[rgba(80,65,45,0.08)] flex flex-col justify-between hover:shadow-[0_8px_24px_rgba(80,65,45,0.12)] transition-shadow">
       <div>
         <h3 className="font-bold text-lg mb-2 line-clamp-2 text-[#2F2A24]">
           {book.title}

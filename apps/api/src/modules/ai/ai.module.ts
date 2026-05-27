@@ -16,7 +16,7 @@ import * as path from 'path';
       useFactory: () => {
         return new OpenAIProvider(
           process.env.OPENAI_API_KEY || 'dummy-key',
-          process.env.OPENAI_BASE_URL
+          process.env.OPENAI_BASE_URL,
         );
       },
     },

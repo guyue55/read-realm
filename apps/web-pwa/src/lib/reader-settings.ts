@@ -5,7 +5,7 @@ const STORAGE_KEY = "reader-settings";
 
 export type ReaderSettingsState = Pick<
   ReaderSettings,
-  "fontSize" | "lineHeight" | "theme" | "pageMode"
+  "fontSize" | "lineHeight" | "theme" | "pageMode" | "uiMode"
 >;
 
 export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
@@ -13,6 +13,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
   lineHeight: 1.7,
   theme: "paper",
   pageMode: "scroll",
+  uiMode: "default",
 };
 
 export function isThemeName(value: unknown): value is ThemeName {
@@ -39,6 +40,10 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
       candidate.pageMode === "pagination"
         ? "pagination"
         : DEFAULT_READER_SETTINGS.pageMode,
+    uiMode:
+      candidate.uiMode === "simple"
+        ? "simple"
+        : DEFAULT_READER_SETTINGS.uiMode,
   };
 }
 
