@@ -1,6 +1,6 @@
 # 开发者贡献指南 (Contributing Guide)
 
-感谢你对 **我的阅读世界 (novel-reader-platform)** 的关注和支持！🎉 本项目是一个致力于打造极致体验的“个人小说聚合阅读平台”的高性能 Monorepo。
+感谢你对 **我的阅读世界 (read-realm)** 的关注和支持！🎉 本项目是一个致力于打造极致体验的“个人小说聚合阅读平台”的高性能 Monorepo。
 
 为了保持代码库的健康、可读性以及高效的协作，请在开始开发前仔细阅读本指南。
 
@@ -21,8 +21,8 @@
 1. **克隆项目**：
 
    ```bash
-   git clone https://github.com/guyue/novel-reader-platform.git
-   cd novel-reader-platform
+   git clone https://github.com/guyue55/read-realm.git
+   cd read-realm
    ```
 
 2. **安装依赖**：

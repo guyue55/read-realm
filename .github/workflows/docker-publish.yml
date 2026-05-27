@@ -44,7 +44,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/novel-reader-api
+          images: ghcr.io/${{ github.repository_owner }}/read-realm-api
           tags: |
             type=semver,pattern={{version}}
             type=ref,event=branch
@@ -68,7 +68,7 @@ jobs:
         uses: actions/delete-package-versions@v5
         continue-on-error: true # 容错，防止因新库无旧版本可删而导致工作流中断
         with:
-          package-name: "novel-reader-api"
+          package-name: "read-realm-api"
           package-type: "container"
           min-versions-to-keep: 3 # 每个分支保留最新的 3 个旧版本
           delete-only-untagged-versions: "true" # 仅清理无 Tag 镜像，有 Release Tag (如 v0.1.0) 的永久保留
@@ -100,7 +100,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/novel-reader-web-pwa
+          images: ghcr.io/${{ github.repository_owner }}/read-realm-web-pwa
           tags: |
             type=semver,pattern={{version}}
             type=ref,event=branch
@@ -122,7 +122,7 @@ jobs:
         uses: actions/delete-package-versions@v5
         continue-on-error: true
         with:
-          package-name: "novel-reader-web-pwa"
+          package-name: "read-realm-web-pwa"
           package-type: "container"
           min-versions-to-keep: 3
           delete-only-untagged-versions: "true"
