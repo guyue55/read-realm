@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { parseWebPageWithReadability } from '@reader/parser-core';
 
 export interface ParsedChapter {
   index: number;
@@ -61,7 +62,7 @@ function getTitle(html: string, url: string) {
   return title.replace(/[_|-].*$/, '').trim() || new URL(url).hostname;
 }
 
-function getReadableText(html: string) {
+function getReadableText(html: string, url?: string) {
   const candidates: string[] = [];
   const selectorPatterns = [
     /<article\b[^>]*>([\s\S]*?)<\/article>/gi,
@@ -81,6 +82,16 @@ function getReadableText(html: string) {
   );
   if (usableCandidates.length > 0) {
     return usableCandidates.sort((a, b) => b.length - a.length)[0] || '';
+  }
+
+  // 降级兜底链路：利用 @reader/parser-core 里的 Readability 算法精准提取通用博客和网页正文
+  try {
+    const readable = parseWebPageWithReadability(html, url);
+    if (readable.textContent.length >= 40) {
+      return readable.textContent;
+    }
+  } catch {
+    // 捕获异常，防止对特定未知页面崩溃，静默降级到 stripHtml
   }
 
   return stripHtml(html);
@@ -231,7 +242,7 @@ export class UrlImportService {
       visited.add(currentUrl);
       const html = await this.fetchHtml(currentUrl);
       if (page === 0) title = getTitle(html, currentUrl) || fallbackTitle;
-      const text = getReadableText(html);
+      const text = getReadableText(html, currentUrl);
       if (text.length >= 40) parts.push(text);
       currentUrl = this.getNextPageUrl(html, currentUrl, visited);
     }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Controller, Post, Body, Delete, Param } from '@nestjs/common';
 import { BookRepository } from './book.repository';
 import { Book } from '@reader/shared-types';

@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "test": "vitest run",
     "build": "tsc"
   },
   "dependencies": {
@@ -12,10 +13,15 @@
     "@reader/content-utils": "workspace:*",
     "jszip": "^3.10.1",
     "isomorphic-dompurify": "^2.0.0",
-    "@xmldom/xmldom": "^0.8.10"
+    "@xmldom/xmldom": "^0.8.10",
+    "jsdom": "^24.0.0",
+    "@mozilla/readability": "^0.5.0"
   },
   "devDependencies": {
     "@reader/tsconfig": "workspace:*",
-    "typescript": "latest"
+    "typescript": "latest",
+    "@types/jsdom": "^21.1.6",
+    "@types/mozilla-readability": "^0.2.1",
+    "vitest": "^1.0.0"
   }
 }

@@ -30,7 +30,7 @@ export class ChapterController {
         ...chapter,
         content: content.toString('utf-8'),
       };
-    } catch (error) {
+    } catch {
       throw new NotFoundException('Chapter content not found');
     }
   }

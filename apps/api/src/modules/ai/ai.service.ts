@@ -26,12 +26,17 @@ export class AiService {
       throw new NotFoundException('Chapter not found');
     }
 
+    const model = 'gpt-3.5-turbo';
+    const promptVersion = '1.0';
+
     // Check cache
     const cached = await this.db.query.aiViews.findFirst({
       where: and(
         eq(schema.aiViews.bookId, bookId),
         eq(schema.aiViews.chapterIndex, chapterIndex),
         eq(schema.aiViews.sourceHash, chapter.contentHash),
+        eq(schema.aiViews.model, model),
+        eq(schema.aiViews.promptVersion, promptVersion),
       ),
     });
 
@@ -53,8 +58,8 @@ export class AiService {
       chapterIndex,
       sourceHash: chapter.contentHash,
       summary,
-      model: 'gpt-3.5-turbo',
-      promptVersion: '1.0',
+      model,
+      promptVersion,
       createdAt: new Date().toISOString(),
     };
 
