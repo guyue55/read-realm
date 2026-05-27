@@ -9,7 +9,8 @@ import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useRouter } from "next/navigation";
-import type { MouseEvent } from "react";
+import { useCallback, type MouseEvent } from "react";
+import { GestureRecognizer } from "@reader/gesture-core";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
   return (
@@ -19,6 +20,8 @@ function isInteractiveReaderTarget(target: EventTarget | null) {
     )
   );
 }
+
+const recognizer = new GestureRecognizer();
 
 export function ReaderDefault({ bookId }: { bookId: string }) {
   const router = useRouter();
@@ -57,6 +60,47 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     isPagination,
   } = useReader(bookId);
 
+  const handleMobileReaderClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (isInteractiveReaderTarget(event.target) || activePanel) return;
+
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const width = bounds.width;
+
+      // 使用手势核心识别点击行为
+      const action = recognizer.getTapAction(x, width);
+
+      // 1. 如果菜单尚未显示
+      if (!showMenu) {
+        if (action === "prev") {
+          void handlePagePrev();
+        } else if (action === "next") {
+          void handlePageNext();
+        } else {
+          // 点击中间区域，唤醒菜单
+          setShowMenu(true);
+        }
+        return;
+      }
+
+      // 2. 如果菜单已经显示
+      if (action === "prev") {
+        void handlePagePrev();
+        return;
+      }
+
+      if (action === "next") {
+        void handlePageNext();
+        return;
+      }
+
+      // 点击中间区域，隐藏菜单
+      setShowMenu(false);
+    },
+    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel],
+  );
+
   if (!chapter)
     return (
       <div className="flex h-screen items-center justify-center text-[#2F2A24]">
@@ -69,29 +113,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const overlay2 = isDark ? "rgba(255,255,255,0.05)" : "rgba(80,65,45,0.06)"; // TOC
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
   const brandColor = isDark ? "#D8D2C6" : "#526047";
-  const handleMobileReaderClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (isInteractiveReaderTarget(event.target) || activePanel) return;
-
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const ratio = (event.clientX - bounds.left) / bounds.width;
-
-    if (!showMenu) {
-      setShowMenu(true);
-      return;
-    }
-
-    if (ratio < 0.22) {
-      void handlePagePrev();
-      return;
-    }
-
-    if (ratio > 0.78) {
-      void handlePageNext();
-      return;
-    }
-
-    setShowMenu(false);
-  };
 
   return (
     <main className="fixed inset-0 overflow-hidden transition-colors duration-300 xl:flex xl:items-center xl:justify-center xl:bg-[#F7F1E6]">

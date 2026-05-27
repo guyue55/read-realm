@@ -30,7 +30,7 @@ export function parseTxtBook(
   for (const line of lines) {
     if (line.length < 50 && chapterRegex.test(line)) {
       // Save previous chapter if it has content
-      if (currentChapterLines.length > 0 || chapters.length === 0) {
+      if (currentChapterLines.length > 0) {
         chapters.push({
           index: chapterIndex++,
           title: currentChapterTitle.trim(),

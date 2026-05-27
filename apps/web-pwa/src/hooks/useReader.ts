@@ -8,6 +8,7 @@ import {
 import { ReaderEngine, type ChapterData } from "@reader/reader-core";
 import { db } from "@reader/storage-core";
 import type { ReadingProgress, Bookmark } from "@reader/shared-types";
+import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { apiUrl } from "@/lib/api";
 import { strings } from "@/lib/i18n";
@@ -74,6 +75,8 @@ export function useReader(bookId: string) {
   );
   const [readingProgress, setReadingProgress] = useState(0);
   const touchGestureRef = useRef<{ x: number; y: number } | null>(null);
+  const recognizerRef = useRef(new GestureRecognizer());
+  const touchTimeRef = useRef<number>(0);
 
   const [activePanel, setActivePanel] = useState<
     "toc" | "progress" | "ai" | "settings" | null
@@ -462,6 +465,7 @@ export function useReader(bookId: string) {
       const touch = event.touches[0];
       if (!touch) return;
       touchGestureRef.current = { x: touch.clientX, y: touch.clientY };
+      touchTimeRef.current = Date.now();
     },
     [activePanel],
   );
@@ -476,19 +480,19 @@ export function useReader(bookId: string) {
       const touch = event.changedTouches[0];
       if (!touch) return;
 
-      const deltaX = touch.clientX - start.x;
-      const deltaY = touch.clientY - start.y;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
-      if (Math.max(absX, absY) < 56) return;
+      const end = { x: touch.clientX, y: touch.clientY };
+      const duration = Date.now() - touchTimeRef.current;
 
-      if (absX > absY * 1.15) {
-        void (deltaX < 0 ? handlePageNext() : handlePagePrev());
-        return;
-      }
+      const swipeAction = recognizerRef.current.getSwipeAction(start, end, duration);
 
-      if (absY > absX * 1.15) {
-        void (deltaY < 0 ? handlePageNext() : handlePagePrev());
+      if (swipeAction === "swipeLeft" || swipeAction === "swipeUp") {
+        // 阻止移动端滑动释放后的延迟 click (Ghost Click)，防止重复翻页或唤醒菜单
+        event.preventDefault();
+        void handlePageNext();
+      } else if (swipeAction === "swipeRight" || swipeAction === "swipeDown") {
+        // 阻止移动端滑动释放后的延迟 click (Ghost Click)，防止重复翻页或唤醒菜单
+        event.preventDefault();
+        void handlePagePrev();
       }
     },
     [handlePageNext, handlePagePrev, settings.pageMode],

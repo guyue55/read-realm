@@ -28,6 +28,7 @@ describe("ReaderEngine Settings", () => {
       lineHeight: 1.7,
       theme: "paper",
       pageMode: "scroll",
+      uiMode: "default",
     });
   });
 
