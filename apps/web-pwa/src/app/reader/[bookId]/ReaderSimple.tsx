@@ -140,7 +140,6 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               isDesktop={false}
               isDark={isDark}
               onBack={() => (window.location.href = "/")}
-              onSummarize={handleSummarize}
               onBookmark={addBookmark}
               onSettings={() => togglePanel("settings")}
             />

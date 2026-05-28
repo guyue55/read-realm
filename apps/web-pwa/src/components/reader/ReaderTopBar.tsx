@@ -4,23 +4,25 @@ import { strings } from "@/lib/i18n";
 export interface ReaderTopBarProps {
   title: string;
   onBack: () => void;
-  onSummarize: () => void;
   onBookmark: () => void;
   onSettings: () => void;
   isVisible: boolean;
   isDesktop?: boolean;
   isDark?: boolean;
+  onToggleToc?: () => void;
+  onToggleAi?: () => void;
 }
 
 export function ReaderTopBar({
   title,
   onBack,
-  onSummarize,
   onBookmark,
   onSettings,
   isVisible,
   isDesktop = false,
   isDark = false,
+  onToggleToc,
+  onToggleAi,
 }: ReaderTopBarProps) {
   // Mobile Top Bar (Overlay)
   if (!isDesktop) {
@@ -64,25 +66,52 @@ export function ReaderTopBar({
 
   // Desktop Weak Toolbar (Always visible but unobtrusive)
   return (
-    <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(80,65,45,0.12)] bg-transparent">
-      <button
-        onClick={onBack}
-        className="text-sm font-medium text-[#6F665B] hover:text-inherit"
-      >
-        ← 返回书架
-      </button>
-      <div className="flex gap-4">
+    <div className="grid grid-cols-3 items-center px-6 py-3 border-b border-[rgba(80,65,45,0.12)] bg-transparent">
+      <div className="flex justify-start">
         <button
-          onClick={onSummarize}
-          className="text-sm font-medium text-[#9A6A3A] hover:opacity-80"
+          onClick={onBack}
+          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95"
         >
-          ✨ {strings.reader.aiSummary}
+          ← 返回书架
         </button>
+      </div>
+      <div className="flex justify-center">
+        <span className="text-sm font-bold font-serif max-w-[320px] truncate opacity-85">
+          {title}
+        </span>
+      </div>
+      <div className="flex justify-end gap-5 items-center">
+        {onToggleToc && (
+          <button
+            onClick={onToggleToc}
+            className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center gap-1"
+            title="展开目录"
+          >
+            ☰ {strings.reader.toc}
+          </button>
+        )}
         <button
           onClick={onBookmark}
-          className="text-sm font-medium text-[#678055] hover:opacity-80"
+          className="text-sm font-medium text-[#678055] hover:text-[#5F7D52] transition-colors active:scale-95"
+          title="添加书签"
         >
           + {strings.reader.bookmark}
+        </button>
+        {onToggleAi && (
+          <button
+            onClick={onToggleAi}
+            className="text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] transition-colors active:scale-95 flex items-center gap-1"
+            title="智能阅读助手"
+          >
+            ✨ {strings.reader.aiSummary}
+          </button>
+        )}
+        <button
+          onClick={onSettings}
+          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center"
+          title="阅读设置"
+        >
+          ⚙ 设置
         </button>
       </div>
     </div>
