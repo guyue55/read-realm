@@ -368,45 +368,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onSeekProgress={seekToProgress}
         />
 
-        {/* Mobile Drawers & Overlays */}
-        {activePanel && (
+        {/* Mobile Settings/Progress Backdrop */}
+        {(activePanel === "settings" || activePanel === "progress") && (
           <div
             className="fixed inset-0 z-40 bg-black/20"
             onClick={() => setActivePanel(null)}
           />
         )}
-
-        {/* TOC Drawer */}
-        <div
-          className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
-          style={{ backgroundColor: currentThemeColors.bg }}
-        >
-          <TocDrawer
-            toc={toc}
-            bookmarks={bookmarks}
-            currentChapterIndex={chapter.index}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onJumpToChapter={jumpToChapter}
-            onJumpToBookmark={jumpToBookmark}
-            isMobileDrawer={true}
-            onClose={() => setActivePanel(null)}
-          />
-        </div>
-
-        {/* AI Drawer */}
-        <div
-          className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
-          style={{ backgroundColor: currentThemeColors.bg }}
-        >
-          <AIReaderPanel
-            isAiLoading={isAiLoading}
-            aiSummary={aiSummary}
-            isMobileDrawer={true}
-            isDark={isDark}
-            onClose={() => setActivePanel(null)}
-          />
-        </div>
 
         {/* Settings Sheet */}
         <div
@@ -475,6 +443,50 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Shared Drawers (TOC & AI) and Backdrop for both Mobile and Desktop */}
+      {(activePanel === "toc" || activePanel === "ai") && (
+        <div
+          className="fixed inset-0 z-40 bg-black/20"
+          onClick={() => setActivePanel(null)}
+        />
+      )}
+
+      {/* TOC Drawer (Shared) */}
+      <div
+        className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${
+          activePanel === "toc" ? "translate-x-0" : "-translate-x-full"
+        }`}
+        style={{ backgroundColor: currentThemeColors.bg }}
+      >
+        <TocDrawer
+          toc={toc}
+          bookmarks={bookmarks}
+          currentChapterIndex={chapter.index}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onJumpToChapter={jumpToChapter}
+          onJumpToBookmark={jumpToBookmark}
+          isMobileDrawer={true}
+          onClose={() => setActivePanel(null)}
+        />
+      </div>
+
+      {/* AI Drawer (Shared) */}
+      <div
+        className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${
+          activePanel === "ai" ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ backgroundColor: currentThemeColors.bg }}
+      >
+        <AIReaderPanel
+          isAiLoading={isAiLoading}
+          aiSummary={aiSummary}
+          isMobileDrawer={true}
+          isDark={isDark}
+          onClose={() => setActivePanel(null)}
+        />
       </div>
 
       {/* Desktop Settings Modal Overlay */}
