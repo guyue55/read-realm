@@ -78,6 +78,29 @@ export function useReader(bookId: string) {
   const recognizerRef = useRef(new GestureRecognizer());
   const touchTimeRef = useRef<number>(0);
 
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingProgressRef = useRef<{
+    bookId: string;
+    chapterId: string;
+    chapterIndex: number;
+    offset: number;
+  } | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast(msg);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 2500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
   const [activePanel, setActivePanel] = useState<
     "toc" | "progress" | "ai" | "settings" | null
   >(null);
@@ -177,6 +200,16 @@ export function useReader(bookId: string) {
         offset,
         percentage: toc.length > 0 ? (chapter.index / toc.length) * 100 : 0,
         updatedAt: new Date().toISOString(),
+      }).then(() => {
+        if (
+          pendingProgressRef.current &&
+          pendingProgressRef.current.offset === offset &&
+          pendingProgressRef.current.chapterId === chapter.id
+        ) {
+          pendingProgressRef.current = null;
+        }
+      }).catch((err) => {
+        console.error("Failed to auto-save scroll progress:", err);
       });
     }, 1000);
 
@@ -186,7 +219,15 @@ export function useReader(bookId: string) {
       setReadingProgress(
         computeOverallProgress(chapter.index, toc.length, offsetRatio),
       );
-      if (offset > 0) saveScrollProgress(offset);
+      if (offset > 0) {
+        pendingProgressRef.current = {
+          bookId,
+          chapterId: chapter.id,
+          chapterIndex: chapter.index,
+          offset,
+        };
+        saveScrollProgress(offset);
+      }
     };
 
     const container = contentRef.current;
@@ -201,6 +242,53 @@ export function useReader(bookId: string) {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [chapter, bookId, settings.pageMode, toc.length, getOffsetState]);
+
+  // 强落盘保障机制 (一)：处理 Hook/组件 卸载时的进度刷盘
+  useEffect(() => {
+    return () => {
+      if (pendingProgressRef.current) {
+        const { bookId: pid, chapterId, chapterIndex, offset } = pendingProgressRef.current;
+        pendingProgressRef.current = null;
+        void db.progress.put({
+          bookId: pid,
+          chapterId,
+          chapterIndex,
+          offset,
+          percentage: toc.length > 0 ? (chapterIndex / toc.length) * 100 : 0,
+          updatedAt: new Date().toISOString(),
+        }).catch((err) => {
+          console.error("Failed to force save reader progress on Hook unmount:", err);
+        });
+      }
+    };
+  }, [toc.length]);
+
+  // 强落盘保障机制 (二)：处理页面隐藏 (pagehide)、即将卸载 (beforeunload) 时的进度刷盘
+  useEffect(() => {
+    const forceFlushProgress = () => {
+      if (pendingProgressRef.current) {
+        const { bookId: pid, chapterId, chapterIndex, offset } = pendingProgressRef.current;
+        pendingProgressRef.current = null;
+        void db.progress.put({
+          bookId: pid,
+          chapterId,
+          chapterIndex,
+          offset,
+          percentage: toc.length > 0 ? (chapterIndex / toc.length) * 100 : 0,
+          updatedAt: new Date().toISOString(),
+        }).catch((err) => {
+          console.error("Failed to force save reader progress on page exit:", err);
+        });
+      }
+    };
+
+    window.addEventListener("pagehide", forceFlushProgress);
+    window.addEventListener("beforeunload", forceFlushProgress);
+    return () => {
+      window.removeEventListener("pagehide", forceFlushProgress);
+      window.removeEventListener("beforeunload", forceFlushProgress);
+    };
+  }, [toc.length]);
 
   useEffect(() => {
     if (settings.pageMode !== "pagination") return;
@@ -395,17 +483,17 @@ export function useReader(bookId: string) {
     if (engine && chapter && chapter.index < toc.length - 1) {
       await jumpToChapter(chapter.index + 1);
     } else {
-      alert(strings.reader.endOfBook);
+      showToast(strings.reader.endOfBook);
     }
-  }, [engine, chapter, toc.length, jumpToChapter]);
+  }, [engine, chapter, toc.length, jumpToChapter, showToast]);
 
   const handlePrev = useCallback(async () => {
     if (engine && chapter && chapter.index > 0) {
       await jumpToChapter(chapter.index - 1);
     } else {
-      alert(strings.reader.startOfBook);
+      showToast(strings.reader.startOfBook);
     }
-  }, [engine, chapter, jumpToChapter]);
+  }, [engine, chapter, jumpToChapter, showToast]);
 
   const handlePageNext = useCallback(async () => {
     const isPagination = settings.pageMode === "pagination";
@@ -523,8 +611,8 @@ export function useReader(bookId: string) {
     };
     await db.bookmarks.add(bookmark);
     setBookmarks((prev) => [...prev, bookmark]);
-    alert(strings.reader.bookmarkAdded);
-  }, [chapter, bookId, settings.pageMode]);
+    showToast(strings.reader.bookmarkAdded);
+  }, [chapter, bookId, settings.pageMode, showToast]);
 
   const jumpToBookmark = useCallback(
     async (bookmark: Bookmark) => {
@@ -681,5 +769,6 @@ export function useReader(bookId: string) {
     readingProgress,
     currentThemeColors,
     isPagination,
+    toast,
   };
 }
