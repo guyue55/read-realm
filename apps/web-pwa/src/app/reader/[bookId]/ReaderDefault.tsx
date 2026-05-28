@@ -120,7 +120,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       {/* 优雅非阻塞 Toast 消息层 */}
       {toast && (
         <div
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-4"
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md physics-spring animate-in fade-in slide-in-from-top-4"
           style={{
             backgroundColor: isDark ? "rgba(45, 45, 45, 0.85)" : "rgba(255, 252, 245, 0.85)",
             color: isDark ? "#E5E5E5" : "#2F2A24",
@@ -266,7 +266,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 {chapter.title}
               </h1>
               <div
-                className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4"
+                className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+                  isDark ? "theme-dark-filter" : ""
+                }`}
                 dangerouslySetInnerHTML={{ __html: chapter.content }}
               />
               {!isPagination && (
@@ -356,7 +358,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               {chapter.title}
             </h1>
             <div
-              className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4"
+              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+                isDark ? "theme-dark-filter" : ""
+              }`}
               dangerouslySetInnerHTML={{ __html: chapter.content }}
             />
             {/* Nav Buttons */}
@@ -406,7 +410,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* TOC Drawer */}
         <div
-          className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-[var(--theme-bg)] z-50 shadow-xl transition-transform duration-300 ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
+          className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
           style={{ backgroundColor: currentThemeColors.bg }}
         >
           <TocDrawer
@@ -424,7 +428,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* AI Drawer */}
         <div
-          className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-[var(--theme-bg)] z-50 shadow-xl transition-transform duration-300 ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
+          className={`fixed inset-y-0 right-0 w-[85%] max-w-md bg-[var(--theme-bg)] z-50 shadow-xl physics-spring ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
           style={{ backgroundColor: currentThemeColors.bg }}
         >
           <AIReaderPanel
@@ -438,7 +442,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Settings Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 bg-transparent z-50 transition-transform duration-300 rounded-t-[24px] overflow-hidden ${activePanel === "settings" ? "translate-y-0" : "translate-y-full"}`}
+          className={`fixed bottom-0 inset-x-0 bg-transparent z-50 physics-spring rounded-t-[24px] overflow-hidden ${activePanel === "settings" ? "translate-y-0" : "translate-y-full"}`}
         >
           <SettingsSheet
             settings={settings}
@@ -452,7 +456,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Progress Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" : "bg-[rgba(255,252,245,0.96)] shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] transition-transform duration-300 rounded-t-[24px] ${activePanel === "progress" ? "translate-y-0" : "translate-y-full"}`}
+          className={`fixed bottom-0 inset-x-0 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" : "bg-[rgba(255,252,245,0.96)] shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] physics-spring rounded-t-[24px] ${activePanel === "progress" ? "translate-y-0" : "translate-y-full"}`}
         >
           <div className="flex justify-between items-center mb-6">
             <h3

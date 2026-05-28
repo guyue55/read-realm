@@ -35,7 +35,7 @@ export function ReaderTopBar({
 
     return (
       <div
-        className={`fixed top-0 inset-x-0 h-14 ${bgClass} shadow-sm z-20 flex items-center px-4 transition-all duration-200 border-b ${borderClass} ${
+        className={`fixed top-0 inset-x-0 h-14 ${bgClass} shadow-sm z-20 flex items-center px-4 physics-spring border-b ${borderClass} ${
           isVisible
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "-translate-y-full opacity-0 pointer-events-none"
