@@ -119,7 +119,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
       {/* 优雅非阻塞 Toast 消息层 */}
       {toast && (
         <div
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-4"
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md physics-spring animate-in fade-in slide-in-from-top-4"
           style={{
             backgroundColor: isDark ? "rgba(45, 45, 45, 0.85)" : "rgba(255, 252, 245, 0.85)",
             color: isDark ? "#E5E5E5" : "#2F2A24",
@@ -172,7 +172,9 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           >
             <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
             <div
-              className="reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4"
+              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+                isDark ? "theme-dark-filter" : ""
+              }`}
               dangerouslySetInnerHTML={{ __html: chapter.content }}
             />
             {/* Nav Buttons (Scroll mode end) */}
@@ -229,7 +231,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* TOC Drawer */}
         <div
-          className={`fixed inset-y-0 left-0 w-[300px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl transition-transform duration-300 ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
+          className={`fixed inset-y-0 left-0 w-[300px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
         >
           <TocDrawer
             toc={toc}
@@ -246,7 +248,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* AI Drawer */}
         <div
-          className={`fixed inset-y-0 right-0 w-[340px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl transition-transform duration-300 ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
+          className={`fixed inset-y-0 right-0 w-[340px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
         >
           <AIReaderPanel
             isAiLoading={isAiLoading}
@@ -259,7 +261,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* Settings Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 bg-transparent z-50 transition-transform duration-300 rounded-t-[24px] sm:rounded-[24px] overflow-hidden sm:shadow-2xl ${activePanel === "settings" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
+          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 bg-transparent z-50 physics-spring rounded-t-[24px] sm:rounded-[24px] overflow-hidden sm:shadow-2xl ${activePanel === "settings" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
         >
           <SettingsSheet
             settings={settings}
@@ -273,7 +275,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* Progress Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-2xl" : "bg-[rgba(255,252,245,0.96)] sm:bg-white sm:shadow-2xl shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-8 transition-transform duration-300 rounded-t-[24px] sm:rounded-[24px] ${activePanel === "progress" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
+          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-2xl" : "bg-[rgba(255,252,245,0.96)] sm:bg-white sm:shadow-2xl shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-8 physics-spring rounded-t-[24px] sm:rounded-[24px] ${activePanel === "progress" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
         >
           <div className="flex justify-between items-center mb-6">
             <h3
