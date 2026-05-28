@@ -111,7 +111,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
   const isDark = settings.theme === "dark";
   const overlay1 = isDark ? "rgba(255,255,255,0.02)" : "rgba(80,65,45,0.02)"; // Sidebar & AI
-  const overlay2 = isDark ? "rgba(255,255,255,0.05)" : "rgba(80,65,45,0.06)"; // TOC
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
   const brandColor = isDark ? "#D8D2C6" : "#526047";
 
@@ -209,24 +208,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           </nav>
         </div>
 
-        {/* TOC Drawer (240px per tokens) */}
-        <div
-          className="w-[240px] shrink-0 flex flex-col"
-          style={{
-            backgroundColor: overlay2,
-            borderRight: `1px solid ${borderColor}`,
-          }}
-        >
-          <TocDrawer
-            toc={toc}
-            bookmarks={bookmarks}
-            currentChapterIndex={chapter.index}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onJumpToChapter={jumpToChapter}
-            onJumpToBookmark={jumpToBookmark}
-          />
-        </div>
+        {/* TOC 侧边栏现已采用响应式左侧悬浮 Drawer 交互 */}
 
         {/* Reader Canvas (Flex-1) */}
         <div className="flex-1 flex flex-col min-w-0 bg-transparent relative">
@@ -235,9 +217,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             isVisible={true}
             isDesktop={true}
             onBack={() => router.push("/library")}
-            onSummarize={handleSummarize}
             onBookmark={addBookmark}
-            onSettings={() => setActivePanel("settings")}
+            onSettings={() => togglePanel("settings")}
+            onToggleToc={() => togglePanel("toc")}
+            onToggleAi={() => togglePanel("ai")}
           />
           <div
             ref={contentRef}
@@ -291,21 +274,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           </div>
         </div>
 
-        {/* AI Panel (338px per tokens) */}
-        <div
-          className="w-[338px] shrink-0 flex flex-col"
-          style={{
-            backgroundColor: overlay1,
-            borderLeft: `1px solid ${borderColor}`,
-          }}
-        >
-          <AIReaderPanel
-            isAiLoading={isAiLoading}
-            aiSummary={aiSummary}
-            isMobileDrawer={false}
-            isDark={isDark}
-          />
-        </div>
+        {/* AI 助手面板现已采用响应式右侧悬浮 Drawer 交互 */}
       </div>
 
       {/* 
@@ -325,7 +294,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           isDesktop={false}
           isDark={isDark}
           onBack={() => router.push("/library")}
-          onSummarize={handleSummarize}
           onBookmark={addBookmark}
           onSettings={() => togglePanel("settings")}
         />
