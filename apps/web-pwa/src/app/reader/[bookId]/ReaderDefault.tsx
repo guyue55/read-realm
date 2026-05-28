@@ -58,6 +58,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     readingProgress,
     currentThemeColors,
     isPagination,
+    toast,
   } = useReader(bookId);
 
   const handleMobileReaderClick = useCallback(
@@ -116,6 +117,20 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
   return (
     <main className="fixed inset-0 overflow-hidden transition-colors duration-300 xl:flex xl:items-center xl:justify-center xl:bg-[#F7F1E6]">
+      {/* 优雅非阻塞 Toast 消息层 */}
+      {toast && (
+        <div
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-4"
+          style={{
+            backgroundColor: isDark ? "rgba(45, 45, 45, 0.85)" : "rgba(255, 252, 245, 0.85)",
+            color: isDark ? "#E5E5E5" : "#2F2A24",
+            borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(80, 65, 45, 0.15)",
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
       {/* 
         Desktop Workspace Container 
         Matching SVG Max-width ~1372px (92 + 240 + 700 + 338 = 1370)
