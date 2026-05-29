@@ -690,6 +690,18 @@ export function useReader(bookId: string) {
     [engine],
   );
 
+  const updateFontFamily = useCallback(
+    (fontFamily: "kaiti" | "songti" | "heiti") => {
+      setSettings((prev) => {
+        const newSettings = { ...prev, fontFamily };
+        saveReaderSettings(newSettings);
+        engine?.updateSettings(newSettings);
+        return newSettings;
+      });
+    },
+    [engine],
+  );
+
   const updatePageMode = useCallback(
     (mode: "scroll" | "pagination") => {
       if (!chapter) return;
@@ -765,6 +777,7 @@ export function useReader(bookId: string) {
     updateFontSize,
     updateTheme,
     updatePageMode,
+    updateFontFamily,
     seekToProgress,
     readingProgress,
     currentThemeColors,

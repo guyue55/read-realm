@@ -5,13 +5,14 @@ const STORAGE_KEY = "reader-settings";
 
 export type ReaderSettingsState = Pick<
   ReaderSettings,
-  "fontSize" | "lineHeight" | "theme" | "pageMode" | "uiMode"
+  "fontFamily" | "fontSize" | "lineHeight" | "theme" | "pageMode" | "uiMode"
 > & {
   paragraphSpacing: number;
   letterSpacing: number;
 };
 
 export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
+  fontFamily: "kaiti", // 默认优雅国风楷体
   fontSize: 18,
   lineHeight: 1.7,
   theme: "paper",
@@ -30,6 +31,10 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
 
   const candidate = value as Partial<ReaderSettingsState>;
   return {
+    fontFamily:
+      candidate.fontFamily === "songti" || candidate.fontFamily === "heiti"
+        ? candidate.fontFamily
+        : "kaiti",
     fontSize:
       typeof candidate.fontSize === "number"
         ? Math.min(36, Math.max(14, candidate.fontSize))
