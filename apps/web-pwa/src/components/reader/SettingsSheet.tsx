@@ -9,6 +9,7 @@ export interface SettingsSheetProps {
   updateTheme: (theme: ThemeName) => void;
   updatePageMode: (mode: "scroll" | "pagination") => void;
   updateUiMode?: (mode: "default" | "simple") => void;
+  updateFontFamily?: (fontFamily: "kaiti" | "songti" | "heiti") => void;
   isMobileSheet?: boolean;
   onClose?: () => void;
 }
@@ -19,6 +20,7 @@ export function SettingsSheet({
   updateTheme,
   updatePageMode,
   updateUiMode,
+  updateFontFamily,
   isMobileSheet = false,
   onClose,
 }: SettingsSheetProps) {
@@ -106,6 +108,38 @@ export function SettingsSheet({
             </button>
           </div>
         </div>
+
+        {updateFontFamily && (
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-medium ${mutedText}`}>
+              字体
+            </span>
+            <div
+              className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
+            >
+              {[
+                { key: "kaiti", name: "楷体" },
+                { key: "songti", name: "宋体" },
+                { key: "heiti", name: "黑体" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() =>
+                    updateFontFamily(f.key as "kaiti" | "songti" | "heiti")
+                  }
+                  className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                    settings.fontFamily === f.key
+                      ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                      : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
+                  }`}
+                  style={{ fontFamily: `var(--font-${f.key})` }}
+                >
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <span className={`text-sm font-medium ${mutedText}`}>

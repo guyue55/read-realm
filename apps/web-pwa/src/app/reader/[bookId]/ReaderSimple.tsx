@@ -51,6 +51,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     updateFontSize,
     updateTheme,
     updatePageMode,
+    updateFontFamily,
     seekToProgress,
     readingProgress,
     currentThemeColors,
@@ -169,6 +170,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               height: isPagination ? "100%" : "auto",
               "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
               "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+              "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
             } as React.CSSProperties}
           >
             <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
@@ -269,6 +271,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             updateFontSize={updateFontSize}
             updateTheme={updateTheme}
             updatePageMode={updatePageMode}
+            updateFontFamily={updateFontFamily}
             isMobileSheet={true}
             onClose={() => setActivePanel(null)}
           />
