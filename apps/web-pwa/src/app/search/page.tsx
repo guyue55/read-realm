@@ -18,6 +18,37 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [status, setStatus] = useState("");
 
+  // Global Geeky keyboard shortcuts: / to focus search, Esc to blur
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (
+        activeEl.tagName === "INPUT" ||
+        activeEl.tagName === "TEXTAREA" ||
+        activeEl.tagName === "SELECT" ||
+        activeEl.getAttribute("contenteditable") === "true"
+      );
+
+      if (isInputActive) {
+        if (e.key === "Escape") {
+          (activeEl as HTMLElement).blur();
+        }
+        return;
+      }
+
+      if (e.key === "/") {
+        e.preventDefault();
+        const searchInput = document.getElementById("search-input-field");
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
   // Instant local search
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -81,32 +112,33 @@ export default function SearchPage() {
         </button>
       }
     >
-      <section className="ui-card rounded-[18px] p-4 md:p-5">
+      <section className="ui-card rounded-[18px] p-5.5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] bg-[rgba(255,255,255,0.6)] backdrop-blur-md">
         <div className="relative flex gap-2">
           <input
+            id="search-input-field"
             type="text"
-            placeholder={strings.shelf.searchPlaceholder}
+            placeholder={`${strings.shelf.searchPlaceholder} (按 '/' 键聚焦)`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGlobalSearch()}
-            className="ui-focus-ring w-full rounded-full border border-[var(--ui-border)] bg-white px-5 py-3 pr-28 text-[var(--ui-text)] shadow-sm"
+            className="ui-focus-ring w-full rounded-full border border-[var(--ui-border)] bg-white px-5 py-3 pr-32 text-[var(--ui-text)] shadow-sm physics-spring focus:scale-[1.015] focus:shadow-[0_15px_35px_rgba(95,125,82,0.12)] focus:border-[var(--ui-accent)]"
             autoFocus
           />
           <button
             onClick={handleGlobalSearch}
             disabled={isSearching || !searchQuery.trim()}
-            className="ui-focus-ring absolute bottom-1.5 right-1.5 top-1.5 rounded-full bg-[var(--ui-accent)] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:bg-[rgba(80,65,45,0.2)]"
+            className="ui-focus-ring absolute bottom-1.5 right-1.5 top-1.5 rounded-full bg-[var(--ui-accent)] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
           >
             {isSearching ? "搜索中" : "搜索云端"}
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4.5 flex flex-wrap gap-2.5">
           {["综合", "书名", "作者", "标签", "连载中", "已完结"].map(
             (label, index) => (
               <button
                 key={label}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors physics-spring hover:scale-[1.05] hover:-translate-y-0.5 shadow-sm ${
                   index === 0
                     ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)]"
                     : "border-[var(--ui-border)] bg-white/60 text-[var(--ui-muted)] hover:text-[var(--ui-text)]"

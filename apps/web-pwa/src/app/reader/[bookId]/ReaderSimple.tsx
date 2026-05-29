@@ -167,11 +167,13 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               columnWidth: isPagination ? "calc(100vw - 48px)" : "auto",
               columnGap: "48px",
               height: isPagination ? "100%" : "auto",
-            }}
+              "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+              "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+            } as React.CSSProperties}
           >
             <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
             <div
-              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
                 isDark ? "theme-dark-filter" : ""
               }`}
               dangerouslySetInnerHTML={{ __html: chapter.content }}

@@ -168,23 +168,131 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          <section className="ui-card rounded-[18px] p-5 md:p-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-bold">排版微调</h2>
+              <p className="mt-1 text-sm text-[var(--ui-muted)]">
+                自由解耦四大印刷维度的微秒级形变，调节最适合您的中文宁静排版黄金比例。
+              </p>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              {/* 字号滑轨 */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-[var(--ui-text)]">字号 (Size)</span>
+                  <span className="text-[var(--ui-accent)]">{settings.fontSize} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="14"
+                  max="36"
+                  step="1"
+                  value={settings.fontSize}
+                  onChange={(e) => saveNextSettings({ ...settings, fontSize: parseInt(e.target.value) })}
+                  className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
+                />
+                <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
+                  <span>小号 (14px)</span>
+                  <span>大号 (36px)</span>
+                </div>
+              </div>
+
+              {/* 行高滑轨 */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-[var(--ui-text)]">行高 (Line Height)</span>
+                  <span className="text-[var(--ui-accent)]">{settings.lineHeight} 倍</span>
+                </div>
+                <input
+                  type="range"
+                  min="1.3"
+                  max="2.4"
+                  step="0.1"
+                  value={settings.lineHeight}
+                  onChange={(e) => saveNextSettings({ ...settings, lineHeight: parseFloat(e.target.value) })}
+                  className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
+                />
+                <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
+                  <span>紧凑 (1.3)</span>
+                  <span>宽松 (2.4)</span>
+                </div>
+              </div>
+
+              {/* 段距滑轨 */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-[var(--ui-text)]">段落间距 (Paragraph)</span>
+                  <span className="text-[var(--ui-accent)]">{settings.paragraphSpacing} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="40"
+                  step="2"
+                  value={settings.paragraphSpacing}
+                  onChange={(e) => saveNextSettings({ ...settings, paragraphSpacing: parseInt(e.target.value) })}
+                  className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
+                />
+                <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
+                  <span>紧密 (0px)</span>
+                  <span>开阔 (40px)</span>
+                </div>
+              </div>
+
+              {/* 字距滑轨 */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-[var(--ui-text)]">字符间距 (Letter)</span>
+                  <span className="text-[var(--ui-accent)]">{settings.letterSpacing} em</span>
+                </div>
+                <input
+                  type="range"
+                  min="-0.05"
+                  max="0.25"
+                  step="0.01"
+                  value={settings.letterSpacing}
+                  onChange={(e) => saveNextSettings({ ...settings, letterSpacing: parseFloat(e.target.value) })}
+                  className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
+                />
+                <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
+                  <span>紧密 (-0.05em)</span>
+                  <span>开阔 (0.25em)</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="ui-card rounded-[18px] p-5 md:p-6">
             <h2 className="mb-4 text-lg font-bold">
               {strings.settings.previewTitle}
             </h2>
             <div
-              className="rounded-[16px] border border-[rgba(80,65,45,0.12)] p-6 shadow-sm"
+              className="rounded-[16px] border border-[rgba(80,65,45,0.12)] p-6 shadow-sm transition-all duration-300"
               style={{
                 backgroundColor: currentTheme.bg,
                 color: currentTheme.text,
               }}
             >
-              <h3 className="font-reading-title mb-4 text-2xl font-semibold">
+              <h3 className="font-reading-title mb-4 text-2xl font-semibold" style={{ letterSpacing: `${settings.letterSpacing}em` }}>
                 {strings.settings.previewTitle}
               </h3>
-              <p className="text-lg leading-[1.7]">
-                {strings.settings.previewText}
-              </p>
+              <div
+                className="reader-content"
+                style={{
+                  fontSize: `${settings.fontSize}px`,
+                  lineHeight: settings.lineHeight,
+                  "--paragraph-spacing": `${settings.paragraphSpacing}px`,
+                  "--letter-spacing": `${settings.letterSpacing}em`,
+                } as React.CSSProperties}
+              >
+                <p>
+                  一页安静的文字，应该像灯下摊开的纸，也可以像夜里柔和的屏幕。字与字有了呼吸的空隙，段与段有了落脚的宁静。
+                </p>
+                <p>
+                  这是「墨问」为您呈现的全新中式排版微调。行距、段距、字距自由流淌，在最细微的间隙里，雕刻出您最舒适的宁静世界。
+                </p>
+              </div>
             </div>
           </section>
 

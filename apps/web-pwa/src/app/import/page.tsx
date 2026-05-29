@@ -14,6 +14,8 @@ export default function ImportPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeMode, setActiveMode] = useState<"file" | "url">("file");
   const [urlInput, setUrlInput] = useState("");
+  // 拖拽激活状态，用于控制拟物压紧与浅绿漫反射呼吸高光
+  const [isDragActive, setIsDragActive] = useState(false);
   const router = useRouter();
 
   const createImportTask = async (
@@ -104,8 +106,36 @@ export default function ImportPage() {
     if (file) await handleFile(file);
   };
 
+  // 鼠标拖拽进入区域
+  const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isProcessing) {
+      setIsDragActive(true);
+    }
+  };
+
+  // 鼠标拖拽在区域内悬停
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isProcessing && !isDragActive) {
+      setIsDragActive(true);
+    }
+  };
+
+  // 鼠标拖拽离开区域
+  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  // 鼠标松开释放文件
   const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
     const file = event.dataTransfer.files?.[0];
     if (file && !isProcessing) await handleFile(file);
   };
@@ -188,9 +218,9 @@ export default function ImportPage() {
             <button
               type="button"
               onClick={() => setActiveMode("file")}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-colors ${
+              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "file"
-                  ? "bg-[var(--ui-accent)] text-white"
+                  ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
               }`}
             >
@@ -199,9 +229,9 @@ export default function ImportPage() {
             <button
               type="button"
               onClick={() => setActiveMode("url")}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-colors ${
+              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "url"
-                  ? "bg-[var(--ui-accent)] text-white"
+                  ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
               }`}
             >
@@ -211,33 +241,59 @@ export default function ImportPage() {
 
           {activeMode === "file" ? (
             <label
-              onDragOver={(event) => event.preventDefault()}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className="ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-8 text-center transition-colors hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+              className={`group ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed p-8 text-center transition-all duration-300 physics-spring ${
+                isDragActive
+                  ? "border-[var(--ui-accent)] bg-[rgba(95,125,82,0.06)] scale-[0.98] shadow-[0_8px_30px_rgba(95,125,82,0.08)]"
+                  : "border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+              }`}
             >
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm">
-                <svg
-                  aria-hidden="true"
-                  className="h-8 w-8"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-                  <path d="M14 3v5h5" />
-                  <path d="M12 17V10" />
-                  <path d="m9 13 3-3 3 3" />
-                </svg>
+              <div className="pointer-events-none flex flex-col items-center justify-center">
+                {/* 精装仿真感图标：Hover 时轻微顺时针偏角和放大 */}
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm physics-spring group-hover:scale-[1.1] group-hover:rotate-[-3deg]">
+                  <svg
+                    aria-hidden="true"
+                    className="h-8 w-8"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
+                    <path d="M14 3v5h5" />
+                    <path d="M12 17V10" />
+                    <path d="m9 13 3-3 3 3" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-[var(--ui-text)]">
+                  {isDragActive ? "松开鼠标即可解析并导入书籍" : "拖拽文件到此处，或点击选择文件"}
+                </h2>
+                <p className="mt-2 text-sm text-[var(--ui-muted)]">
+                  支持 TXT、EPUB 格式，解析后先进入章节预览页
+                </p>
+
+                {/* “选择文件”拟物按钮，支持物理拉伸与群组联动 hover 色变 */}
+                <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm physics-spring group-hover:scale-[1.05] group-hover:bg-[#527047]">
+                  选择文件
+                </div>
+
+                {isProcessing && (
+                  <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(154,106,58,0.18)] border-t-[var(--ui-warm)]" />
+                    {status}
+                  </div>
+                )}
+                {!isProcessing && status !== "等待导入" && (
+                  <p className="mt-4 text-sm font-medium text-[var(--ui-danger)]">
+                    {status}
+                  </p>
+                )}
               </div>
-              <h2 className="text-xl font-bold text-[var(--ui-text)]">
-                拖拽文件到此处，或点击选择文件
-              </h2>
-              <p className="mt-2 text-sm text-[var(--ui-muted)]">
-                支持 TXT、EPUB 格式，解析后先进入章节预览页
-              </p>
 
               <input
                 type="file"
@@ -246,22 +302,6 @@ export default function ImportPage() {
                 disabled={isProcessing}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
               />
-
-              <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm">
-                选择文件
-              </div>
-
-              {isProcessing && (
-                <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(154,106,58,0.18)] border-t-[var(--ui-warm)]" />
-                  {status}
-                </div>
-              )}
-              {!isProcessing && status !== "等待导入" && (
-                <p className="mt-4 text-sm font-medium text-[var(--ui-danger)]">
-                  {status}
-                </p>
-              )}
             </label>
           ) : (
             <form
@@ -298,12 +338,14 @@ export default function ImportPage() {
                   onChange={(event) => setUrlInput(event.currentTarget.value)}
                   placeholder="https://example.com/book/123/"
                   disabled={isProcessing}
-                  className="ui-focus-ring min-h-12 flex-1 rounded-full border border-[var(--ui-border)] bg-white px-5 text-[var(--ui-text)] shadow-sm disabled:opacity-60"
+                  // 输入框 Focus 时，应用 physics-spring 伴随微幅拉宽，并散发浅绿漫反射光圈，与搜索页视觉风格一脉相承
+                  className="ui-focus-ring min-h-12 flex-1 rounded-full border border-[var(--ui-border)] bg-white px-5 text-[var(--ui-text)] shadow-sm disabled:opacity-60 physics-spring focus:scale-[1.015] focus:shadow-[0_15px_35px_rgba(95,125,82,0.12)] focus:border-[var(--ui-accent)]"
                 />
                 <button
                   type="submit"
                   disabled={isProcessing || !urlInput.trim()}
-                  className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)]"
+                  // 解析按钮：hover 微放大，active 微缩拢
+                  className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isProcessing ? "解析中" : "解析 URL"}
                 </button>

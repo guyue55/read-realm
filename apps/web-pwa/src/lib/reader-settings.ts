@@ -6,7 +6,10 @@ const STORAGE_KEY = "reader-settings";
 export type ReaderSettingsState = Pick<
   ReaderSettings,
   "fontSize" | "lineHeight" | "theme" | "pageMode" | "uiMode"
->;
+> & {
+  paragraphSpacing: number;
+  letterSpacing: number;
+};
 
 export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
   fontSize: 18,
@@ -14,6 +17,8 @@ export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
   theme: "paper",
   pageMode: "scroll",
   uiMode: "default",
+  paragraphSpacing: 16,
+  letterSpacing: 0.03,
 };
 
 export function isThemeName(value: unknown): value is ThemeName {
@@ -31,7 +36,7 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
         : DEFAULT_READER_SETTINGS.fontSize,
     lineHeight:
       typeof candidate.lineHeight === "number"
-        ? candidate.lineHeight
+        ? Math.min(2.4, Math.max(1.3, candidate.lineHeight))
         : DEFAULT_READER_SETTINGS.lineHeight,
     theme: isThemeName(candidate.theme)
       ? candidate.theme
@@ -42,6 +47,14 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
         : DEFAULT_READER_SETTINGS.pageMode,
     uiMode:
       candidate.uiMode === "simple" ? "simple" : DEFAULT_READER_SETTINGS.uiMode,
+    paragraphSpacing:
+      typeof candidate.paragraphSpacing === "number"
+        ? Math.min(40, Math.max(0, candidate.paragraphSpacing))
+        : DEFAULT_READER_SETTINGS.paragraphSpacing,
+    letterSpacing:
+      typeof candidate.letterSpacing === "number"
+        ? Math.min(0.25, Math.max(-0.05, candidate.letterSpacing))
+        : DEFAULT_READER_SETTINGS.letterSpacing,
   };
 }
 
