@@ -30,6 +30,18 @@ const navItems = [
     ),
   },
   {
+    label: "阅历",
+    href: "/notes",
+    icon: (
+      <>
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M9 6h7" />
+        <path d="M9 10h7" />
+      </>
+    ),
+  },
+  {
     label: "导入",
     href: "/import",
     icon: (
@@ -106,7 +118,7 @@ export function AppShell({
         <Link href="/library" className="mb-8 flex items-center gap-2">
           <LeafMark />
           <span className="text-sm font-bold tracking-[0.02em] text-[var(--ui-text)]">
-            阅间
+            墨问
           </span>
         </Link>
 
@@ -185,7 +197,7 @@ export function AppShell({
         </div>
       </main>
 
-      <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid grid-cols-4 rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid grid-cols-5 rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden">
         {navItems.map((item) => {
           const active =
             pathname === item.href ||

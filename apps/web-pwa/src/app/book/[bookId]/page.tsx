@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { db } from "@reader/storage-core";
 import type { Book } from "@reader/shared-types";
 import { PageLayout } from "@/components/PageLayout";
+import { BookCover } from "@/components/BookCover";
+import { extractColorsFromTitle } from "@/lib/color-extraction";
+import { SkeletonLoader } from "@/components/SkeletonLoader";
 
 export default function BookDetailPage({
   params,
@@ -15,41 +18,58 @@ export default function BookDetailPage({
   const [book, setBook] = useState<Book | null>(null);
 
   useEffect(() => {
-    db.books.get(params.bookId).then((b) => {
-      if (b) setBook(b);
-      else router.push("/library");
-    });
+    db.books
+      .get(params.bookId)
+      .then((b) => {
+        if (b) setBook(b);
+        else router.push("/library");
+      })
+      .catch((error) => {
+        console.error("载入书卷详情发生异常:", error);
+        router.push("/library");
+      });
   }, [params.bookId, router]);
 
-  if (!book) return null;
+  if (!book) {
+    return (
+      <PageLayout title="载入书册..." onBack={() => router.push("/library")}>
+        <div className="w-full max-w-4xl mx-auto mt-10 p-6 md:p-10 rounded-[28px] border border-[#E9DCC8] bg-[#FFFDF8] shadow-[0_16px_40px_rgba(80,65,45,0.02)] physics-spring animate-pulse">
+          <SkeletonLoader type="list" count={1} />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // 动态提取封面真彩配方
+  const colors = extractColorsFromTitle(book.title);
 
   return (
     <PageLayout title={book.title} onBack={() => router.push("/library")}>
-      <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-10 mt-4">
-        {/* Book Cover matching PNG depth */}
-        <div
-          className="w-48 md:w-64 shrink-0 mx-auto md:mx-0 aspect-[2/3] rounded-[12px] border border-[rgba(0,0,0,0.8)] shadow-[0_8px_24px_rgba(0,0,0,0.15)] relative overflow-hidden"
-          style={{
-            background:
-              book.format === "epub"
-                ? "linear-gradient(135deg, #E9D7B6 0%, #D4BA90 40%, #8C6B45 100%)"
-                : "linear-gradient(135deg, #2D343A 0%, #1D2224 40%, #0D0F10 100%)",
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-          <div className="absolute inset-[6px] rounded-[6px] border border-white/20 flex flex-col items-center justify-center p-4 text-center bg-black/5">
-            <span className="text-[#F3ECE0] font-bold text-xl leading-snug drop-shadow-md font-serif line-clamp-4">
-              {book.title}
-            </span>
-          </div>
+      <div
+        className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-10 mt-4 p-6 md:p-10 rounded-[28px] border shadow-[0_16px_40px_rgba(80,65,45,0.04)] physics-spring"
+        style={{
+          background: `linear-gradient(135deg, ${colors.bgGradStart} 0%, ${colors.bgGradEnd} 100%)`,
+          borderColor: colors.border,
+        }}
+      >
+        {/* 3D 拟物触感书籍封面 */}
+        <div className="group w-48 md:w-64 shrink-0 mx-auto md:mx-0 aspect-[2/3]">
+          <BookCover
+            title={book.title}
+            hoverLift={true}
+            className="w-full h-full"
+          />
         </div>
 
         {/* Book Info Panel */}
         <div className="flex-1 flex flex-col pt-2">
-          <h1 className="text-3xl md:text-4xl font-bold font-serif text-[#2F2A24] mb-3">
+          <h1
+            className="text-3xl md:text-4xl font-bold font-serif mb-3 tracking-wide drop-shadow-sm"
+            style={{ color: colors.text }}
+          >
             {book.title}
           </h1>
-          <p className="text-[#6F665B] mb-8">
+          <p className="mb-8 text-sm" style={{ color: colors.muted }}>
             {book.author ? `作者：${book.author} · ` : ""}本地上传 ·{" "}
             {book.format.toUpperCase()}
           </p>
@@ -57,43 +77,59 @@ export default function BookDetailPage({
           <div className="flex flex-wrap gap-4 mb-10">
             <button
               onClick={() => router.push(`/reader/${book.id}`)}
-              className="px-8 py-3 bg-[#678055] text-white rounded-[12px] font-bold shadow-[0_4px_12px_rgba(103,128,85,0.2)] hover:bg-[#526047] transition-colors"
+              className="px-8 py-3 rounded-[12px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
+              style={{
+                backgroundColor: colors.accent,
+                color: book.format === "epub" ? "#FFF" : colors.bgGradStart,
+              }}
             >
               继续阅读
             </button>
-            <button className="px-6 py-3 bg-[#EEF2E9] text-[#678055] border border-[#CDD8C5] rounded-[12px] font-bold hover:bg-[#DDEBD6] transition-colors">
+            <button
+              className="px-6 py-3 border rounded-[12px] font-bold hover:bg-white/20 active:scale-95 transition-all"
+              style={{
+                borderColor: colors.border,
+                color: colors.text,
+              }}
+            >
               缓存管理
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-[#FFFDF8] rounded-[20px] border border-[#DED6C8] shadow-[0_8px_24px_rgba(80,65,45,0.06)]">
+          <div
+            className="grid grid-cols-2 md:grid-cols-3 gap-6 p-6 rounded-[20px] border shadow-[0_8px_24px_rgba(0,0,0,0.02)]"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.45)",
+              borderColor: colors.border,
+            }}
+          >
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">阅读进度</p>
-              <p className="font-bold text-[#2F2A24]">0%</p>
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>阅读进度</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>0%</p>
             </div>
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">章节数</p>
-              <p className="font-bold text-[#2F2A24]">{book.chapterCount}</p>
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>章节数</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>{book.chapterCount}</p>
             </div>
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">字数</p>
-              <p className="font-bold text-[#2F2A24]">
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>字数</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>
                 {book.wordCount
                   ? `${(book.wordCount / 10000).toFixed(1)}万`
                   : "-"}
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">书签与笔记</p>
-              <p className="font-bold text-[#2F2A24]">0</p>
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>书签与笔记</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>0</p>
             </div>
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">来源</p>
-              <p className="font-bold text-[#2F2A24]">{book.sourceType}</p>
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>来源</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>{book.sourceType}</p>
             </div>
             <div>
-              <p className="text-xs text-[#6F665B] mb-1">导入时间</p>
-              <p className="font-bold text-[#2F2A24]">
+              <p className="text-xs mb-1" style={{ color: colors.muted }}>导入时间</p>
+              <p className="font-bold font-serif" style={{ color: colors.text }}>
                 {new Date(book.createdAt).toLocaleDateString()}
               </p>
             </div>

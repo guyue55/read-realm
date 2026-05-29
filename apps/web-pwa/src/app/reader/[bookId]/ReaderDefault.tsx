@@ -110,9 +110,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     );
 
   const isDark = settings.theme === "dark";
-  const overlay1 = isDark ? "rgba(255,255,255,0.02)" : "rgba(80,65,45,0.02)"; // Sidebar & AI
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
-  const brandColor = isDark ? "#D8D2C6" : "#526047";
 
   return (
     <main className="fixed inset-0 overflow-hidden transition-colors duration-300 xl:flex xl:items-center xl:justify-center xl:bg-[#F7F1E6]">
@@ -142,72 +140,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           borderColor: borderColor,
         }}
       >
-        {/* Sidebar Nav (92px) */}
-        <div
-          className="w-[92px] shrink-0 flex flex-col items-center py-8"
-          style={{
-            backgroundColor: overlay1,
-            borderRight: `1px solid ${borderColor}`,
-          }}
-        >
-          <h1
-            className="text-xl font-bold mb-8 font-serif"
-            style={{ color: brandColor }}
-          >
-            墨问
-          </h1>
-          <nav className="flex flex-col gap-6 items-center flex-1 w-full">
-            <div
-              onClick={() => router.push("/library")}
-              className="flex flex-col items-center gap-1 w-16 py-2 rounded-lg cursor-pointer hover:bg-[rgba(80,65,45,0.04)]"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#678055] opacity-0 hover:opacity-100 transition-opacity"></div>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: brandColor }}
-              >
-                书架
-              </span>
-            </div>
-            <div
-              onClick={() => router.push("/search")}
-              className="flex flex-col items-center gap-1 w-16 py-2 rounded-lg cursor-pointer hover:bg-[rgba(80,65,45,0.04)]"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#678055] opacity-0 hover:opacity-100 transition-opacity"></div>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: brandColor }}
-              >
-                发现
-              </span>
-            </div>
-            <div
-              onClick={() => router.push("/import")}
-              className="flex flex-col items-center gap-1 w-16 py-2 rounded-lg cursor-pointer hover:bg-[rgba(80,65,45,0.04)]"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#678055] opacity-0 hover:opacity-100 transition-opacity"></div>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: brandColor }}
-              >
-                导入
-              </span>
-            </div>
-            <div
-              onClick={() => setActivePanel("settings")}
-              className="flex flex-col items-center gap-1 w-16 py-2 rounded-lg cursor-pointer bg-[#E7EDE0]"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#678055]"></div>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: brandColor }}
-              >
-                设置
-              </span>
-            </div>
-          </nav>
-        </div>
-
         {/* TOC 侧边栏现已采用响应式左侧悬浮 Drawer 交互 */}
 
         {/* Reader Canvas (Flex-1) */}
@@ -240,7 +172,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 columnWidth: isPagination ? "calc(100vw - 48px)" : "auto",
                 columnGap: "48px",
                 height: isPagination ? "100%" : "auto",
-              }}
+                "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+                "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+              } as React.CSSProperties}
             >
               <h1
                 className="text-3xl font-bold mb-10 font-serif text-center"
@@ -249,7 +183,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 {chapter.title}
               </h1>
               <div
-                className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+                className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
                   isDark ? "theme-dark-filter" : ""
                 }`}
                 dangerouslySetInnerHTML={{ __html: chapter.content }}
@@ -320,13 +254,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               columnWidth: isPagination ? "calc(100vw - 48px)" : "auto",
               columnGap: "48px",
               height: isPagination ? "100%" : "auto",
-            }}
+              "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+              "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+            } as React.CSSProperties}
           >
             <h1 className="text-2xl font-bold mb-8 font-serif">
               {chapter.title}
             </h1>
             <div
-              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid [&_p]:mb-4 ${
+              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
                 isDark ? "theme-dark-filter" : ""
               }`}
               dangerouslySetInnerHTML={{ __html: chapter.content }}
