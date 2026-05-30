@@ -75,30 +75,41 @@ export default function SearchPage() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  // Instant local search (关联分类过滤器 activeFilter 进行多维度本地匹配)
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // 1. 输入防抖 200ms：打字期间仅流畅更新 searchQuery State，停顿 200ms 后再向 IndexedDB 触发本地检索
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 2. 本地检索：防抖后触发，关联分类过滤器 activeFilter 进行多维度匹配
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
       setLocalResults([]);
       return;
     }
-    const q = searchQuery.toLowerCase();
+    const q = debouncedQuery.toLowerCase();
     db.books.toArray().then((allBooks) => {
-      setLocalResults(
-        allBooks.filter((b) => {
-          const titleMatch = b.title.toLowerCase().includes(q);
-          const authorMatch = b.author?.toLowerCase().includes(q);
-          const tagsMatch = b.tags?.some((t) => t.toLowerCase().includes(q));
+      const filtered = allBooks.filter((b) => {
+        const titleMatch = b.title.toLowerCase().includes(q);
+        const authorMatch = b.author?.toLowerCase().includes(q);
+        const tagsMatch = b.tags?.some((t) => t.toLowerCase().includes(q));
 
-          if (activeFilter === "书名") return titleMatch;
-          if (activeFilter === "作者") return authorMatch;
-          if (activeFilter === "标签") return !!tagsMatch;
-          if (activeFilter === "已完结") return (titleMatch || authorMatch) && b.status === "finished";
-          if (activeFilter === "连载中") return (titleMatch || authorMatch) && b.status !== "finished";
-          return titleMatch || authorMatch || !!tagsMatch;
-        }),
-      );
+        if (activeFilter === "书名") return titleMatch;
+        if (activeFilter === "作者") return authorMatch;
+        if (activeFilter === "标签") return !!tagsMatch;
+        if (activeFilter === "已完结") return (titleMatch || authorMatch) && b.status === "finished";
+        if (activeFilter === "连载中") return (titleMatch || authorMatch) && b.status !== "finished";
+        return titleMatch || authorMatch || !!tagsMatch;
+      });
+
+      // 限制本地检索最大渲染 12 个结果，保障超大藏书量下移动端 diff 重绘顺滑度
+      setLocalResults(filtered.slice(0, 12));
     });
-  }, [searchQuery, activeFilter]);
+  }, [debouncedQuery, activeFilter]);
 
   // 全局/云端搜索倒排索引匹配
   const handleGlobalSearch = async (overrideQuery?: string) => {

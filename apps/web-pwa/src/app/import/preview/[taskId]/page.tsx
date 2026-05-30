@@ -15,6 +15,7 @@ export default function PreviewPage({
   const [task, setTask] = useState<ImportTask | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(60);
   const router = useRouter();
 
   useEffect(() => {
@@ -23,6 +24,29 @@ export default function PreviewPage({
       else setError("任务未找到或已过期");
     });
   }, [params.taskId]);
+
+  // 增量懒加载：当用户向下滚动快接近底部 200px 时，自动追加载入 50 章，避免千章巨制 DOM 树爆炸
+  useEffect(() => {
+    if (!task || task.chapters.length <= visibleCount) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) =>
+            Math.min(task.chapters.length, prev + 50)
+          );
+        }
+      },
+      { threshold: 0.1, rootMargin: "200px" }
+    );
+
+    const anchor = document.getElementById("lazy-load-anchor");
+    if (anchor) observer.observe(anchor);
+
+    return () => {
+      if (anchor) observer.unobserve(anchor);
+    };
+  }, [task, visibleCount]);
 
   const handleConfirm = async () => {
     if (!task) return;
@@ -148,7 +172,7 @@ export default function PreviewPage({
           </div>
 
           <div className="reader-scrollbar max-h-[calc(100vh-190px)] overflow-y-auto p-2">
-            {task.chapters.map((ch) => {
+            {task.chapters.slice(0, visibleCount).map((ch) => {
               const quality = analyzeChapterQuality(ch.content, ch.title);
               return (
                 <div
@@ -181,6 +205,17 @@ export default function PreviewPage({
                 </div>
               );
             })}
+
+            {/* 丝滑增量加载锚点占位元素 */}
+            {task.chapters.length > visibleCount && (
+              <div
+                id="lazy-load-anchor"
+                className="flex items-center justify-center py-6 gap-2 text-xs text-[var(--ui-quiet)]"
+              >
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(95,125,82,0.18)] border-t-[var(--ui-accent)]" />
+                <span>拂拭卷轴，正在载入后续章节...</span>
+              </div>
+            )}
           </div>
         </section>
       </div>

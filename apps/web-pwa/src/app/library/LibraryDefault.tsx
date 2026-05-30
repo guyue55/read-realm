@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import { useRouter } from "next/navigation";
@@ -191,11 +191,18 @@ export function LibraryDefault() {
         </>
       }
     >
-      <section className="relative overflow-hidden rounded-[18px] border border-[var(--ui-border)] bg-[linear-gradient(135deg,#FFFDF8_0%,#F1ECE2_58%,#E7E0D3_100%)] p-5 shadow-[0_18px_50px_rgba(80,65,45,0.07)] md:p-7">
-        <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-75 md:block">
-          <div className="absolute bottom-0 right-0 h-40 w-72 rounded-tl-[120px] bg-[linear-gradient(135deg,rgba(95,125,82,0.11),rgba(154,106,58,0.11))]" />
-          <div className="absolute bottom-10 right-16 h-12 w-48 rounded-full bg-[rgba(47,42,36,0.06)] blur-xl" />
-          <div className="absolute bottom-16 right-20 h-24 w-36 rounded-t-full border-t border-[rgba(95,125,82,0.24)]" />
+      <section className="relative overflow-hidden rounded-[24px] border border-[#E3D5BE] bg-[linear-gradient(135deg,#FFFDFB_0%,#FAF5EB_50%,#F1E7D7_100%)] p-6 shadow-[0_20px_50px_rgba(80,65,45,0.06)] md:p-10 transition-all duration-300">
+        {/* 宣纸淡墨/天青水墨自然晕开效果 */}
+        <div className="absolute -right-10 -top-10 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(95,125,82,0.08)_0%,transparent_70%)] pointer-events-none select-none" />
+        <div className="absolute right-12 -bottom-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(154,106,58,0.06)_0%,transparent_70%)] pointer-events-none select-none" />
+        {/* 拟物洒金微茫点缀 */}
+        <div className="absolute inset-0 bg-[radial-gradient(#F3D39E_1px,transparent_1px)] bg-[size:24px_24px] opacity-10 pointer-events-none" />
+        
+        <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-90 md:block pointer-events-none">
+          {/* 中式枯山水写意弧线 */}
+          <div className="absolute bottom-0 right-0 h-48 w-80 rounded-tl-[160px] bg-[linear-gradient(135deg,rgba(95,125,82,0.08),rgba(154,106,58,0.08))]" />
+          <div className="absolute bottom-12 right-24 h-16 w-60 rounded-full bg-[rgba(95,125,82,0.03)] blur-2xl" />
+          <div className="absolute bottom-20 right-28 h-32 w-48 rounded-t-full border-t-2 border-double border-[rgba(95,125,82,0.18)]" />
         </div>
         <div className="relative z-10 max-w-xl">
           <h2 className="font-reading-title text-3xl font-semibold leading-tight text-[var(--ui-text)] md:text-4xl">
@@ -426,9 +433,12 @@ export function LibraryDefault() {
                 <div
                   key={book.id}
                   onClick={() => router.push(`/reader/${book.id}`)}
-                  className="group relative cursor-pointer ui-card flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 mb-3 border border-white/60 bg-[linear-gradient(135deg,#FFFDF9_0%,#F5F1E8_100%)] shadow-[0_10px_30px_rgba(80,65,45,0.03)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_16px_40px_rgba(80,65,45,0.07)] hover:-translate-y-0.5"
+                  className="group relative cursor-pointer ui-card flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 mb-3 border border-[#E9DCC8] bg-[linear-gradient(135deg,#FFFDFB_0%,#F5ECE0_100%)] shadow-[0_10px_30px_rgba(80,65,45,0.03)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_16px_40px_rgba(80,65,45,0.06)] hover:-translate-y-0.5 overflow-hidden"
                 >
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                  {/* 中式翻书折页左侧天青微立柱高亮 */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--ui-accent)] scale-y-0 origin-center transition-transform duration-300 group-hover:scale-y-100 rounded-l-[16px]" />
+                  
+                  <div className="flex items-center gap-5 min-w-0 flex-1 pl-1">
                     {/* 实体比例微型 3D 封面，支持 hover 物理弹簧微幅倾斜抬升 */}
                     <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.03] group-hover:rotate-[1deg]">
                       {/* 仿真书后叠层漫反射微阴影 */}
@@ -646,7 +656,7 @@ interface StackingBookListCardProps {
   isCompact?: boolean;
 }
 
-function StackingBookListCard({
+const StackingBookListCard = memo(function StackingBookListCard({
   title,
   description,
   bookTitles,
@@ -714,7 +724,7 @@ function StackingBookListCard({
       </div>
     </div>
   );
-}
+});
 
 interface CuratedDrawerProps {
   isOpen: boolean;
@@ -722,7 +732,7 @@ interface CuratedDrawerProps {
   onCollect: (listTitle: string) => void;
 }
 
-function CuratedDrawer({ isOpen, onClose, onCollect }: CuratedDrawerProps) {
+const CuratedDrawer = memo(function CuratedDrawer({ isOpen, onClose, onCollect }: CuratedDrawerProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -813,4 +823,4 @@ function CuratedDrawer({ isOpen, onClose, onCollect }: CuratedDrawerProps) {
       </div>
     </div>
   );
-}
+});

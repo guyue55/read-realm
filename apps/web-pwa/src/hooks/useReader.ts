@@ -390,6 +390,75 @@ export function useReader(bookId: string) {
       setToc(loadedToc);
       db.bookmarks.where("bookId").equals(bookId).toArray().then(setBookmarks);
 
+      // 拦截 URL 中的 chapter 和 bookmarkId 参数进行空降定位
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlChapter = searchParams.get("chapter");
+      const urlBookmarkId = searchParams.get("bookmarkId");
+
+      if (urlChapter !== null) {
+        const targetChapterIndex = parseInt(urlChapter, 10);
+        if (!isNaN(targetChapterIndex) && targetChapterIndex >= 0 && targetChapterIndex < loadedToc.length) {
+          await reader.loadChapter(targetChapterIndex);
+          const targetedChapter = reader.getCurrentChapter();
+          setChapter(targetedChapter);
+
+          if (urlBookmarkId && targetedChapter) {
+            const bookmark = await db.bookmarks.get(urlBookmarkId);
+            if (bookmark) {
+              setTimeout(() => {
+                const container = contentRef.current;
+                if (container) {
+                  const paragraphs = container.querySelectorAll(".reader-content p, .reader-content");
+                  let targetEl: Element | null = null;
+                  
+                  if (bookmark.contentPreview) {
+                    const previewText = bookmark.contentPreview.trim();
+                    for (let i = 0; i < paragraphs.length; i++) {
+                      const p = paragraphs[i];
+                      const pText = p.textContent || "";
+                      if (pText.includes(previewText) || previewText.includes(pText.trim())) {
+                        targetEl = p;
+                        break;
+                      }
+                    }
+                  }
+
+                  if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                    targetEl.classList.remove("ink-highlight-flash");
+                    void (targetEl as HTMLElement).offsetWidth;
+                    targetEl.classList.add("ink-highlight-flash");
+                    setTimeout(() => {
+                      targetEl?.classList.remove("ink-highlight-flash");
+                    }, 3200);
+                  } else {
+                    if (loadedSettings.pageMode === "scroll") {
+                      container.scrollTop = bookmark.offset;
+                    } else {
+                      container.scrollLeft = bookmark.offset;
+                    }
+                  }
+                } else {
+                  window.scrollTo(0, bookmark.offset);
+                }
+                
+                setReadingProgress(
+                  computeOverallProgress(targetedChapter.index, loadedToc.length, 0)
+                );
+              }, 400);
+              return;
+            }
+          }
+
+          if (targetedChapter) {
+            setReadingProgress(
+              computeOverallProgress(targetedChapter.index, loadedToc.length, 0)
+            );
+          }
+          return;
+        }
+      }
+
       db.progress.get(bookId).then((progress) => {
         if (
           currentChapter &&
@@ -658,21 +727,51 @@ export function useReader(bookId: string) {
         setActivePanel(null);
         setShowMenu(false);
         setTimeout(async () => {
-          if (contentRef.current) {
-            if (settings.pageMode === "scroll") {
-              contentRef.current.scrollTop = bookmark.offset;
+          const container = contentRef.current;
+          if (container) {
+            const paragraphs = container.querySelectorAll(".reader-content p, .reader-content");
+            let targetEl: Element | null = null;
+            
+            if (bookmark.contentPreview) {
+              const previewText = bookmark.contentPreview.trim();
+              for (let i = 0; i < paragraphs.length; i++) {
+                const p = paragraphs[i];
+                const pText = p.textContent || "";
+                if (pText.includes(previewText) || previewText.includes(pText.trim())) {
+                  targetEl = p;
+                  break;
+                }
+              }
+            }
+
+            if (targetEl) {
+              targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              targetEl.classList.remove("ink-highlight-flash");
+              void (targetEl as HTMLElement).offsetWidth; // trigger reflow
+              targetEl.classList.add("ink-highlight-flash");
+              setTimeout(() => {
+                targetEl?.classList.remove("ink-highlight-flash");
+              }, 3200);
             } else {
-              contentRef.current.scrollLeft = bookmark.offset;
+              if (settings.pageMode === "scroll") {
+                container.scrollTo({ top: bookmark.offset, behavior: "smooth" });
+              } else {
+                container.scrollTo({ left: bookmark.offset, behavior: "smooth" });
+              }
             }
           } else {
-            window.scrollTo(0, bookmark.offset);
+            window.scrollTo({ top: bookmark.offset, behavior: "smooth" });
           }
-          if (currentChapter)
+          if (currentChapter) {
             await saveCurrentProgress(currentChapter, bookmark.offset);
-        }, 100);
+            setReadingProgress(
+              computeOverallProgress(currentChapter.index, toc.length || 1, 0)
+            );
+          }
+        }, 300);
       }
     },
-    [engine, settings.pageMode, saveCurrentProgress],
+    [engine, settings.pageMode, saveCurrentProgress, toc.length],
   );
 
   const handleSummarize = useCallback(async () => {
