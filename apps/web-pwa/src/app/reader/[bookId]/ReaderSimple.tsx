@@ -8,6 +8,7 @@ import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
+import { useRouter } from "next/navigation";
 import { useCallback, type MouseEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
@@ -23,8 +24,10 @@ function isInteractiveReaderTarget(target: EventTarget | null) {
 const recognizer = new GestureRecognizer();
 
 export function ReaderSimple({ bookId }: { bookId: string }) {
+  const router = useRouter();
   const {
     chapter,
+    isPositionRestored,
     contentRef,
     handleContentTouchStart,
     handleContentTouchEnd,
@@ -71,6 +74,19 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
       // 使用手势核心识别点击行为
       const action = recognizer.getTapAction(x, width);
 
+      // 在流式滚动模式（非 pagination）下，排除由于滑动触控松开引发的左右点击翻页，以防止 Ghost Click 暴跳
+      if (!isPagination) {
+        if (action === "menu") {
+          setShowMenu((prev) => !prev);
+        } else {
+          // 在滚动模式下，点击左右非中间区域：若菜单已开启则关闭，若菜单未开启则忽略不处理，彻底降噪
+          if (showMenu) {
+            setShowMenu(false);
+          }
+        }
+        return;
+      }
+
       // 1. 如果菜单尚未显示
       if (!showMenu) {
         if (action === "prev") {
@@ -98,15 +114,21 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
       // 点击中间区域，隐藏菜单
       setShowMenu(false);
     },
-    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel],
+    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel, isPagination],
   );
 
-  if (!chapter)
+  if (!chapter) {
+    const bg = currentThemeColors?.bg || "#F8F8F5";
+    const text = currentThemeColors?.text || "#2F2A24";
     return (
-      <div className="flex h-screen items-center justify-center text-[#2F2A24]">
-        {strings.reader.loading}
+      <div
+        className="flex h-screen items-center justify-center transition-colors duration-300 animate-pulse-short"
+        style={{ backgroundColor: bg, color: text }}
+      >
+        <span className="text-sm font-semibold tracking-widest">{strings.reader.loading}</span>
       </div>
     );
+  }
 
   const isDark = settings.theme === "dark";
 
@@ -141,7 +163,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               isVisible={showMenu}
               isDesktop={false}
               isDark={isDark}
-              onBack={() => (window.location.href = "/")}
+              onBack={() => router.push("/library")}
               onBookmark={addBookmark}
               onSettings={() => togglePanel("settings")}
             />
@@ -158,7 +180,9 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             isPagination
               ? "overflow-x-auto overflow-y-hidden"
               : "overflow-y-auto overflow-x-hidden"
-          } transition-all duration-300`}
+          } transition-all duration-300 transition-opacity duration-200 ease-out ${
+            isPositionRestored ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
           style={{ scrollBehavior: "smooth" }}
         >
           <ReaderContent

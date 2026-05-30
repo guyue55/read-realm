@@ -56,7 +56,13 @@ export default function PreviewPage({
         "rw",
         [db.books, db.chapters, db.importTasks],
         async () => {
-          await db.books.add(task.bookMetadata);
+          // 提取轻量级 ToC 目录元数据，冗余保存到 books 表，以便进入阅读器时一帧内 2ms 极速拉取
+          const toc = task.chapters.map((ch) => ({
+            index: ch.index,
+            title: ch.title,
+          }));
+          const bookWithToc = { ...task.bookMetadata, toc };
+          await db.books.add(bookWithToc);
           await db.chapters.bulkAdd(task.chapters);
           await db.importTasks.delete(task.id);
         },
