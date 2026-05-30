@@ -172,7 +172,7 @@ export function LibraryDefault() {
 
   return (
     <AppShell
-      title={strings.shelf.libraryTitle}
+      title="「 墨问 」"
       subtitle="沉浸阅读，智能相伴"
       rightNodes={
         <>
@@ -191,21 +191,21 @@ export function LibraryDefault() {
         </>
       }
     >
-      <section className="relative overflow-hidden rounded-[16px] border border-[var(--ui-border)] bg-[linear-gradient(135deg,#FFFDF8_0%,#F6F2E9_100%)] px-5 py-4.5 shadow-[0_8px_24px_rgba(80,65,45,0.03)]">
-        <div className="absolute inset-y-0 right-0 hidden w-1/3 opacity-30 md:block">
-          <div className="absolute bottom-0 right-0 h-20 w-36 rounded-tl-[60px] bg-[linear-gradient(135deg,rgba(95,125,82,0.08),rgba(154,106,58,0.08))]" />
+      <section className="relative overflow-hidden rounded-[18px] border border-[var(--ui-border)] bg-[linear-gradient(135deg,#FFFDF8_0%,#F6F2E9_100%)] py-9 px-8 md:py-12 md:px-12 shadow-[0_12px_32px_rgba(80,65,45,0.04)]">
+        {/* 右侧淡雅中式工笔淡墨竹影 SVG 装饰，营造长卷惊艳画境 */}
+        <div className="absolute inset-y-0 right-8 hidden w-64 opacity-[0.16] md:block pointer-events-none select-none">
+          <svg className="w-full h-full text-[var(--ui-accent)]" viewBox="0 0 200 200" fill="currentColor">
+            <path d="M180,30 c-12,3 -30,16 -36,28 c-3,7 -2,15 -5,22 c-5,12 -18,22 -30,29 c-2,1 5,-6 7,-9 c14,-12 21,-30 26,-46 c3,-11 14,-22 26,-26 Z" />
+            <path d="M140,75 c-10,5 -22,19 -24,30 c-1,6 3,11 1,17 c-3,10 -12,17 -21,22 c1,0 4,-4 5,-6 c8,-10 12,-24 14,-36 c1,-9 10,-17 18,-20 Z" />
+            <path d="M105,120 c-6,4 -14,12 -15,20 c-1,4 1,7 0,11 c-2,6 -8,11 -14,14 c1,0 3,-3 4,-4 c5,-6 8,-15 9,-22 c1,-5 6,-11 12,-12 Z" />
+          </svg>
         </div>
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--ui-accent)] text-[10px] font-bold select-none bg-[var(--ui-accent-soft)] px-2 py-0.5 rounded uppercase tracking-wider">落款</span>
-            <h2 className="font-reading-title text-base font-semibold leading-relaxed text-[var(--ui-text)] sm:text-lg">
-              「 大道无形，清天可期。 」
-            </h2>
-            <span className="text-xs text-[var(--ui-muted)] font-medium hidden sm:inline">— 🍃 禅意书房，微光相伴。</span>
-          </div>
-          <div className="text-[10px] font-bold text-[var(--ui-quiet)] uppercase tracking-widest hidden md:block">
-            {strings.shelf.libraryTitle}
-          </div>
+        <div className="relative z-10 flex flex-col items-center justify-center text-center gap-3">
+          <h2 className="font-reading-title text-base md:text-[20px] font-bold leading-[2.2] text-[var(--ui-text)] max-w-2xl tracking-[0.16em] select-none">
+            「 大道无形，清天可期。
+            <br />
+            日日晨昏与书相伴，是一场内心的宁静修行。 」
+          </h2>
         </div>
       </section>
 
@@ -332,15 +332,6 @@ export function LibraryDefault() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
-            {bookCount > 0 && (
-              <button
-                onClick={() => setShowDrawer(true)}
-                className="ui-focus-ring rounded-full border border-[rgba(95,125,82,0.15)] bg-[rgba(95,125,82,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] transition-colors hover:bg-[rgba(95,125,82,0.1)] mr-1 flex items-center gap-1 physics-spring hover:scale-[1.02]"
-              >
-                <span>推荐阁</span>
-                <span className="text-[10px]">↗</span>
-              </button>
-            )}
             <div className="inline-flex w-fit rounded-full border border-[var(--ui-border)] bg-white/64 p-1 text-sm">
               <button
                 onClick={() => setSortBy("title")}
@@ -405,10 +396,10 @@ export function LibraryDefault() {
             </button>
           </div>
         ) : viewMode === "list" ? (
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <button
               onClick={() => router.push("/import")}
-              className="ui-focus-ring flex min-h-[48px] w-full items-center justify-center rounded-[12px] border border-dashed border-[rgba(95,125,82,0.2)] bg-white/30 px-4 text-sm font-semibold text-[var(--ui-muted)] transition-colors hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)] hover:text-[var(--ui-accent)]"
+              className="ui-focus-ring flex min-h-[52px] w-full items-center justify-center rounded-[16px] border border-dashed border-[rgba(95,125,82,0.2)] bg-white/30 px-4 mb-4 text-sm font-semibold text-[var(--ui-muted)] transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)] hover:text-[var(--ui-accent)]"
             >
               ＋ 导入书籍
             </button>
@@ -419,35 +410,40 @@ export function LibraryDefault() {
                 <div
                   key={book.id}
                   onClick={() => router.push(`/reader/${book.id}`)}
-                  className="group relative cursor-pointer flex items-center justify-between gap-4 border-b border-[rgba(80,65,45,0.04)] px-2 py-2.5 transition-colors hover:bg-[rgba(95,125,82,0.03)] rounded-lg"
+                  className="group relative cursor-pointer ui-card flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 mb-3 border border-white/60 bg-[linear-gradient(135deg,#FFFDF9_0%,#F5F1E8_100%)] shadow-[0_10px_30px_rgba(80,65,45,0.03)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_16px_40px_rgba(80,65,45,0.07)] hover:-translate-y-0.5"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* 微型极小封面 */}
-                    <div className="relative shrink-0 select-none">
-                      <div className="absolute -left-0.5 top-0.5 w-full h-full rounded-[4px] bg-black/6 blur-[1px] -z-10" />
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {/* 实体比例微型 3D 封面，支持 hover 物理弹簧微幅倾斜抬升 */}
+                    <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.03] group-hover:rotate-[1deg]">
+                      {/* 仿真书后叠层漫反射微阴影 */}
+                      <div className="absolute -left-1 top-1 w-full h-full rounded-[4px] bg-black/8 blur-[2px] -z-10" />
                       <BookCover
                         title={book.title}
-                        className="h-[44px] w-[30px] rounded-[3px] shadow-[1px_3px_8px_rgba(47,42,36,0.1)]"
+                        className="h-[68px] w-[46px] rounded-[4px] shadow-[1px_4px_12px_rgba(47,42,36,0.14)]"
                         compact
                       />
                     </div>
                     
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-reading-title text-[15px] font-semibold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors">
+                      <h3 className="truncate font-reading-title text-[15.5px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
                         {book.title}
                       </h3>
-                      <p className="mt-0.5 truncate text-xs text-[var(--ui-muted)] border-0">
-                        {book.author || "本地书籍"} · <span className="uppercase text-[10px] font-semibold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-1.5 py-0.2 rounded">{book.format}</span>
+                      <p className="mt-1.5 flex items-center gap-2 text-xs text-[var(--ui-muted)]">
+                        <span>{book.author || "本地书籍"}</span>
+                        <span className="text-[var(--ui-quiet)]">•</span>
+                        <span className="uppercase text-[10px] font-bold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-2 py-0.5 rounded-md">
+                          {book.format}
+                        </span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 shrink-0">
+                  <div className="flex items-center gap-6 shrink-0 pr-8 sm:pr-10">
                     {/* 极细微型进度条与百分比 */}
                     <div className="flex items-center gap-3">
-                      <div className="w-20 h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.05)] relative hidden sm:block">
+                      <div className="w-20 h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative hidden sm:block">
                         <div
-                          className="h-full rounded-full bg-[var(--ui-accent)] transition-[width]"
+                          className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width]"
                           style={{ width: `${percent}%` }}
                         />
                       </div>
@@ -456,13 +452,13 @@ export function LibraryDefault() {
                       </span>
                     </div>
 
-                    {/* 删除操作 */}
+                    {/* 悬展删除操作：PC 端 Hover 淡出，移动端小屏常驻 */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(book.id, book.title);
                       }}
-                      className="flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/90 text-xs font-bold text-[var(--ui-danger)] opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
                       title={strings.shelf.delete}
                     >
                       ×
@@ -593,6 +589,20 @@ export function LibraryDefault() {
             />
           </div>
         </section>
+      )}
+
+      {/* 4. 当书架有藏书时，底部低调显示一个雅致的推荐阁入口引流装饰线 */}
+      {bookCount > 0 && (
+        <div className="mt-14 mb-4 flex justify-center text-center select-none">
+          <button
+            onClick={() => setShowDrawer(true)}
+            className="group flex items-center gap-2 text-xs font-medium text-[var(--ui-quiet)] transition-colors hover:text-[var(--ui-accent)]"
+          >
+            <span className="opacity-30">——————</span>
+            <span className="flex items-center gap-1">🍃 案头书尽？可往「推荐阁 ↗」寻新书</span>
+            <span className="opacity-30">——————</span>
+          </button>
+        </div>
       )}
 
       {/* 5. 推荐阁侧边抽屉组件 */}
