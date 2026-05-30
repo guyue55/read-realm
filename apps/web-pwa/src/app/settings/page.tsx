@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_READER_SETTINGS,
   loadReaderSettings,
@@ -23,11 +23,35 @@ export default function SettingsPage() {
     setSettings(loadReaderSettings());
   }, []);
 
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   const saveNextSettings = (nextSettings: ReaderSettingsState) => {
     setSettings(nextSettings);
     saveReaderSettings(nextSettings);
     setSaved(true);
-    window.setTimeout(() => setSaved(false), 1200);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setSaved(false);
+    }, 1200);
+  };
+
+  // 拖动期间仅更新 React State，变动 CSS 变量触发预览重绘，无任何 IO 与定时器开销，保障 60fps 流畅度
+  const handleSettingChange = (nextSettings: ReaderSettingsState) => {
+    setSettings(nextSettings);
+  };
+
+  // 拖动结束/松开时执行写盘，并单次优雅触发保存气泡
+  const handleSettingCommit = (nextSettings: ReaderSettingsState) => {
+    saveReaderSettings(nextSettings);
+    setSaved(true);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setSaved(false);
+    }, 1200);
   };
 
   const updateTheme = (theme: ThemeName) => {
@@ -249,7 +273,9 @@ export default function SettingsPage() {
                 max="36"
                 step="1"
                 value={settings.fontSize}
-                onChange={(e) => saveNextSettings({ ...settings, fontSize: parseInt(e.target.value) })}
+                onChange={(e) => handleSettingChange({ ...settings, fontSize: parseInt(e.target.value) })}
+                onMouseUp={() => handleSettingCommit(settings)}
+                onTouchEnd={() => handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -270,7 +296,9 @@ export default function SettingsPage() {
                 max="2.4"
                 step="0.1"
                 value={settings.lineHeight}
-                onChange={(e) => saveNextSettings({ ...settings, lineHeight: parseFloat(e.target.value) })}
+                onChange={(e) => handleSettingChange({ ...settings, lineHeight: parseFloat(e.target.value) })}
+                onMouseUp={() => handleSettingCommit(settings)}
+                onTouchEnd={() => handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -291,7 +319,9 @@ export default function SettingsPage() {
                 max="40"
                 step="2"
                 value={settings.paragraphSpacing}
-                onChange={(e) => saveNextSettings({ ...settings, paragraphSpacing: parseInt(e.target.value) })}
+                onChange={(e) => handleSettingChange({ ...settings, paragraphSpacing: parseInt(e.target.value) })}
+                onMouseUp={() => handleSettingCommit(settings)}
+                onTouchEnd={() => handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -312,7 +342,9 @@ export default function SettingsPage() {
                 max="0.25"
                 step="0.01"
                 value={settings.letterSpacing}
-                onChange={(e) => saveNextSettings({ ...settings, letterSpacing: parseFloat(e.target.value) })}
+                onChange={(e) => handleSettingChange({ ...settings, letterSpacing: parseFloat(e.target.value) })}
+                onMouseUp={() => handleSettingCommit(settings)}
+                onTouchEnd={() => handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
