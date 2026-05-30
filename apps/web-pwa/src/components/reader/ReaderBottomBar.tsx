@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { strings } from "@/lib/i18n";
 
 export interface ReaderBottomBarProps {
@@ -33,6 +33,15 @@ export function ReaderBottomBar({
   progress = 0,
 }: ReaderBottomBarProps) {
   const safeProgress = Math.max(0, Math.min(100, progress));
+
+  const [tempProgress, setTempProgress] = useState(safeProgress);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setTempProgress(safeProgress);
+    }
+  }, [safeProgress]);
   const shellClass = isDark
     ? "border-[rgba(255,255,255,0.12)] bg-[rgba(35,35,35,0.96)] text-[#CFCFCF] shadow-[0_18px_60px_rgba(0,0,0,0.38)]"
     : "border-[rgba(80,65,45,0.12)] bg-[rgba(255,252,245,0.96)] text-[#2F2A24] shadow-[0_18px_60px_rgba(47,42,36,0.18)]";
@@ -82,6 +91,7 @@ export function ReaderBottomBar({
 
   return (
     <div
+      style={{ willChange: "transform" }}
       className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl physics-spring sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
@@ -102,10 +112,25 @@ export function ReaderBottomBar({
           min={0}
           max={100}
           step={0.1}
-          value={safeProgress}
-          onChange={(event) =>
-            onSeekProgress(Number(event.currentTarget.value))
-          }
+          value={tempProgress}
+          onChange={(event) => {
+            isDraggingRef.current = true;
+            setTempProgress(Number(event.target.value));
+          }}
+          onMouseUp={() => {
+            isDraggingRef.current = false;
+            onSeekProgress(tempProgress);
+          }}
+          onTouchEnd={() => {
+            isDraggingRef.current = false;
+            onSeekProgress(tempProgress);
+          }}
+          onKeyUp={(event) => {
+            if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) {
+              isDraggingRef.current = false;
+              onSeekProgress(tempProgress);
+            }
+          }}
           className="h-6 w-full accent-[#5F7D52]"
         />
         <button
@@ -116,7 +141,7 @@ export function ReaderBottomBar({
           ›
         </button>
         <span className={`text-right text-xs font-semibold ${mutedClass}`}>
-          {Math.round(safeProgress)}%
+          {Math.round(tempProgress)}%
         </span>
       </div>
 
