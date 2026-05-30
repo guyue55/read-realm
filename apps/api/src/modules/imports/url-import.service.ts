@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { parseWebPageWithReadability } from '@reader/parser-core';
+import { parseWebPageWithReadability } from '@reader/parser-core/html';
 
 export interface ParsedChapter {
   index: number;
