@@ -24,7 +24,7 @@
   --ui-shadow: 0 18px 50px rgba(80, 65, 45, 0.08);
 
   /* 三大风雅国风/屏显中文字体变量 */
-  --font-kaiti: "Kaiti SC", "STKaiti", "FZKai-Z03S", "KaiTi", "LXGW WenKai Screen", "Noto Serif SC", serif;
+  --font-kaiti: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "KaiTi", "Noto Serif SC", serif;
   --font-songti: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
   --font-heiti: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
@@ -100,6 +100,9 @@ body {
     word-break: break-all;
     letter-spacing: var(--letter-spacing, 0.03em);
     font-family: var(--reader-font-family, var(--font-kaiti)); /* 默认应用优雅楷体 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-shadow: 0 0 1px rgba(80, 65, 45, 0.015); /* 模拟微弱油墨在宣纸上匀称晕开的高档质感 */
   }
 
   .reader-content p {
