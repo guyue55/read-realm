@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;900&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css');
+@import url('https://npm.elemecdn.com/lxgw-wenkai-screen-webfont@1.7.0/style.css');
 
 @tailwind base;
 @tailwind components;
