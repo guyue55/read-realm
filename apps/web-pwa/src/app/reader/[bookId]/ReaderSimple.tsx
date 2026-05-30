@@ -6,6 +6,7 @@ import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
 import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
+import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { useCallback, type MouseEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
@@ -160,8 +161,15 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           } transition-all duration-300`}
           style={{ scrollBehavior: "smooth" }}
         >
-          <div
-            className={`max-w-[760px] mx-auto px-6 pt-16 pb-[120px]`}
+          <ReaderContent
+            title={chapter.title}
+            content={chapter.content}
+            isDark={isDark}
+            isPagination={isPagination}
+            buttonVariant="simple"
+            onPrev={handlePrev}
+            onNext={handleNext}
+            className="max-w-[760px] mx-auto px-6 pt-16 pb-[120px]"
             style={{
               fontSize: `${settings.fontSize}px`,
               lineHeight: settings.lineHeight,
@@ -172,32 +180,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
               "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
             } as React.CSSProperties}
-          >
-            <h1 className="text-2xl font-bold mb-8">{chapter.title}</h1>
-            <div
-              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
-                isDark ? "theme-dark-filter" : ""
-              }`}
-              dangerouslySetInnerHTML={{ __html: chapter.content }}
-            />
-            {/* Nav Buttons (Scroll mode end) */}
-            {!isPagination && (
-              <div className="mt-12 flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10">
-                <button
-                  onClick={handlePrev}
-                  className="px-6 py-3 bg-[rgba(80,65,45,0.04)] rounded-full text-sm hover:bg-[rgba(80,65,45,0.08)] transition-colors text-inherit"
-                >
-                  {strings.reader.prevChapter}
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="px-6 py-3 border border-[#678055] text-[#678055] font-bold rounded-full text-sm hover:bg-[rgba(103,128,85,0.04)] transition-colors"
-                >
-                  {strings.reader.nextChapter}
-                </button>
-              </div>
-            )}
-          </div>
+            titleClassName="text-2xl font-bold mb-8"
+          />
         </div>
 
         {/* Bottom Bar Overlay - universal for simple mode */}
