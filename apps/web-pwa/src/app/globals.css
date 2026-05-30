@@ -146,5 +146,50 @@ body {
     background-size: 200% 100%;
     animation: pulse-sweep 1.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
   }
+
+  /* 移动端 StatusBar 与 Home 键安全区适配 */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 天青水墨淡入三次呼吸闪烁动效 */
+  @keyframes ink-highlight-pulse {
+    0% {
+      background-color: transparent;
+      box-shadow: 0 0 0 rgba(95, 125, 82, 0);
+    }
+    15% {
+      background-color: rgba(95, 125, 82, 0.16);
+      box-shadow: 0 0 16px rgba(95, 125, 82, 0.15);
+      border-radius: 6px;
+    }
+    40% {
+      background-color: rgba(95, 125, 82, 0.04);
+      box-shadow: 0 0 4px rgba(95, 125, 82, 0.05);
+    }
+    60% {
+      background-color: rgba(95, 125, 82, 0.14);
+      box-shadow: 0 0 12px rgba(95, 125, 82, 0.12);
+    }
+    80% {
+      background-color: rgba(95, 125, 82, 0.02);
+      box-shadow: 0 0 2px rgba(95, 125, 82, 0.02);
+    }
+    100% {
+      background-color: transparent;
+      box-shadow: 0 0 0 rgba(95, 125, 82, 0);
+    }
+  }
+
+  .ink-highlight-flash {
+    animation: ink-highlight-pulse 3s cubic-bezier(0.25, 1, 0.5, 1) both;
+    padding-left: 6px;
+    padding-right: 6px;
+    margin-left: -6px;
+    margin-right: -6px;
+  }
 }
 

@@ -88,6 +88,23 @@ export default function NotesPage() {
   // 勋章详情弹窗彩蛋
   const [activeMedal, setActiveMedal] = useState<Medal | null>(null);
 
+  // 搜索和藏书过滤状态
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBookId, setSelectedBookId] = useState("");
+
+  const bookFilters = Array.from(
+    new Map(bookmarks.map((b) => [b.bookId, b.bookTitle || "未知书籍"])).entries()
+  ).map(([id, title]) => ({ id, title }));
+
+  const filteredBookmarks = bookmarks.filter((b) => {
+    const matchesSearch = searchQuery
+      ? b.contentPreview?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.bookTitle?.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    const matchesBook = selectedBookId ? b.bookId === selectedBookId : true;
+    return matchesSearch && matchesBook;
+  });
+
   useEffect(() => {
     const fetchNotesAndStats = async () => {
       try {
@@ -315,17 +332,72 @@ export default function NotesPage() {
           </div>
         ) : (
           /* Tab B: 我的笔记列表 */
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {bookmarks.length === 0 ? (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+            {bookmarks.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white/45 backdrop-blur-md p-4 rounded-[20px] border border-[#E9DCC8] shadow-sm">
+                {/* 搜索框 */}
+                <div className="relative w-full sm:max-w-md">
+                  <span className="absolute inset-y-0 left-4 flex items-center text-[var(--ui-quiet)] pointer-events-none">
+                    🔍
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="输入关键字搜索笔记或想法..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm bg-white/70 border border-[#E9DCC8] focus:border-[var(--ui-accent)] focus:outline-none transition-colors placeholder-[#8A8374]"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute inset-y-0 right-4 flex items-center text-[var(--ui-quiet)] hover:text-[var(--ui-text)]"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                {/* 藏书选择器 */}
+                <div className="relative w-full sm:w-64">
+                  <select
+                    value={selectedBookId}
+                    onChange={(e) => setSelectedBookId(e.target.value)}
+                    className="w-full pl-4 pr-10 py-2.5 rounded-full text-sm bg-white/70 border border-[#E9DCC8] focus:border-[var(--ui-accent)] focus:outline-none appearance-none cursor-pointer transition-colors"
+                  >
+                    <option value="">全部藏书</option>
+                    {bookFilters.map((bk) => (
+                      <option key={bk.id} value={bk.id}>
+                        {bk.title}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-xs text-[var(--ui-quiet)]">
+                    ▼
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {filteredBookmarks.length === 0 ? (
               <EmptyState
-                title="暂无笔记"
-                description="在阅读器时长按或选中文字即可添加书签与笔记"
-                actionLabel="去阅读"
-                onAction={() => router.push("/library")}
+                title={bookmarks.length === 0 ? "暂无笔记" : "未找到匹配的笔记"}
+                description={
+                  bookmarks.length === 0
+                    ? "在阅读器时长按或选中文字即可添加书签与笔记"
+                    : "请尝试缩短或更改搜索词，或切换不同的藏书进行筛选"
+                }
+                actionLabel={bookmarks.length === 0 ? "去阅读" : "清除筛选条件"}
+                onAction={() => {
+                  if (bookmarks.length === 0) {
+                    router.push("/library");
+                  } else {
+                    setSearchQuery("");
+                    setSelectedBookId("");
+                  }
+                }}
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {bookmarks.map((bookmark) => (
+                {filteredBookmarks.map((bookmark) => (
                   <div
                     key={bookmark.id}
                     className="bg-[#FFFDF8] p-6 rounded-[24px] shadow-[0_6px_20px_rgba(80,65,45,0.03)] border border-[#E9DCC8] flex flex-col hover:shadow-[0_12px_28px_rgba(80,65,45,0.08)] transition-all duration-300 hover:-translate-y-0.5"
@@ -362,7 +434,11 @@ export default function NotesPage() {
                         {new Date(bookmark.createdAt).toLocaleDateString()}
                       </span>
                       <button
-                        onClick={() => router.push(`/reader/${bookmark.bookId}`)}
+                        onClick={() =>
+                          router.push(
+                            `/reader/${bookmark.bookId}?chapter=${bookmark.chapterIndex}&bookmarkId=${bookmark.id}`
+                          )
+                        }
                         className="text-[var(--ui-accent)] text-sm font-bold hover:text-[#4B633C] transition-colors flex items-center gap-1 font-serif"
                       >
                         跳转原文 <span>→</span>
