@@ -72,26 +72,41 @@ export default function ImportPage() {
 
     setIsProcessing(true);
     try {
-      setStatus("加载解析引擎...");
-      const { parseTxtBook, parseEpubBook } =
-        await import("@reader/parser-core");
-
       setStatus("读取文件内容...");
       const buffer = await file.arrayBuffer();
 
-      setStatus("解析章节中...");
-      let parsedBook;
-      if (file.name.toLowerCase().endsWith(".epub")) {
-        parsedBook = await parseEpubBook(file.name, buffer);
-      } else {
-        parsedBook = parseTxtBook(file.name, buffer);
-      }
+      setStatus("启动解析引擎...");
+      const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
 
-      setStatus(`解析完成，共发现 ${parsedBook.chapters.length} 章`);
-      const format = (
-        file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt"
-      ) as "epub" | "txt";
-      await createImportTask(parsedBook, "upload", { format });
+      // 实例化 Next.js 原生支持的 Web Worker 异步解析，解放主线程
+      const worker = new Worker(
+        new URL("./parser.worker.ts", import.meta.url)
+      );
+
+      // 使用 Transferable Objects 传递 buffer，无内存拷贝，0 感延迟
+      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
+
+      setStatus("引擎解析章节中...");
+      
+      worker.onmessage = async (e) => {
+        const { success, parsedBook, error } = e.data;
+        worker.terminate(); // 解析完成，物理销毁 Worker，杜绝内存泄漏
+
+        if (success) {
+          setStatus(`解析完成，共发现 ${parsedBook.chapters.length} 章`);
+          const format = type as "epub" | "txt";
+          await createImportTask(parsedBook, "upload", { format });
+        } else {
+          setStatus(`解析失败: ${error}`);
+          setIsProcessing(false);
+        }
+      };
+
+      worker.onerror = (e) => {
+        worker.terminate();
+        setStatus(`解析异常: ${e.message}`);
+        setIsProcessing(false);
+      };
     } catch (e) {
       const error = e as Error;
       setStatus(`解析失败: ${error.message}`);

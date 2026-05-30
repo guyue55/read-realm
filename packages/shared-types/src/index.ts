@@ -35,6 +35,7 @@ export const BookSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   lastReadAt: z.string().optional(),
+  toc: z.array(z.object({ index: z.number(), title: z.string() })).optional(),
 });
 
 export type Book = z.infer<typeof BookSchema>;
