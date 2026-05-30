@@ -6,6 +6,7 @@ import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
 import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
+import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useRouter } from "next/navigation";
@@ -164,7 +165,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             } transition-all duration-300`}
             style={{ scrollBehavior: "smooth" }}
           >
-            <div
+            <ReaderContent
+              title={chapter.title}
+              content={chapter.content}
+              isDark={isDark}
+              isPagination={isPagination}
+              buttonVariant="default"
+              onPrev={handlePrev}
+              onNext={handleNext}
               className="mx-auto px-6 pt-12 pb-[120px] xl:px-12"
               style={{
                 maxWidth: `${readerTokens.layout.desktopContentMaxWidth}px`,
@@ -177,36 +185,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
                 "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
               } as React.CSSProperties}
-            >
-              <h1
-                className="text-3xl font-bold mb-10 font-serif text-center"
-                style={{ color: currentThemeColors.text }}
-              >
-                {chapter.title}
-              </h1>
-              <div
-                className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
-                  isDark ? "theme-dark-filter" : ""
-                }`}
-                dangerouslySetInnerHTML={{ __html: chapter.content }}
-              />
-              {!isPagination && (
-                <div className="mt-16 flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10">
-                  <button
-                    onClick={handlePrev}
-                    className="px-6 py-3 bg-[rgba(80,65,45,0.04)] rounded-full text-sm hover:bg-[rgba(80,65,45,0.08)] transition-colors text-inherit"
-                  >
-                    {strings.reader.prevChapter}
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="px-6 py-3 bg-[#EEF2E9] text-[#678055] font-bold rounded-full text-sm hover:bg-[#DDEBD6] transition-colors"
-                  >
-                    {strings.reader.nextChapter}
-                  </button>
-                </div>
-              )}
-            </div>
+              titleClassName="text-3xl font-bold mb-10 font-serif text-center"
+              titleStyle={{ color: currentThemeColors.text }}
+            />
           </div>
         </div>
 
@@ -247,7 +228,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           } transition-all duration-300`}
           style={{ scrollBehavior: "smooth" }}
         >
-          <div
+          <ReaderContent
+            title={chapter.title}
+            content={chapter.content}
+            isDark={isDark}
+            isPagination={isPagination}
+            buttonVariant="default"
+            onPrev={handlePrev}
+            onNext={handleNext}
             className="mx-auto px-6 pt-12 pb-[120px]"
             style={{
               maxWidth: `${readerTokens.layout.tabletContentMaxWidth}px`,
@@ -260,34 +248,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
               "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
             } as React.CSSProperties}
-          >
-            <h1 className="text-2xl font-bold mb-8 font-serif">
-              {chapter.title}
-            </h1>
-            <div
-              className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
-                isDark ? "theme-dark-filter" : ""
-              }`}
-              dangerouslySetInnerHTML={{ __html: chapter.content }}
-            />
-            {/* Nav Buttons */}
-            {!isPagination && (
-              <div className="mt-12 flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10">
-                <button
-                  onClick={handlePrev}
-                  className="px-6 py-3 bg-[rgba(80,65,45,0.04)] rounded-full text-sm hover:bg-[rgba(80,65,45,0.08)] transition-colors text-inherit"
-                >
-                  {strings.reader.prevChapter}
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="px-6 py-3 bg-[#EEF2E9] text-[#678055] font-bold rounded-full text-sm hover:bg-[#DDEBD6] transition-colors"
-                >
-                  {strings.reader.nextChapter}
-                </button>
-              </div>
-            )}
-          </div>
+            titleClassName="text-2xl font-bold mb-8 font-serif"
+          />
         </div>
 
         {/* Mobile Bottom Bar Overlay */}
