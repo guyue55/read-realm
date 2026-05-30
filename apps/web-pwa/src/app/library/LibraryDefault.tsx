@@ -191,21 +191,37 @@ export function LibraryDefault() {
         </>
       }
     >
-      <section className="relative overflow-hidden rounded-[18px] border border-[var(--ui-border)] bg-[linear-gradient(135deg,#FFFDF8_0%,#F6F2E9_100%)] py-9 px-8 md:py-12 md:px-12 shadow-[0_12px_32px_rgba(80,65,45,0.04)]">
-        {/* 右侧淡雅中式工笔淡墨竹影 SVG 装饰，营造长卷惊艳画境 */}
-        <div className="absolute inset-y-0 right-8 hidden w-64 opacity-[0.16] md:block pointer-events-none select-none">
-          <svg className="w-full h-full text-[var(--ui-accent)]" viewBox="0 0 200 200" fill="currentColor">
-            <path d="M180,30 c-12,3 -30,16 -36,28 c-3,7 -2,15 -5,22 c-5,12 -18,22 -30,29 c-2,1 5,-6 7,-9 c14,-12 21,-30 26,-46 c3,-11 14,-22 26,-26 Z" />
-            <path d="M140,75 c-10,5 -22,19 -24,30 c-1,6 3,11 1,17 c-3,10 -12,17 -21,22 c1,0 4,-4 5,-6 c8,-10 12,-24 14,-36 c1,-9 10,-17 18,-20 Z" />
-            <path d="M105,120 c-6,4 -14,12 -15,20 c-1,4 1,7 0,11 c-2,6 -8,11 -14,14 c1,0 3,-3 4,-4 c5,-6 8,-15 9,-22 c1,-5 6,-11 12,-12 Z" />
-          </svg>
+      <section className="relative overflow-hidden rounded-[18px] border border-[var(--ui-border)] bg-[linear-gradient(135deg,#FFFDF8_0%,#F1ECE2_58%,#E7E0D3_100%)] p-5 shadow-[0_18px_50px_rgba(80,65,45,0.07)] md:p-7">
+        <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-75 md:block">
+          <div className="absolute bottom-0 right-0 h-40 w-72 rounded-tl-[120px] bg-[linear-gradient(135deg,rgba(95,125,82,0.11),rgba(154,106,58,0.11))]" />
+          <div className="absolute bottom-10 right-16 h-12 w-48 rounded-full bg-[rgba(47,42,36,0.06)] blur-xl" />
+          <div className="absolute bottom-16 right-20 h-24 w-36 rounded-t-full border-t border-[rgba(95,125,82,0.24)]" />
         </div>
-        <div className="relative z-10 flex flex-col items-center justify-center text-center gap-3">
-          <h2 className="font-reading-title text-base md:text-[20px] font-bold leading-[2.2] text-[var(--ui-text)] max-w-2xl tracking-[0.16em] select-none">
-            「 大道无形，清天可期。
-            <br />
-            日日晨昏与书相伴，是一场内心的宁静修行。 」
+        <div className="relative z-10 max-w-xl">
+          <h2 className="font-reading-title text-3xl font-semibold leading-tight text-[var(--ui-text)] md:text-4xl">
+            大道无形，清天可期
           </h2>
+          <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ui-muted)]">
+            管理本地书籍、继续上次阅读，也可以把新的 TXT / EPUB
+            放进这间安静书房。
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              onClick={() =>
+                continueBook && router.push(`/reader/${continueBook.id}`)
+              }
+              disabled={!continueBook}
+              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.18)]"
+            >
+              继续阅读
+            </button>
+            <button
+              onClick={() => router.push("/search")}
+              className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-5 py-2.5 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white"
+            >
+              去发现
+            </button>
+          </div>
         </div>
       </section>
 
