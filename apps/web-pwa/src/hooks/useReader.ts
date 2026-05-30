@@ -6,7 +6,7 @@ import {
   type TouchEvent,
 } from "react";
 import { ReaderEngine, type ChapterData } from "@reader/reader-core";
-import { db } from "@reader/storage-core";
+import { Dexie, db } from "@reader/storage-core";
 import type { ReadingProgress, Bookmark } from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
@@ -27,6 +27,34 @@ function debounce<Args extends unknown[]>(
   return (...args: Args) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+function throttle<Args extends unknown[]>(
+  func: (...args: Args) => void,
+  limit: number,
+) {
+  let lastFunc: ReturnType<typeof setTimeout> | null = null;
+  let lastRan: number = 0;
+  return (...args: Args) => {
+    const now = Date.now();
+    if (!lastRan) {
+      func(...args);
+      lastRan = now;
+    } else {
+      if (lastFunc) clearTimeout(lastFunc);
+      const remaining = limit - (now - lastRan);
+      if (remaining <= 0) {
+        func(...args);
+        lastRan = now;
+      } else {
+        lastFunc = setTimeout(() => {
+          func(...args);
+          lastRan = Date.now();
+          lastFunc = null;
+        }, remaining);
+      }
+    }
   };
 }
 
@@ -74,6 +102,11 @@ export function useReader(bookId: string) {
     DEFAULT_READER_SETTINGS,
   );
   const [readingProgress, setReadingProgress] = useState(0);
+  const throttledSetReadingProgressRef = useRef(
+    throttle((progress: number) => {
+      setReadingProgress(progress);
+    }, 150),
+  );
   const touchGestureRef = useRef<{ x: number; y: number } | null>(null);
   const recognizerRef = useRef(new GestureRecognizer());
   const touchTimeRef = useRef<number>(0);
@@ -216,9 +249,8 @@ export function useReader(bookId: string) {
     const handleScroll = () => {
       const { offset, maxOffset } = getOffsetState();
       const offsetRatio = maxOffset > 0 ? offset / maxOffset : 0;
-      setReadingProgress(
-        computeOverallProgress(chapter.index, toc.length, offsetRatio),
-      );
+      const overallProgress = computeOverallProgress(chapter.index, toc.length, offsetRatio);
+      throttledSetReadingProgressRef.current(overallProgress);
       if (offset > 0) {
         pendingProgressRef.current = {
           bookId,
@@ -327,11 +359,14 @@ export function useReader(bookId: string) {
       getChapterCount: async (id: string) =>
         await db.chapters.where("bookId").equals(id).count(),
       getToc: async (id: string) => {
-        const chapters = await db.chapters
-          .where("bookId")
-          .equals(id)
-          .sortBy("index");
-        return chapters.map((c) => ({ index: c.index, title: c.title }));
+        const list: { index: number; title: string }[] = [];
+        await db.chapters
+          .where("[bookId+index]")
+          .between([id, Dexie.minKey], [id, Dexie.maxKey])
+          .each((c) => {
+            list.push({ index: c.index, title: c.title });
+          });
+        return list;
       },
     };
 
