@@ -11,6 +11,11 @@ export interface ReaderTopBarProps {
   isDark?: boolean;
   onToggleToc?: () => void;
   onToggleAi?: () => void;
+  onPrevChapter?: () => void;
+  onNextChapter?: () => void;
+  progress?: number;
+  currentChapterIndex?: number;
+  totalChapters?: number;
 }
 
 export function ReaderTopBar({
@@ -23,6 +28,11 @@ export function ReaderTopBar({
   isDark = false,
   onToggleToc,
   onToggleAi,
+  onPrevChapter,
+  onNextChapter,
+  progress,
+  currentChapterIndex,
+  totalChapters,
 }: ReaderTopBarProps) {
   // Mobile Top Bar (Overlay)
   if (!isDesktop) {
@@ -37,7 +47,7 @@ export function ReaderTopBar({
 
     return (
       <div
-        className={`fixed top-0 inset-x-0 h-14 ${bgClass} shadow-sm z-20 flex items-center px-4 physics-spring border-b ${borderClass} ${
+        className={`fixed top-0 inset-x-0 pt-[env(safe-area-inset-top)] pb-0 min-h-[calc(3.5rem+env(safe-area-inset-top))] ${bgClass} shadow-sm z-20 flex items-center px-4 physics-spring border-b ${borderClass} ${
           isVisible
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "-translate-y-full opacity-0 pointer-events-none"
@@ -49,11 +59,18 @@ export function ReaderTopBar({
         >
           ←
         </button>
-        <span
-          className={`truncate flex-1 text-sm font-bold text-center ${textColor}`}
-        >
-          {title}
-        </span>
+        <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2">
+          <span
+            className={`truncate w-full text-sm font-bold text-center ${textColor}`}
+          >
+            {title}
+          </span>
+          {typeof progress === "number" && (
+            <span className={`text-[10px] font-semibold tracking-wider opacity-60 ${textColor}`}>
+              {Math.round(progress)}% · {(currentChapterIndex || 0) + 1}/{totalChapters || 1} 章
+            </span>
+          )}
+        </div>
         <button
           onClick={onSettings}
           className={`ml-4 text-sm font-medium ${iconColor} active:scale-95`}
@@ -70,16 +87,57 @@ export function ReaderTopBar({
       <div className="flex justify-start">
         <button
           onClick={onBack}
-          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95"
+          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center gap-1"
         >
           ← 返回书架
         </button>
       </div>
-      <div className="flex justify-center">
-        <span className="text-sm font-bold font-serif max-w-[320px] truncate opacity-85">
-          {title}
-        </span>
+      
+      <div className="flex justify-center items-center gap-4 select-none">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrevChapter?.();
+          }}
+          className="group flex items-center gap-1 px-3 py-1 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[11px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          title="上一章"
+          aria-label="上一章"
+        >
+          <span className="transition-transform duration-200 ease-out group-hover:-translate-x-0.5">⏮</span>
+          <span>上一章</span>
+        </button>
+        
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-bold font-serif max-w-[200px] truncate opacity-85">
+            {title}
+          </span>
+          {typeof progress === "number" && (
+            <div 
+              className="flex items-center gap-1.5 backdrop-blur-md bg-[rgba(103,128,85,0.08)] border border-[#678055]/15 text-[#678055] px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide"
+              title={`阅读进度: ${Math.round(progress)}%`}
+            >
+              <span>{Math.round(progress)}%</span>
+              {typeof currentChapterIndex === "number" && typeof totalChapters === "number" && (
+                <span className="opacity-60 font-normal">({currentChapterIndex + 1}/{totalChapters})</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onNextChapter?.();
+          }}
+          className="group flex items-center gap-1 px-3 py-1 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[11px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          title="下一章"
+          aria-label="下一章"
+        >
+          <span>下一章</span>
+          <span className="transition-transform duration-200 ease-out group-hover:translate-x-0.5">⏭</span>
+        </button>
       </div>
+
       <div className="flex justify-end gap-5 items-center">
         {onToggleToc && (
           <button

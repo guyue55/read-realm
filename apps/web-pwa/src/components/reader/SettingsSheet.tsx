@@ -10,6 +10,10 @@ export interface SettingsSheetProps {
   updatePageMode: (mode: "scroll" | "pagination") => void;
   updateUiMode?: (mode: "default" | "simple") => void;
   updateFontFamily?: (fontFamily: "kaiti" | "songti" | "heiti") => void;
+  updateParagraphSpacing?: (spacing: number) => void;
+  updateLetterSpacing?: (spacing: number) => void;
+  updateLineHeight?: (height: number) => void;
+  updateAutoFlipAtBottom?: (enabled: boolean) => void;
   isMobileSheet?: boolean;
   onClose?: () => void;
 }
@@ -21,6 +25,10 @@ export function SettingsSheet({
   updatePageMode,
   updateUiMode,
   updateFontFamily,
+  updateParagraphSpacing,
+  updateLetterSpacing,
+  updateLineHeight,
+  updateAutoFlipAtBottom,
   isMobileSheet = false,
   onClose,
 }: SettingsSheetProps) {
@@ -34,7 +42,7 @@ export function SettingsSheet({
   const mutedText = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
 
   const containerClasses = isMobileSheet
-    ? `h-full flex flex-col ${bgClass}`
+    ? `flex flex-col pb-[calc(2rem+env(safe-area-inset-bottom))] ${bgClass}`
     : `${bgClass} rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full`;
 
   return (
@@ -192,6 +200,86 @@ export function SettingsSheet({
             </button>
           </div>
         </div>
+
+        {/* 精细排版 Slider 控制组 */}
+        {updateLineHeight && (
+          <div className="flex flex-col gap-1 pb-1">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span className={mutedText}>行间距</span>
+              <span className={`${textColor} font-bold text-xs`}>{settings.lineHeight.toFixed(1)} 倍</span>
+            </div>
+            <input
+              aria-label="行间距"
+              type="range"
+              min={1.4}
+              max={2.2}
+              step={0.1}
+              value={settings.lineHeight}
+              onChange={(e) => updateLineHeight(Number(e.target.value))}
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+            />
+          </div>
+        )}
+
+        {updateParagraphSpacing && (
+          <div className="flex flex-col gap-1 pb-1">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span className={mutedText}>段落间距</span>
+              <span className={`${textColor} font-bold text-xs`}>{settings.paragraphSpacing} px</span>
+            </div>
+            <input
+              aria-label="段落间距"
+              type="range"
+              min={0}
+              max={32}
+              step={4}
+              value={settings.paragraphSpacing}
+              onChange={(e) => updateParagraphSpacing(Number(e.target.value))}
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+            />
+          </div>
+        )}
+
+        {updateLetterSpacing && (
+          <div className="flex flex-col gap-1 pb-1">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span className={mutedText}>字间距</span>
+              <span className={`${textColor} font-bold text-xs`}>{settings.letterSpacing.toFixed(2)} em</span>
+            </div>
+            <input
+              aria-label="字间距"
+              type="range"
+              min={-0.02}
+              max={0.15}
+              step={0.01}
+              value={settings.letterSpacing}
+              onChange={(e) => updateLetterSpacing(Number(e.target.value))}
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+            />
+          </div>
+        )}
+
+        {/* 触底自动切章 Switch */}
+        {settings.pageMode === "scroll" && updateAutoFlipAtBottom && (
+          <div className="flex items-center justify-between pt-4 border-t border-[rgba(80,65,45,0.08)]">
+            <span className={`text-sm font-medium ${mutedText}`}>触底自动切章</span>
+            <button
+              onClick={() => updateAutoFlipAtBottom(!settings.autoFlipAtBottom)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
+                settings.autoFlipAtBottom ? "bg-[#678055]" : "bg-gray-300 dark:bg-zinc-700"
+              }`}
+              role="switch"
+              aria-checked={settings.autoFlipAtBottom}
+              aria-label="触底自动切章"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.autoFlipAtBottom ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

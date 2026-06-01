@@ -44,6 +44,7 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   runtimeCaching: customizedCaching,
+  buildExcludes: [/app-build-manifest\.json$/, /middleware-manifest\.json$/],
 });
 
 const nextConfig = {

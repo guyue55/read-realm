@@ -16,15 +16,56 @@ export function AIReaderPanel({
   isDark = false,
   onClose,
 }: AIReaderPanelProps) {
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobileDrawer) return;
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobileDrawer || touchStart === null) return;
+    const currentX = e.targetTouches[0].clientX;
+    const diffX = currentX - touchStart;
+    // Slide right to hide AI panel
+    if (diffX > 40) {
+      onClose?.();
+      setTouchStart(null);
+    }
+  };
+
   const containerClasses = isMobileDrawer
-    ? "h-full flex flex-col"
-    : "h-full flex flex-col bg-transparent text-inherit";
+    ? "h-full flex flex-col relative select-none"
+    : "h-full flex flex-col bg-transparent text-inherit relative";
 
   const bubbleBg = isDark ? "bg-[rgba(0,0,0,0.2)]" : "bg-white";
 
   return (
-    <div className={containerClasses}>
-      <div className="p-4 border-b border-[rgba(80,65,45,0.12)] flex items-center justify-between bg-[rgba(80,65,45,0.04)]">
+    <div
+      className={containerClasses}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
+      {/* 左侧外缘手势拖拽指示柄：伸入左边空白遮罩区，支持一键点击或滑动收拢助手 */}
+      {isMobileDrawer && onClose && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="关闭助手"
+          className="absolute left-0 top-1/2 -translate-y-1/2 translate-x-[-90%] z-10 flex h-24 w-5 items-center justify-center rounded-l-2xl border-y border-l border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] backdrop-blur-lg opacity-90 hover:opacity-100 transition-all duration-200"
+          style={{
+            backgroundColor: "inherit",
+            color: "inherit",
+            boxShadow: "-6px 0 16px rgba(0,0,0,0.08)",
+          }}
+        >
+          <span className="text-xs font-bold opacity-75">›</span>
+        </button>
+      )}
+
+      <div className="p-4 border-b border-[rgba(80,65,45,0.12)] flex items-center justify-between bg-[rgba(80,65,45,0.04)] pt-[calc(1rem+env(safe-area-inset-top))]">
         <h2 className="font-bold text-[#9A6A3A] flex items-center">
           <span className="mr-2">✨</span> {strings.reader.aiAssistant}
         </h2>
@@ -86,7 +127,8 @@ export function AIReaderPanel({
         </div>
       </div>
 
-      <div className="p-4 border-t border-[rgba(80,65,45,0.12)] bg-transparent">
+      {/* 底部聊天框容器：若是移动端则加上 pb-24 以避开大拇指悬浮胶囊 */}
+      <div className={`p-4 border-t border-[rgba(80,65,45,0.12)] bg-transparent ${isMobileDrawer ? "pb-24" : "pb-[calc(1rem+env(safe-area-inset-bottom))]"}`}>
         <div
           className={`flex items-center ${bubbleBg} border border-[rgba(80,65,45,0.12)] rounded-full px-4 py-2 shadow-sm focus-within:border-[#9A6A3A] transition-colors`}
         >
@@ -100,6 +142,21 @@ export function AIReaderPanel({
           </button>
         </div>
       </div>
+
+      {/* 大拇指黄金触控悬浮一键收纳胶囊 */}
+      {isMobileDrawer && onClose && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold backdrop-blur-md transition-all active:scale-95 border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] text-[#2F2A24] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF] shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:opacity-100"
+          >
+            ✕ 收起助手
+          </button>
+        </div>
+      )}
     </div>
   );
 }

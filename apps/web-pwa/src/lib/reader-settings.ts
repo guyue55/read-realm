@@ -9,6 +9,7 @@ export type ReaderSettingsState = Pick<
 > & {
   paragraphSpacing: number;
   letterSpacing: number;
+  autoFlipAtBottom: boolean;
 };
 
 export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
@@ -20,6 +21,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
   uiMode: "default",
   paragraphSpacing: 16,
   letterSpacing: 0.03,
+  autoFlipAtBottom: true,
 };
 
 export function isThemeName(value: unknown): value is ThemeName {
@@ -60,6 +62,10 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
       typeof candidate.letterSpacing === "number"
         ? Math.min(0.25, Math.max(-0.05, candidate.letterSpacing))
         : DEFAULT_READER_SETTINGS.letterSpacing,
+    autoFlipAtBottom:
+      typeof candidate.autoFlipAtBottom === "boolean"
+        ? candidate.autoFlipAtBottom
+        : DEFAULT_READER_SETTINGS.autoFlipAtBottom,
   };
 }
 

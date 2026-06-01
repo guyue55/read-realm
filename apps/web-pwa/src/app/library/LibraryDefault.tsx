@@ -170,6 +170,38 @@ export function LibraryDefault() {
     books?.slice(0, 8).forEach((book) => router.prefetch(`/reader/${book.id}`));
   }, [books, router]);
 
+  useEffect(() => {
+    const autoInitializePreset = async () => {
+      if (books !== undefined && books.length === 0) {
+        const hasInitialized = window.localStorage.getItem("library-auto-initialized");
+        if (!hasInitialized) {
+          try {
+            const list = PRESET_BOOKLISTS["心灵幽谷与禅修静夜"];
+            if (list) {
+              await db.transaction(
+                "rw",
+                [db.books, db.chapters],
+                async () => {
+                  for (const item of list) {
+                    await db.books.put(item.book);
+                    for (const chap of item.chapters) {
+                      await db.chapters.put(chap);
+                    }
+                  }
+                }
+              );
+              window.localStorage.setItem("library-auto-initialized", "true");
+              setToastMsg("🍃 已为您在书阁首案静心置备「心灵幽谷与禅修静夜」精选传世经典。");
+            }
+          } catch (e) {
+            console.error("Auto initialization failed", e);
+          }
+        }
+      }
+    };
+    autoInitializePreset();
+  }, [books]);
+
   return (
     <AppShell
       title="「 墨问 」"
@@ -191,16 +223,16 @@ export function LibraryDefault() {
         </>
       }
     >
-      <section className="relative overflow-hidden rounded-[24px] border border-[#E3D5BE] bg-[linear-gradient(135deg,#FFFDFB_0%,#FAF5EB_50%,#F1E7D7_100%)] p-6 shadow-[0_20px_50px_rgba(80,65,45,0.06)] md:p-10 transition-all duration-300">
-        {/* 宣纸淡墨/天青水墨自然晕开效果 */}
-        <div className="absolute -right-10 -top-10 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(95,125,82,0.08)_0%,transparent_70%)] pointer-events-none select-none" />
-        <div className="absolute right-12 -bottom-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(154,106,58,0.06)_0%,transparent_70%)] pointer-events-none select-none" />
+      <section className="relative overflow-hidden rounded-[24px] border border-[#E3D5BE] bg-[linear-gradient(135deg,#FFFDFB_0%,#FAF5EB_50%,#F1E7D7_100%)] py-10 px-8 md:py-16 md:px-14 shadow-[0_20px_50px_rgba(80,65,45,0.06)] transition-all duration-300">
+        {/* 宣纸淡墨/天青水墨自然晕开慢呼吸效果 */}
+        <div className="absolute -right-10 -top-10 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(95,125,82,0.08)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
+        <div className="absolute right-12 -bottom-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(154,106,58,0.06)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
         {/* 拟物洒金微茫点缀 */}
         <div className="absolute inset-0 bg-[radial-gradient(#F3D39E_1px,transparent_1px)] bg-[size:24px_24px] opacity-10 pointer-events-none" />
         
         <div className="absolute inset-y-0 right-0 hidden w-1/2 opacity-90 md:block pointer-events-none">
           {/* 中式枯山水写意弧线 */}
-          <div className="absolute bottom-0 right-0 h-48 w-80 rounded-tl-[160px] bg-[linear-gradient(135deg,rgba(95,125,82,0.08),rgba(154,106,58,0.08))]" />
+          <div className="absolute bottom-0 right-0 h-48 w-80 rounded-tl-[160px] bg-[linear-gradient(135deg,rgba(95,125,82,0.08),rgba(154,106,58,0.08))] ink-breathe-layer reader-gpu-accelerated" />
           <div className="absolute bottom-12 right-24 h-16 w-60 rounded-full bg-[rgba(95,125,82,0.03)] blur-2xl" />
           <div className="absolute bottom-20 right-28 h-32 w-48 rounded-t-full border-t-2 border-double border-[rgba(95,125,82,0.18)]" />
         </div>
@@ -419,10 +451,10 @@ export function LibraryDefault() {
             </button>
           </div>
         ) : viewMode === "list" ? (
-          <div className="space-y-1">
+          <div className="overflow-hidden rounded-[20px] border border-[#E9DCC8]/60 bg-[#FFFDFB]/60 backdrop-blur-md shadow-[0_12px_36px_rgba(80,65,45,0.03)] divide-y divide-[#E9DCC8]/50">
             <button
               onClick={() => router.push("/import")}
-              className="ui-focus-ring flex min-h-[52px] w-full items-center justify-center rounded-[16px] border border-dashed border-[rgba(95,125,82,0.2)] bg-white/30 px-4 mb-4 text-sm font-semibold text-[var(--ui-muted)] transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)] hover:text-[var(--ui-accent)]"
+              className="ui-focus-ring flex min-h-[54px] w-full items-center justify-center bg-white/30 px-4 text-sm font-semibold text-[var(--ui-muted)] transition-all duration-300 hover:bg-[var(--ui-accent-soft)] hover:text-[var(--ui-accent)]"
             >
               ＋ 导入书籍
             </button>
@@ -433,31 +465,31 @@ export function LibraryDefault() {
                 <div
                   key={book.id}
                   onClick={() => router.push(`/reader/${book.id}`)}
-                  className="group relative cursor-pointer ui-card flex items-center justify-between gap-4 rounded-[16px] px-5 py-4 mb-3 border border-[#E9DCC8] bg-[linear-gradient(135deg,#FFFDFB_0%,#F5ECE0_100%)] shadow-[0_10px_30px_rgba(80,65,45,0.03)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_16px_40px_rgba(80,65,45,0.06)] hover:-translate-y-0.5 overflow-hidden"
+                  className="group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50"
                 >
-                  {/* 中式翻书折页左侧天青微立柱高亮 */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[var(--ui-accent)] scale-y-0 origin-center transition-transform duration-300 group-hover:scale-y-100 rounded-l-[16px]" />
+                  {/* 左侧动态高亮天青原点/指示点 */}
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--ui-accent)] opacity-0 scale-50 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100" />
                   
-                  <div className="flex items-center gap-5 min-w-0 flex-1 pl-1">
+                  <div className="flex items-center gap-5 min-w-0 flex-1 pl-3">
                     {/* 实体比例微型 3D 封面，支持 hover 物理弹簧微幅倾斜抬升 */}
                     <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.03] group-hover:rotate-[1deg]">
                       {/* 仿真书后叠层漫反射微阴影 */}
-                      <div className="absolute -left-1 top-1 w-full h-full rounded-[4px] bg-black/8 blur-[2px] -z-10" />
+                      <div className="absolute -left-1 top-1 w-full h-full rounded-[4px] bg-black/5 blur-[2px] -z-10" />
                       <BookCover
                         title={book.title}
-                        className="h-[68px] w-[46px] rounded-[4px] shadow-[1px_4px_12px_rgba(47,42,36,0.14)]"
+                        className="h-[64px] w-[44px] rounded-[4px] shadow-[1px_3px_8px_rgba(47,42,36,0.1)]"
                         compact
                       />
                     </div>
                     
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-reading-title text-[15.5px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
+                      <h3 className="truncate font-reading-title text-[15px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
                         {book.title}
                       </h3>
                       <p className="mt-1.5 flex items-center gap-2 text-xs text-[var(--ui-muted)]">
                         <span>{book.author || "本地书籍"}</span>
                         <span className="text-[var(--ui-quiet)]">•</span>
-                        <span className="uppercase text-[10px] font-bold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-2 py-0.5 rounded-md">
+                        <span className="uppercase text-[10px] font-bold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-1.5 py-0.5 rounded">
                           {book.format}
                         </span>
                       </p>
@@ -484,7 +516,7 @@ export function LibraryDefault() {
                         e.stopPropagation();
                         handleDelete(book.id, book.title);
                       }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
                       title={strings.shelf.delete}
                     >
                       ×
@@ -619,14 +651,14 @@ export function LibraryDefault() {
 
       {/* 4. 当书架有藏书时，底部低调显示一个雅致的推荐阁入口引流装饰线 */}
       {bookCount > 0 && (
-        <div className="mt-14 mb-4 flex justify-center text-center select-none">
+        <div className="mt-14 mb-4 flex justify-center text-center select-none px-4 overflow-hidden">
           <button
             onClick={() => setShowDrawer(true)}
-            className="group flex items-center gap-2 text-xs font-medium text-[var(--ui-quiet)] transition-colors hover:text-[var(--ui-accent)]"
+            className="group flex items-center gap-2 text-xs font-medium text-[var(--ui-quiet)] transition-colors hover:text-[var(--ui-accent)] whitespace-nowrap truncate max-w-full"
           >
-            <span className="opacity-30">——————</span>
-            <span className="flex items-center gap-1">🍃 案头书尽？可往「推荐阁 ↗」寻新书</span>
-            <span className="opacity-30">——————</span>
+            <span className="opacity-30 hidden sm:inline">——————</span>
+            <span className="flex items-center gap-1 truncate">🍃 案头书尽？可往「推荐阁 ↗」寻新书</span>
+            <span className="opacity-30 hidden sm:inline">——————</span>
           </button>
         </div>
       )}
