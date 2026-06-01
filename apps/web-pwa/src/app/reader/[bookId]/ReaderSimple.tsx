@@ -48,6 +48,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     jumpToChapter,
     handleNext,
     handlePrev,
+    handlePrevChapterActive,
+    handleNextChapterActive,
     handlePageNext,
     handlePagePrev,
     addBookmark,
@@ -172,8 +174,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               onBack={() => router.push("/library")}
               onBookmark={addBookmark}
               onSettings={() => togglePanel("settings")}
-              onPrevChapter={handlePrev}
-              onNextChapter={handleNext}
+              onPrevChapter={handlePrevChapterActive}
+              onNextChapter={handleNextChapterActive}
             />
           </div>
         </div>
@@ -186,7 +188,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           onTouchEnd={handleContentTouchEnd}
           className={`flex-1 relative ${
             isPagination
-              ? "overflow-x-auto overflow-y-hidden"
+              ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
               : "overflow-y-auto overflow-x-hidden"
           } transition-all duration-300 transition-opacity duration-200 ease-out ${
             isPositionRestored ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -228,8 +230,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
                   isDark={isDark}
                   isPagination={isPagination}
                   buttonVariant="simple"
-                  onPrev={ch.index === renderedChapters[renderedChapters.length - 1].index ? handlePrev : undefined}
-                  onNext={ch.index === renderedChapters[renderedChapters.length - 1].index ? handleNext : undefined}
+                  onPrev={undefined}
+                  onNext={undefined}
                   style={{
                     fontSize: `${settings.fontSize}px`,
                     lineHeight: settings.lineHeight,
@@ -264,8 +266,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               onPagePrev={handlePagePrev}
               onPageNext={handlePageNext}
               onSeekProgress={seekToProgress}
-              onPrevChapter={handlePrev}
-              onNextChapter={handleNext}
+              onPrevChapter={handlePrevChapterActive}
+              onNextChapter={handleNextChapterActive}
             />
           </div>
         </div>
@@ -354,7 +356,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                void handlePrev();
+                void handlePrevChapterActive();
               }}
               title="上一章"
               aria-label="上一章"
@@ -389,7 +391,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                void handleNext();
+                void handleNextChapterActive();
               }}
               title="下一章"
               aria-label="下一章"

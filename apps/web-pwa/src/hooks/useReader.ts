@@ -1022,13 +1022,31 @@ export function useReader(bookId: string) {
     }
   }, [engine, chapter, jumpToChapter, showToast]);
 
+  const handlePrevChapterActive = useCallback(async () => {
+    if (engine && chapter && chapter.index > 0) {
+      await jumpToChapter(chapter.index - 1);
+    } else {
+      showToast(strings.reader.startOfBook);
+    }
+  }, [engine, chapter, jumpToChapter, showToast]);
+
+  const handleNextChapterActive = useCallback(async () => {
+    if (engine && chapter && chapter.index < toc.length - 1) {
+      await jumpToChapter(chapter.index + 1);
+    } else {
+      showToast(strings.reader.endOfBook);
+    }
+  }, [engine, chapter, jumpToChapter, toc.length, showToast]);
+
+
   const handlePageNext = useCallback(async () => {
     lastFlipTimeRef.current = Date.now();
     triggerHapticFeedback(12); // 微颤物理触感
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
-      if (Math.ceil(scrollLeft + clientWidth) < scrollWidth - 20) {
+      const maxScrollLeft = scrollWidth - clientWidth;
+      if (scrollLeft < maxScrollLeft - 10) {
         contentRef.current.scrollTo({
           left: scrollLeft + clientWidth,
           behavior: "smooth",
@@ -1054,7 +1072,7 @@ export function useReader(bookId: string) {
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth } = contentRef.current;
-      if (scrollLeft > 20) {
+      if (scrollLeft > 10) {
         contentRef.current.scrollTo({
           left: scrollLeft - clientWidth,
           behavior: "smooth",
@@ -1073,6 +1091,7 @@ export function useReader(bookId: string) {
     }
     await handlePrev();
   }, [settings.pageMode, handlePrev]);
+
 
   const hasActiveSelection = useCallback(() => {
     if (typeof window === "undefined") return false;
@@ -1533,6 +1552,8 @@ export function useReader(bookId: string) {
     jumpToChapter,
     handleNext,
     handlePrev,
+    handlePrevChapterActive,
+    handleNextChapterActive,
     handlePageNext,
     handlePagePrev,
     addBookmark,

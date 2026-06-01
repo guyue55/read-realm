@@ -60,6 +60,29 @@ export const ReaderContent = memo(
       }
     }, [content]);
 
+    if (isPagination) {
+      const titleClassAttr = titleClassName ? `class="${titleClassName}"` : "";
+      let titleStyleStr = "";
+      if (titleStyle) {
+        titleStyleStr = Object.entries(titleStyle)
+          .map(([key, val]) => `${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}:${val}`)
+          .join(";");
+      }
+      const titleStyleAttr = titleStyleStr ? `style="${titleStyleStr}"` : "";
+      const titleHtml = title ? `<h1 ${titleClassAttr} ${titleStyleAttr}>${title}</h1>` : "";
+      const combinedHtml = `${titleHtml}\n${processedContent}`;
+
+      return (
+        <div
+          className={`${className} reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
+            isDark ? "theme-dark-filter" : ""
+          }`}
+          style={style}
+          dangerouslySetInnerHTML={{ __html: combinedHtml }}
+        />
+      );
+    }
+
     return (
       <div className={className} style={style}>
         <h1 className={titleClassName} style={titleStyle}>
@@ -71,7 +94,7 @@ export const ReaderContent = memo(
           }`}
           dangerouslySetInnerHTML={{ __html: processedContent }}
         />
-        {!isPagination && onPrev && onNext && (
+        {onPrev && onNext && (
           <div
             className={`${containerSpacingClass} flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10`}
           >
