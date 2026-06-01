@@ -46,24 +46,6 @@ export function AIReaderPanel({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
-      {/* 左侧外缘手势拖拽指示柄：伸入左边空白遮罩区，支持一键点击或滑动收拢助手 */}
-      {isMobileDrawer && onClose && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          aria-label="关闭助手"
-          className="absolute left-0 top-1/2 -translate-y-1/2 translate-x-[-90%] z-10 flex h-24 w-5 items-center justify-center rounded-l-2xl border-y border-l border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] backdrop-blur-lg opacity-90 hover:opacity-100 transition-all duration-200"
-          style={{
-            backgroundColor: "inherit",
-            color: "inherit",
-            boxShadow: "-6px 0 16px rgba(0,0,0,0.08)",
-          }}
-        >
-          <span className="text-xs font-bold opacity-75">›</span>
-        </button>
-      )}
 
       <div className="p-4 border-b border-[rgba(80,65,45,0.12)] flex items-center justify-between bg-[rgba(80,65,45,0.04)] pt-[calc(1rem+env(safe-area-inset-top))]">
         <h2 className="font-bold text-[#9A6A3A] flex items-center">

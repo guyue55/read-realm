@@ -54,24 +54,6 @@ export function TocDrawer({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
-      {/* 右侧外缘手势拖拽指示柄：伸入空白遮罩区，支持一键点击或滑动收拢目录 */}
-      {isMobileDrawer && onClose && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          aria-label="关闭目录"
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[90%] z-10 flex h-24 w-5 items-center justify-center rounded-r-2xl border-y border-r border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] backdrop-blur-lg opacity-90 hover:opacity-100 transition-all duration-200"
-          style={{
-            backgroundColor: "inherit",
-            color: "inherit",
-            boxShadow: "6px 0 16px rgba(0,0,0,0.08)",
-          }}
-        >
-          <span className="text-xs font-bold opacity-75">‹</span>
-        </button>
-      )}
 
       <div className="border-b border-[rgba(80,65,45,0.12)] pt-[env(safe-area-inset-top)]">
         <div className="flex p-2">

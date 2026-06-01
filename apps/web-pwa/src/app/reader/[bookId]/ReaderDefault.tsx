@@ -49,6 +49,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     jumpToChapter,
     handleNext,
     handlePrev,
+    handlePrevChapterActive,
+    handleNextChapterActive,
     handlePageNext,
     handlePagePrev,
     addBookmark,
@@ -214,14 +216,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onSettings={() => togglePanel("settings")}
             onToggleToc={() => togglePanel("toc")}
             onToggleAi={() => togglePanel("ai")}
-            onPrevChapter={handlePrev}
-            onNextChapter={handleNext}
+            onPrevChapter={handlePrevChapterActive}
+            onNextChapter={handleNextChapterActive}
           />
           <div
             ref={contentRef}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
-                ? "overflow-x-auto overflow-y-hidden"
+                ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
                 : "overflow-y-auto overflow-x-hidden"
             } transition-all duration-300 ease-out ${
               isPositionRestored
@@ -270,8 +272,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                     isDark={isDark}
                     isPagination={isPagination}
                     buttonVariant="default"
-                    onPrev={ch.index === renderedChapters[renderedChapters.length - 1].index ? handlePrev : undefined}
-                    onNext={ch.index === renderedChapters[renderedChapters.length - 1].index ? handleNext : undefined}
+                    onPrev={undefined}
+                    onNext={undefined}
                     style={{
                       fontSize: `${settings.fontSize}px`,
                       lineHeight: settings.lineHeight,
@@ -342,7 +344,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onTouchEnd={handleContentTouchEnd}
           className={`flex-1 relative reader-gpu-accelerated ${
             isPagination
-              ? "overflow-x-auto overflow-y-hidden"
+              ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
               : "overflow-y-auto overflow-x-hidden"
           } transition-all duration-300 ease-out ${
             isPositionRestored
@@ -390,8 +392,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   isDark={isDark}
                   isPagination={isPagination}
                   buttonVariant="default"
-                  onPrev={ch.index === renderedChapters[renderedChapters.length - 1].index ? handlePrev : undefined}
-                  onNext={ch.index === renderedChapters[renderedChapters.length - 1].index ? handleNext : undefined}
+                  onPrev={undefined}
+                  onNext={undefined}
                   style={{
                     fontSize: `${settings.fontSize}px`,
                     lineHeight: settings.lineHeight,
@@ -424,8 +426,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onPagePrev={handlePagePrev}
           onPageNext={handlePageNext}
           onSeekProgress={seekToProgress}
-          onPrevChapter={handlePrev}
-          onNextChapter={handleNext}
+          onPrevChapter={handlePrevChapterActive}
+          onNextChapter={handleNextChapterActive}
         />
 
         {/* Mobile Settings/Progress Backdrop */}
@@ -482,7 +484,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                void handlePrev();
+                void handlePrevChapterActive();
               }}
               title="上一章"
               aria-label="上一章"
@@ -517,7 +519,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                void handleNext();
+                void handleNextChapterActive();
               }}
               title="下一章"
               aria-label="下一章"
