@@ -25,7 +25,7 @@
   --ui-shadow: 0 18px 50px rgba(80, 65, 45, 0.08);
 
   /* 三大风雅国风/屏显中文字体变量 */
-  --font-kaiti: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "KaiTi", "Noto Serif SC", serif;
+  --font-kaiti: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "FZKai-Z03S", "FZKai-Z03", "FandolKai", "KaiTi", "SimKai", "Noto Serif SC", serif;
   --font-songti: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
   --font-heiti: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
@@ -211,6 +211,35 @@ body {
     padding-right: 6px;
     margin-left: -6px;
     margin-right: -6px;
+  }
+
+  /* 强力 3D 合成器硬件加速，隔离重绘 */
+  .reader-gpu-accelerated {
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* 动画期间或移动端特定环境下的阻尼降阶，优化高斯拉屏混合开销 */
+  .backdrop-blur-reduced {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* 宣纸淡墨慢呼吸写意过渡 */
+  @keyframes inkBreathe {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 0.84;
+    }
+    50% {
+      transform: scale(1.045) rotate(1.2deg);
+      opacity: 0.96;
+    }
+  }
+
+  .ink-breathe-layer {
+    animation: inkBreathe 10s ease-in-out infinite;
+    will-change: transform, opacity;
   }
 }
 

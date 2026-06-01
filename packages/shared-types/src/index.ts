@@ -47,6 +47,8 @@ export const ReadingProgressSchema = z.object({
   offset: z.number(),
   percentage: z.number(),
   updatedAt: z.string(),
+  paragraphIndex: z.number().optional(),
+  characterOffset: z.number().optional(),
 });
 
 export type ReadingProgress = z.infer<typeof ReadingProgressSchema>;
@@ -69,6 +71,8 @@ export const BookmarkSchema = z.object({
   offset: z.number(),
   contentPreview: z.string().optional(),
   createdAt: z.string(),
+  paragraphIndex: z.number().optional(),
+  characterOffset: z.number().optional(),
 });
 
 export type Bookmark = z.infer<typeof BookmarkSchema>;

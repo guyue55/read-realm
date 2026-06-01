@@ -37,6 +37,29 @@ export const ReaderContent = memo(
     const containerSpacingClass =
       buttonVariant === "simple" ? "mt-12" : "mt-16";
 
+    const processedContent = React.useMemo(() => {
+      const hasHtmlParagraphs = /<p\b|<div\b/i.test(content);
+      let idx = 0;
+      if (!hasHtmlParagraphs) {
+        // Raw plain text with newlines (e.g. from TXT files)
+        const lines = content.split(/\r?\n/);
+        return lines
+          .map((line) => {
+            const trimmed = line.trim();
+            if (trimmed.length === 0) return "";
+            return `<p data-idx="${idx++}">${trimmed}</p>`;
+          })
+          .filter(Boolean)
+          .join("");
+      } else {
+        // Existing HTML paragraphs (e.g. from EPUB/HTML files)
+        // Decorate existing <p> tags with data-idx attribute
+        return content.replace(/<p([\s>])/gi, (_, suffix) => {
+          return `<p data-idx="${idx++}"${suffix}`;
+        });
+      }
+    }, [content]);
+
     return (
       <div className={className} style={style}>
         <h1 className={titleClassName} style={titleStyle}>
@@ -46,19 +69,28 @@ export const ReaderContent = memo(
           className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
             isDark ? "theme-dark-filter" : ""
           }`}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: processedContent }}
         />
         {!isPagination && onPrev && onNext && (
           <div
             className={`${containerSpacingClass} flex justify-between items-center border-t border-[rgba(80,65,45,0.12)] pt-8 relative z-10`}
           >
             <button
-              onClick={onPrev}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPrev();
+              }}
               className="px-6 py-3 bg-[rgba(80,65,45,0.04)] rounded-full text-sm hover:bg-[rgba(80,65,45,0.08)] transition-colors text-inherit"
             >
               {strings.reader.prevChapter}
             </button>
-            <button onClick={onNext} className={nextButtonClass}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNext();
+              }}
+              className={nextButtonClass}
+            >
               {strings.reader.nextChapter}
             </button>
           </div>

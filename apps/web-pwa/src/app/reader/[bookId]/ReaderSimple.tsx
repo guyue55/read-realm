@@ -27,6 +27,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
   const router = useRouter();
   const {
     chapter,
+    renderedChapters,
     isPositionRestored,
     contentRef,
     handleContentTouchStart,
@@ -61,6 +62,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     currentThemeColors,
     isPagination,
     toast,
+    updateAutoFlipAtBottom,
+    autoFlipCountdown,
   } = useReader(bookId);
 
   const handleReaderClick = useCallback(
@@ -163,9 +166,14 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               isVisible={showMenu}
               isDesktop={false}
               isDark={isDark}
+              progress={readingProgress}
+              currentChapterIndex={chapter.index}
+              totalChapters={toc.length}
               onBack={() => router.push("/library")}
               onBookmark={addBookmark}
               onSettings={() => togglePanel("settings")}
+              onPrevChapter={handlePrev}
+              onNextChapter={handleNext}
             />
           </div>
         </div>
@@ -185,27 +193,58 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           }`}
           style={{ scrollBehavior: "smooth" }}
         >
-          <ReaderContent
-            title={chapter.title}
-            content={chapter.content}
-            isDark={isDark}
-            isPagination={isPagination}
-            buttonVariant="simple"
-            onPrev={handlePrev}
-            onNext={handleNext}
-            className="max-w-[760px] mx-auto px-6 pt-16 pb-[120px]"
-            style={{
-              fontSize: `${settings.fontSize}px`,
-              lineHeight: settings.lineHeight,
-              columnWidth: isPagination ? "calc(100vw - 48px)" : "auto",
-              columnGap: "48px",
-              height: isPagination ? "100%" : "auto",
-              "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-              "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-              "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-            } as React.CSSProperties}
-            titleClassName="text-2xl font-bold mb-8"
-          />
+          {isPagination ? (
+            <ReaderContent
+              title={chapter.title}
+              content={chapter.content}
+              isDark={isDark}
+              isPagination={isPagination}
+              buttonVariant="simple"
+              onPrev={handlePrev}
+              onNext={handleNext}
+              className="max-w-[760px] mx-auto px-6 pt-16 pb-[120px]"
+              style={{
+                fontSize: `${settings.fontSize}px`,
+                lineHeight: settings.lineHeight,
+                columnWidth: "calc(100vw - 48px)",
+                columnGap: "48px",
+                height: "100%",
+                "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+                "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+                "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
+              } as React.CSSProperties}
+              titleClassName="text-2xl font-bold mb-8"
+            />
+          ) : (
+            renderedChapters.map((ch) => (
+              <div
+                key={ch.id}
+                className="chapter-container max-w-[760px] mx-auto px-6 pt-16 pb-[60px] border-b border-[rgba(80,65,45,0.08)] last:border-b-0"
+                data-chapter-index={ch.index}
+              >
+                <ReaderContent
+                  title={ch.title}
+                  content={ch.content}
+                  isDark={isDark}
+                  isPagination={isPagination}
+                  buttonVariant="simple"
+                  onPrev={ch.index === renderedChapters[renderedChapters.length - 1].index ? handlePrev : undefined}
+                  onNext={ch.index === renderedChapters[renderedChapters.length - 1].index ? handleNext : undefined}
+                  style={{
+                    fontSize: `${settings.fontSize}px`,
+                    lineHeight: settings.lineHeight,
+                    columnWidth: "auto",
+                    columnGap: "48px",
+                    height: "auto",
+                    "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+                    "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+                    "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
+                  } as React.CSSProperties}
+                  titleClassName="text-2xl font-bold mb-8"
+                />
+              </div>
+            ))
+          )}
         </div>
 
         {/* Bottom Bar Overlay - universal for simple mode */}
@@ -225,6 +264,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               onPagePrev={handlePagePrev}
               onPageNext={handlePageNext}
               onSeekProgress={seekToProgress}
+              onPrevChapter={handlePrev}
+              onNextChapter={handleNext}
             />
           </div>
         </div>
@@ -242,7 +283,10 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* TOC Drawer */}
         <div
-          className={`fixed inset-y-0 left-0 w-[300px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring ${activePanel === "toc" ? "translate-x-0" : "-translate-x-full"}`}
+          className={`fixed inset-y-0 left-0 w-[280px] max-w-[72vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring`}
+          style={{
+            transform: activePanel === "toc" ? "translateX(0)" : "translateX(-100%)"
+          }}
         >
           <TocDrawer
             toc={toc}
@@ -259,7 +303,10 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* AI Drawer */}
         <div
-          className={`fixed inset-y-0 right-0 w-[340px] max-w-[85vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring ${activePanel === "ai" ? "translate-x-0" : "translate-x-full"}`}
+          className={`fixed inset-y-0 right-0 w-[280px] max-w-[72vw] ${isDark ? "bg-[#232323]" : "bg-white"} z-50 shadow-xl physics-spring`}
+          style={{
+            transform: activePanel === "ai" ? "translateX(0)" : "translateX(100%)"
+          }}
         >
           <AIReaderPanel
             isAiLoading={isAiLoading}
@@ -280,6 +327,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             updateTheme={updateTheme}
             updatePageMode={updatePageMode}
             updateFontFamily={updateFontFamily}
+            updateAutoFlipAtBottom={updateAutoFlipAtBottom}
             isMobileSheet={true}
             onClose={() => setActivePanel(null)}
           />
@@ -302,7 +350,18 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               ✕
             </button>
           </div>
-          <div className="grid grid-cols-[36px_minmax(0,1fr)_36px] items-center gap-3">
+          <div className="grid grid-cols-[40px_36px_minmax(0,1fr)_36px_40px] items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                void handlePrev();
+              }}
+              title="上一章"
+              aria-label="上一章"
+              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xs font-bold transition-all active:scale-90`}
+            >
+              ⏮
+            </button>
             <button
               onClick={handlePagePrev}
               className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xl`}
@@ -327,6 +386,17 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             >
               ›
             </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleNext();
+              }}
+              title="下一章"
+              aria-label="下一章"
+              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xs font-bold transition-all active:scale-90`}
+            >
+              ⏭
+            </button>
           </div>
           <div
             className={`flex justify-between text-sm ${isDark ? "text-[#8F8F8F]" : "text-[#6F665B]"}`}
@@ -339,6 +409,18 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           </div>
         </div>
       </div>
+
+      {/* 磨砂玻璃自适应自动换章倒计时胶囊 */}
+      {autoFlipCountdown !== null && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in zoom-in-95 duration-200">
+          <button
+            onClick={() => handleNext()}
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold border backdrop-blur-md transition-all active:scale-95 border-[#678055]/30 bg-[rgba(238,242,233,0.92)] text-[#678055] dark:border-[#EEF2E9]/20 dark:bg-[rgba(45,45,45,0.92)] dark:text-[#EEF2E9] shadow-[0_8px_30px_rgba(103,128,85,0.15)]"
+          >
+            ✨ {autoFlipCountdown.toFixed(1)}s 后自动切到下一章... [立即跳转]
+          </button>
+        </div>
+      )}
     </main>
   );
 }

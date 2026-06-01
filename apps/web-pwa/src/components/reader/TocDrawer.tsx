@@ -26,13 +26,54 @@ export function TocDrawer({
   isMobileDrawer = false,
   onClose,
 }: TocDrawerProps) {
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobileDrawer) return;
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobileDrawer || touchStart === null) return;
+    const currentX = e.targetTouches[0].clientX;
+    const diffX = touchStart - currentX;
+    // Slide left to hide TOC
+    if (diffX > 40) {
+      onClose?.();
+      setTouchStart(null);
+    }
+  };
+
   const containerClasses = isMobileDrawer
-    ? "h-full flex flex-col"
-    : "h-full flex flex-col bg-transparent"; // inherit bg from parent
+    ? "h-full flex flex-col relative select-none"
+    : "h-full flex flex-col bg-transparent relative"; // inherit bg from parent
 
   return (
-    <div className={containerClasses}>
-      <div className="border-b border-[rgba(80,65,45,0.12)]">
+    <div
+      className={containerClasses}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
+      {/* 右侧外缘手势拖拽指示柄：伸入空白遮罩区，支持一键点击或滑动收拢目录 */}
+      {isMobileDrawer && onClose && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="关闭目录"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[90%] z-10 flex h-24 w-5 items-center justify-center rounded-r-2xl border-y border-r border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] backdrop-blur-lg opacity-90 hover:opacity-100 transition-all duration-200"
+          style={{
+            backgroundColor: "inherit",
+            color: "inherit",
+            boxShadow: "6px 0 16px rgba(0,0,0,0.08)",
+          }}
+        >
+          <span className="text-xs font-bold opacity-75">‹</span>
+        </button>
+      )}
+
+      <div className="border-b border-[rgba(80,65,45,0.12)] pt-[env(safe-area-inset-top)]">
         <div className="flex p-2">
           <button
             onClick={() => setActiveTab("toc")}
@@ -62,7 +103,8 @@ export function TocDrawer({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* 滚动容器：若是移动端抽屉则留出 pb-24 以避开大拇指悬浮胶囊 */}
+      <div className={`flex-1 overflow-y-auto ${isMobileDrawer ? "pb-24" : "pb-[env(safe-area-inset-bottom)]"}`}>
         {activeTab === "toc" ? (
           <div>
             <div className="p-4 bg-[rgba(80,65,45,0.04)] text-xs text-[#6F665B] uppercase font-bold tracking-wider">
@@ -147,6 +189,21 @@ export function TocDrawer({
           </div>
         )}
       </div>
+
+      {/* 大拇指黄金触控悬浮一键收纳胶囊 */}
+      {isMobileDrawer && onClose && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold backdrop-blur-md transition-all active:scale-95 border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] text-[#2F2A24] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF] shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:opacity-100"
+          >
+            ✕ 收起目录
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,8 @@ export interface ReaderBottomBarProps {
   activePanel?: "toc" | "progress" | "ai" | "settings" | null;
   isDark?: boolean;
   progress?: number;
+  onPrevChapter?: () => void;
+  onNextChapter?: () => void;
 }
 
 export function ReaderBottomBar({
@@ -31,6 +33,8 @@ export function ReaderBottomBar({
   activePanel,
   isDark = false,
   progress = 0,
+  onPrevChapter,
+  onNextChapter,
 }: ReaderBottomBarProps) {
   const safeProgress = Math.max(0, Math.min(100, progress));
 
@@ -98,9 +102,23 @@ export function ReaderBottomBar({
           : "translate-y-6 opacity-0 pointer-events-none"
       }`}
     >
-      <div className="mb-3 grid grid-cols-[32px_minmax(0,1fr)_32px_42px] items-center gap-2">
+      <div className="mb-3 grid grid-cols-[32px_32px_minmax(0,1fr)_32px_32px_42px] items-center gap-1.5">
         <button
-          onClick={onPagePrev}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrevChapter?.();
+          }}
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          title="上一章"
+          aria-label="上一章"
+        >
+          ⏮
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPagePrev();
+          }}
           className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="上一页"
         >
@@ -134,11 +152,25 @@ export function ReaderBottomBar({
           className="h-6 w-full accent-[#5F7D52]"
         />
         <button
-          onClick={onPageNext}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPageNext();
+          }}
           className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="下一页"
         >
           ›
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onNextChapter?.();
+          }}
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          title="下一章"
+          aria-label="下一章"
+        >
+          ⏭
         </button>
         <span className={`text-right text-xs font-semibold ${mutedClass}`}>
           {Math.round(tempProgress)}%
