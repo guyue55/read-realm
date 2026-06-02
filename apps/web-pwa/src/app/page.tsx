@@ -5,42 +5,42 @@ import dynamic from "next/dynamic";
 import { RouteProvider, useRouteStore } from "@/components/RouteProvider";
 
 // 惰性异步动态导入视图组件，极大减少首屏 bundle 体积，保障极致瞬间水合 (Hydration)
-const LibraryPage = dynamic(() => import("../app/library/page"), {
+const LibraryPage = dynamic(() => import("./library/page"), {
   loading: () => <PageLoadingSkeleton text="正在展卷书架..." />,
   ssr: false,
 });
 
-const ReaderPageSwitch = dynamic(() => import("../app/reader/[bookId]/page"), {
+const ReaderPageSwitch = dynamic(() => import("./reader/[bookId]/page"), {
   loading: () => <PageLoadingSkeleton text="正在载入书册..." />,
   ssr: false,
 });
 
-const BookDetailPage = dynamic(() => import("../app/book/[bookId]/page"), {
+const BookDetailPage = dynamic(() => import("./book/[bookId]/page"), {
   loading: () => <PageLoadingSkeleton text="正在检索典籍详情..." />,
   ssr: false,
 });
 
-const SearchPage = dynamic(() => import("../app/search/page"), {
+const SearchPage = dynamic(() => import("./search/page"), {
   loading: () => <PageLoadingSkeleton text="正在开启检索室..." />,
   ssr: false,
 });
 
-const NotesPage = dynamic(() => import("../app/notes/page"), {
+const NotesPage = dynamic(() => import("./notes/page"), {
   loading: () => <PageLoadingSkeleton text="正在检索读书笔记..." />,
   ssr: false,
 });
 
-const SettingsPage = dynamic(() => import("../app/settings/page"), {
+const SettingsPage = dynamic(() => import("./settings/page"), {
   loading: () => <PageLoadingSkeleton text="正在进入藏书设置..." />,
   ssr: false,
 });
 
-const ImportPage = dynamic(() => import("../app/import/page"), {
+const ImportPage = dynamic(() => import("./import/page"), {
   loading: () => <PageLoadingSkeleton text="正在连接导入港口..." />,
   ssr: false,
 });
 
-const ImportPreviewPage = dynamic(() => import("../app/import/preview/[taskId]/page"), {
+const ImportPreviewPage = dynamic(() => import("./import/preview/[taskId]/page"), {
   loading: () => <PageLoadingSkeleton text="正在展卷解析预览..." />,
   ssr: false,
 });
@@ -300,8 +300,18 @@ function SpaDashboard() {
   );
 }
 
-// SPA物理唯一入口
+// SPA物理唯一入口，挂载客户端延迟空降自愈锁，彻底绝杀一切服务端/客户端水合属性与时差冲突
 export default function Page() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <PageLoadingSkeleton text="正在启封书册..." />;
+  }
+
   return (
     <GlobalErrorBoundary>
       <RouteProvider>
