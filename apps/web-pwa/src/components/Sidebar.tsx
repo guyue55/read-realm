@@ -1,44 +1,45 @@
 "use client";
 
 import React from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouteStore } from "@/components/RouteProvider";
+import { useVirtualRouter } from "@/lib/route-store";
 
 export function Sidebar() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const router = useVirtualRouter();
+  const { currentView } = useRouteStore();
 
   const navItems = [
     {
       name: "书架",
-      path: "/library",
+      path: "library",
       icon: (
         <div className="w-2 h-2 rounded-full bg-[#678055] transition-opacity"></div>
       ),
     },
     {
       name: "发现",
-      path: "/search",
+      path: "search",
       icon: (
         <div className="w-2 h-2 rounded-full bg-[#678055] transition-opacity"></div>
       ),
     },
     {
       name: "导入",
-      path: "/import",
+      path: "import",
       icon: (
         <div className="w-2 h-2 rounded-full bg-[#678055] transition-opacity"></div>
       ),
     },
     {
       name: "笔记",
-      path: "/notes",
+      path: "notes",
       icon: (
         <div className="w-2 h-2 rounded-full bg-[#678055] transition-opacity"></div>
       ),
     },
     {
       name: "设置",
-      path: "/settings",
+      path: "settings",
       icon: (
         <div className="w-2 h-2 rounded-full bg-[#678055] transition-opacity"></div>
       ),
@@ -51,11 +52,11 @@ export function Sidebar() {
 
       <nav className="flex flex-col gap-6 items-center flex-1 w-full">
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive = currentView === item.path;
           return (
             <div
               key={item.path}
-              onClick={() => router.push(item.path)}
+              onClick={() => router.push("/" + item.path)}
               className={`flex flex-col items-center gap-1 w-16 py-2 rounded-lg cursor-pointer transition-colors ${
                 isActive ? "bg-[#E7EDE0]" : "hover:bg-[rgba(80,65,45,0.04)]"
               }`}

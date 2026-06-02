@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db, type ImportTask } from "@reader/storage-core";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -16,7 +16,14 @@ export default function PreviewPage({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [visibleCount, setVisibleCount] = useState(60);
-  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
+  const router = useVirtualRouter();
 
   useEffect(() => {
     db.importTasks.get(params.taskId).then((t) => {

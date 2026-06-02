@@ -10,6 +10,10 @@ export default function LibraryPageSwitch() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+      return;
+    }
     setUiMode(loadReaderSettings().uiMode || "default");
     setMounted(true);
   }, []);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@reader/storage-core";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import type { Bookmark } from "@reader/shared-types";
 import { PageLayout } from "@/components/PageLayout";
 import { EmptyState } from "@/components/EmptyState";
@@ -77,7 +77,14 @@ const MEDALS: Medal[] = [
 ];
 
 export default function NotesPage() {
-  const router = useRouter();
+  const router = useVirtualRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
   const [bookmarks, setBookmarks] = useState<
     (Bookmark & { bookTitle?: string })[]
   >([]);

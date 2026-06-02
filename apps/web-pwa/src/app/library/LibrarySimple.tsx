@@ -7,11 +7,11 @@ import { strings } from "@/lib/i18n";
 import { BookCard } from "@/components/BookCard";
 import { EmptyState } from "@/components/EmptyState";
 import { AppHeader } from "@/components/AppHeader";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { apiUrl } from "@/lib/api";
 
 export default function LibraryPage() {
-  const router = useRouter();
+  const router = useVirtualRouter();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
 
   const books = useLiveQuery(async () => {

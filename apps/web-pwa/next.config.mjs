@@ -60,15 +60,6 @@ const nextConfig = {
     }
     return config;
   },
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/library",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default withPWA(nextConfig);

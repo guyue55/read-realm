@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { useLiveQuery } from "dexie-react-hooks";
 import { apiUrl, getApiBaseUrl } from "@/lib/api";
 import { strings } from "@/lib/i18n";
@@ -12,9 +12,15 @@ import { BookCard } from "@/components/BookCard";
 import { BookCover } from "@/components/BookCover";
 
 export default function SearchPage() {
-  const router = useRouter();
+  const router = useVirtualRouter();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<string>("综合");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
   const [localResults, setLocalResults] = useState<Book[]>([]);
   const [globalResults, setGlobalResults] = useState<Book[]>([]);
   const [isSearching, setIsSearching] = useState(false);
