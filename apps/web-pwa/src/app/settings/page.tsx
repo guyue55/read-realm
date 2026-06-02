@@ -10,10 +10,17 @@ import {
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 
 export default function SettingsPage() {
-  const router = useRouter();
+  const router = useVirtualRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
+
   const [settings, setSettings] = useState<ReaderSettingsState>(
     DEFAULT_READER_SETTINGS,
   );

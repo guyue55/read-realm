@@ -1,22 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createId } from "@reader/shared-types";
 import type { ParsedBook } from "@reader/parser-core";
 import { db } from "@reader/storage-core";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { AppShell } from "@/components/AppShell";
 import { apiUrl } from "@/lib/api";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
 
 export default function ImportPage() {
   const [status, setStatus] = useState<string>("等待导入");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeMode, setActiveMode] = useState<"file" | "url">("file");
   const [urlInput, setUrlInput] = useState("");
   // 拖拽激活状态，用于控制拟物压紧与浅绿漫反射呼吸高光
   const [isDragActive, setIsDragActive] = useState(false);
-  const router = useRouter();
+  const router = useVirtualRouter();
 
   const createImportTask = async (
     parsedBook: ParsedBook,

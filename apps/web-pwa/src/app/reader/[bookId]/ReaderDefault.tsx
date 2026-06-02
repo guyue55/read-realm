@@ -9,7 +9,7 @@ import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { useCallback, type MouseEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
@@ -25,7 +25,7 @@ function isInteractiveReaderTarget(target: EventTarget | null) {
 const recognizer = new GestureRecognizer();
 
 export function ReaderDefault({ bookId }: { bookId: string }) {
-  const router = useRouter();
+  const router = useVirtualRouter();
   const {
     chapter,
     renderedChapters,

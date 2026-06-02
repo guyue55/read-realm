@@ -3,7 +3,7 @@
 import { useEffect, useState, memo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { apiUrl } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
@@ -60,7 +60,7 @@ function getFriendlyRelativeTime(dateInput?: string | Date) {
 }
 
 export function LibraryDefault() {
-  const router = useRouter();
+  const router = useVirtualRouter();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
   const [viewMode, setViewModeState] =
     useState<LibraryViewMode>(loadLibraryViewMode);

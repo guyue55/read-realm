@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useVirtualRouter } from "@/lib/route-store";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import type { Book } from "@reader/shared-types";
@@ -15,10 +15,16 @@ export default function BookDetailPage({
 }: {
   params: { bookId: string };
 }) {
-  const router = useRouter();
+  const router = useVirtualRouter();
   const [book, setBook] = useState<Book | null>(null);
   const [showCacheSheet, setShowCacheSheet] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    }
+  }, []);
 
   useEffect(() => {
     db.books

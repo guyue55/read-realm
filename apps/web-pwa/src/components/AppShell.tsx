@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import React from "react";
+import { useRouteStore } from "@/components/RouteProvider";
+import { useVirtualRouter } from "@/lib/route-store";
 
 export interface AppShellProps {
   title: React.ReactNode;
@@ -109,13 +110,20 @@ export function AppShell({
   children,
   contentClassName = "",
 }: AppShellProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { currentView } = useRouteStore();
+  const router = useVirtualRouter();
 
   return (
     <div className="min-h-screen bg-[var(--ui-bg)] text-[var(--ui-text)] md:flex">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-32 flex-col border-r border-[var(--ui-border)] bg-[rgba(255,252,245,0.72)] px-4 py-5 backdrop-blur-xl md:flex">
-        <Link href="/library" className="mb-8 flex items-center gap-2">
+        <Link
+          href="/#/library"
+          onClick={(e) => {
+            e.preventDefault();
+            router.push("/library");
+          }}
+          className="mb-8 flex items-center gap-2"
+        >
           <LeafMark />
           <span className="text-sm font-bold tracking-[0.02em] text-[var(--ui-text)]">
             墨问
@@ -125,12 +133,16 @@ export function AppShell({
         <nav className="flex flex-1 flex-col gap-1">
           {navItems.map((item) => {
             const active =
-              pathname === item.href ||
-              (item.href !== "/library" && pathname.startsWith(item.href));
+              currentView === item.href.slice(1) ||
+              (item.href === "/library" && currentView === "library");
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={`/#${item.href}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push(item.href);
+                }}
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                   active
                     ? "bg-[var(--ui-accent-soft)] font-semibold text-[var(--ui-accent)]"
@@ -200,12 +212,16 @@ export function AppShell({
       <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid grid-cols-5 rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden">
         {navItems.map((item) => {
           const active =
-            pathname === item.href ||
-            (item.href !== "/library" && pathname.startsWith(item.href));
+            currentView === item.href.slice(1) ||
+            (item.href === "/library" && currentView === "library");
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={`/#${item.href}`}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(item.href);
+              }}
               className={`ui-focus-ring flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[16px] text-xs font-semibold transition-colors ${
                 active
                   ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent)]"

@@ -922,7 +922,7 @@ export function useReader(bookId: string) {
         setIsPositionRestored(true); // 物理排版重置完毕后，一帧内优雅淡现
       }
     },
-    [engine, saveCurrentProgress, toc.length],
+    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer],
   );
 
   const seekToProgress = useCallback(
@@ -973,7 +973,7 @@ export function useReader(bookId: string) {
       await saveCurrentProgress(chapter, offset, paragraphIndex, characterOffset);
       setIsPositionRestored(true); // 瞬间淡出后淡入还原
     },
-    [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, settings.pageMode, getPrecisePosition],
+    [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, settings.pageMode, getPrecisePosition, clearAutoFlipTimer],
   );
 
   const handleNext = useCallback(async () => {
