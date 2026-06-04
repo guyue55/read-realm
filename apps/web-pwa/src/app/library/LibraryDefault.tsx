@@ -166,13 +166,17 @@ export function LibraryDefault() {
     }
   };
 
-  // 双向一键智能同步中心
-  const handleDualSync = async () => {
+  // 双向一键智能同步中心（支持静默后台自愈）
+  const handleDualSync = async (isSilent: boolean = false) => {
     if (isSyncing || !isOnline || syncMutexRef.current) return;
     syncMutexRef.current = true;
-    setIsSyncing(true);
-    setSyncProgress(0);
-    setSyncStepText("正在检测两端书阁差异...");
+
+    // 仅在非静默（手动点击）时激活大加载面板与进度
+    if (!isSilent) {
+      setIsSyncing(true);
+      setSyncProgress(0);
+      setSyncStepText("正在检测两端书阁差异...");
+    }
 
     try {
       const res = await fetch(apiUrl("/books"));
@@ -190,6 +194,27 @@ export function LibraryDefault() {
       const both = localBooks.filter(
         (lb) => currentCloudBooks.some((cb) => cb.id === lb.id)
       );
+
+      // 专家级快速无损拦截：若两端数量完全对齐且没有最后阅读时间戳变动，则 50ms 内极静秒退，不触发任何重绘和动画
+      let hasDiff = localOnly.length > 0 || cloudOnly.length > 0;
+      if (!hasDiff) {
+        for (const localBook of both) {
+          const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
+          if (cloudBook) {
+            const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
+            const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
+            if (cloudTime !== localTime) {
+              hasDiff = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!hasDiff) {
+        console.log("[Sync Check] 两端书阁完美一致，50ms 内极静退出同步。");
+        return;
+      }
 
       const totalSteps = localOnly.length + cloudOnly.length + both.length;
       let completedSteps = 0;
@@ -387,9 +412,12 @@ export function LibraryDefault() {
         }
       }
 
-      setSyncProgress(100);
-      setSyncStepText(strings.sync.syncSuccess);
-      setToastMsg(strings.sync.syncSuccess);
+      // 仅在非静默（手动点击）时更新主加载进度与弹出 Toast 提示
+      if (!isSilent) {
+        setSyncProgress(100);
+        setSyncStepText(strings.sync.syncSuccess);
+        setToastMsg(strings.sync.syncSuccess);
+      }
 
       const finalRes = await fetch(apiUrl("/books"));
       if (finalRes.ok) {
@@ -398,14 +426,18 @@ export function LibraryDefault() {
       }
     } catch (e) {
       console.error("一键双向同步过程遭遇异常:", e);
-      setToastMsg(strings.sync.syncFailed);
+      if (!isSilent) {
+        setToastMsg(strings.sync.syncFailed);
+      }
     } finally {
       syncMutexRef.current = false;
-      setTimeout(() => {
-        setIsSyncing(false);
-        setSyncProgress(0);
-        setSyncStepText("");
-      }, 500);
+      if (!isSilent) {
+        setTimeout(() => {
+          setIsSyncing(false);
+          setSyncProgress(0);
+          setSyncStepText("");
+        }, 500);
+      }
     }
   };
 
@@ -615,10 +647,12 @@ export function LibraryDefault() {
       if (hasAutoSyncedRef.current) return;
       hasAutoSyncedRef.current = true;
 
-      // 1. 冷启动自动双向对撞同步
-      if (autoSyncOnStartup && !isSyncing && !syncMutexRef.current) {
+      // 1. 冷启动自动双向对撞同步 (使用 sessionStorage 构筑会话级隔离锁，防刷限流)
+      const hasSyncedInSession = sessionStorage.getItem("reader-session-auto-synced");
+      if (autoSyncOnStartup && !isSyncing && !syncMutexRef.current && hasSyncedInSession !== "true") {
         console.log("[Sync Self-healing] 触发冷启动静默自动同步...");
-        void handleDualSync(); // 异步静默运行，无需阻塞，handleDualSync 内已有 syncMutexRef 保护
+        sessionStorage.setItem("reader-session-auto-synced", "true");
+        void handleDualSync(true); // 异步极静运行，无需阻塞，handleDualSync 内已有 syncMutexRef 保护
       }
 
       // 2. 持久化任务重连校验与自愈
@@ -967,7 +1001,7 @@ export function LibraryDefault() {
           <div className="flex items-center gap-3 shrink-0">
             {isOnline && (
               <button
-                onClick={handleDualSync}
+                onClick={() => handleDualSync(false)}
                 disabled={isSyncing}
                 className="ui-focus-ring w-full sm:w-auto rounded-full bg-[var(--ui-accent)] px-5 py-2 text-xs font-bold text-white transition-all hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-gray-300"
               >
