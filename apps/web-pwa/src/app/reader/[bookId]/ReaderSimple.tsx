@@ -321,7 +321,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* Settings Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 bg-transparent z-50 physics-spring rounded-t-[24px] sm:rounded-[24px] overflow-hidden sm:shadow-2xl ${activePanel === "settings" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
+          className={`fixed bottom-3 inset-x-3 mb-safe sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 bg-transparent z-50 physics-spring rounded-[24px] overflow-hidden sm:shadow-2xl ${activePanel === "settings" ? "translate-y-0 sm:scale-100" : "translate-y-[110%] sm:translate-y-full sm:scale-95 sm:opacity-0"}`}
         >
           <SettingsSheet
             settings={settings}
@@ -337,9 +337,9 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
         {/* Progress Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-2xl" : "bg-[rgba(255,252,245,0.96)] sm:bg-white sm:shadow-2xl shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-8 physics-spring rounded-t-[24px] sm:rounded-[24px] ${activePanel === "progress" ? "translate-y-0 sm:scale-100" : "translate-y-full sm:scale-95 sm:opacity-0"}`}
+          className={`fixed bottom-3 inset-x-3 mb-safe sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[400px] sm:bottom-8 ${isDark ? "bg-[rgba(35,35,35,0.92)] shadow-2xl text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] sm:bg-white sm:shadow-2xl shadow-2xl text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8 physics-spring rounded-[24px] max-h-[60vh] overflow-y-auto ${activePanel === "progress" ? "translate-y-0 sm:scale-100" : "translate-y-[110%] sm:translate-y-full sm:scale-95 sm:opacity-0"}`}
         >
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h3
               className={`font-bold ${isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]"}`}
             >

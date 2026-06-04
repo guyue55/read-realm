@@ -30,6 +30,10 @@ const DEFAULT_STATE: RouteState = {
 let currentState: RouteState = { ...DEFAULT_STATE };
 const listeners = new Set<() => void>();
 
+// 内存中常驻的滚动位置记忆字典，key 为 view 标识符，value 为滚动高度
+export const viewScrollMemory: Record<string, number> = {};
+
+
 // 浏览器 Hash 解析器
 export function parseHash(hashString: string): RouteState {
   const cleanHash = hashString.startsWith("#") ? hashString.slice(1) : hashString;

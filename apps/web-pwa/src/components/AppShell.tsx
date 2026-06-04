@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useRouteStore } from "@/components/RouteProvider";
-import { useVirtualRouter } from "@/lib/route-store";
+import { useVirtualRouter, viewScrollMemory } from "@/lib/route-store";
 
 export interface AppShellProps {
   title: React.ReactNode;
@@ -110,11 +110,55 @@ export function AppShell({
   children,
   contentClassName = "",
 }: AppShellProps) {
-  const { currentView } = useRouteStore();
+  const routeStore = useRouteStore();
+  const currentView = routeStore?.currentView || "library";
+  const activeBookId = routeStore?.activeBookId || "";
+  const activeTaskId = routeStore?.activeTaskId || "";
   const router = useVirtualRouter();
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  // 📝 融汇生成独一无二之滚动空间标识，以隔绝不同页面与多本书籍详情、导入预览的滚动交叉污染
+  let scrollKey = currentView as string;
+  if (currentView === "book-detail" && activeBookId) {
+    scrollKey = `book-detail-${activeBookId}`;
+  } else if (currentView === "import-preview" && activeTaskId) {
+    scrollKey = `import-preview-${activeTaskId}`;
+  }
+
+  // 1. 自动对齐与咬合恢复滚动条高度
+  useEffect(() => {
+    const container = mainRef.current;
+    if (!container) return;
+
+    const previousScroll = viewScrollMemory[scrollKey] || 0;
+    if (previousScroll > 0) {
+      // 60ms 黄金缓冲：确保 Dexie 数据读取及 DOM 高度异步渲染已稳定就绪
+      const timer = setTimeout(() => {
+        container.scrollTop = previousScroll;
+      }, 60);
+      return () => clearTimeout(timer);
+    } else {
+      container.scrollTop = 0;
+    }
+  }, [scrollKey]);
+
+  // 2. 满帧监听：实时将当前视图的 scrollTop 备份入库
+  useEffect(() => {
+    const container = mainRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      viewScrollMemory[scrollKey] = container.scrollTop;
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [scrollKey]);
 
   return (
-    <div className="min-h-screen bg-[var(--ui-bg)] text-[var(--ui-text)] md:flex">
+    <div className="h-screen w-full bg-[var(--ui-bg)] text-[var(--ui-text)] md:flex overflow-hidden">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-32 flex-col border-r border-[var(--ui-border)] bg-[rgba(255,252,245,0.72)] px-4 py-5 backdrop-blur-xl md:flex">
         <Link
           href="/#/library"
@@ -172,7 +216,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <main className="min-h-screen flex-1 pb-[calc(78px+env(safe-area-inset-bottom))] md:pb-0 md:pl-32">
+      <main ref={mainRef} className="h-full overflow-y-auto flex-1 pb-[calc(78px+env(safe-area-inset-bottom))] md:pb-0 md:pl-32">
         <header className="sticky top-0 z-30 border-b border-[var(--ui-border)] bg-[rgba(248,246,240,0.82)] backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-full max-w-[1240px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">

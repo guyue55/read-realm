@@ -440,9 +440,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Settings Sheet */}
         <div
-          className="fixed bottom-0 inset-x-0 bg-transparent z-50 physics-spring reader-gpu-accelerated rounded-t-[24px] overflow-hidden"
+          className="fixed bottom-3 inset-x-3 bg-transparent z-50 physics-spring reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
           style={{
-            transform: activePanel === "settings" ? "translateY(0)" : "translateY(100%)"
+            transform: activePanel === "settings" ? "translateY(0)" : "translateY(calc(100% + 24px))"
           }}
         >
           <SettingsSheet
@@ -462,12 +462,12 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Progress Sheet */}
         <div
-          className={`fixed bottom-0 inset-x-0 ${isDark ? "bg-[rgba(35,35,35,0.96)] shadow-[0_-4px_20px_rgba(0,0,0,0.5)]" : "bg-[rgba(255,252,245,0.96)] shadow-[0_-4px_20px_rgba(80,65,45,0.08)]"} z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] physics-spring reader-gpu-accelerated rounded-t-[24px]`}
+          className={`fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl physics-spring reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
           style={{
-            transform: activePanel === "progress" ? "translateY(0)" : "translateY(100%)"
+            transform: activePanel === "progress" ? "translateY(0)" : "translateY(calc(100% + 24px))"
           }}
         >
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h3
               className={`font-bold ${isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]"}`}
             >
@@ -475,7 +475,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             </h3>
             <button
               onClick={() => setActivePanel(null)}
-              className={`${isDark ? "text-[#8F8F8F]" : "text-[#6F665B]"} p-1`}
+              className={`${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"} p-1 rounded-full`}
             >
               ✕
             </button>
