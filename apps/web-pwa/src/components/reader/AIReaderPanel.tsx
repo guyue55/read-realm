@@ -153,6 +153,7 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
   const [displayedText, setDisplayedText] = React.useState("");
   const [isTyping, setIsTyping] = React.useState(false);
   const prevLoadingRef = React.useRef(false);
+  const textContainerRef = React.useRef<HTMLSpanElement | null>(null);
 
   React.useEffect(() => {
     const wasLoading = prevLoadingRef.current;
@@ -161,12 +162,18 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     if (isAiLoading) {
       setDisplayedText("");
       setIsTyping(false);
+      if (textContainerRef.current) {
+        textContainerRef.current.textContent = "";
+      }
       return;
     }
 
     if (!text) {
       setDisplayedText("");
       setIsTyping(false);
+      if (textContainerRef.current) {
+        textContainerRef.current.textContent = "";
+      }
       return;
     }
 
@@ -175,19 +182,22 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
       setIsTyping(true);
       let currentIndex = 0;
       setDisplayedText("");
+      if (textContainerRef.current) {
+        textContainerRef.current.textContent = "";
+      }
 
       const interval = setInterval(() => {
-        setDisplayedText((prev) => {
-          if (currentIndex < text.length) {
-            const nextChar = text.charAt(currentIndex);
-            currentIndex++;
-            return prev + nextChar;
-          } else {
-            clearInterval(interval);
-            setIsTyping(false);
-            return prev;
+        if (currentIndex < text.length) {
+          const nextChar = text.charAt(currentIndex);
+          currentIndex++;
+          if (textContainerRef.current) {
+            textContainerRef.current.textContent += nextChar;
           }
-        });
+        } else {
+          clearInterval(interval);
+          setIsTyping(false);
+          setDisplayedText(text);
+        }
       }, 20);
 
       return () => clearInterval(interval);
@@ -195,6 +205,9 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
       // 缓存瞬间直出，跳过打字动效，100% 纯净高亮
       setDisplayedText(text);
       setIsTyping(false);
+      if (textContainerRef.current) {
+        textContainerRef.current.textContent = text;
+      }
     }
   }, [text, isAiLoading]);
 
@@ -202,9 +215,9 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     <div
       className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
     >
-      {displayedText}
+      <span ref={textContainerRef}>{displayedText}</span>
       {isTyping && (
-        <span className="inline-block ml-1 w-1.5 h-3.5 bg-[#9A6A3A] animate-pulse" />
+        <span className="inline-block ml-1 w-1.5 h-3.5 bg-[#9A6A3A] animate-pulse align-middle" />
       )}
     </div>
   );
