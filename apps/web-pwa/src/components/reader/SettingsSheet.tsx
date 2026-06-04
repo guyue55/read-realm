@@ -65,7 +65,7 @@ export function SettingsSheet({
       <div className={`flex flex-col gap-4 ${isMobileSheet ? "px-4 pb-4" : ""}`}>
         {updateUiMode && (
           <div className="flex items-center justify-between pb-4 border-b border-[rgba(80,65,45,0.08)]">
-            <span className={`text-sm font-medium ${mutedText}`}>UI 主题</span>
+            <span className={`text-sm font-medium ${mutedText}`}>{strings.reader.uiModeLabel}</span>
             <div
               className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
             >
@@ -77,7 +77,7 @@ export function SettingsSheet({
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
                 }`}
               >
-                默认 (丰富)
+                {strings.reader.uiModeDefault}
               </button>
               <button
                 onClick={() => updateUiMode("simple")}
@@ -87,7 +87,7 @@ export function SettingsSheet({
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
                 }`}
               >
-                简洁
+                {strings.reader.uiModeSimple}
               </button>
             </div>
           </div>
@@ -120,15 +120,15 @@ export function SettingsSheet({
         {updateFontFamily && (
           <div className="flex items-center justify-between">
             <span className={`text-sm font-medium ${mutedText}`}>
-              字体
+              {strings.reader.fontFamilyLabel}
             </span>
             <div
               className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
             >
               {[
-                { key: "kaiti", name: "楷体" },
-                { key: "songti", name: "宋体" },
-                { key: "heiti", name: "黑体" },
+                { key: "kaiti", name: strings.reader.fontFamilyKaiti },
+                { key: "songti", name: strings.reader.fontFamilySongti },
+                { key: "heiti", name: strings.reader.fontFamilyHeiti },
               ].map((f) => (
                 <button
                   key={f.key}
@@ -205,11 +205,11 @@ export function SettingsSheet({
         {updateLineHeight && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>行间距</span>
+              <span className={mutedText}>{strings.reader.lineHeightLabel}</span>
               <span className={`${textColor} font-bold text-xs`}>{settings.lineHeight.toFixed(1)} 倍</span>
             </div>
             <input
-              aria-label="行间距"
+              aria-label={strings.reader.lineHeightLabel}
               type="range"
               min={1.4}
               max={2.2}
@@ -224,11 +224,11 @@ export function SettingsSheet({
         {updateParagraphSpacing && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>段落间距</span>
+              <span className={mutedText}>{strings.reader.paragraphSpacingLabel}</span>
               <span className={`${textColor} font-bold text-xs`}>{settings.paragraphSpacing} px</span>
             </div>
             <input
-              aria-label="段落间距"
+              aria-label={strings.reader.paragraphSpacingLabel}
               type="range"
               min={0}
               max={32}
@@ -243,11 +243,11 @@ export function SettingsSheet({
         {updateLetterSpacing && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>字间距</span>
+              <span className={mutedText}>{strings.reader.letterSpacingLabel}</span>
               <span className={`${textColor} font-bold text-xs`}>{settings.letterSpacing.toFixed(2)} em</span>
             </div>
             <input
-              aria-label="字间距"
+              aria-label={strings.reader.letterSpacingLabel}
               type="range"
               min={-0.02}
               max={0.15}
@@ -262,7 +262,7 @@ export function SettingsSheet({
         {/* 触底自动切章 Switch */}
         {settings.pageMode === "scroll" && updateAutoFlipAtBottom && (
           <div className="flex items-center justify-between pt-4 border-t border-[rgba(80,65,45,0.08)]">
-            <span className={`text-sm font-medium ${mutedText}`}>触底自动切章</span>
+            <span className={`text-sm font-medium ${mutedText}`}>{strings.reader.autoFlipAtBottomLabel}</span>
             <button
               onClick={() => updateAutoFlipAtBottom(!settings.autoFlipAtBottom)}
               className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
@@ -270,7 +270,7 @@ export function SettingsSheet({
               }`}
               role="switch"
               aria-checked={settings.autoFlipAtBottom}
-              aria-label="触底自动切章"
+              aria-label={strings.reader.autoFlipAtBottomLabel}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

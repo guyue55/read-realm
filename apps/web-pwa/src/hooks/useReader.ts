@@ -7,7 +7,7 @@ import {
 } from "react";
 import { ReaderEngine, type ChapterData } from "@reader/reader-core";
 import { Dexie, db } from "@reader/storage-core";
-import type { ReadingProgress, Bookmark } from "@reader/shared-types";
+import { generateAiSigKeyAsync, type ReadingProgress, type Bookmark } from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { apiUrl } from "@/lib/api";
@@ -1283,12 +1283,143 @@ export function useReader(bookId: string) {
     [engine, settings.pageMode, saveCurrentProgress, toc.length],
   );
 
+  const rollbackProgress = useCallback(
+    async () => {
+      if (!bookId || !engine) return;
+      const key = `reader-progress-rollback-${bookId}`;
+      let list: {
+        chapterId: string;
+        chapterIndex: number;
+        offset?: number;
+        paragraphIndex?: number;
+        characterOffset?: number;
+        percentage?: number;
+      }[] = [];
+      try {
+        list = JSON.parse(localStorage.getItem(key) || "[]");
+      } catch {}
+
+      if (list.length === 0) {
+        showToast(strings.sync.progressRollbackEmpty);
+        return;
+      }
+
+      const rollbackItem = list[list.length - 1];
+
+      await db.progress.put({
+        bookId,
+        chapterId: rollbackItem.chapterId,
+        chapterIndex: rollbackItem.chapterIndex,
+        offset: rollbackItem.offset || 0,
+        paragraphIndex: rollbackItem.paragraphIndex || 0,
+        characterOffset: rollbackItem.characterOffset || 0,
+        percentage: rollbackItem.percentage || 0,
+        updatedAt: new Date().toISOString(),
+      });
+
+      clearAutoFlipTimer();
+      setIsPositionRestored(false);
+      await engine.loadChapter(rollbackItem.chapterIndex);
+      const currentChapter = engine.getCurrentChapter();
+      setChapter(currentChapter);
+      if (currentChapter) {
+        setRenderedChapters([currentChapter]);
+      }
+      setActivePanel(null);
+      setShowMenu(false);
+
+      const container = contentRef.current;
+      restoreScrollPositionStable(
+        container,
+        rollbackItem.offset || 0,
+        settings.pageMode,
+        async (finalOffset, maxOffset) => {
+          if (container) {
+            let targetEl: Element | null = null;
+            if (typeof rollbackItem.paragraphIndex === "number" && rollbackItem.paragraphIndex >= 0) {
+              targetEl = container.querySelectorAll("p[data-idx]")[rollbackItem.paragraphIndex] || null;
+            }
+            if (targetEl) {
+              targetEl.classList.remove("ink-highlight-flash");
+              void (targetEl as HTMLElement).offsetWidth;
+              targetEl.classList.add("ink-highlight-flash");
+              setTimeout(() => {
+                targetEl?.classList.remove("ink-highlight-flash");
+              }, 3200);
+            } else {
+              if (settings.pageMode === "scroll") {
+                container.scrollTo({ top: rollbackItem.offset || 0, behavior: "smooth" });
+              } else {
+                container.scrollTo({ left: rollbackItem.offset || 0, behavior: "smooth" });
+              }
+            }
+          } else {
+            window.scrollTo({ top: rollbackItem.offset || 0, behavior: "smooth" });
+          }
+
+          if (currentChapter) {
+            const offsetRatio = maxOffset > 0 ? finalOffset / maxOffset : 0;
+            setReadingProgress(
+              computeOverallProgress(currentChapter.index, toc.length || 1, offsetRatio)
+            );
+          }
+        },
+        rollbackItem.paragraphIndex,
+        rollbackItem.characterOffset
+      );
+
+      let successMsg = strings.sync.progressRollbackSuccess;
+      if (successMsg.includes("{chapter}")) {
+        successMsg = successMsg.replace("{chapter}", String(rollbackItem.chapterIndex + 1));
+      }
+      showToast(successMsg);
+    },
+    [bookId, engine, settings.pageMode, toc.length, clearAutoFlipTimer, showToast],
+  );
+
   const handleSummarize = useCallback(async () => {
     if (!chapter) return;
     setIsAiLoading(true);
     setActivePanel("ai");
     setShowMenu(false);
+
     try {
+      // 1. 纯前端异步高稳定性 SHA-256 运算器
+      const computeSha256Async = async (rawText: string): Promise<string> => {
+        const encoder = new TextEncoder();
+        const dataBytes = encoder.encode(rawText);
+        const cryptoObj = typeof window !== "undefined"
+          ? (window.crypto || (window as unknown as { msCrypto?: Crypto }).msCrypto)
+          : (typeof globalThis !== "undefined" ? (globalThis as unknown as { crypto?: Crypto }).crypto : null);
+
+        if (!cryptoObj || !cryptoObj.subtle) {
+          return "legacy-fallback-hash";
+        }
+        const hashBuffer = await cryptoObj.subtle.digest("SHA-256", dataBytes);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      };
+
+      const sourceHash = await computeSha256Async(chapter.content);
+      const model = "gpt-3.5-turbo";
+      const promptVersion = "2.0";
+
+      // 2. 跨端计算与后端 100% 物理对称的 HMAC 强哈希主键 (AISigKey)
+      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion);
+      console.log(`[AI-Reader] 🛡️ 正在进行 PWA 侧 L1 级本地 IndexedDB 缓存检索. Key: ${aiSigKey}`);
+
+      // 3. 拦截器 L1：优先在前端离线 aiViews 数据库中寻找
+      const cached = await db.aiViews.get(aiSigKey);
+      if (cached) {
+        console.log(`[AI-Reader] 🎉 命中 PWA 侧 L1 本地缓存！5ms 闪电无网直出。`);
+        setAiSummary(cached.summary);
+        setIsAiLoading(false);
+        return;
+      }
+
+      console.log(`[AI-Reader] 🚨 L1 缓存未命中，开始唤醒 L2/L3 后端服务穿透...`);
+
+      // 4. 穿透：调用 NestJS 后端 L2 SQLite (及大模型 L3)
       const response = await fetch(apiUrl("/ai/summarize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1298,11 +1429,37 @@ export function useReader(bookId: string) {
           chapterIndex: chapter.index,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
       const data = await response.json();
-      setAiSummary(data.summary);
+      const generatedSummary = data.summary;
+
+      // 5. 将刚生成的高质量大模型摘要同步、原子化地落库到前端 L1 IndexedDB 备用
+      const aiViewItem = {
+        id: aiSigKey,
+        bookId,
+        chapterIndex: chapter.index,
+        sourceHash,
+        summary: generatedSummary,
+        model,
+        promptVersion,
+        createdAt: new Date().toISOString(),
+      };
+
+      await db.aiViews.put(aiViewItem);
+      console.log(`[AI-Reader] ✨ 已将最新生成的 AI 章节摘要归档至本地 L1 IndexedDB 库。Key: ${aiSigKey}`);
+
+      setAiSummary(generatedSummary);
     } catch (error) {
       console.error("AI Summarize failed:", error);
-      setAiSummary(strings.reader.aiError);
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setAiSummary(strings.network.offlineAiHint);
+      } else {
+        setAiSummary(strings.reader.aiError);
+      }
     } finally {
       setIsAiLoading(false);
     }
@@ -1574,5 +1731,6 @@ export function useReader(bookId: string) {
     isFlipCooldown,
     updateAutoFlipAtBottom,
     autoFlipCountdown,
+    rollbackProgress,
   };
 }

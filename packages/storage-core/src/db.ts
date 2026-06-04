@@ -16,23 +16,258 @@ export interface ImportTask {
   createdAt: string;
 }
 
+export interface LocalAIView {
+  id: string;
+  bookId: string;
+  chapterIndex: number;
+  sourceHash: string;
+  summary: string;
+  model: string;
+  promptVersion: string;
+  createdAt: string;
+}
+
 export class ReaderDatabase extends Dexie {
   books!: Table<Book, string>;
   chapters!: Table<LocalChapter, string>;
   progress!: Table<ReadingProgress, string>;
   bookmarks!: Table<Bookmark, string>;
   importTasks!: Table<ImportTask, string>;
+  aiViews!: Table<LocalAIView, string>;
 
   constructor() {
     super("ReaderDatabase");
-    this.version(5).stores({
+    this.version(6).stores({
       books: "id, title, createdAt, lastReadAt",
       chapters: "id, [bookId+index], bookId, index",
       progress: "bookId",
       bookmarks: "id, bookId, chapterIndex",
       importTasks: "id",
+      aiViews: "id, bookId, chapterIndex, sourceHash",
     });
+
+    // 挂载 Dexie AOP 拦截 Hook：当用户进行任何增删改书籍、进度或书签操作时，
+    // 自动捕获并触发 1.2 秒缓释防抖双轨备份，从底层打通无侵入式的多端“防蒸发”闭环。
+    if (typeof window !== "undefined") {
+      let backupTimeout: any = null;
+      const triggerBackup = () => {
+        if (backupTimeout) {
+          clearTimeout(backupTimeout);
+        }
+        backupTimeout = setTimeout(() => {
+          void backupMetadataToStorage();
+        }, 1200); // 1.2秒阻尼防抖，过滤极高频的连续翻页/划线开销
+      };
+
+      this.books.hook("creating", triggerBackup);
+      this.books.hook("updating", triggerBackup);
+      this.books.hook("deleting", triggerBackup);
+
+      this.progress.hook("creating", triggerBackup);
+      this.progress.hook("updating", triggerBackup);
+      this.progress.hook("deleting", triggerBackup);
+
+      this.bookmarks.hook("creating", triggerBackup);
+      this.bookmarks.hook("updating", triggerBackup);
+      this.bookmarks.hook("deleting", triggerBackup);
+    }
   }
 }
 
 export const db = new ReaderDatabase();
+
+// ==========================================================
+// 🏮 「防蒸发柜」 双轨冗余镜像备份与冷自愈协议 (E07-S04 / E07-S03)
+// ==========================================================
+
+export interface MetaShelfBackup {
+  books: Book[];
+  progress: ReadingProgress[];
+  bookmarks: Bookmark[];
+  backupTime: string;
+}
+
+/**
+ * 自动持久化双轨备份：将当前 IndexedDB 中的书架元数据、进度与书签打包存储。
+ * 1. 优先备份到 localStorage 建立一级防线；
+ * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
+ */
+export async function backupMetadataToStorage(): Promise<void> {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const books = await db.books.toArray();
+    const progress = await db.progress.toArray();
+    const bookmarks = await db.bookmarks.toArray();
+    
+    // 如果没有任何藏书，不进行覆盖式空备份以防恶意擦除
+    if (books.length === 0) {
+      console.log("[Storage] 书架暂无典籍，跳过镜像双轨备份。");
+      return;
+    }
+
+    const backup: MetaShelfBackup = {
+      books,
+      progress,
+      bookmarks,
+      backupTime: new Date().toISOString(),
+    };
+
+    const serialized = JSON.stringify(backup);
+    
+    // 一级防线：浏览器本地持久存储 localStorage
+    window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
+    console.log("[Storage] 双轨冗余：元数据已顺利归档至 localStorage 备卷。");
+
+    // 二级防线：Capacitor 物理沙盒备份
+    const cap = (window as any).Capacitor;
+    if (cap?.Plugins?.Filesystem) {
+      try {
+        const { Filesystem, Directory } = cap.Plugins;
+        await Filesystem.writeFile({
+          path: "read_realm_backup/meta_shelf.json",
+          data: serialized,
+          directory: Directory.Documents,
+          encoding: "utf8",
+          recursive: true,
+        });
+        console.log("[Storage] 双轨冗余：元数据已成功篆刻至 Capacitor 原生物理沙盒 (Documents/read_realm_backup/meta_shelf.json)");
+      } catch (err) {
+        console.warn("[Storage] Capacitor 原生沙盒写入遭遇阻碍:", err);
+      }
+    }
+    // 三级防线：Tauri 物理沙盒备份
+    else if ((window as any).__TAURI__?.fs) {
+      try {
+        const { writeTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
+        await writeTextFile("read_realm_backup/meta_shelf.json", serialized, {
+          dir: BaseDirectory.AppLocalData,
+        });
+        console.log("[Storage] 双轨冗余：元数据已成功篆刻至 Tauri 原生物理沙盒 (AppLocalData/read_realm_backup/meta_shelf.json)");
+      } catch (err) {
+        console.warn("[Storage] Tauri 原生沙盒写入遭遇阻碍:", err);
+      }
+    }
+  } catch (err) {
+    console.error("[Storage] 自动双轨备份异常中断:", err);
+  }
+}
+
+/**
+ * 校验并执行冷启动元数据自愈：
+ * 1. 检查 IndexedDB 中的书籍表是否被静默清洗（Eviction）；
+ * 2. 若书籍表为空，但本地或原生沙盒存在有效备份，则一键唤醒“降卷自愈”；
+ * 3. 使用数据库事务，安全可靠地恢复书架、阅读进度及书签。
+ */
+export async function checkAndRestoreFromBackup(): Promise<boolean> {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    const booksCount = await db.books.count();
+    if (booksCount > 0) {
+      // 数据库元数据完整，不需要恢复
+      return false;
+    }
+
+    console.warn("[Storage] 🚨 警告：检测到 IndexedDB 书架已空！极可能由于系统空间告急被 WebView 强行静默抹除。正在启动双轨熔断自愈...");
+
+    let backupStr: string | null = null;
+
+    // 1. 尝试从 Capacitor 物理沙盒读取
+    const cap = (window as any).Capacitor;
+    if (cap?.Plugins?.Filesystem) {
+      try {
+        const { Filesystem, Directory } = cap.Plugins;
+        const result = await Filesystem.readFile({
+          path: "read_realm_backup/meta_shelf.json",
+          directory: Directory.Documents,
+          encoding: "utf8",
+        });
+        backupStr = result.data;
+        console.log("[Storage] 成功从 Capacitor 物理沙盒起封备份文卷。");
+      } catch (e) {
+        console.warn("[Storage] Capacitor 沙盒读取失败，降级寻求本地存储:", e);
+      }
+    }
+    // 2. 尝试从 Tauri 物理沙盒读取
+    else if ((window as any).__TAURI__?.fs) {
+      try {
+        const { readTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
+        backupStr = await readTextFile("read_realm_backup/meta_shelf.json", {
+          dir: BaseDirectory.AppLocalData,
+        });
+        console.log("[Storage] 成功从 Tauri 物理沙盒起封备份文卷。");
+      } catch (e) {
+        console.warn("[Storage] Tauri 沙盒读取失败，降级寻求本地存储:", e);
+      }
+    }
+
+    // 3. 降级：从 localStorage 恢复
+    if (!backupStr) {
+      backupStr = window.localStorage.getItem("read_realm_meta_shelf_backup");
+    }
+
+    if (!backupStr) {
+      console.log("[Storage] 本地与原生沙盒备份尽失，无可自愈。");
+      return false;
+    }
+
+    const backup: MetaShelfBackup = JSON.parse(backupStr);
+    if (!backup.books || backup.books.length === 0) {
+      console.log("[Storage] 备份文档为空，放弃自愈。");
+      return false;
+    }
+
+    console.log(`[Storage] 发现归档于 ${backup.backupTime} 的镜像，开始复苏重建事务...`);
+
+    // 使用事务保证原子级恢复
+    await db.transaction("rw", [db.books, db.progress, db.bookmarks], async () => {
+      if (backup.books && backup.books.length > 0) {
+        await db.books.bulkPut(backup.books);
+      }
+      if (backup.progress && backup.progress.length > 0) {
+        await db.progress.bulkPut(backup.progress);
+      }
+      if (backup.bookmarks && backup.bookmarks.length > 0) {
+        await db.bookmarks.bulkPut(backup.bookmarks);
+      }
+    });
+
+    console.log(`[Storage] 🎉 妙手回春！「防蒸发柜」自动一键自愈完成！成功召回 ${backup.books.length} 本典籍及其阅读进度。`);
+    return true;
+  } catch (err) {
+    console.error("[Storage] 降卷自愈过程遭遇致命故障:", err);
+    return false;
+  }
+}
+
+/**
+ * 🧹 本地存储自动垃圾回收自愈引擎 (GC)
+ * 1. 自动检索 IndexedDB 物理数据库中的 ImportTask；
+ * 2. 驱逐所有 chapters 数量为 0 且创建时间超过 15 分钟以前的空白僵尸导入会话；
+ * 3. 释放由于大文件导入中途失败、刷新关闭等意外情况造成的残留垃圾，保持书架及导入面板零污染。
+ */
+export async function executeStorageGarbageCollection(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    console.log("[Storage GC] 🧹 启动本地物理存储垃圾回收（GC）清道夫机制...");
+    const now = Date.now();
+    const safetyBufferMs = 15 * 60 * 1000; // 15分钟安全静默缓冲，避免正在导入的活跃任务被中途误删
+    
+    const allTasks = await db.importTasks.toArray();
+    const tasksToSweep = allTasks.filter(task => {
+      // 判定条件：没有解析出任何本地章节，且其创建时间已超过 15 分钟
+      const createdAtMs = task.createdAt ? new Date(task.createdAt).getTime() : 0;
+      const isStale = now - createdAtMs > safetyBufferMs;
+      return (!task.chapters || task.chapters.length === 0) && isStale;
+    });
+
+    if (tasksToSweep.length > 0) {
+      const idsToDelete = tasksToSweep.map(t => t.id);
+      await db.importTasks.bulkDelete(idsToDelete);
+      console.log(`[Storage GC] 🎉 清扫完成！成功物理驱逐了 ${tasksToSweep.length} 个僵尸/空白临时导入任务。IDs:`, idsToDelete);
+    } else {
+      console.log("[Storage GC] ✨ 物理层级扫描结束，未发现长期滞留的空白僵尸任务。");
+    }
+  } catch (err) {
+    console.error("[Storage GC] 垃圾回收清扫进程遭遇异常:", err);
+  }
+}

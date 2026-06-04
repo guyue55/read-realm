@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, memo } from "react";
+import { useEffect, useState, memo, useCallback, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -10,6 +10,7 @@ import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Book, ReadingProgress } from "@reader/shared-types";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 
@@ -61,11 +62,48 @@ function getFriendlyRelativeTime(dateInput?: string | Date) {
 
 export function LibraryDefault() {
   const router = useVirtualRouter();
+  const isOnline = useOnlineStatus();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
   const [viewMode, setViewModeState] =
     useState<LibraryViewMode>(loadLibraryViewMode);
   const [toastMsg, setToastMsg] = useState("");
   const [showDrawer, setShowDrawer] = useState(false);
+
+  // 云端同步及状态判定核心字段
+  const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncStepText, setSyncStepText] = useState("");
+  const [syncingBookId, setSyncingBookId] = useState<string | null>(null);
+
+  // 专家级细粒度隔离状态机：记录每本书独立的同步进度与文案
+  const [bookSyncStates, setBookSyncStates] = useState<Record<string, { progress: number; stepText: string }>>({});
+
+  // 物理互斥信号锁，防止高频点按引起 IndexedDB 写入竞态
+  const syncMutexRef = useRef(false);
+
+  // 用户同步首选项配置
+  const [autoSyncOnStartup, setAutoSyncOnStartupState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const val = window.localStorage.getItem("reader-sync-auto-startup");
+    return val !== "false";
+  });
+  const [autoSyncProgressOnReading, setAutoSyncProgressOnReadingState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const val = window.localStorage.getItem("reader-sync-auto-progress");
+    return val !== "false";
+  });
+  const [showSyncConfig, setShowSyncConfig] = useState(false);
+
+  const setAutoSyncOnStartup = (val: boolean) => {
+    setAutoSyncOnStartupState(val);
+    window.localStorage.setItem("reader-sync-auto-startup", String(val));
+  };
+
+  const setAutoSyncProgressOnReading = (val: boolean) => {
+    setAutoSyncProgressOnReadingState(val);
+    window.localStorage.setItem("reader-sync-auto-progress", String(val));
+  };
 
   useEffect(() => {
     if (toastMsg) {
@@ -73,6 +111,29 @@ export function LibraryDefault() {
       return () => clearTimeout(timer);
     }
   }, [toastMsg]);
+
+  // 拉取云端书籍列表
+  const fetchCloudBooks = useCallback(async () => {
+    if (!isOnline) {
+      setCloudBooks([]);
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl("/books"));
+      if (res.ok) {
+        const data = await res.json();
+        setCloudBooks(data);
+      }
+    } catch (e) {
+      console.error("拉取云端书籍元数据失败:", e);
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    fetchCloudBooks();
+  }, [fetchCloudBooks]);
+
+
 
   const handleCollectBookList = async (listTitle: string) => {
     const list = PRESET_BOOKLISTS[listTitle];
@@ -84,7 +145,6 @@ export function LibraryDefault() {
         [db.books, db.chapters],
         async () => {
           for (const item of list) {
-            // 用 put 防重，如已存在，自动平滑覆盖
             await db.books.put(item.book);
             for (const chap of item.chapters) {
               await db.chapters.put(chap);
@@ -98,9 +158,439 @@ export function LibraryDefault() {
       } else {
         setToastMsg("🚀 书阁已纳「科技灯火与人类群星」！黑客与画家等科技名篇已备，共探智慧。");
       }
+      // 成功导入本地后，触发一次拉取云端对齐（避免缓存不同步）
+      fetchCloudBooks();
     } catch (err) {
       console.error("一键收藏精选书单失败:", err);
       setToastMsg("💡 本地存储繁忙，请稍后再试。");
+    }
+  };
+
+  // 双向一键智能同步中心
+  const handleDualSync = async () => {
+    if (isSyncing || !isOnline || syncMutexRef.current) return;
+    syncMutexRef.current = true;
+    setIsSyncing(true);
+    setSyncProgress(0);
+    setSyncStepText("正在检测两端书阁差异...");
+
+    try {
+      const res = await fetch(apiUrl("/books"));
+      if (!res.ok) throw new Error();
+      const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
+      setCloudBooks(currentCloudBooks);
+
+      const localBooks = await db.books.toArray();
+      const localOnly = localBooks.filter(
+        (lb) => !currentCloudBooks.some((cb) => cb.id === lb.id)
+      );
+      const cloudOnly = currentCloudBooks.filter(
+        (cb) => !localBooks.some((lb) => lb.id === cb.id)
+      );
+      const both = localBooks.filter(
+        (lb) => currentCloudBooks.some((cb) => cb.id === lb.id)
+      );
+
+      const totalSteps = localOnly.length + cloudOnly.length + both.length;
+      let completedSteps = 0;
+
+      const updateProgress = (stepCount: number, subProgress: number) => {
+        const base = (stepCount / Math.max(1, totalSteps)) * 100;
+        const addition = subProgress / Math.max(1, totalSteps);
+        setSyncProgress(Math.min(100, Math.round(base + addition)));
+      };
+
+      // 1. 备份本地专享 (携带进度)
+      for (const book of localOnly) {
+        setSyncStepText(`正在备份「${book.title}」至云阁...`);
+        const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
+        const progress = await db.progress.get(book.id);
+        const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
+        
+        // 绑定最新进度 JSON
+        const bookWithProgress = { ...book, lastReadProgress };
+
+        // 记入活跃持久化上传任务，防刷新和崩溃
+        const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+        activeTasks[book.id] = "upload";
+        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+        for (let p = 0; p <= 100; p += 25) {
+          updateProgress(completedSteps, p);
+          await new Promise((r) => setTimeout(r, 40));
+        }
+
+        await fetch(apiUrl("/books/import"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+        });
+
+        // 任务完结，清除落盘记录
+        const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+        delete nextTasks[book.id];
+        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+
+        completedSteps++;
+      }
+
+      // 2. 拉取云端新书 (还原进度)
+      for (const book of cloudOnly) {
+        setSyncStepText(`正在从云阁拉取「${book.title}」...`);
+        
+        // 记入活跃持久化下载任务
+        const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+        activeTasks[book.id] = "download";
+        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+        for (let p = 0; p <= 50; p += 25) {
+          updateProgress(completedSteps, p);
+          await new Promise((r) => setTimeout(r, 40));
+        }
+
+        const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`));
+        if (chapRes.ok) {
+          const chapters = await chapRes.json();
+          for (let p = 50; p <= 100; p += 25) {
+            updateProgress(completedSteps, p);
+            await new Promise((r) => setTimeout(r, 30));
+          }
+
+          await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+            // 安全防丢历史备份
+            const oldProgress = await db.progress.get(book.id);
+            if (oldProgress) {
+              const key = `reader-progress-rollback-${book.id}`;
+              let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+              try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+              if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+                list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+                localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+              }
+            }
+
+            await db.books.put(book);
+            for (const chap of chapters) {
+              await db.chapters.put(chap);
+            }
+            // 反序列化云端进度落库，打通跨设备重现
+            if (book.lastReadProgress) {
+              try {
+                const parsedProgress = JSON.parse(book.lastReadProgress);
+                await db.progress.put(parsedProgress);
+              } catch (e) {
+                console.error("解析进度快照失败:", e);
+              }
+            }
+          });
+        }
+
+        // 任务完结，清除落盘记录
+        const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+        delete nextTasks[book.id];
+        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+
+        completedSteps++;
+      }
+
+      // 3. 进度双向对撞与咬合
+      if (both.length > 0) {
+        setSyncStepText("正在合并两端阅读痕迹...");
+        for (const localBook of both) {
+          const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
+          if (cloudBook) {
+            const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
+            const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
+
+            if (cloudTime > localTime) {
+              // A. 云端新：拉下并覆盖本地元数据与进度
+              await db.transaction("rw", [db.books, db.progress], async () => {
+                // 覆盖前自动落盘安全防丢备份
+                const oldProgress = await db.progress.get(localBook.id);
+                if (oldProgress) {
+                  const key = `reader-progress-rollback-${localBook.id}`;
+                  let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+                  try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+                  if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+                    list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+                    localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+                  }
+                }
+
+                await db.books.update(localBook.id, { lastReadAt: cloudBook.lastReadAt });
+                if (cloudBook.lastReadProgress) {
+                  try {
+                    const parsedProgress = JSON.parse(cloudBook.lastReadProgress);
+                    await db.progress.put(parsedProgress);
+                  } catch (e) {
+                    console.error("更新本地对齐进度失败:", e);
+                  }
+                }
+              });
+            } else if (localTime > cloudTime) {
+              // B. 本地新：覆盖备份到云端
+              const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
+              const progress = await db.progress.get(localBook.id);
+              const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
+              const bookWithProgress = { ...localBook, lastReadProgress };
+
+              await fetch(apiUrl("/books/import"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+              });
+            } else if (cloudTime === localTime) {
+              // C. 两端最后阅读时间戳完全一样，精细属性对碰，防止 Clock Skew 冲突覆盖
+              const localProgress = await db.progress.get(localBook.id);
+              if (cloudBook.lastReadProgress && localProgress) {
+                try {
+                  const parsedCloud = JSON.parse(cloudBook.lastReadProgress);
+                  const cloudIdx = parsedCloud.chapterIndex ?? 0;
+                  const localIdx = localProgress.chapterIndex ?? 0;
+                  const cloudPct = parsedCloud.percentage ?? 0;
+                  const localPct = localProgress.percentage ?? 0;
+
+                  if (cloudIdx > localIdx || (cloudIdx === localIdx && cloudPct > localPct)) {
+                    // 云端确实走得更远，更新本地
+                    await db.transaction("rw", [db.books, db.progress], async () => {
+                      const oldProgress = await db.progress.get(localBook.id);
+                      if (oldProgress) {
+                        const key = `reader-progress-rollback-${localBook.id}`;
+                        let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+                        try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+                        if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+                          list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+                          localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+                        }
+                      }
+                      await db.progress.put(parsedCloud);
+                    });
+                  } else if (localIdx > cloudIdx || (localIdx === cloudIdx && localPct > cloudPct)) {
+                    // 本地更远，反向覆盖上报云端
+                    const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
+                    const bookWithProgress = { ...localBook, lastReadProgress: JSON.stringify(localProgress) };
+                    await fetch(apiUrl("/books/import"), {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+                    });
+                  }
+                } catch (e) {
+                  console.error("时间戳相等时对撞对齐解析失败:", e);
+                }
+              }
+            }
+          }
+          completedSteps++;
+          updateProgress(completedSteps, 0);
+          await new Promise((r) => setTimeout(r, 20));
+        }
+      }
+
+      setSyncProgress(100);
+      setSyncStepText(strings.sync.syncSuccess);
+      setToastMsg(strings.sync.syncSuccess);
+
+      const finalRes = await fetch(apiUrl("/books"));
+      if (finalRes.ok) {
+        const finalData = await finalRes.json();
+        setCloudBooks(finalData);
+      }
+    } catch (e) {
+      console.error("一键双向同步过程遭遇异常:", e);
+      setToastMsg(strings.sync.syncFailed);
+    } finally {
+      syncMutexRef.current = false;
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncProgress(0);
+        setSyncStepText("");
+      }, 500);
+    }
+  };
+
+  // 单书快捷备份 (细粒度隔离进度状态)
+  const handleSingleUpload = async (book: Book) => {
+    if (isSyncing || syncingBookId || !isOnline || syncMutexRef.current) return;
+    syncMutexRef.current = true;
+    setSyncingBookId(book.id);
+    setIsSyncing(true);
+    setBookSyncStates((prev) => ({
+      ...prev,
+      [book.id]: { progress: 0, stepText: "正在打包本地卷阁..." },
+    }));
+
+    try {
+      // 记入活跃持久化上传任务，防刷新和崩溃
+      const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+      activeTasks[book.id] = "upload";
+      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+      const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
+      const progress = await db.progress.get(book.id);
+      const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
+      const bookWithProgress = { ...book, lastReadProgress };
+
+      for (let p = 0; p <= 100; p += 20) {
+        setBookSyncStates((prev) => ({
+          ...prev,
+          [book.id]: { progress: p, stepText: `备份中... ${p}%` },
+        }));
+        await new Promise((r) => setTimeout(r, 30));
+      }
+
+      const res = await fetch(apiUrl("/books/import"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+      });
+
+      if (res.ok) {
+        setToastMsg(`🍃 「${book.title}」云端备份成功！`);
+        await fetchCloudBooks();
+      } else {
+        throw new Error();
+      }
+    } catch {
+      setToastMsg("💡 备份失败，请检查网络或后端服务。");
+    } finally {
+      // 任务完结，清除落盘记录
+      const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+      delete nextTasks[book.id];
+      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+
+      syncMutexRef.current = false;
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncingBookId(null);
+        setBookSyncStates((prev) => {
+          const next = { ...prev };
+          delete next[book.id];
+          return next;
+        });
+      }, 300);
+    }
+  };
+
+  // 单书快捷拉取 (物理还原进度快照)
+  const handleSingleDownload = async (book: Book & { lastReadProgress?: string }) => {
+    if (isSyncing || syncingBookId || !isOnline || syncMutexRef.current) return;
+    syncMutexRef.current = true;
+    setSyncingBookId(book.id);
+    setIsSyncing(true);
+    setBookSyncStates((prev) => ({
+      ...prev,
+      [book.id]: { progress: 0, stepText: "正在连接云阁拉取..." },
+    }));
+
+    try {
+      // 记入活跃持久化下载任务
+      const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+      activeTasks[book.id] = "download";
+      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+      for (let p = 0; p <= 40; p += 20) {
+        setBookSyncStates((prev) => ({
+          ...prev,
+          [book.id]: { progress: p, stepText: `拉取中... ${p}%` },
+        }));
+        await new Promise((r) => setTimeout(r, 40));
+      }
+
+      const res = await fetch(apiUrl(`/books/${book.id}/chapters`));
+      if (res.ok) {
+        const chapters = await res.json();
+        for (let p = 40; p <= 100; p += 20) {
+          setBookSyncStates((prev) => ({
+            ...prev,
+            [book.id]: { progress: p, stepText: `落库中... ${p}%` },
+          }));
+          await new Promise((r) => setTimeout(r, 30));
+        }
+
+        await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+          // 在覆盖本地进度前，做 L2 备份
+          const oldProgress = await db.progress.get(book.id);
+          if (oldProgress) {
+            const key = `reader-progress-rollback-${book.id}`;
+            let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+            try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+            if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+              list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+              localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+            }
+          }
+
+          await db.books.put(book);
+          for (const chap of chapters) {
+            await db.chapters.put(chap);
+          }
+          if (book.lastReadProgress) {
+            try {
+              const parsedProgress = JSON.parse(book.lastReadProgress);
+              await db.progress.put(parsedProgress);
+            } catch (e) {
+              console.error("解析进度快照失败:", e);
+            }
+          }
+        });
+
+        setToastMsg(`🍃 「${book.title}」已成功拉取至本地书阁！`);
+        await fetchCloudBooks();
+      } else {
+        throw new Error();
+      }
+    } catch {
+      setToastMsg("💡 拉取失败，该书籍可能在云端已被清除。");
+    } finally {
+      // 任务完结，清除落盘记录
+      const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+      delete nextTasks[book.id];
+      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+
+      syncMutexRef.current = false;
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncingBookId(null);
+        setBookSyncStates((prev) => {
+          const next = { ...prev };
+          delete next[book.id];
+          return next;
+        });
+      }, 300);
+    }
+  };
+
+  // 单书物理空间释放 (Space Offloading 与等价行级 Integrity 校验)
+  const handleSpaceOffload = async (book: Book) => {
+    if (isSyncing || syncingBookId) return;
+
+    // 1. 物理安全行级校验 Integrity Grid
+    const cloudBook = cloudBooks.find((cb) => cb.id === book.id);
+    if (!cloudBook) {
+      setToastMsg(strings.sync.offloadNoCloudError);
+      return;
+    }
+
+    if (cloudBook.chapterCount !== book.chapterCount) {
+      const errorMsg = strings.sync.offloadCountMismatchError
+        .replace("{cloudCount}", String(cloudBook.chapterCount))
+        .replace("{localCount}", String(book.chapterCount));
+      setToastMsg(errorMsg);
+      return;
+    }
+
+    if (!confirm(strings.sync.offloadConfirm.replace("{title}", book.title))) return;
+
+    try {
+      await db.transaction("rw", [db.chapters], async () => {
+        await db.chapters.where("bookId").equals(book.id).delete();
+      });
+      setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
+      await fetchCloudBooks(); // 重新拉取对齐，由于本地 chapters 为空而云端有，书卡在 mergedBooks 会自动转为 Cloud Only 磨砂状态
+    } catch (err) {
+      console.error("释放本地空间失败:", err);
+      setToastMsg("💡 物理释放空间失败，存储数据库繁忙。");
     }
   };
 
@@ -113,6 +603,72 @@ export function LibraryDefault() {
       return getBookTimestamp(b) - getBookTimestamp(a);
     });
   }, [sortBy]);
+
+  // 冷启动自愈：1. 静默自动同步大盘 2. 持久化未完结单书同步任务自愈
+  const hasAutoSyncedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOnline) return;
+
+    const runAutoStartupSyncAndRecovery = async () => {
+      // 避免重复运行
+      if (hasAutoSyncedRef.current) return;
+      hasAutoSyncedRef.current = true;
+
+      // 1. 冷启动自动双向对撞同步
+      if (autoSyncOnStartup && !isSyncing && !syncMutexRef.current) {
+        console.log("[Sync Self-healing] 触发冷启动静默自动同步...");
+        void handleDualSync(); // 异步静默运行，无需阻塞，handleDualSync 内已有 syncMutexRef 保护
+      }
+
+      // 2. 持久化任务重连校验与自愈
+      try {
+        const activeTasksVal = localStorage.getItem("reader-active-sync-tasks");
+        if (activeTasksVal) {
+          const activeTasks = JSON.parse(activeTasksVal) as Record<string, "upload" | "download">;
+          const localBooks = await db.books.toArray();
+          
+          for (const [bookId, action] of Object.entries(activeTasks)) {
+            // 如果已经在同步该书，安全跳过
+            if (syncingBookId === bookId) continue;
+
+            const book = localBooks.find(b => b.id === bookId);
+            if (book) {
+              console.log(`[Sync Self-healing] 检测到未完结持久任务「${book.title}」(${action})，启动断点自愈重连...`);
+              if (action === "upload") {
+                void handleSingleUpload(book);
+              } else if (action === "download") {
+                void handleSingleDownload(book);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("恢复持久化活跃同步任务失败:", e);
+      }
+    };
+
+    // 在本地书籍加载完或准备妥当后运行
+    if (books !== undefined) {
+      const timer = setTimeout(runAutoStartupSyncAndRecovery, 200);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, books, autoSyncOnStartup]);
+
+  // 所有融合后的书籍（本地 + 仅云端存在）
+  const mergedBooks = (() => {
+    const local = books || [];
+    const cloudOnly = cloudBooks.filter(
+      (cb) => !local.some((lb) => lb.id === cb.id)
+    );
+    return [...local, ...cloudOnly].sort((a, b) => {
+      if (sortBy === "title") {
+        return a.title.localeCompare(b.title);
+      }
+      return getBookTimestamp(b) - getBookTimestamp(a);
+    });
+  })();
 
   const progressByBookId = useLiveQuery(async () => {
     const allProgress = await db.progress.toArray();
@@ -146,6 +702,8 @@ export function LibraryDefault() {
       } catch (e) {
         console.error("Backend delete failed", e);
       }
+      // 删除后拉取刷新云端对齐
+      fetchCloudBooks();
     } catch (e) {
       console.error(`Delete error: ${(e as Error).message}`);
     }
@@ -376,6 +934,130 @@ export function LibraryDefault() {
         </section>
       )}
 
+      {/* 🔮 极奢国风磨砂「云同步管理中心」 */}
+      <section className="relative overflow-hidden rounded-[18px] border border-[#E4D7C2]/70 bg-gradient-to-br from-white/70 to-[#FAF5EB]/50 backdrop-blur-md p-5 shadow-[0_8px_32px_rgba(80,65,45,0.03)] mt-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgba(95,125,82,0.08)] text-lg text-[var(--ui-accent)]">
+              {isSyncing ? "🌀" : isOnline ? "☁️" : "🌧️"}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[var(--ui-text)] flex items-center gap-2">
+                <span>{strings.sync.title}</span>
+                {isOnline ? (
+                  <span className="px-2 py-0.5 rounded bg-[rgba(95,125,82,0.08)] text-[10px] font-bold text-[var(--ui-accent)] uppercase">
+                    {strings.shelf.syncingCloud}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded bg-red-50 text-[10px] font-bold text-red-500 uppercase">
+                    已离线
+                  </span>
+                )}
+              </h3>
+              <p className="mt-0.5 text-xs text-[var(--ui-muted)] leading-relaxed">
+                {isSyncing && !syncingBookId
+                  ? syncStepText
+                  : isOnline
+                  ? "发现本地与云端存在数据微澜，建议立即双向同步"
+                  : strings.sync.offlineDesc}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 shrink-0">
+            {isOnline && (
+              <button
+                onClick={handleDualSync}
+                disabled={isSyncing}
+                className="ui-focus-ring w-full sm:w-auto rounded-full bg-[var(--ui-accent)] px-5 py-2 text-xs font-bold text-white transition-all hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {isSyncing && !syncingBookId ? "同步中..." : strings.sync.syncBtn}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="relative z-10 flex flex-col items-start">
+          <button
+            onClick={() => setShowSyncConfig(!showSyncConfig)}
+            className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[var(--ui-accent)] hover:underline"
+          >
+            <span>⚙️ {strings.sync.syncSettingsTitle}</span>
+            <span>{showSyncConfig ? "▲" : "▼"}</span>
+          </button>
+        </div>
+
+        {showSyncConfig && (
+          <div className="mt-4 pt-4 border-t border-[rgba(80,65,45,0.08)] space-y-4 animate-fade-in relative z-10">
+            {/* 启动自动云同步 */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <label className="text-xs font-bold text-[var(--ui-text)] flex items-center gap-1.5">
+                  <span>🍃</span> {strings.sync.autoSyncStartupLabel}
+                </label>
+                <p className="text-[11px] text-[var(--ui-muted)] leading-relaxed mt-0.5">
+                  {strings.sync.autoSyncStartupDesc}
+                </p>
+              </div>
+              <button
+                onClick={() => setAutoSyncOnStartup(!autoSyncOnStartup)}
+                disabled={!isOnline}
+                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  autoSyncOnStartup && isOnline ? "bg-[var(--ui-accent)]" : "bg-gray-200"
+                } ${!isOnline ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    autoSyncOnStartup && isOnline ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 阅读翻页自动备份 */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <label className="text-xs font-bold text-[var(--ui-text)] flex items-center gap-1.5">
+                  <span>📖</span> {strings.sync.autoSyncProgressLabel}
+                </label>
+                <p className="text-[11px] text-[var(--ui-muted)] leading-relaxed mt-0.5">
+                  {strings.sync.autoSyncProgressDesc}
+                </p>
+              </div>
+              <button
+                onClick={() => setAutoSyncProgressOnReading(!autoSyncProgressOnReading)}
+                disabled={!isOnline}
+                className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  autoSyncProgressOnReading && isOnline ? "bg-[var(--ui-accent)]" : "bg-gray-200"
+                } ${!isOnline ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    autoSyncProgressOnReading && isOnline ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 300ms 黄金阻尼微百分比进度加载条 */}
+        {isSyncing && !syncingBookId && (
+          <div className="mt-4 pt-3 border-t border-[rgba(80,65,45,0.06)] relative z-10">
+            <div className="flex justify-between text-[11px] font-bold text-[var(--ui-quiet)] mb-1.5">
+              <span>{syncStepText}</span>
+              <span>{syncProgress}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] via-[#81a073] to-[#9a6a3a] transition-[width] duration-300 ease-out"
+                style={{ width: `${syncProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </section>
+
       <section className="mt-7">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -458,14 +1140,29 @@ export function LibraryDefault() {
             >
               ＋ 导入书籍
             </button>
-            {books.map((book) => {
+            {mergedBooks.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
+
+              const isLocal = (books || []).some((lb) => lb.id === book.id);
+              const isCloud = cloudBooks.some((cb) => cb.id === book.id);
+              const isLocalOnly = isLocal && !isCloud;
+              const isCloudOnly = !isLocal && isCloud;
+              const isSynced = isLocal && isCloud;
+
               return (
                 <div
                   key={book.id}
-                  onClick={() => router.push(`/reader/${book.id}`)}
-                  className="group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50"
+                  onClick={() => {
+                    if (isCloudOnly) {
+                      handleSingleDownload(book);
+                    } else {
+                      router.push(`/reader/${book.id}`);
+                    }
+                  }}
+                  className={`group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50 ${
+                    isCloudOnly ? "opacity-75 backdrop-blur-[0.5px]" : ""
+                  }`}
                 >
                   {/* 左侧动态高亮天青原点/指示点 */}
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--ui-accent)] opacity-0 scale-50 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100" />
@@ -483,10 +1180,28 @@ export function LibraryDefault() {
                     </div>
                     
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-reading-title text-[15px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
-                        {book.title}
-                      </h3>
-                      <p className="mt-1.5 flex items-center gap-2 text-xs text-[var(--ui-muted)]">
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        <h3 className="truncate font-reading-title text-[15px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
+                          {book.title}
+                        </h3>
+                        {/* 状态徽标 */}
+                        {isLocalOnly && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FAF5EB] text-[#8C6239] border border-[#E4D7C2] whitespace-nowrap">
+                            {strings.sync.localOnly}
+                          </span>
+                        )}
+                        {isCloudOnly && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-100 whitespace-nowrap animate-pulse-slow">
+                            {strings.sync.cloudOnly}
+                          </span>
+                        )}
+                        {isSynced && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#F1F6F0] text-[#4C664B] border border-[#D5E5D3] whitespace-nowrap">
+                            {strings.sync.bothSynced} ☁️
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 flex items-center gap-2 text-xs text-[var(--ui-muted)]">
                         <span>{book.author || "本地书籍"}</span>
                         <span className="text-[var(--ui-quiet)]">•</span>
                         <span className="uppercase text-[10px] font-bold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-1.5 py-0.5 rounded">
@@ -496,32 +1211,94 @@ export function LibraryDefault() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 shrink-0 pr-8 sm:pr-10">
+                  <div className="flex items-center gap-4 shrink-0 pr-8 sm:pr-10 relative z-20">
+                    {/* 单书备份/拉取/释放 快捷控制按钮 */}
+                    {isLocalOnly && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isOnline) handleSingleUpload(book);
+                        }}
+                        disabled={!isOnline || isSyncing}
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shadow-sm ${
+                          isOnline
+                            ? "bg-[var(--ui-accent-soft)] hover:bg-[var(--ui-accent)] hover:text-white text-[var(--ui-accent)]"
+                            : "bg-gray-100 text-gray-400 opacity-40 pointer-events-none"
+                        }`}
+                        title={isOnline ? "" : "🌧️ 离线暂存"}
+                      >
+                        {syncingBookId === book.id ? "备份中" : isOnline ? strings.sync.backupBtn : "🌧️ 暂存"}
+                      </button>
+                    )}
+                    {isCloudOnly && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isOnline) handleSingleDownload(book);
+                        }}
+                        disabled={!isOnline || isSyncing}
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all shadow-sm ${
+                          isOnline
+                            ? "bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600"
+                            : "bg-gray-100 text-gray-400 opacity-40 pointer-events-none"
+                        }`}
+                        title={isOnline ? "" : "🌧️ 待连网下载"}
+                      >
+                        {syncingBookId === book.id ? "拉取中" : isOnline ? strings.sync.downloadBtn : "🌧️ 待连"}
+                      </button>
+                    )}
+                    {isSynced && syncingBookId !== book.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSpaceOffload(book);
+                        }}
+                        className="px-2.5 py-1 rounded-full bg-amber-50 hover:bg-[#8C6239] hover:text-white text-xs font-bold text-[#8C6239] transition-all border border-amber-200 shadow-sm"
+                        title="释放本地物理章节，保留云端书架索引"
+                      >
+                        {strings.sync.offloadBtn}
+                      </button>
+                    )}
+
                     {/* 极细微型进度条与百分比 */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-20 h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative hidden sm:block">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width]"
-                          style={{ width: `${percent}%` }}
-                        />
+                    {!isCloudOnly && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative hidden sm:block">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width]"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-bold text-[var(--ui-quiet)] w-10 text-right">
+                          {percent}%
+                        </span>
                       </div>
-                      <span className="text-[11px] font-bold text-[var(--ui-quiet)] w-10 text-right">
-                        {percent}%
-                      </span>
-                    </div>
+                    )}
 
                     {/* 悬展删除操作：PC 端 Hover 淡出，移动端小屏常驻 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(book.id, book.title);
-                      }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
-                      title={strings.shelf.delete}
-                    >
-                      ×
-                    </button>
+                    {isLocal && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(book.id, book.title);
+                        }}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                        title={strings.shelf.delete}
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
+
+                  {/* 单书同步微型黄金阻尼进度条 */}
+                  {syncingBookId === book.id && (
+                    <div className="absolute bottom-0 inset-x-0 h-1 bg-[rgba(80,65,45,0.06)] overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width] duration-300 ease-out"
+                        style={{ width: `${bookSyncStates[book.id]?.progress || 0}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -543,30 +1320,64 @@ export function LibraryDefault() {
               <span className="mb-2 text-2xl font-light">＋</span>
               <span className="text-sm font-semibold">导入书籍</span>
             </button>
-            {books.map((book) => {
+            {mergedBooks.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
+
+              const isLocal = (books || []).some((lb) => lb.id === book.id);
+              const isCloud = cloudBooks.some((cb) => cb.id === book.id);
+              const isLocalOnly = isLocal && !isCloud;
+              const isCloudOnly = !isLocal && isCloud;
+              const isSynced = isLocal && isCloud;
+
               return (
                 <div
                   key={book.id}
-                  onClick={() => router.push(`/reader/${book.id}`)}
+                  onClick={() => {
+                    if (isCloudOnly) {
+                      handleSingleDownload(book);
+                    } else {
+                      router.push(`/reader/${book.id}`);
+                    }
+                  }}
                   className={`group relative overflow-hidden cursor-pointer ui-card flex flex-col justify-between rounded-[18px] p-4 physics-spring hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,65,45,0.07)] ${
                     viewMode === "compact" ? "min-h-[110px]" : "min-h-[148px]"
-                  }`}
+                  } ${isCloudOnly ? "opacity-75 backdrop-blur-[0.5px]" : ""}`}
                 >
                   {/* Delete button: visible on mobile, hover-fade-in on desktop */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(book.id, book.title);
-                    }}
-                    className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
-                    title={strings.shelf.delete}
-                  >
-                    ×
-                  </button>
+                  {isLocal && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(book.id, book.title);
+                      }}
+                      className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                      title={strings.shelf.delete}
+                    >
+                      ×
+                    </button>
+                  )}
 
-                  <div className="flex gap-4">
+                  {/* 状态徽标 (右上角挂载，左移以让出删除按钮空间) */}
+                  <div className="absolute left-2 top-2 z-20 flex gap-1">
+                    {isLocalOnly && (
+                      <span className="rounded bg-[#FAF5EB] border border-[#E4D7C2] px-1.5 py-0.5 text-[9px] font-bold text-[#8C6239] shadow-sm">
+                        {strings.sync.localOnly}
+                      </span>
+                    )}
+                    {isCloudOnly && (
+                      <span className="rounded bg-blue-50 border border-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 shadow-sm animate-pulse-slow">
+                        {strings.sync.cloudOnly}
+                      </span>
+                    )}
+                    {isSynced && (
+                      <span className="rounded bg-[#F1F6F0] border border-[#D5E5D3] px-1.5 py-0.5 text-[9px] font-bold text-[#4C664B] shadow-sm">
+                        {strings.sync.bothSynced} ☁️
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4 mt-6">
                     {viewMode === "cover" && (
                       <div className="relative shrink-0 select-none">
                         {/* 仿真阴影叠层 */}
@@ -586,33 +1397,86 @@ export function LibraryDefault() {
                       <p className="mt-1 truncate text-xs text-[var(--ui-muted)]">
                         {book.author || "本地书籍"}
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-1.5 items-center">
                         <span className="rounded bg-[var(--ui-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ui-accent)]">
                           {book.format}
                         </span>
-                        <span className="rounded bg-[rgba(80,65,45,0.05)] px-2 py-0.5 text-[10px] text-[var(--ui-muted)]">
-                          {strings.reader.chapterCount.replace(
-                            "{count}",
-                            book.chapterCount?.toString() || "0",
-                          )}
-                        </span>
+                        
+                        {isLocalOnly && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isOnline) handleSingleUpload(book);
+                            }}
+                            disabled={!isOnline || isSyncing}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all border ${
+                              isOnline
+                                ? "bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white text-[#8C6239] border-[#E4D7C2]"
+                                : "bg-gray-100 text-gray-400 border-gray-200 opacity-40 pointer-events-none"
+                            }`}
+                            title={isOnline ? "" : "🌧️ 离线暂存"}
+                          >
+                            {syncingBookId === book.id ? "备份中" : isOnline ? strings.sync.backupBtn : "🌧️ 暂存"}
+                          </button>
+                        )}
+                        {isCloudOnly && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isOnline) handleSingleDownload(book);
+                            }}
+                            disabled={!isOnline || isSyncing}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all border ${
+                              isOnline
+                                ? "bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 border-blue-100"
+                                : "bg-gray-100 text-gray-400 border-gray-200 opacity-40 pointer-events-none"
+                            }`}
+                            title={isOnline ? "" : "🌧️ 待连网下载"}
+                          >
+                            {syncingBookId === book.id ? "拉取中" : isOnline ? strings.sync.downloadBtn : "🌧️ 待连"}
+                          </button>
+                        )}
+                        {isSynced && syncingBookId !== book.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSpaceOffload(book);
+                            }}
+                            className="rounded bg-amber-50 hover:bg-[#8C6239] hover:text-white px-2 py-0.5 text-[10px] font-semibold text-[#8C6239] transition-all border border-amber-200"
+                            title="释放本地章节，保留云阁索引"
+                          >
+                            {strings.sync.offloadBtn}
+                          </button>
+                        )}
                       </div>
                       
                       {/* 精美细线进度条 */}
-                      <div className="mt-4">
-                        <div className="h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width]"
-                            style={{ width: `${percent}%` }}
-                          />
+                      {!isCloudOnly && (
+                        <div className="mt-4">
+                          <div className="h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width]"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <p className="mt-1.5 text-[10px] text-[var(--ui-quiet)] font-medium">
-                        {getChapterSummary(progress)} · 已读 {percent}%
-                        {book.lastReadAt && ` · ${getFriendlyRelativeTime(book.lastReadAt)}`}
+                        {isCloudOnly ? "云端新书 · 点击拉取" : `${getChapterSummary(progress)} · 已读 ${percent}%`}
+                        {book.lastReadAt && !isCloudOnly && ` · ${getFriendlyRelativeTime(book.lastReadAt)}`}
                       </p>
                     </div>
                   </div>
+
+                  {/* 单书同步微型进度条 */}
+                  {syncingBookId === book.id && (
+                    <div className="absolute bottom-0 inset-x-0 h-1 bg-[rgba(80,65,45,0.06)] overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width] duration-300 ease-out"
+                        style={{ width: `${bookSyncStates[book.id]?.progress || 0}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

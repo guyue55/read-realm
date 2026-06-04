@@ -22,4 +22,11 @@ export class ChapterRepository {
 
     return results[0] || null;
   }
+
+  async findByBookId(bookId: string) {
+    return this.db
+      .select()
+      .from(schema.chapters)
+      .where(eq(schema.chapters.bookId, bookId));
+  }
 }

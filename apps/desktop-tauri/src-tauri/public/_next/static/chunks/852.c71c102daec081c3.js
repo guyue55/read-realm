@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[852],{8852:function(e,n,t){t.r(n),t.d(n,{default:function(){return c},generateStaticParams:function(){return a}});var r=t(7451),u=t(9004);function a(){return[{bookId:"placeholder"}]}function c(e){let{params:n}=e;return(0,r.jsx)(u.default,{params:n})}}}]);

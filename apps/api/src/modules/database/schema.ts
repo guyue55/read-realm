@@ -16,6 +16,7 @@ export const books = sqliteTable('books', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
   lastReadAt: text('last_read_at'),
+  lastReadProgress: text('last_read_progress'),
 });
 
 export const chapters = sqliteTable('chapters', {

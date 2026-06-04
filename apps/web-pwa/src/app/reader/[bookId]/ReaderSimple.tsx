@@ -66,6 +66,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     toast,
     updateAutoFlipAtBottom,
     autoFlipCountdown,
+    rollbackProgress,
   } = useReader(bookId);
 
   const handleReaderClick = useCallback(
@@ -408,6 +409,20 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               {Math.round(readingProgress)}% · {(chapter?.index || 0) + 1} /{" "}
               {toc.length} 章
             </span>
+          </div>
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => {
+                void rollbackProgress();
+              }}
+              className={`w-full py-2.5 rounded-full text-xs font-semibold tracking-wider transition-all active:scale-[0.98] border ${
+                isDark
+                  ? "bg-[#678055]/20 hover:bg-[#678055]/30 border-[#678055]/40 text-[#EEF2E9]"
+                  : "bg-[#678055] hover:bg-[#556b46] border-[#678055] text-white shadow-[0_4px_12px_rgba(103,128,85,0.2)]"
+              }`}
+            >
+              {strings.sync.progressRollbackBtn}
+            </button>
           </div>
         </div>
       </div>

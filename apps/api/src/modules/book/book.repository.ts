@@ -22,6 +22,11 @@ export class BookRepository {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { tags, ...bookData } = book;
 
+      // 1. Clean delete existing chapters & book under same ID to guarantee idempotency and support overwrite update
+      await tx.delete(schema.chapters).where(eq(schema.chapters.bookId, book.id));
+      await tx.delete(schema.books).where(eq(schema.books.id, book.id));
+
+      // 2. Perform insert of clean new books and chapter collection
       await tx.insert(schema.books).values(bookData);
 
       if (chapters.length > 0) {
@@ -70,5 +75,9 @@ export class BookRepository {
         }
       }
     }
+  }
+
+  async getAllBooks() {
+    return this.db.select().from(schema.books);
   }
 }
