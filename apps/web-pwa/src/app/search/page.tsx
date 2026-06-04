@@ -10,8 +10,10 @@ import type { Book } from "@reader/shared-types";
 import { AppShell } from "@/components/AppShell";
 import { BookCard } from "@/components/BookCard";
 import { BookCover } from "@/components/BookCover";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export default function SearchPage() {
+  const isOnline = useOnlineStatus();
   const router = useVirtualRouter();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<string>("综合");
@@ -122,6 +124,12 @@ export default function SearchPage() {
     const queryToSearch = overrideQuery !== undefined ? overrideQuery : searchQuery;
     if (!queryToSearch.trim()) return;
 
+    if (!isOnline) {
+      setStatus(strings.network.offlineSearchHint);
+      setIsSearching(false);
+      return;
+    }
+
     setIsSearching(true);
     setStatus(strings.shelf.searchingGlobal);
     try {
@@ -159,6 +167,11 @@ export default function SearchPage() {
 
   // 核心功能：一键高并发异步拉取该书籍在云端中存储的所有章节，同步写入本地 IndexedDB
   const handleImportBook = async (book: Book) => {
+    if (!isOnline) {
+      setToastMsg(strings.network.offlineDownloadHint);
+      return;
+    }
+
     if (importingBookIds.has(book.id)) return;
 
     setImportingBookIds((prev) => {

@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fbook\u002F[bookId]","\u002Fimport\u002Fpreview\u002F[taskId]","\u002Freader\u002F[bookId]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()

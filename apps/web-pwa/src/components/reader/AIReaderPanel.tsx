@@ -76,11 +76,11 @@ export function AIReaderPanel({
           ) : (
             <div className="text-sm">
               {aiSummary ? (
-                <div
-                  className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm`}
-                >
-                  {aiSummary}
-                </div>
+                <SummaryContent
+                  text={aiSummary}
+                  isAiLoading={isAiLoading}
+                  bubbleBg={bubbleBg}
+                />
               ) : (
                 <p className="text-center py-8 text-[#6F665B] italic">
                   {strings.reader.aiPrompt}
@@ -142,3 +142,71 @@ export function AIReaderPanel({
     </div>
   );
 }
+
+interface SummaryContentProps {
+  text: string;
+  isAiLoading: boolean;
+  bubbleBg: string;
+}
+
+function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
+  const [displayedText, setDisplayedText] = React.useState("");
+  const [isTyping, setIsTyping] = React.useState(false);
+  const prevLoadingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    const wasLoading = prevLoadingRef.current;
+    prevLoadingRef.current = isAiLoading;
+
+    if (isAiLoading) {
+      setDisplayedText("");
+      setIsTyping(false);
+      return;
+    }
+
+    if (!text) {
+      setDisplayedText("");
+      setIsTyping(false);
+      return;
+    }
+
+    // 智能识别：若是刚刚结束 Loading，说明是初次 LLM 生成，启动 20ms 紧凑逐字打字打印
+    if (wasLoading) {
+      setIsTyping(true);
+      let currentIndex = 0;
+      setDisplayedText("");
+
+      const interval = setInterval(() => {
+        setDisplayedText((prev) => {
+          if (currentIndex < text.length) {
+            const nextChar = text.charAt(currentIndex);
+            currentIndex++;
+            return prev + nextChar;
+          } else {
+            clearInterval(interval);
+            setIsTyping(false);
+            return prev;
+          }
+        });
+      }, 20);
+
+      return () => clearInterval(interval);
+    } else {
+      // 缓存瞬间直出，跳过打字动效，100% 纯净高亮
+      setDisplayedText(text);
+      setIsTyping(false);
+    }
+  }, [text, isAiLoading]);
+
+  return (
+    <div
+      className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
+    >
+      {displayedText}
+      {isTyping && (
+        <span className="inline-block ml-1 w-1.5 h-3.5 bg-[#9A6A3A] animate-pulse" />
+      )}
+    </div>
+  );
+}
+

@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useRef } from "react";
 import { useRouteStore } from "@/components/RouteProvider";
 import { useVirtualRouter, viewScrollMemory } from "@/lib/route-store";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export interface AppShellProps {
   title: React.ReactNode;
@@ -116,6 +117,7 @@ export function AppShell({
   const activeTaskId = routeStore?.activeTaskId || "";
   const router = useVirtualRouter();
   const mainRef = useRef<HTMLElement | null>(null);
+  const isOnline = useOnlineStatus();
 
   // 📝 融汇生成独一无二之滚动空间标识，以隔绝不同页面与多本书籍详情、导入预览的滚动交叉污染
   let scrollKey = currentView as string;
@@ -207,7 +209,18 @@ export function AppShell({
               <p className="truncate text-xs font-semibold text-[var(--ui-text)]">
                 漫游的夜
               </p>
-              <p className="text-[10px] text-[var(--ui-quiet)]">本地书架</p>
+              <p className="text-[10px] text-[var(--ui-quiet)] flex items-center gap-1">
+                <span>本地书架</span>
+                {!isOnline && (
+                  <>
+                    <span className="opacity-50">·</span>
+                    <span className="text-[#9A6A3A] font-bold flex items-center gap-0.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#9A6A3A] animate-pulse" />
+                      离线
+                    </span>
+                  </>
+                )}
+              </p>
             </div>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(80,65,45,0.08)]">
@@ -228,8 +241,13 @@ export function AppShell({
                 <LeafMark />
               </button>
               <div className="min-w-0">
-                <h1 className="truncate text-[22px] font-bold leading-tight tracking-normal text-[var(--ui-text)]">
-                  {title}
+                <h1 className="truncate text-[22px] font-bold leading-tight tracking-normal text-[var(--ui-text)] flex items-center gap-2">
+                  <span>{title}</span>
+                  {!isOnline && (
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-[#FAF4EB] border border-[#E5C9A6]/50 text-[#8C6239] tracking-wider animate-fade-in shrink-0">
+                      离线模式
+                    </span>
+                  )}
                 </h1>
                 {subtitle && (
                   <p className="mt-0.5 truncate text-xs text-[var(--ui-muted)]">

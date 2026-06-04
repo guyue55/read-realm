@@ -172,3 +172,52 @@ export function createId(): string {
   }
   return bytesToUuid(bytes);
 }
+
+/**
+ * 跨平台标准的异步 HMAC-SHA256 签名生成器 (AISigKey)
+ * 100% 兼容现代浏览器环境与 Node.js 16+ 环境，依靠 SubtleCrypto 原生能力提供纳秒级无阻塞加密，
+ * 彻底避免多余第三方依赖，将内容、模型与 Prompt 物理绑定。
+ */
+export async function generateAiSigKeyAsync(
+  sourceHash: string,
+  model: string,
+  promptVersion: string,
+): Promise<string> {
+  const payload = `${sourceHash}:${model}:${promptVersion}`;
+  const encoder = new TextEncoder();
+  const dataBytes = encoder.encode(payload);
+  const secretKeyBytes = encoder.encode("read-realm-secret-salt-2026");
+
+  // 融合浏览器端 (window) 与服务端 (globalThis) 的 SubtleCrypto 加密上下文
+  const cryptoObj = typeof window !== "undefined"
+    ? (window.crypto || (window as unknown as { msCrypto?: Crypto }).msCrypto)
+    : (typeof globalThis !== "undefined" ? (globalThis as unknown as { crypto?: Crypto }).crypto : null);
+
+  if (!cryptoObj || !cryptoObj.subtle) {
+    // 降级兜底：在未支持 Subtle 极度特殊的旧原生套壳中拼接退避
+    return `fallback-${sourceHash}-${model}-${promptVersion}`;
+  }
+
+  try {
+    const key = await cryptoObj.subtle.importKey(
+      "raw",
+      secretKeyBytes,
+      { name: "HMAC", hash: { name: "SHA-256" } },
+      false,
+      ["sign"]
+    );
+
+    const signature = await cryptoObj.subtle.sign(
+      "HMAC",
+      key,
+      dataBytes
+    );
+
+    const hashArray = Array.from(new Uint8Array(signature));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch (err) {
+    console.warn("[Crypto] SubtleCrypto HMAC 运算失败，启动降级签名:", err);
+    return `fallback-${sourceHash}-${model}-${promptVersion}`;
+  }
+}
+

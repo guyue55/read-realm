@@ -1,5 +1,6 @@
 import React from "react";
 import { strings } from "@/lib/i18n";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export interface ReaderTopBarProps {
   title: string;
@@ -34,6 +35,7 @@ export function ReaderTopBar({
   currentChapterIndex,
   totalChapters,
 }: ReaderTopBarProps) {
+  const isOnline = useOnlineStatus();
   // Mobile Top Bar (Overlay)
   if (!isDesktop) {
     const bgClass = isDark
@@ -61,9 +63,14 @@ export function ReaderTopBar({
         </button>
         <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2">
           <span
-            className={`truncate w-full text-sm font-bold text-center ${textColor}`}
+            className={`truncate w-full text-sm font-bold text-center flex items-center justify-center gap-1.5 ${textColor}`}
           >
-            {title}
+            <span>{title}</span>
+            {!isOnline && (
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-[#FAF4EB]/90 border border-[#E5C9A6]/40 text-[#8C6239] rounded scale-90 select-none leading-none">
+                离线
+              </span>
+            )}
           </span>
           {typeof progress === "number" && (
             <span className={`text-[10px] font-semibold tracking-wider opacity-60 ${textColor}`}>
@@ -121,6 +128,11 @@ export function ReaderTopBar({
                 <span className="opacity-60 font-normal">({currentChapterIndex + 1}/{totalChapters})</span>
               )}
             </div>
+          )}
+          {!isOnline && (
+            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#FAF4EB] border border-[#E5C9A6]/50 text-[#8C6239] uppercase tracking-wider select-none shrink-0 leading-none">
+              离线
+            </span>
           )}
         </div>
 

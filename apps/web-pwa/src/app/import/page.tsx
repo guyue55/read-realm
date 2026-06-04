@@ -8,8 +8,11 @@ import { useVirtualRouter } from "@/lib/route-store";
 import { AppShell } from "@/components/AppShell";
 import { apiUrl } from "@/lib/api";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { strings } from "@/lib/i18n";
 
 export default function ImportPage() {
+  const isOnline = useOnlineStatus();
   const [status, setStatus] = useState<string>("等待导入");
   const activeTaskIdRef = useRef<string | null>(null);
 
@@ -396,8 +399,14 @@ export default function ImportPage() {
                 <h2 className="text-xl font-bold text-[var(--ui-text)]">
                   {isDragActive ? "松开鼠标即可解析并导入书籍" : "拖拽文件到此处，或点击选择文件"}
                 </h2>
-                <p className="mt-2 text-sm text-[var(--ui-muted)]">
-                  支持 TXT、EPUB 格式，解析后先进入章节预览页
+                <p className="mt-2 text-sm text-[var(--ui-muted)] flex flex-col items-center gap-1.5">
+                  <span>支持 TXT、EPUB 格式，解析后先进入章节预览页</span>
+                  {!isOnline && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#F1F6F0]/90 border border-[#D0E2CF]/60 text-[#4C664B] tracking-wide animate-fade-in">
+                      <span className="w-1 h-1 rounded-full bg-[#4C664B] animate-pulse" />
+                      100% 支持离线导入
+                    </span>
+                  )}
                 </p>
 
                 {/* “选择文件”拟物按钮，支持物理拉伸与群组联动 hover 色变 */}
@@ -460,19 +469,25 @@ export default function ImportPage() {
                   value={urlInput}
                   onChange={(event) => setUrlInput(event.currentTarget.value)}
                   placeholder="https://example.com/book/123/"
-                  disabled={isProcessing}
+                  disabled={isProcessing || !isOnline}
                   // 输入框 Focus 时，应用 physics-spring 伴随微幅拉宽，并散发浅绿漫反射光圈，与搜索页视觉风格一脉相承
                   className="ui-focus-ring min-h-12 flex-1 rounded-full border border-[var(--ui-border)] bg-white px-5 text-[var(--ui-text)] shadow-sm disabled:opacity-60 physics-spring focus:scale-[1.015] focus:shadow-[0_15px_35px_rgba(95,125,82,0.12)] focus:border-[var(--ui-accent)]"
                 />
                 <button
                   type="submit"
-                  disabled={isProcessing || !urlInput.trim()}
+                  disabled={isProcessing || !urlInput.trim() || !isOnline}
                   // 解析按钮：hover 微放大，active 微缩拢
                   className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isProcessing ? "解析中" : "解析 URL"}
                 </button>
               </div>
+
+              {!isOnline && (
+                <p className="mt-4 text-center text-sm font-medium text-[#8C6239] px-4 py-2.5 bg-[#FAF4EB] border border-[#E5C9A6]/40 rounded-xl animate-fade-in select-none leading-relaxed max-w-xl mx-auto">
+                  {strings.network.offlineImportHint}
+                </p>
+              )}
 
               {isProcessing && (
                 <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">

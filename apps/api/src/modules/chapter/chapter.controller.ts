@@ -9,6 +9,28 @@ export class ChapterController {
     private readonly blobStorage: LocalFileBlobStorage,
   ) {}
 
+  @Get()
+  async getAllChapters(@Param('bookId') bookId: string) {
+    const chapters = await this.chapterRepository.findByBookId(bookId);
+    const chaptersWithContent = await Promise.all(
+      chapters.map(async (chap) => {
+        try {
+          const content = await this.blobStorage.getObject(chap.contentHash);
+          return {
+            ...chap,
+            content: content.toString('utf-8'),
+          };
+        } catch {
+          return {
+            ...chap,
+            content: '',
+          };
+        }
+      })
+    );
+    return chaptersWithContent;
+  }
+
   @Get(':index')
   async getChapter(
     @Param('bookId') bookId: string,
