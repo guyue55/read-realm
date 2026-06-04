@@ -47,7 +47,13 @@ const withPWA = withPWAInit({
   buildExcludes: [/app-build-manifest\.json$/, /middleware-manifest\.json$/],
 });
 
+const isExportMode = process.env.EXPORT_MODE === "true";
+
 const nextConfig = {
+  output: isExportMode ? "export" : undefined,
+  images: {
+    unoptimized: isExportMode ? true : undefined,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

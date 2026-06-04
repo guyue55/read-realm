@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createId } from "@reader/shared-types";
 import type { ParsedBook } from "@reader/parser-core";
 import { db } from "@reader/storage-core";
@@ -11,11 +11,31 @@ import { parseUrlBookInBrowser } from "@/lib/url-import";
 
 export default function ImportPage() {
   const [status, setStatus] = useState<string>("等待导入");
+  const activeTaskIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
       window.location.replace(`/#${window.location.pathname}${window.location.search}`);
     }
+
+    // React 离场清理 Hook (E07-S06-2)：停止使用/中途切换页面时，物理清扫无实质章节的任务
+    return () => {
+      if (activeTaskIdRef.current) {
+        const staleId = activeTaskIdRef.current;
+        void (async () => {
+          try {
+            const task = await db.importTasks.get(staleId);
+            // 若任务仍为 chapters 空白，或者由于用户离场导致解析夭折，则直接强拆
+            if (task && task.chapters.length === 0) {
+              await db.importTasks.delete(staleId);
+              console.log(`[Storage GC] 🧹 组件离场自愈！已成功将未导入完成的临时空白占位任务物理驱逐: ${staleId}`);
+            }
+          } catch (err) {
+            console.warn("[Storage GC] 离场自愈清理失败:", err);
+          }
+        })();
+      }
+    };
   }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeMode, setActiveMode] = useState<"file" | "url">("file");
@@ -93,18 +113,100 @@ export default function ImportPage() {
       worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
 
       setStatus("引擎解析章节中...");
+
+      let taskId = "";
+      let bookId = "";
+      const now = new Date().toISOString();
       
       worker.onmessage = async (e) => {
-        const { success, parsedBook, error } = e.data;
-        worker.terminate(); // 解析完成，物理销毁 Worker，杜绝内存泄漏
+        const { type: msgType, success, error } = e.data;
 
-        if (success) {
-          setStatus(`解析完成，共发现 ${parsedBook.chapters.length} 章`);
-          const format = type as "epub" | "txt";
-          await createImportTask(parsedBook, "upload", { format });
-        } else {
+        if (!success) {
+          worker.terminate();
           setStatus(`解析失败: ${error}`);
           setIsProcessing(false);
+          return;
+        }
+
+        if (msgType === "METADATA") {
+          const { title, chapterCount } = e.data;
+          taskId = createId();
+          bookId = createId();
+          activeTaskIdRef.current = taskId; // 锁存当前正在进行的导入任务，防止中途离场残留空白垃圾 (E07-S06-2)
+
+          setStatus("引擎识别成功，正在空降初始化书册骨架...");
+
+          const bookMetadata = {
+            id: bookId,
+            title,
+            sourceType: "upload" as const,
+            format: type as "epub" | "txt",
+            status: "to_read" as const,
+            tags: [],
+            chapterCount,
+            wordCount: 0,
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          await db.importTasks.add({
+            id: taskId,
+            bookMetadata,
+            chapters: [],
+            createdAt: now,
+          });
+
+        } else if (msgType === "CHUNK") {
+          const { startIndex, chapters: chunkChapters, isFinished } = e.data;
+          setStatus(`正在流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...`);
+
+          const formattedChapters = chunkChapters.map((ch: { title: string; content: string }, idx: number) => {
+            const globalIndex = startIndex + idx;
+            return {
+              id: createId(),
+              bookId,
+              index: globalIndex,
+              title: ch.title || `第 ${globalIndex + 1} 章`,
+              content: ch.content,
+              wordCount: ch.content.length,
+              createdAt: now,
+              updatedAt: now,
+            };
+          });
+
+          const appendAction = async () => {
+            try {
+              await db.transaction("rw", db.importTasks, async () => {
+                const task = await db.importTasks.get(taskId);
+                if (task) {
+                  task.chapters.push(...formattedChapters);
+                  if (isFinished) {
+                    task.bookMetadata.wordCount = task.chapters.reduce(
+                      (sum, ch) => sum + (ch.content ? ch.content.length : 0),
+                      0,
+                    );
+                  }
+                  await db.importTasks.put(task);
+                }
+              });
+            } catch (err) {
+              console.error("分片追加落库发生异常:", err);
+            }
+          };
+
+          if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+            window.requestIdleCallback(async () => {
+              await appendAction();
+            });
+          } else {
+            await appendAction();
+          }
+
+        } else if (msgType === "FINISHED") {
+          worker.terminate();
+          setStatus("完美解析完成！");
+          activeTaskIdRef.current = null; // 完美解析并合并完毕，安全解锁，防止离场卸载误删 (E07-S06-2)
+          router.push(`/import/preview/${taskId}`);
         }
       };
 

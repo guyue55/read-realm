@@ -34,22 +34,22 @@ export function SettingsSheet({
 }: SettingsSheetProps) {
   const isDark = settings.theme === "dark";
   const bgClass = isDark
-    ? "bg-[#232323] text-[#CFCFCF]"
-    : "bg-white text-[#2F2A24]";
+    ? "bg-[#232323]/92 backdrop-blur-md text-[#CFCFCF]"
+    : "bg-white/92 backdrop-blur-md text-[#2F2A24]";
   const inputBgClass = isDark ? "bg-[#1E1E1E]" : "bg-[#F8F8F5]";
   const activeBtnBg = isDark ? "bg-[#333333]" : "bg-white";
   const textColor = isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]";
   const mutedText = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
 
   const containerClasses = isMobileSheet
-    ? `flex flex-col pb-[calc(2rem+env(safe-area-inset-bottom))] ${bgClass}`
+    ? `flex flex-col pb-[calc(1.2rem+env(safe-area-inset-bottom))] ${bgClass} max-h-[60vh] overflow-y-auto rounded-[24px] shadow-2xl`
     : `${bgClass} rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full`;
 
   return (
     <div className={containerClasses}>
       {isMobileSheet && (
         <div
-          className={`flex justify-between items-center mb-6 p-6 pb-0 ${bgClass}`}
+          className={`flex justify-between items-center mb-4 p-4 pb-0 ${bgClass}`}
         >
           <h3 className={`font-bold ${textColor}`}>
             {strings.reader.settings}
@@ -62,7 +62,7 @@ export function SettingsSheet({
         </div>
       )}
 
-      <div className={`flex flex-col gap-6 ${isMobileSheet ? "px-6" : ""}`}>
+      <div className={`flex flex-col gap-4 ${isMobileSheet ? "px-4 pb-4" : ""}`}>
         {updateUiMode && (
           <div className="flex items-center justify-between pb-4 border-b border-[rgba(80,65,45,0.08)]">
             <span className={`text-sm font-medium ${mutedText}`}>UI 主题</span>
