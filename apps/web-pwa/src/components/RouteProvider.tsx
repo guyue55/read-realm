@@ -4,6 +4,33 @@ import React, { useEffect, useSyncExternalStore } from "react";
 import { virtualRouter, RouteState, parseHash } from "@/lib/route-store";
 import { checkAndRestoreFromBackup, executeStorageGarbageCollection } from "@reader/storage-core";
 
+interface SafeWindow {
+  requestIdleCallback?: (
+    callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void,
+    options?: { timeout?: number }
+  ) => number;
+  cancelIdleCallback?: (id: number) => void;
+}
+
+// 注入 Safari / iOS / WKWebView 高精度 requestIdleCallback / cancelIdleCallback 帧自愈垫片
+if (typeof window !== "undefined") {
+  const safeWindow = window as unknown as SafeWindow;
+  if (!safeWindow.requestIdleCallback) {
+    safeWindow.requestIdleCallback = function (cb) {
+      const start = performance.now();
+      return window.setTimeout(() => {
+        cb({
+          didTimeout: false,
+          timeRemaining: () => Math.max(0, 50 - (performance.now() - start)),
+        });
+      }, 1) as unknown as number;
+    };
+    safeWindow.cancelIdleCallback = function (id) {
+      window.clearTimeout(id);
+    };
+  }
+}
+
 // 定义固定的服务端 Snapshot 及其获取函数，确保引用一致性，防 React 18 水合死锁与无限循环
 const SERVER_SNAPSHOT: RouteState = {
   currentView: "library",
