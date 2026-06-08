@@ -290,6 +290,7 @@ export function useReader(bookId: string) {
   const [autoFlipCountdown, setAutoFlipCountdown] = useState<number | null>(null);
   const autoFlipTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const handleNextRef = useRef<(() => Promise<void>) | null>(null);
+  const isAppendingRef = useRef(false);
 
   const clearAutoFlipTimer = useCallback(() => {
     if (autoFlipTimerRef.current) {
@@ -568,6 +569,19 @@ export function useReader(bookId: string) {
         }
       }
 
+      // 触底 200px 自动无缝拼接下一章
+      if (settings.pageMode === "scroll" && activeChapterIndex < toc.length - 1) {
+        if (maxOffset > 0 && maxOffset - offset < 200) {
+          const nextIndex = activeChapterIndex + 1;
+          const hasNextRendered = renderedChapters.some((ch) => ch.index === nextIndex);
+          if (!hasNextRendered && !isAppendingRef.current) {
+            if (handleNextRef.current) {
+              void handleNextRef.current();
+            }
+          }
+        }
+      }
+
       if (offset > 0 && currentActiveChapter) {
         const { paragraphIndex, characterOffset } = getPrecisePosition();
         pendingProgressRef.current = {
@@ -697,7 +711,29 @@ export function useReader(bookId: string) {
 
     const chapterRepo = {
       getChapter: async (id: string, index: number) => {
-        const c = await db.chapters.where({ bookId: id, index }).first();
+        let c = await db.chapters.where({ bookId: id, index }).first();
+        if (!c && typeof window !== "undefined" && navigator.onLine) {
+          try {
+            const res = await fetch(apiUrl(`/books/${id}/chapters/${index}`), {
+              headers: getShareHeaders(),
+            });
+            if (res.ok) {
+              const remoteChapter = await res.json();
+              if (remoteChapter && remoteChapter.content !== undefined) {
+                const cleanId = remoteChapter.id.split("#")[0];
+                const localChapterItem = {
+                  ...remoteChapter,
+                  id: cleanId,
+                  bookId: id,
+                };
+                await db.chapters.put(localChapterItem);
+                c = localChapterItem;
+              }
+            }
+          } catch (err) {
+            console.error("按需懒加载章节失败:", err);
+          }
+        }
         return c
           ? { id: c.id, index: c.index, title: c.title, content: c.content }
           : null;
@@ -907,22 +943,25 @@ export function useReader(bookId: string) {
         }
         setActivePanel(null);
         setShowMenu(false);
-        if (contentRef.current) {
-          contentRef.current.scrollTop = 0;
-          contentRef.current.scrollLeft = 0;
-        } else {
-          window.scrollTo(0, 0);
-        }
-        if (currentChapter) {
-          setReadingProgress(
-            computeOverallProgress(currentChapter.index, toc.length || 1, 0),
-          );
-          await saveCurrentProgress(currentChapter, 0, 0, 0);
-        }
-        setIsPositionRestored(true); // 物理排版重置完毕后，一帧内优雅淡现
+
+        const container = contentRef.current;
+        restoreScrollPositionStable(
+          container,
+          0,
+          settings.pageMode,
+          async () => {
+            if (currentChapter) {
+              setReadingProgress(
+                computeOverallProgress(currentChapter.index, toc.length || 1, 0),
+              );
+              await saveCurrentProgress(currentChapter, 0, 0, 0);
+            }
+            setIsPositionRestored(true); // 物理排版重置完毕且稳定在顶部 0 后，优雅淡现
+          }
+        );
       }
     },
-    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer],
+    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer, settings.pageMode],
   );
 
   const seekToProgress = useCallback(
@@ -977,28 +1016,34 @@ export function useReader(bookId: string) {
   );
 
   const handleNext = useCallback(async () => {
-    if (engine && chapter && chapter.index < toc.length - 1) {
-      const nextIndex = chapter.index + 1;
-      if (settings.pageMode === "scroll") {
-        clearAutoFlipTimer();
-        await engine.loadChapter(nextIndex);
-        const nextChapter = engine.getCurrentChapter();
-        if (nextChapter) {
-          setRenderedChapters((prev) => {
-            if (prev.some((ch) => ch.index === nextChapter.index)) return prev;
-            return [...prev, nextChapter];
-          });
-          setChapter(nextChapter);
-          showToast(`已加载：${nextChapter.title}`);
-          const overallProgress = computeOverallProgress(nextChapter.index, toc.length, 0);
-          setReadingProgress(overallProgress);
-          await saveCurrentProgress(nextChapter, 0, 0, 0);
+    if (isAppendingRef.current) return;
+    isAppendingRef.current = true;
+    try {
+      if (engine && chapter && chapter.index < toc.length - 1) {
+        const nextIndex = chapter.index + 1;
+        if (settings.pageMode === "scroll") {
+          clearAutoFlipTimer();
+          await engine.loadChapter(nextIndex);
+          const nextChapter = engine.getCurrentChapter();
+          if (nextChapter) {
+            setRenderedChapters((prev) => {
+              if (prev.some((ch) => ch.index === nextChapter.index)) return prev;
+              return [...prev, nextChapter];
+            });
+            setChapter(nextChapter);
+            showToast(`已加载：${nextChapter.title}`);
+            const overallProgress = computeOverallProgress(nextChapter.index, toc.length, 0);
+            setReadingProgress(overallProgress);
+            await saveCurrentProgress(nextChapter, 0, 0, 0);
+          }
+        } else {
+          await jumpToChapter(nextIndex);
         }
       } else {
-        await jumpToChapter(nextIndex);
+        showToast(strings.reader.endOfBook);
       }
-    } else {
-      showToast(strings.reader.endOfBook);
+    } finally {
+      isAppendingRef.current = false;
     }
   }, [
     engine,

@@ -428,23 +428,12 @@ export function LibraryDefault() {
             activeTasks[book.id] = "download";
             localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
 
-            for (let p = 0; p <= 50; p += 25) {
+            for (let p = 0; p <= 100; p += 25) {
               updateProgress(completedSteps, p);
               await new Promise((r) => setTimeout(r, 15));
             }
 
-            const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`), {
-              headers: getShareHeaders(),
-            });
-            if (!chapRes.ok) throw new Error(`拉取典籍「${book.title}」的章节失败`);
-            
-            const chapters = await chapRes.json();
-            for (let p = 50; p <= 100; p += 25) {
-              updateProgress(completedSteps, p);
-              await new Promise((r) => setTimeout(r, 10));
-            }
-
-            await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+            await db.transaction("rw", [db.books, db.progress], async () => {
               // 安全防丢历史备份
               const oldProgress = await db.progress.get(book.id);
               if (oldProgress) {
@@ -458,9 +447,6 @@ export function LibraryDefault() {
               }
 
               await db.books.put(book);
-              for (const chap of chapters) {
-                await db.chapters.put(chap);
-              }
               // 反序列化云端进度落库，打通跨设备重现
               if (book.lastReadProgress) {
                 try {
