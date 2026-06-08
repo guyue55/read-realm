@@ -73,23 +73,59 @@ export const ReaderContent = memo(
       const combinedHtml = `${titleHtml}\n${processedContent}`;
 
       return (
-        <div
-          className={`${className} reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
-            isDark ? "theme-dark-filter" : ""
-          }`}
-          style={style}
-          dangerouslySetInnerHTML={{ __html: combinedHtml }}
-        />
+        <>
+          {/* 🏮 强制注入全局宿主大插图与长非折行块的安全防爆排版样式 */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            .reader-content p, 
+            .reader-content div {
+              /* 允许段落在分栏间折开断行，彻底打碎浏览器因强制不折行将整块推挤下一列引发的高度坍塌 */
+              break-inside: auto !important;
+              page-break-inside: auto !important;
+            }
+            .reader-content img {
+              /* 严格控制大插图的视口限额最高比例，既给图片独立占栏留有位置，又绝不撑爆列高度 */
+              max-height: 70vh !important;
+              object-fit: contain !important;
+              display: block !important;
+              margin: 16px auto !important;
+              break-inside: avoid !important; /* 图片作为一个物理节点不被切半 */
+            }
+          `}} />
+          <div
+            className={`${className} reader-content whitespace-pre-wrap break-words ${
+              isDark ? "theme-dark-filter" : ""
+            }`}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: combinedHtml }}
+          />
+        </>
       );
     }
 
     return (
       <div className={className} style={style}>
+        {/* 🏮 强制注入全局宿主大插图与长非折行块的安全防爆排版样式 */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .reader-content p, 
+          .reader-content div {
+            /* 允许段落在分栏间折开断行，彻底打碎浏览器因强制不折行将整块推挤下一列引发的高度坍塌 */
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+          }
+          .reader-content img {
+            /* 严格控制大插图的视口限额最高比例，既给图片独立占栏留有位置，又绝不撑爆列高度 */
+            max-height: 70vh !important;
+            object-fit: contain !important;
+            display: block !important;
+            margin: 16px auto !important;
+            break-inside: avoid !important; /* 图片作为一个物理节点不被切半 */
+          }
+        `}} />
         <h1 className={titleClassName} style={titleStyle}>
           {title}
         </h1>
         <div
-          className={`reader-content whitespace-pre-wrap break-words [&_p]:break-inside-avoid ${
+          className={`reader-content whitespace-pre-wrap break-words ${
             isDark ? "theme-dark-filter" : ""
           }`}
           dangerouslySetInnerHTML={{ __html: processedContent }}

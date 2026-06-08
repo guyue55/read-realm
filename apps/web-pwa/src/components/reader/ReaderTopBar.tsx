@@ -106,12 +106,11 @@ export function ReaderTopBar({
             e.stopPropagation();
             onPrevChapter?.();
           }}
-          className="group flex items-center gap-1 px-3 py-1 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[11px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          className="group flex items-center justify-center w-8 h-8 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[12px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
           title="上一章"
           aria-label="上一章"
         >
           <span className="transition-transform duration-200 ease-out group-hover:-translate-x-0.5">⏮</span>
-          <span>上一章</span>
         </button>
         
         <div className="flex items-center gap-2.5">
@@ -141,11 +140,10 @@ export function ReaderTopBar({
             e.stopPropagation();
             onNextChapter?.();
           }}
-          className="group flex items-center gap-1 px-3 py-1 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[11px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          className="group flex items-center justify-center w-8 h-8 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[12px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
           title="下一章"
           aria-label="下一章"
         >
-          <span>下一章</span>
           <span className="transition-transform duration-200 ease-out group-hover:translate-x-0.5">⏭</span>
         </button>
       </div>

@@ -1046,9 +1046,14 @@ export function useReader(bookId: string) {
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
       const maxScrollLeft = scrollWidth - clientWidth;
+
+      // 🏮 动态计算高保真翻页步长（列宽 + columnGap）
+      const readerContentEl = contentRef.current.querySelector(".reader-content") as HTMLElement;
+      const step = readerContentEl ? readerContentEl.clientWidth + 48 : clientWidth;
+
       if (scrollLeft < maxScrollLeft - 10) {
         contentRef.current.scrollTo({
-          left: scrollLeft + clientWidth,
+          left: scrollLeft + step,
           behavior: "smooth",
         });
         return;
@@ -1072,9 +1077,14 @@ export function useReader(bookId: string) {
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth } = contentRef.current;
+
+      // 🏮 动态计算高保真翻页步长（列宽 + columnGap）
+      const readerContentEl = contentRef.current.querySelector(".reader-content") as HTMLElement;
+      const step = readerContentEl ? readerContentEl.clientWidth + 48 : clientWidth;
+
       if (scrollLeft > 10) {
         contentRef.current.scrollTo({
-          left: scrollLeft - clientWidth,
+          left: Math.max(0, scrollLeft - step),
           behavior: "smooth",
         });
         return;
@@ -1124,17 +1134,40 @@ export function useReader(bookId: string) {
 
   const handleContentTouchEnd = useCallback(
     (event: TouchEvent<HTMLDivElement>) => {
-      if (!touchGestureRef.current || hasActiveSelection()) {
-        touchGestureRef.current = null;
-        return;
-      }
-
       const start = touchGestureRef.current;
       touchGestureRef.current = null;
       const touch = event.changedTouches[0];
-      if (!touch) return;
+      if (!touch || !start) return;
 
       const end = { x: touch.clientX, y: touch.clientY };
+      const deltaX = end.x - start.x;
+
+      // 🏮 核心调停加固：长按划词选区存在，但横向大位移滑动超出 70px
+      const selection = typeof window !== "undefined" ? window.getSelection() : null;
+      const hasActiveSel = selection && !selection.isCollapsed;
+
+      if (hasActiveSel && Math.abs(deltaX) > 70) {
+        // 1. 强力清除系统 Selection 划词句柄，把触摸聚焦归还给翻页容器
+        selection?.removeAllRanges();
+
+        // 2. 调停翻页：强制按横向划动方向推进物理页面，防止容器由于吸附缺失被卡死在两个分页正中央（半页坍塌）
+        if (settings.pageMode === "pagination") {
+          event.preventDefault();
+          const isNext = deltaX < 0;
+          if (isNext) {
+            void handlePageNext();
+          } else {
+            void handlePagePrev();
+          }
+        }
+        return;
+      }
+
+      // 如果有活跃选区，但不是大位移划动，则保留划词高亮，静默跳过翻页
+      if (hasActiveSel) {
+        return;
+      }
+
       const duration = Date.now() - touchTimeRef.current;
 
       if (settings.pageMode === "pagination") {
@@ -1172,7 +1205,6 @@ export function useReader(bookId: string) {
       handlePrev,
       getOffsetState,
       settings.pageMode,
-      hasActiveSelection,
     ],
   );
 
