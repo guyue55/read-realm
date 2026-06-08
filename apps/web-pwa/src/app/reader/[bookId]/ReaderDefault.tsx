@@ -75,6 +75,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     rollbackProgress,
     addBookmarkWithNote,
     showToast,
+    clearAiSession,
   } = useReader(bookId);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
@@ -267,7 +268,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onBookmark={addBookmark}
             onSettings={() => togglePanel("settings")}
             onToggleToc={() => togglePanel("toc")}
-            onToggleAi={() => togglePanel("ai")}
+            onToggleAi={() => {
+              togglePanel("ai");
+              handleSummarize();
+            }}
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
           />
@@ -329,6 +333,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   onClose={() => setActivePanel(null)}
                   aiInput={aiInput}
                   setAiInput={setAiInput}
+                  onClearSession={async () => {
+                    await clearAiSession();
+                    setAiInput("");
+                  }}
                 />
               </div>
             </div>
@@ -681,6 +689,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onClose={() => setActivePanel(null)}
           aiInput={aiInput}
           setAiInput={setAiInput}
+          onClearSession={async () => {
+            await clearAiSession();
+            setAiInput("");
+          }}
         />
       </div>
 

@@ -69,6 +69,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     rollbackProgress,
     addBookmarkWithNote,
     showToast,
+    clearAiSession,
   } = useReader(bookId);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
@@ -371,6 +372,10 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             onClose={() => setActivePanel(null)}
             aiInput={aiInput}
             setAiInput={setAiInput}
+            onClearSession={async () => {
+              await clearAiSession();
+              setAiInput("");
+            }}
           />
         </div>
 

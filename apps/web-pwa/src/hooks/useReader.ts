@@ -1546,6 +1546,42 @@ export function useReader(bookId: string) {
     }
   }, [chapter, bookId]);
 
+  const clearAiSession = useCallback(async () => {
+    if (!chapter) return;
+    try {
+      const computeSha256Async = async (rawText: string): Promise<string> => {
+        const encoder = new TextEncoder();
+        const dataBytes = encoder.encode(rawText);
+        const cryptoObj = typeof window !== "undefined"
+          ? (window.crypto || (window as unknown as { msCrypto?: Crypto }).msCrypto)
+          : (typeof globalThis !== "undefined" ? (globalThis as unknown as { crypto?: Crypto }).crypto : null);
+
+        if (!cryptoObj || !cryptoObj.subtle) {
+          return "legacy-fallback-hash";
+        }
+        const hashBuffer = await cryptoObj.subtle.digest("SHA-256", dataBytes);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      };
+
+      const sourceHash = await computeSha256Async(chapter.content);
+      const model = "gpt-3.5-turbo";
+      const promptVersion = "2.0";
+      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion);
+
+      // 物理删除 L1 离线数据库
+      await db.aiViews.delete(aiSigKey);
+      console.log(`[AI-Reader] 🧹 拂尘扫尘：已成功物理清理本地 L1 AI 伴读缓存。Key: ${aiSigKey}`);
+
+      setAiSummary("");
+      showToast("🧹 伴读拂尘，已清空本章会话缓存。");
+    } catch (error) {
+      console.error("[AI-Reader] 清空伴读会话发生故障:", error);
+      showToast("💡 存储繁忙，清空伴读失败。");
+    }
+  }, [chapter, showToast]);
+
+
   const updateFontSize = useCallback(
     (delta: number) => {
       const container = contentRef.current;
@@ -1798,6 +1834,7 @@ export function useReader(bookId: string) {
     addBookmarkWithNote,
     jumpToBookmark,
     handleSummarize,
+    clearAiSession,
     updateFontSize,
     updateTheme,
     updatePageMode,
