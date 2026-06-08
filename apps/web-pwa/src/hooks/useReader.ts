@@ -10,7 +10,7 @@ import { Dexie, db } from "@reader/storage-core";
 import { generateAiSigKeyAsync, type ReadingProgress, type Bookmark } from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getShareHeaders } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import {
   loadReaderSettings,
@@ -1503,7 +1503,10 @@ export function useReader(bookId: string) {
       // 4. 穿透：调用 NestJS 后端 L2 SQLite (及大模型 L3)
       const response = await fetch(apiUrl("/ai/summarize"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getShareHeaders(),
+        },
         body: JSON.stringify({
           text: chapter.content,
           bookId,

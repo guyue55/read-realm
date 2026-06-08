@@ -34,10 +34,11 @@ export class AiService {
       .digest('hex');
   }
 
-  async summarize(bookId: string, chapterIndex: number) {
+  async summarize(bookId: string, chapterIndex: number, shareToken: string) {
     const chapter = await this.chapterRepository.findByIndex(
       bookId,
       chapterIndex,
+      shareToken,
     );
     if (!chapter) {
       throw new NotFoundException('Chapter not found');
@@ -65,7 +66,10 @@ export class AiService {
       console.log(
         `[AI-Service] 🎉 L2 级 SQLite 拦截成功！命中已有摘要，未发生 API 穿透。`,
       );
-      return cached;
+      return {
+        ...cached,
+        bookId: cached.bookId.split('#')[0],
+      };
     }
 
     console.log(`[AI-Service] 🚨 L2 缓存未命中，开始读取原文章节并穿透生成...`);
@@ -77,10 +81,12 @@ export class AiService {
     // 4. 调用 packages/ai-core 生成摘要（内部已挂载智能 Token 滑动窗裁剪，安全不爆仓）
     const summary = await this.openAIProvider.generateSummary(content, model);
 
+    const dbBookId = `${bookId}#${shareToken}`;
+
     // 5. 将生成的摘要进行原子化落库，归档此 AISigKey 以阻断后续请求
     const aiView = {
       id: aiSigKey, // 强签名直接作为数据库主键
-      bookId,
+      bookId: dbBookId,
       chapterIndex,
       sourceHash: chapter.contentHash,
       summary,
@@ -94,6 +100,9 @@ export class AiService {
       `[AI-Service] ✨ 大模型摘要生成完毕，并已原子落盘 SQLite L2 缓存。`,
     );
 
-    return aiView;
+    return {
+      ...aiView,
+      bookId: bookId.split('#')[0],
+    };
   }
 }
