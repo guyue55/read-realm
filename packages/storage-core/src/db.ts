@@ -92,6 +92,35 @@ export interface MetaShelfBackup {
  * 1. 优先备份到 localStorage 建立一级防线；
  * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
  */
+/**
+ * 辅助函数：按最后阅读时间或创建时间裁剪备份元数据，杜绝 LocalStorage 5MB 溢出
+ */
+function pruneBackupData(books: Book[], progress: ReadingProgress[], bookmarks: Bookmark[], limit: number): MetaShelfBackup {
+  const sortedBooks = [...books].sort((a, b) => {
+    const tA = a.lastReadAt ? new Date(a.lastReadAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+    const tB = b.lastReadAt ? new Date(b.lastReadAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+    return tB - tA;
+  });
+
+  const slicedBooks = sortedBooks.slice(0, limit);
+  const bookIds = new Set(slicedBooks.map(b => b.id));
+
+  const filteredProgress = progress.filter(p => bookIds.has(p.bookId));
+  const filteredBookmarks = bookmarks.filter(b => bookIds.has(b.bookId));
+
+  return {
+    books: slicedBooks,
+    progress: filteredProgress,
+    bookmarks: filteredBookmarks,
+    backupTime: new Date().toISOString(),
+  };
+}
+
+/**
+ * 自动持久化双轨备份：将当前 IndexedDB 中的书架元数据、进度与书签打包存储。
+ * 1. 优先备份到 localStorage 建立一级防线，配有 80 本最高频活跃书籍截断策略及 QuotaExceededError 自愈裁剪垫片；
+ * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
+ */
 export async function backupMetadataToStorage(): Promise<void> {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
@@ -99,38 +128,53 @@ export async function backupMetadataToStorage(): Promise<void> {
     const progress = await db.progress.toArray();
     const bookmarks = await db.bookmarks.toArray();
     
-    // 如果没有任何藏书，不进行覆盖式空备份以防恶意擦除
+    // 如果没有任何藏书，不进行覆盖式空备份以防恶意抹除
     if (books.length === 0) {
       console.log("[Storage] 书架暂无典籍，跳过镜像双轨备份。");
       return;
     }
 
-    const backup: MetaShelfBackup = {
-      books,
-      progress,
-      bookmarks,
-      backupTime: new Date().toISOString(),
-    };
-
-    const serialized = JSON.stringify(backup);
+    // 默认高规格限制：最多备份 80 本最新活跃书籍的元数据，控制体积保持在 200KB 以下安全水位
+    let limit = 80;
+    let backup = pruneBackupData(books, progress, bookmarks, limit);
+    let serialized = JSON.stringify(backup);
     
-    // 一级防线：浏览器本地持久存储 localStorage
-    window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
-    console.log("[Storage] 双轨冗余：元数据已顺利归档至 localStorage 备卷。");
+    // 一级防线：浏览器本地持久存储 localStorage (带 QuotaExceeded 熔断自愈)
+    try {
+      window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
+      console.log(`[Storage] 双轨冗余：元数据（最新活跃 ${backup.books.length} 本书）归档至 localStorage。`);
+    } catch (e: any) {
+      if (e.name === "QuotaExceededError" || e.code === 22 || e.number === 0x8007000E) {
+        console.warn("[Storage] 🚨 警告：LocalStorage 空间告急 (QuotaExceededError)！启动深度裁剪自愈机制，强制收缩至 20 本最新书籍...");
+        limit = 20;
+        backup = pruneBackupData(books, progress, bookmarks, limit);
+        serialized = JSON.stringify(backup);
+        try {
+          window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
+          console.log("[Storage] 降级裁剪：20 本最新活跃图书元数据成功归档。");
+        } catch (retryErr) {
+          console.error("[Storage] 裁剪降级后仍无法写入 LocalStorage:", retryErr);
+        }
+      } else {
+        console.error("[Storage] 写入 LocalStorage 遭遇其他未知错误:", e);
+      }
+    }
 
-    // 二级防线：Capacitor 物理沙盒备份
+    // 二级防线：Capacitor 物理沙盒备份 (保留全量，不受 5MB 局限)
     const cap = (window as any).Capacitor;
     if (cap?.Plugins?.Filesystem) {
       try {
         const { Filesystem, Directory } = cap.Plugins;
+        const fullBackup: MetaShelfBackup = { books, progress, bookmarks, backupTime: new Date().toISOString() };
+        const fullSerialized = JSON.stringify(fullBackup);
         await Filesystem.writeFile({
           path: "read_realm_backup/meta_shelf.json",
-          data: serialized,
+          data: fullSerialized,
           directory: Directory.Documents,
           encoding: "utf8",
           recursive: true,
         });
-        console.log("[Storage] 双轨冗余：元数据已成功篆刻至 Capacitor 原生物理沙盒 (Documents/read_realm_backup/meta_shelf.json)");
+        console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Capacitor 原生物理沙盒 (Documents/read_realm_backup/meta_shelf.json)");
       } catch (err) {
         console.warn("[Storage] Capacitor 原生沙盒写入遭遇阻碍:", err);
       }
@@ -139,10 +183,12 @@ export async function backupMetadataToStorage(): Promise<void> {
     else if ((window as any).__TAURI__?.fs) {
       try {
         const { writeTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
-        await writeTextFile("read_realm_backup/meta_shelf.json", serialized, {
+        const fullBackup: MetaShelfBackup = { books, progress, bookmarks, backupTime: new Date().toISOString() };
+        const fullSerialized = JSON.stringify(fullBackup);
+        await writeTextFile("read_realm_backup/meta_shelf.json", fullSerialized, {
           dir: BaseDirectory.AppLocalData,
         });
-        console.log("[Storage] 双轨冗余：元数据已成功篆刻至 Tauri 原生物理沙盒 (AppLocalData/read_realm_backup/meta_shelf.json)");
+        console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Tauri 原生物理沙盒 (AppLocalData/read_realm_backup/meta_shelf.json)");
       } catch (err) {
         console.warn("[Storage] Tauri 原生沙盒写入遭遇阻碍:", err);
       }

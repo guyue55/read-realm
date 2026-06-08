@@ -15,6 +15,7 @@ export default function ImportPage() {
   const isOnline = useOnlineStatus();
   const [status, setStatus] = useState<string>("等待导入");
   const activeTaskIdRef = useRef<string | null>(null);
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
@@ -23,6 +24,13 @@ export default function ImportPage() {
 
     // React 离场清理 Hook (E07-S06-2)：停止使用/中途切换页面时，物理清扫无实质章节的任务
     return () => {
+      // 强行终止空转线程，杜绝主线程事件积压
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        console.log("[Worker GC] 🧹 组件离场自愈！已成功强制中止并在后台物理销毁空转解析 Worker 进程。");
+        workerRef.current = null;
+      }
+
       if (activeTaskIdRef.current) {
         const staleId = activeTaskIdRef.current;
         void (async () => {
@@ -111,6 +119,7 @@ export default function ImportPage() {
       const worker = new Worker(
         new URL("./parser.worker.ts", import.meta.url)
       );
+      workerRef.current = worker;
 
       // 使用 Transferable Objects 传递 buffer，无内存拷贝，0 感延迟
       worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
@@ -126,6 +135,7 @@ export default function ImportPage() {
 
         if (!success) {
           worker.terminate();
+          workerRef.current = null;
           setStatus(`解析失败: ${error}`);
           setIsProcessing(false);
           return;
@@ -207,6 +217,7 @@ export default function ImportPage() {
 
         } else if (msgType === "FINISHED") {
           worker.terminate();
+          workerRef.current = null;
           setStatus("完美解析完成！");
           activeTaskIdRef.current = null; // 完美解析并合并完毕，安全解锁，防止离场卸载误删 (E07-S06-2)
           router.push(`/import/preview/${taskId}`);
@@ -215,6 +226,7 @@ export default function ImportPage() {
 
       worker.onerror = (e) => {
         worker.terminate();
+        workerRef.current = null;
         setStatus(`解析异常: ${e.message}`);
         setIsProcessing(false);
       };
