@@ -166,277 +166,372 @@ export function LibraryDefault() {
     }
   };
 
-  // 双向一键智能同步中心（支持静默后台自愈）
+  // 双向一键智能同步中心（支持多进程分布式互斥、最深阅读进度对碰与细粒度容错隔离）
   const handleDualSync = async (isSilent: boolean = false) => {
-    if (isSyncing || !isOnline || syncMutexRef.current) return;
-    syncMutexRef.current = true;
+    if (isSyncing || !isOnline) return;
 
-    // 仅在非静默（手动点击）时激活大加载面板与进度
-    if (!isSilent) {
-      setIsSyncing(true);
-      setSyncProgress(0);
-      setSyncStepText("正在检测两端书阁差异...");
-    }
+    // 核心同步管道执行函数
+    const executeSyncPipeline = async () => {
+      if (syncMutexRef.current) return;
+      syncMutexRef.current = true;
 
-    try {
-      const res = await fetch(apiUrl("/books"));
-      if (!res.ok) throw new Error();
-      const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
-      setCloudBooks(currentCloudBooks);
+      // 仅在非静默（手动点击）时激活大加载面板与进度
+      if (!isSilent) {
+        setIsSyncing(true);
+        setSyncProgress(0);
+        setSyncStepText("正在检测两端书阁差异...");
+      }
 
-      const localBooks = await db.books.toArray();
-      const localOnly = localBooks.filter(
-        (lb) => !currentCloudBooks.some((cb) => cb.id === lb.id)
-      );
-      const cloudOnly = currentCloudBooks.filter(
-        (cb) => !localBooks.some((lb) => lb.id === cb.id)
-      );
-      const both = localBooks.filter(
-        (lb) => currentCloudBooks.some((cb) => cb.id === lb.id)
-      );
+      let hasSyncFailures = false;
 
-      // 专家级快速无损拦截：若两端数量完全对齐且没有最后阅读时间戳变动，则 50ms 内极静秒退，不触发任何重绘和动画
-      let hasDiff = localOnly.length > 0 || cloudOnly.length > 0;
-      if (!hasDiff) {
-        for (const localBook of both) {
-          const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
-          if (cloudBook) {
-            const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
-            const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
-            if (cloudTime !== localTime) {
-              hasDiff = true;
-              break;
+      try {
+        const res = await fetch(apiUrl("/books"));
+        if (!res.ok) throw new Error("获取云阁典籍列表失败");
+        const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
+        setCloudBooks(currentCloudBooks);
+
+        const localBooks = await db.books.toArray();
+        const localOnly = localBooks.filter(
+          (lb) => !currentCloudBooks.some((cb) => cb.id === lb.id)
+        );
+        const cloudOnly = currentCloudBooks.filter(
+          (cb) => !localBooks.some((lb) => lb.id === cb.id)
+        );
+        const both = localBooks.filter(
+          (lb) => currentCloudBooks.some((cb) => cb.id === lb.id)
+        );
+
+        // 专家级快速无损拦截：若两端数量完全对齐且没有最后阅读时间戳变动，则 50ms 内极静秒退，不触发任何重绘和动画
+        let hasDiff = localOnly.length > 0 || cloudOnly.length > 0;
+        if (!hasDiff) {
+          for (const localBook of both) {
+            const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
+            if (cloudBook) {
+              const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
+              const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
+              if (cloudTime !== localTime) {
+                hasDiff = true;
+                break;
+              }
             }
           }
         }
+
+        if (!hasDiff) {
+          console.log("[Sync Check] 两端书阁完美一致，50ms 内极静退出同步。");
+          return;
+        }
+
+        const totalSteps = localOnly.length + cloudOnly.length + both.length;
+        let completedSteps = 0;
+
+        const updateProgress = (stepCount: number, subProgress: number) => {
+          const base = (stepCount / Math.max(1, totalSteps)) * 100;
+          const addition = subProgress / Math.max(1, totalSteps);
+          setSyncProgress(Math.min(100, Math.round(base + addition)));
+        };
+
+        // 1. 备份本地专享 (单个书籍 fetch 粒度异常断路隔离)
+        for (const book of localOnly) {
+          try {
+            setSyncStepText(`正在备份「${book.title}」至云阁...`);
+            const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
+            const progress = await db.progress.get(book.id);
+            const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
+            
+            // 绑定最新进度 JSON
+            const bookWithProgress = { ...book, lastReadProgress };
+
+            // 记入活跃持久化上传任务，防刷新和崩溃
+            const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+            activeTasks[book.id] = "upload";
+            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+            for (let p = 0; p <= 100; p += 25) {
+              updateProgress(completedSteps, p);
+              await new Promise((r) => setTimeout(r, 15));
+            }
+
+            const importRes = await fetch(apiUrl("/books/import"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+            });
+            if (!importRes.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
+
+            // 任务完结，清除落盘记录
+            const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+            delete nextTasks[book.id];
+            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+          } catch (singleBookErr) {
+            console.error(`[Sync] 备份本地典籍「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
+            hasSyncFailures = true;
+          } finally {
+            completedSteps++;
+            updateProgress(completedSteps, 0);
+          }
+        }
+
+        // 2. 拉取云端新书 (单个书籍 fetch 粒度异常断路隔离)
+        for (const book of cloudOnly) {
+          try {
+            setSyncStepText(`正在从云阁拉取「${book.title}」...`);
+            
+            // 记入活跃持久化下载任务
+            const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+            activeTasks[book.id] = "download";
+            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+
+            for (let p = 0; p <= 50; p += 25) {
+              updateProgress(completedSteps, p);
+              await new Promise((r) => setTimeout(r, 15));
+            }
+
+            const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`));
+            if (!chapRes.ok) throw new Error(`拉取典籍「${book.title}」的章节失败`);
+            
+            const chapters = await chapRes.json();
+            for (let p = 50; p <= 100; p += 25) {
+              updateProgress(completedSteps, p);
+              await new Promise((r) => setTimeout(r, 10));
+            }
+
+            await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+              // 安全防丢历史备份
+              const oldProgress = await db.progress.get(book.id);
+              if (oldProgress) {
+                const key = `reader-progress-rollback-${book.id}`;
+                let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+                try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+                if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+                  list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+                  localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+                }
+              }
+
+              await db.books.put(book);
+              for (const chap of chapters) {
+                await db.chapters.put(chap);
+              }
+              // 反序列化云端进度落库，打通跨设备重现
+              if (book.lastReadProgress) {
+                try {
+                  const parsedProgress = JSON.parse(book.lastReadProgress);
+                  await db.progress.put(parsedProgress);
+                } catch (e) {
+                  console.error("解析进度快照失败:", e);
+                }
+              }
+            });
+
+            // 任务完结，清除落盘记录
+            const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
+            delete nextTasks[book.id];
+            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+          } catch (singleBookErr) {
+            console.error(`[Sync] 拉取云阁新书「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
+            hasSyncFailures = true;
+          } finally {
+            completedSteps++;
+            updateProgress(completedSteps, 0);
+          }
+        }
+
+        // 3. 进度双向对撞与咬合 (最深阅读进度大值优先对碰)
+        if (both.length > 0) {
+          setSyncStepText("正在合并两端阅读痕迹...");
+          for (const localBook of both) {
+            try {
+              const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
+              if (cloudBook) {
+                const localProgress = await db.progress.get(localBook.id);
+                let cloudProgress: ReadingProgress | null = null;
+                if (cloudBook.lastReadProgress) {
+                  try { cloudProgress = JSON.parse(cloudBook.lastReadProgress); } catch {}
+                }
+
+                // 确定合并获胜端：最深阅读字数/章节大值优先对碰，彻底免疫设备分布式时钟偏差 (Clock Skew)
+                let winner: "local" | "cloud" = "local";
+
+                if (localProgress && cloudProgress) {
+                  const localIdx = localProgress.chapterIndex ?? 0;
+                  const cloudIdx = cloudProgress.chapterIndex ?? 0;
+
+                  if (cloudIdx > localIdx) {
+                    winner = "cloud";
+                  } else if (localIdx > cloudIdx) {
+                    winner = "local";
+                  } else {
+                    // 章节完全咬合，精细对比段落阅读百分比
+                    const localPct = localProgress.percentage ?? 0;
+                    const cloudPct = cloudProgress.percentage ?? 0;
+
+                    if (cloudPct > localPct) {
+                      winner = "cloud";
+                    } else if (localPct > cloudPct) {
+                      winner = "local";
+                    } else {
+                      // 章节百分比对齐，精细比对段落序号段偏量
+                      const localPara = localProgress.paragraphIndex ?? 0;
+                      const cloudPara = cloudProgress.paragraphIndex ?? 0;
+
+                      if (cloudPara > localPara) {
+                        winner = "cloud";
+                      } else if (localPara > cloudPara) {
+                        winner = "local";
+                      } else {
+                        // 物理阅读进度完全处于同一维度！降级比对时钟，取最后修改时间
+                        const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
+                        const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
+                        winner = cloudTime > localTime ? "cloud" : "local";
+                      }
+                    }
+                  }
+                } else if (cloudProgress && !localProgress) {
+                  winner = "cloud";
+                } else if (localProgress && !cloudProgress) {
+                  winner = "local";
+                } else {
+                  // 两端均无有效进度记录，依据书籍元数据更新时间戳
+                  const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
+                  const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
+                  winner = cloudTime > localTime ? "cloud" : "local";
+                }
+
+                // 执行胜出端合并事务
+                if (winner === "cloud") {
+                  // 云端读得更深：拉下并覆写本地元数据与进度
+                  await db.transaction("rw", [db.books, db.progress], async () => {
+                    // 备份本地进度防丢
+                    const oldProgress = await db.progress.get(localBook.id);
+                    if (oldProgress) {
+                      const key = `reader-progress-rollback-${localBook.id}`;
+                      let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
+                      try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+                      if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
+                        list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
+                        localStorage.setItem(key, JSON.stringify(list.slice(-5)));
+                      }
+                    }
+
+                    await db.books.update(localBook.id, { lastReadAt: cloudBook.lastReadAt });
+                    if (cloudBook.lastReadProgress) {
+                      try {
+                        const parsedProgress = JSON.parse(cloudBook.lastReadProgress);
+                        await db.progress.put(parsedProgress);
+                      } catch (e) {
+                        console.error("更新本地对准进度失败:", e);
+                      }
+                    }
+                  });
+                } else if (winner === "local") {
+                  // 本地读得更深：反向上传覆盖备份到云端
+                  const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
+                  const progress = await db.progress.get(localBook.id);
+                  const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
+                  const bookWithProgress = { ...localBook, lastReadProgress };
+
+                  const importRes = await fetch(apiUrl("/books/import"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+                  });
+                  if (!importRes.ok) throw new Error(`云阁拒绝了最深本地读痕的上报请求`);
+                }
+              }
+            } catch (singleBookErr) {
+              console.error(`[Sync] 合并重叠图书「${localBook.title}」进度遭遇错误，已断路保护:`, singleBookErr);
+              hasSyncFailures = true;
+            } finally {
+              completedSteps++;
+              updateProgress(completedSteps, 0);
+              await new Promise((r) => setTimeout(r, 10));
+            }
+          }
+        }
+
+        // 仅在非静默（手动点击）时更新主加载进度与弹出 Toast 提示
+        if (!isSilent) {
+          setSyncProgress(100);
+          if (hasSyncFailures) {
+            setSyncStepText("部分书籍备份受阻，其余同步成功");
+            setToastMsg("💡 部分书籍由于网络卡顿已安全隔离防断链，其余典籍已安全对齐！");
+          } else {
+            setSyncStepText(strings.sync.syncSuccess);
+            setToastMsg(strings.sync.syncSuccess);
+          }
+        }
+
+        const finalRes = await fetch(apiUrl("/books"));
+        if (finalRes.ok) {
+          const finalData = await finalRes.json();
+          setCloudBooks(finalData);
+        }
+      } catch (e) {
+        console.error("一键双向同步过程遭遇异常:", e);
+        if (!isSilent) {
+          setToastMsg(strings.sync.syncFailed);
+        }
+      } finally {
+        syncMutexRef.current = false;
+        if (!isSilent) {
+          setTimeout(() => {
+            setIsSyncing(false);
+            setSyncProgress(0);
+            setSyncStepText("");
+          }, 500);
+        }
+      }
+    };
+
+    // 4. 跨标签页分布式互斥多标签进程锁，彻底隔离多端写冲突
+    if (typeof navigator !== "undefined" && navigator.locks) {
+      try {
+        await navigator.locks.request("read_realm_global_sync_lock", { ifAvailable: true }, async (lock) => {
+          if (!lock) {
+            console.log("[Sync Lock] 跨标签页竞态抑制：另一书房标签页正在执行同步事务，本次极静退出。");
+            return;
+          }
+          await executeSyncPipeline();
+        });
+      } catch (err) {
+        console.warn("[Sync Lock] Web Locks API 请求异常，降级直跑:", err);
+        await executeSyncPipeline();
+      }
+    } else {
+      // 降级使用 LocalStorage 带 8 秒租约心跳时间戳分布式排他锁
+      const lockKey = "read_realm_sync_local_lock";
+      const now = Date.now();
+      const rawLock = localStorage.getItem(lockKey);
+      let isLockAvailable = true;
+
+      if (rawLock) {
+        try {
+          const { timestamp } = JSON.parse(rawLock);
+          if (now - timestamp < 8000) {
+            isLockAvailable = false;
+          }
+        } catch {
+          localStorage.removeItem(lockKey);
+        }
       }
 
-      if (!hasDiff) {
-        console.log("[Sync Check] 两端书阁完美一致，50ms 内极静退出同步。");
+      if (!isLockAvailable) {
+        console.log("[Sync Lock] LocalStorage 锁冲突判定：另一标签页同步尚未结束，本次静默退出。");
         return;
       }
 
-      const totalSteps = localOnly.length + cloudOnly.length + both.length;
-      let completedSteps = 0;
+      localStorage.setItem(lockKey, JSON.stringify({ timestamp: now }));
 
-      const updateProgress = (stepCount: number, subProgress: number) => {
-        const base = (stepCount / Math.max(1, totalSteps)) * 100;
-        const addition = subProgress / Math.max(1, totalSteps);
-        setSyncProgress(Math.min(100, Math.round(base + addition)));
-      };
+      const lockKeepAlive = setInterval(() => {
+        localStorage.setItem(lockKey, JSON.stringify({ timestamp: Date.now() }));
+      }, 3000);
 
-      // 1. 备份本地专享 (携带进度)
-      for (const book of localOnly) {
-        setSyncStepText(`正在备份「${book.title}」至云阁...`);
-        const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
-        const progress = await db.progress.get(book.id);
-        const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
-        
-        // 绑定最新进度 JSON
-        const bookWithProgress = { ...book, lastReadProgress };
-
-        // 记入活跃持久化上传任务，防刷新和崩溃
-        const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-        activeTasks[book.id] = "upload";
-        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
-
-        for (let p = 0; p <= 100; p += 25) {
-          updateProgress(completedSteps, p);
-          await new Promise((r) => setTimeout(r, 40));
-        }
-
-        await fetch(apiUrl("/books/import"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ metadata: bookWithProgress, chapters }),
-        });
-
-        // 任务完结，清除落盘记录
-        const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-        delete nextTasks[book.id];
-        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
-
-        completedSteps++;
-      }
-
-      // 2. 拉取云端新书 (还原进度)
-      for (const book of cloudOnly) {
-        setSyncStepText(`正在从云阁拉取「${book.title}」...`);
-        
-        // 记入活跃持久化下载任务
-        const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-        activeTasks[book.id] = "download";
-        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
-
-        for (let p = 0; p <= 50; p += 25) {
-          updateProgress(completedSteps, p);
-          await new Promise((r) => setTimeout(r, 40));
-        }
-
-        const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`));
-        if (chapRes.ok) {
-          const chapters = await chapRes.json();
-          for (let p = 50; p <= 100; p += 25) {
-            updateProgress(completedSteps, p);
-            await new Promise((r) => setTimeout(r, 30));
-          }
-
-          await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
-            // 安全防丢历史备份
-            const oldProgress = await db.progress.get(book.id);
-            if (oldProgress) {
-              const key = `reader-progress-rollback-${book.id}`;
-              let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
-              try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
-              if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
-                list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
-                localStorage.setItem(key, JSON.stringify(list.slice(-5)));
-              }
-            }
-
-            await db.books.put(book);
-            for (const chap of chapters) {
-              await db.chapters.put(chap);
-            }
-            // 反序列化云端进度落库，打通跨设备重现
-            if (book.lastReadProgress) {
-              try {
-                const parsedProgress = JSON.parse(book.lastReadProgress);
-                await db.progress.put(parsedProgress);
-              } catch (e) {
-                console.error("解析进度快照失败:", e);
-              }
-            }
-          });
-        }
-
-        // 任务完结，清除落盘记录
-        const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-        delete nextTasks[book.id];
-        localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
-
-        completedSteps++;
-      }
-
-      // 3. 进度双向对撞与咬合
-      if (both.length > 0) {
-        setSyncStepText("正在合并两端阅读痕迹...");
-        for (const localBook of both) {
-          const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
-          if (cloudBook) {
-            const cloudTime = cloudBook.lastReadAt ? new Date(cloudBook.lastReadAt).getTime() : 0;
-            const localTime = localBook.lastReadAt ? new Date(localBook.lastReadAt).getTime() : 0;
-
-            if (cloudTime > localTime) {
-              // A. 云端新：拉下并覆盖本地元数据与进度
-              await db.transaction("rw", [db.books, db.progress], async () => {
-                // 覆盖前自动落盘安全防丢备份
-                const oldProgress = await db.progress.get(localBook.id);
-                if (oldProgress) {
-                  const key = `reader-progress-rollback-${localBook.id}`;
-                  let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
-                  try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
-                  if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
-                    list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
-                    localStorage.setItem(key, JSON.stringify(list.slice(-5)));
-                  }
-                }
-
-                await db.books.update(localBook.id, { lastReadAt: cloudBook.lastReadAt });
-                if (cloudBook.lastReadProgress) {
-                  try {
-                    const parsedProgress = JSON.parse(cloudBook.lastReadProgress);
-                    await db.progress.put(parsedProgress);
-                  } catch (e) {
-                    console.error("更新本地对齐进度失败:", e);
-                  }
-                }
-              });
-            } else if (localTime > cloudTime) {
-              // B. 本地新：覆盖备份到云端
-              const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
-              const progress = await db.progress.get(localBook.id);
-              const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
-              const bookWithProgress = { ...localBook, lastReadProgress };
-
-              await fetch(apiUrl("/books/import"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ metadata: bookWithProgress, chapters }),
-              });
-            } else if (cloudTime === localTime) {
-              // C. 两端最后阅读时间戳完全一样，精细属性对碰，防止 Clock Skew 冲突覆盖
-              const localProgress = await db.progress.get(localBook.id);
-              if (cloudBook.lastReadProgress && localProgress) {
-                try {
-                  const parsedCloud = JSON.parse(cloudBook.lastReadProgress);
-                  const cloudIdx = parsedCloud.chapterIndex ?? 0;
-                  const localIdx = localProgress.chapterIndex ?? 0;
-                  const cloudPct = parsedCloud.percentage ?? 0;
-                  const localPct = localProgress.percentage ?? 0;
-
-                  if (cloudIdx > localIdx || (cloudIdx === localIdx && cloudPct > localPct)) {
-                    // 云端确实走得更远，更新本地
-                    await db.transaction("rw", [db.books, db.progress], async () => {
-                      const oldProgress = await db.progress.get(localBook.id);
-                      if (oldProgress) {
-                        const key = `reader-progress-rollback-${localBook.id}`;
-                        let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
-                        try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
-                        if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
-                          list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
-                          localStorage.setItem(key, JSON.stringify(list.slice(-5)));
-                        }
-                      }
-                      await db.progress.put(parsedCloud);
-                    });
-                  } else if (localIdx > cloudIdx || (localIdx === cloudIdx && localPct > cloudPct)) {
-                    // 本地更远，反向覆盖上报云端
-                    const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
-                    const bookWithProgress = { ...localBook, lastReadProgress: JSON.stringify(localProgress) };
-                    await fetch(apiUrl("/books/import"), {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ metadata: bookWithProgress, chapters }),
-                    });
-                  }
-                } catch (e) {
-                  console.error("时间戳相等时对撞对齐解析失败:", e);
-                }
-              }
-            }
-          }
-          completedSteps++;
-          updateProgress(completedSteps, 0);
-          await new Promise((r) => setTimeout(r, 20));
-        }
-      }
-
-      // 仅在非静默（手动点击）时更新主加载进度与弹出 Toast 提示
-      if (!isSilent) {
-        setSyncProgress(100);
-        setSyncStepText(strings.sync.syncSuccess);
-        setToastMsg(strings.sync.syncSuccess);
-      }
-
-      const finalRes = await fetch(apiUrl("/books"));
-      if (finalRes.ok) {
-        const finalData = await finalRes.json();
-        setCloudBooks(finalData);
-      }
-    } catch (e) {
-      console.error("一键双向同步过程遭遇异常:", e);
-      if (!isSilent) {
-        setToastMsg(strings.sync.syncFailed);
-      }
-    } finally {
-      syncMutexRef.current = false;
-      if (!isSilent) {
-        setTimeout(() => {
-          setIsSyncing(false);
-          setSyncProgress(0);
-          setSyncStepText("");
-        }, 500);
+      try {
+        await executeSyncPipeline();
+      } finally {
+        clearInterval(lockKeepAlive);
+        localStorage.removeItem(lockKey);
       }
     }
   };

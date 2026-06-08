@@ -150,7 +150,6 @@ interface SummaryContentProps {
 }
 
 function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
-  const [displayedText, setDisplayedText] = React.useState("");
   const [isTyping, setIsTyping] = React.useState(false);
   const prevLoadingRef = React.useRef(false);
   const textContainerRef = React.useRef<HTMLSpanElement | null>(null);
@@ -160,7 +159,6 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     prevLoadingRef.current = isAiLoading;
 
     if (isAiLoading) {
-      setDisplayedText("");
       setIsTyping(false);
       if (textContainerRef.current) {
         textContainerRef.current.textContent = "";
@@ -169,7 +167,6 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     }
 
     if (!text) {
-      setDisplayedText("");
       setIsTyping(false);
       if (textContainerRef.current) {
         textContainerRef.current.textContent = "";
@@ -181,7 +178,6 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     if (wasLoading) {
       setIsTyping(true);
       let currentIndex = 0;
-      setDisplayedText("");
       if (textContainerRef.current) {
         textContainerRef.current.textContent = "";
       }
@@ -196,14 +192,12 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
         } else {
           clearInterval(interval);
           setIsTyping(false);
-          setDisplayedText(text);
         }
       }, 20);
 
       return () => clearInterval(interval);
     } else {
       // 缓存瞬间直出，跳过打字动效，100% 纯净高亮
-      setDisplayedText(text);
       setIsTyping(false);
       if (textContainerRef.current) {
         textContainerRef.current.textContent = text;
@@ -215,7 +209,9 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
     <div
       className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
     >
-      <span ref={textContainerRef}>{displayedText}</span>
+      {/* 采用空子树 JSX 结构：React Diff 协调时，由于其在虚拟 DOM 中无子级，
+          即使父级/暗黑模式高频重绘，React 也绝不会覆写和擦除原生 textContent，彻底消除打字中途文字斩断闪烁 */}
+      <span ref={textContainerRef} />
       {isTyping && (
         <span className="inline-block ml-1 w-1.5 h-3.5 bg-[#9A6A3A] animate-pulse align-middle" />
       )}

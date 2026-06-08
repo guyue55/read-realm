@@ -1,49 +1,18 @@
 "use client";
 
 import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
-import dynamic from "next/dynamic";
 import { RouteProvider, useRouteStore } from "@/components/RouteProvider";
+import { virtualRouter } from "@/lib/route-store";
 
-// 惰性异步动态导入视图组件，极大减少首屏 bundle 体积，保障极致瞬间水合 (Hydration)
-const LibraryPage = dynamic(() => import("./library/page"), {
-  loading: () => <PageLoadingSkeleton text="正在展卷书架..." />,
-  ssr: false,
-});
-
-const ReaderPageSwitch = dynamic(() => import("./reader/[bookId]/page"), {
-  loading: () => <PageLoadingSkeleton text="正在载入书册..." />,
-  ssr: false,
-});
-
-const BookDetailPage = dynamic(() => import("./book/[bookId]/page"), {
-  loading: () => <PageLoadingSkeleton text="正在检索典籍详情..." />,
-  ssr: false,
-});
-
-const SearchPage = dynamic(() => import("./search/page"), {
-  loading: () => <PageLoadingSkeleton text="正在开启检索室..." />,
-  ssr: false,
-});
-
-const NotesPage = dynamic(() => import("./notes/page"), {
-  loading: () => <PageLoadingSkeleton text="正在检索读书笔记..." />,
-  ssr: false,
-});
-
-const SettingsPage = dynamic(() => import("./settings/page"), {
-  loading: () => <PageLoadingSkeleton text="正在进入藏书设置..." />,
-  ssr: false,
-});
-
-const ImportPage = dynamic(() => import("./import/page"), {
-  loading: () => <PageLoadingSkeleton text="正在连接导入港口..." />,
-  ssr: false,
-});
-
-const ImportPreviewPage = dynamic(() => import("./import/preview/[taskId]/page"), {
-  loading: () => <PageLoadingSkeleton text="正在展卷解析预览..." />,
-  ssr: false,
-});
+// 同步静态导入所有视图，彻底打消动态 chunk 请求，确保离线 100% 物理高可用、物理 0.0ms 切换！
+import LibraryPage from "./library/page";
+import ReaderPageSwitch from "./reader/[bookId]/page";
+import BookDetailPage from "./book/[bookId]/page";
+import SearchPage from "./search/page";
+import NotesPage from "./notes/page";
+import SettingsPage from "./settings/page";
+import ImportPage from "./import/page";
+import ImportPreviewPage from "./import/preview/[taskId]/page";
 
 // 精美的宣纸中式骨架加载组件
 function PageLoadingSkeleton({ text }: { text: string }) {
@@ -158,18 +127,59 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   private handleResetAndBackToLibrary = () => {
     try {
       localStorage.removeItem("read_realm_virtual_route_snapshot");
-      window.location.hash = "/library";
-      setTimeout(() => {
-        window.location.reload();
-      }, 300);
+      
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        // 🏮 离线抗灾力：在完全断网或 Next 停机下，杜绝物理刷新，采用虚拟路由内存级原位救赎
+        virtualRouter.emitChange({
+          currentView: "library",
+          activeBookId: null,
+          activeChapterIndex: null,
+          activePanel: null,
+          activeTaskId: null,
+        });
+        window.location.hash = "/library";
+        
+        setTimeout(() => {
+          this.setState({
+            hasError: false,
+            error: null,
+            showDetails: false,
+          });
+        }, 120);
+      } else {
+        window.location.hash = "/library";
+        setTimeout(() => {
+          window.location.reload();
+        }, 300);
+      }
     } catch (e) {
       console.error("重置快照失败:", e);
-      window.location.reload();
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        this.setState({
+          hasError: false,
+          error: null,
+          showDetails: false,
+        });
+      } else {
+        window.location.reload();
+      }
     }
   };
 
   private handleReload = () => {
-    window.location.reload();
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      // 🏮 离线静默复位：直接原地抹去错误，在宿主页面保持完好的情况下重试渲染
+      this.setState({
+        hasError: false,
+        error: null,
+        showDetails: false,
+      });
+    } else {
+      window.location.reload();
+    }
   };
 
   private toggleDetails = () => {
@@ -178,6 +188,8 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 
   public render() {
     if (this.state.hasError) {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
       return (
         <div className="w-full h-full min-h-screen flex flex-col items-center justify-center p-6 bg-[#F4EFE6] text-[#2C2621] dark:bg-[#151516] dark:text-[#A3A3AC] overflow-y-auto">
           <div className="max-w-md w-full flex flex-col items-center text-center gap-6 p-8 rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-[#678055]/10 shadow-lg scale-95 transition-all duration-300">
@@ -195,7 +207,13 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
             <p className="text-sm leading-relaxed text-[#6F665B] dark:text-[#8F8F8F] font-serif max-w-sm">
               书卷微染尘埃，秩序发生紊乱。
               <br />
-              或因古籍残缺、墨迹斑驳，致使当下展卷失败。
+              {isOffline ? (
+                <span className="text-[#9A6A3A] dark:text-[#C5A376] font-semibold mt-1 inline-block">
+                  🌿 此时断联尘封，无法连接云端。自愈阁将为您原位抚平画卷。
+                </span>
+              ) : (
+                "或因古籍残缺、墨迹斑驳，致使当下展卷失败。"
+              )}
             </p>
 
             {/* 功能按钮群 */}
@@ -204,14 +222,14 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
                 onClick={this.handleResetAndBackToLibrary}
                 className="w-full py-3 px-4 rounded-xl text-sm font-medium tracking-wide bg-[#678055] hover:bg-[#566c46] text-white active:scale-95 transition-all duration-200 shadow-md shadow-[#678055]/20"
               >
-                重置快照并回书架
+                {isOffline ? "【离线软复位】直接归于书架" : "重置快照并回书架"}
               </button>
 
               <button
                 onClick={this.handleReload}
                 className="w-full py-3 px-4 rounded-xl text-sm font-medium tracking-wide bg-white/60 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15 text-[#2C2621] dark:text-[#E3E3E3] border border-[#678055]/20 active:scale-95 transition-all duration-200"
               >
-                静默尝试重新展卷
+                {isOffline ? "【离线静默复位】原地抚平画卷" : "静默尝试重新展卷"}
               </button>
 
               <button
