@@ -10,7 +10,7 @@ import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
-import { useCallback, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, type MouseEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
@@ -26,6 +26,7 @@ const recognizer = new GestureRecognizer();
 
 export function ReaderDefault({ bookId }: { bookId: string }) {
   const router = useVirtualRouter();
+  const mainRef = useRef<HTMLDivElement>(null);
   const {
     chapter,
     renderedChapters,
@@ -73,6 +74,23 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     autoFlipCountdown,
     rollbackProgress,
   } = useReader(bookId);
+
+  useEffect(() => {
+    const updateActiveRef = () => {
+      if (!mainRef.current) return;
+      const containers = mainRef.current.querySelectorAll(".reader-gpu-accelerated");
+      for (const el of Array.from(containers)) {
+        if ((el as HTMLElement).offsetParent !== null) {
+          (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = el as HTMLDivElement;
+          break;
+        }
+      }
+    };
+
+    updateActiveRef();
+    window.addEventListener("resize", updateActiveRef);
+    return () => window.removeEventListener("resize", updateActiveRef);
+  }, [contentRef]);
 
   const handleMobileReaderClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -154,7 +172,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
 
   return (
-    <main className="fixed inset-0 overflow-hidden transition-colors duration-300 md:flex md:items-center md:justify-center md:bg-[#F7F1E6]">
+    <main
+      ref={mainRef}
+      className="fixed inset-0 overflow-hidden transition-colors duration-300 md:flex md:items-center md:justify-center md:bg-[#F7F1E6]"
+    >
       {/* 优雅非阻塞 Toast 消息层 */}
       {toast && (
         <div
@@ -221,7 +242,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onNextChapter={handleNextChapterActive}
           />
           <div
-            ref={contentRef}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
                 ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
@@ -339,7 +359,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Scrollable / Paginable Content Canvas */}
         <div
-          ref={contentRef}
           onClick={handleMobileReaderClick}
           onTouchStart={handleContentTouchStart}
           onTouchEnd={handleContentTouchEnd}

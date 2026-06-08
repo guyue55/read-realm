@@ -202,29 +202,72 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="rounded-xl border border-[var(--ui-border)] bg-white/55 p-3">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-[linear-gradient(135deg,#E7B77A,#5F7D52)]" />
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-[var(--ui-text)]">
-                漫游的夜
-              </p>
-              <p className="text-[10px] text-[var(--ui-quiet)] flex items-center gap-1">
-                <span>本地书架</span>
-                {!isOnline && (
-                  <>
-                    <span className="opacity-50">·</span>
-                    <span className="text-[#9A6A3A] font-bold flex items-center gap-0.5">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#9A6A3A] animate-pulse" />
-                      离线
-                    </span>
-                  </>
-                )}
-              </p>
+        {/* 极简底栏条：无杂乱文字，极致留白，悬浮展开详情卡 */}
+        <div className="group relative rounded-xl border border-[var(--ui-border)] bg-white/55 p-2 px-2.5 flex items-center justify-between gap-3 shadow-sm transition-all duration-300 hover:bg-white/85 hover:shadow-[0_4px_16px_rgba(80, 65, 45, 0.04)] cursor-pointer select-none">
+          {/* 左侧极其素雅圆形头像 */}
+          <div className="h-6 w-6 rounded-full bg-[#678055] flex items-center justify-center text-white font-serif text-[9px] font-bold shadow-sm shrink-0 transition-transform duration-300 group-hover:scale-105">
+            墨
+          </div>
+          
+          {/* 右侧极其克制、细长的水平进度线指示器 */}
+          <div className="flex-1 flex flex-col gap-1 pr-1">
+            <div className="h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)]">
+              <div className="h-full w-2/5 rounded-full bg-[#E7B77A] transition-all duration-500 ease-out" />
             </div>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(80,65,45,0.08)]">
-            <div className="h-full w-2/5 rounded-full bg-[var(--ui-accent)]" />
+
+          {/* 向上展开的磨砂宣纸卡片 (Tooltip) */}
+          <div className="absolute bottom-[115%] left-0 w-52 p-4 rounded-xl border border-[#E4D9C9] bg-[rgba(251,248,240,0.96)] shadow-[0_12px_36px_rgba(80,65,45,0.12)] backdrop-blur-md scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-300 origin-bottom z-50">
+            {/* 卡片下置小三角装饰 */}
+            <div className="absolute -bottom-1 left-6 w-2 h-2 rotate-45 border-r border-b border-[#E4D9C9] bg-[#FBF8F0]" />
+            
+            <div className="relative font-serif">
+              {/* 阁号与头像 */}
+              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-[#E4D9C9]/50">
+                <div className="w-8 h-8 rounded-full bg-[#678055] flex items-center justify-center text-white text-[10px] font-bold">
+                  墨
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#2F2A24] truncate">漫游的夜</p>
+                  <p className="text-[9px] text-[#8C8375] tracking-wider">墨问阁主</p>
+                </div>
+              </div>
+
+              {/* 阅读数据指标 */}
+              <div className="flex flex-col gap-2.5 text-[10px] text-[#526047]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#8C8375]">🔥 连续展卷</span>
+                  <span className="font-semibold font-mono text-[#2F2A24]">18 天</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8C8375]">⏱️ 今日达成</span>
+                    <span className="font-semibold font-mono text-[#2F2A24]">15 / 45 分钟</span>
+                  </div>
+                  <div className="h-1 w-full bg-[rgba(80,65,45,0.06)] rounded-full overflow-hidden">
+                    <div className="h-full w-1/3 bg-[#E7B77A] rounded-full" />
+                  </div>
+                </div>
+                
+                {/* 本地状态与离线/在线呼吸灯 */}
+                <div className="flex items-center justify-between border-t border-[#E4D9C9]/30 pt-2 text-[9px] text-[#8C8375]">
+                  <span>📚 藏书：12 册</span>
+                  <span className="text-[#678055] flex items-center gap-1">
+                    {!isOnline ? (
+                      <>
+                        <span className="inline-block w-1 h-1 rounded-full bg-[#9A6A3A] animate-pulse" />
+                        <span className="text-[#9A6A3A] font-bold">离线</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-block w-1 h-1 rounded-full bg-[#678055] animate-pulse" />
+                        <span>在线</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </aside>

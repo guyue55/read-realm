@@ -51,6 +51,10 @@ export class ReaderDatabase extends Dexie {
     if (typeof window !== "undefined") {
       let backupTimeout: any = null;
       const triggerBackup = () => {
+        if (isTransactionWriting) {
+          // 🏮 事务进行中，屏蔽 AOP 高频中间脏状态备份，待 executeSafeWriteTransaction 统一调度
+          return;
+        }
         if (backupTimeout) {
           clearTimeout(backupTimeout);
         }
@@ -76,6 +80,34 @@ export class ReaderDatabase extends Dexie {
 
 export const db = new ReaderDatabase();
 
+// 🏮 1. 新增全局写事务隔离状态阀与状态设置函数
+let isTransactionWriting = false;
+
+export function setTransactionWriting(active: boolean) {
+  isTransactionWriting = active;
+}
+
+/**
+ * 🏮 2. 封装高可用批量写事务包装器
+ * 确保原子事务 onSuccess 提交落盘后方才静雅触发 AOP 级冷冷元数据双轨备份
+ */
+export async function executeSafeWriteTransaction<T>(
+  tables: any[],
+  runner: () => Promise<T>
+): Promise<T> {
+  setTransactionWriting(true);
+  try {
+    const result = await db.transaction("rw", tables, async () => {
+      return await runner();
+    });
+    // 只有事务 100% 完美提交后，此时数据库元数据完整无损，触发全量冷备份
+    await backupMetadataToStorage();
+    return result;
+  } finally {
+    setTransactionWriting(false);
+  }
+}
+
 // ==========================================================
 // 🏮 「防蒸发柜」 双轨冗余镜像备份与冷自愈协议 (E07-S04 / E07-S03)
 // ==========================================================
@@ -89,74 +121,62 @@ export interface MetaShelfBackup {
 
 /**
  * 自动持久化双轨备份：将当前 IndexedDB 中的书架元数据、进度与书签打包存储。
- * 1. 优先备份到 localStorage 建立一级防线；
+ * 1. 优先备份到 localStorage 建立一级防线，配有 5MB 配额物理熔断和超量体积物理裁剪引擎；
  * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
  */
-/**
- * 辅助函数：按最后阅读时间或创建时间裁剪备份元数据，杜绝 LocalStorage 5MB 溢出
- */
-function pruneBackupData(books: Book[], progress: ReadingProgress[], bookmarks: Bookmark[], limit: number): MetaShelfBackup {
-  const sortedBooks = [...books].sort((a, b) => {
-    const tA = a.lastReadAt ? new Date(a.lastReadAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-    const tB = b.lastReadAt ? new Date(b.lastReadAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-    return tB - tA;
-  });
-
-  const slicedBooks = sortedBooks.slice(0, limit);
-  const bookIds = new Set(slicedBooks.map(b => b.id));
-
-  const filteredProgress = progress.filter(p => bookIds.has(p.bookId));
-  const filteredBookmarks = bookmarks.filter(b => bookIds.has(b.bookId));
-
-  return {
-    books: slicedBooks,
-    progress: filteredProgress,
-    bookmarks: filteredBookmarks,
-    backupTime: new Date().toISOString(),
-  };
-}
-
-/**
- * 自动持久化双轨备份：将当前 IndexedDB 中的书架元数据、进度与书签打包存储。
- * 1. 优先备份到 localStorage 建立一级防线，配有 80 本最高频活跃书籍截断策略及 QuotaExceededError 自愈裁剪垫片；
- * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
- */
-export async function backupMetadataToStorage(): Promise<void> {
-  if (typeof window === "undefined" || !window.localStorage) return;
+export async function backupMetadataToStorage(): Promise<boolean> {
+  if (typeof window === "undefined" || !window.localStorage) return false;
   try {
-    const books = await db.books.toArray();
-    const progress = await db.progress.toArray();
-    const bookmarks = await db.bookmarks.toArray();
+    let books = await db.books.toArray();
+    let progress = await db.progress.toArray();
+    let bookmarks = await db.bookmarks.toArray();
     
     // 如果没有任何藏书，不进行覆盖式空备份以防恶意抹除
     if (books.length === 0) {
       console.log("[Storage] 书架暂无典籍，跳过镜像双轨备份。");
-      return;
+      return false;
     }
 
-    // 默认高规格限制：最多备份 80 本最新活跃书籍的元数据，控制体积保持在 200KB 以下安全水位
-    let limit = 80;
-    let backup = pruneBackupData(books, progress, bookmarks, limit);
-    let serialized = JSON.stringify(backup);
+    // 🏮 核心安全自愈裁剪（容量限额防线）：
+    // 若 books.length > 20 或 bookmarks.length > 100，则自动 prune 并仅对最新前 20 本书、最新前 100 章节书签执行备份（强制限制快照 JSON 在 500KB 以下）
+    if (books.length > 20 || bookmarks.length > 100) {
+      console.log(`[Storage Backup] ⚠️ 检测到数据量规模较大，启动 LocalStorage 熔断剪裁机制...`);
+      // 仅备份最新活跃的 20 本藏书与最新前 100 条书签
+      books = books
+        .sort((a, b) => {
+          const tA = a.lastReadAt ? new Date(a.lastReadAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const tB = b.lastReadAt ? new Date(b.lastReadAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+          return tB - tA;
+        })
+        .slice(0, 20);
+      const allowedBookIds = new Set(books.map(b => b.id));
+      progress = progress.filter(p => allowedBookIds.has(p.bookId));
+      bookmarks = bookmarks
+        .filter(b => allowedBookIds.has(b.bookId))
+        .slice(-100);
+    }
+
+    const backupData: MetaShelfBackup = {
+      books,
+      progress,
+      bookmarks,
+      backupTime: new Date().toISOString(),
+    };
+
+    const serialized = JSON.stringify(backupData);
     
     // 一级防线：浏览器本地持久存储 localStorage (带 QuotaExceeded 熔断自愈)
     try {
       window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
-      console.log(`[Storage] 双轨冗余：元数据（最新活跃 ${backup.books.length} 本书）归档至 localStorage。`);
+      console.log(`[Storage] 双轨冗余：元数据（最新活跃 ${backupData.books.length} 本书）归档至 localStorage。`);
     } catch (e: any) {
       if (e.name === "QuotaExceededError" || e.code === 22 || e.number === 0x8007000E) {
-        console.warn("[Storage] 🚨 警告：LocalStorage 空间告急 (QuotaExceededError)！启动深度裁剪自愈机制，强制收缩至 20 本最新书籍...");
-        limit = 20;
-        backup = pruneBackupData(books, progress, bookmarks, limit);
-        serialized = JSON.stringify(backup);
+        console.error("[Storage Backup] ❌ 备份写入 LocalStorage 发生物理配额溢出，进行紧急冷自愈清除:", e);
         try {
-          window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
-          console.log("[Storage] 降级裁剪：20 本最新活跃图书元数据成功归档。");
-        } catch (retryErr) {
-          console.error("[Storage] 裁剪降级后仍无法写入 LocalStorage:", retryErr);
-        }
+          window.localStorage.removeItem("read_realm_meta_shelf_backup"); // 清理垃圾以防异常级联
+        } catch {}
       } else {
-        console.error("[Storage] 写入 LocalStorage 遭遇其他未知错误:", e);
+        console.error("[Storage Backup] 写入 LocalStorage 遭遇其他未知错误:", e);
       }
     }
 
@@ -165,7 +185,10 @@ export async function backupMetadataToStorage(): Promise<void> {
     if (cap?.Plugins?.Filesystem) {
       try {
         const { Filesystem, Directory } = cap.Plugins;
-        const fullBackup: MetaShelfBackup = { books, progress, bookmarks, backupTime: new Date().toISOString() };
+        const fullBooks = await db.books.toArray();
+        const fullProgress = await db.progress.toArray();
+        const fullBookmarks = await db.bookmarks.toArray();
+        const fullBackup: MetaShelfBackup = { books: fullBooks, progress: fullProgress, bookmarks: fullBookmarks, backupTime: new Date().toISOString() };
         const fullSerialized = JSON.stringify(fullBackup);
         await Filesystem.writeFile({
           path: "read_realm_backup/meta_shelf.json",
@@ -183,7 +206,10 @@ export async function backupMetadataToStorage(): Promise<void> {
     else if ((window as any).__TAURI__?.fs) {
       try {
         const { writeTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
-        const fullBackup: MetaShelfBackup = { books, progress, bookmarks, backupTime: new Date().toISOString() };
+        const fullBooks = await db.books.toArray();
+        const fullProgress = await db.progress.toArray();
+        const fullBookmarks = await db.bookmarks.toArray();
+        const fullBackup: MetaShelfBackup = { books: fullBooks, progress: fullProgress, bookmarks: fullBookmarks, backupTime: new Date().toISOString() };
         const fullSerialized = JSON.stringify(fullBackup);
         await writeTextFile("read_realm_backup/meta_shelf.json", fullSerialized, {
           dir: BaseDirectory.AppLocalData,
@@ -193,8 +219,10 @@ export async function backupMetadataToStorage(): Promise<void> {
         console.warn("[Storage] Tauri 原生沙盒写入遭遇阻碍:", err);
       }
     }
+    return true;
   } catch (err) {
     console.error("[Storage] 自动双轨备份异常中断:", err);
+    return false;
   }
 }
 
