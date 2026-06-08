@@ -1,5 +1,6 @@
 import React from "react";
 import { strings } from "@/lib/i18n";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export interface AIReaderPanelProps {
   isAiLoading: boolean;
@@ -9,6 +10,7 @@ export interface AIReaderPanelProps {
   onClose?: () => void;
   aiInput?: string; // 🏮 [NEW] AI 输入框受控绑定内容
   setAiInput?: (val: string) => void; // 🏮 [NEW] 更新 AI 输入框的回调
+  onClearSession?: () => void | Promise<void>; // 🧹 [NEW] 拂尘清理回调
 }
 
 export function AIReaderPanel({
@@ -19,8 +21,10 @@ export function AIReaderPanel({
   onClose,
   aiInput,
   setAiInput,
+  onClearSession,
 }: AIReaderPanelProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobileDrawer) return;
@@ -55,14 +59,29 @@ export function AIReaderPanel({
         <h2 className="font-bold text-[#9A6A3A] flex items-center">
           <span className="mr-2">✨</span> {strings.reader.aiAssistant}
         </h2>
-        {isMobileDrawer && onClose && (
-          <button
-            onClick={onClose}
-            className="text-[#6F665B] p-1 hover:text-inherit"
-          >
-            ✕
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onClearSession && aiSummary && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmOpen(true);
+              }}
+              title="拂尘扫尘"
+              className="text-[#6F665B] hover:text-[#9A6A3A] transition-all flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] hover:rotate-6 active:scale-95 bg-[rgba(80,65,45,0.02)]"
+            >
+              <span className="text-sm">🧹</span>
+              <span className="hidden sm:inline">拂尘</span>
+            </button>
+          )}
+          {isMobileDrawer && onClose && (
+            <button
+              onClick={onClose}
+              className="text-[#6F665B] p-1 hover:text-inherit"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -145,6 +164,24 @@ export function AIReaderPanel({
           </button>
         </div>
       )}
+
+      {/* 🧹 国风朱砂红拂尘确认弹窗 */}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="拂尘扫尘"
+        message="书案落尘，是否拂去本章 AI 伴读会话？&#10;此去不可撤销，下一次研读该章将重新问询伴读。"
+        confirmText="扫除"
+        cancelText="作罢"
+        isDanger={true}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          if (onClearSession) {
+            await onClearSession();
+          }
+        }}
+        onCancel={() => setConfirmOpen(false)}
+        onClose={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

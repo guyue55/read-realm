@@ -80,6 +80,10 @@ export class ReaderDatabase extends Dexie {
 
 export const db = new ReaderDatabase();
 
+if (typeof window !== "undefined") {
+  (window as any).db = db;
+}
+
 // 🏮 1. 新增全局写事务隔离状态阀与状态设置函数
 let isTransactionWriting = false;
 
