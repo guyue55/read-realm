@@ -13,6 +13,7 @@ import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Book, ReadingProgress } from "@reader/shared-types";
 import { PRESET_BOOKLISTS } from "./presetBooks";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type LibraryViewMode = "cover" | "compact" | "list";
 
@@ -68,6 +69,19 @@ export function LibraryDefault() {
     useState<LibraryViewMode>(loadLibraryViewMode);
   const [toastMsg, setToastMsg] = useState("");
   const [showDrawer, setShowDrawer] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
 
   // 云端同步及状态判定核心字段
   const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
@@ -114,8 +128,10 @@ export function LibraryDefault() {
 
   // 拉取云端书籍列表
   const fetchCloudBooks = useCallback(async () => {
-    if (!isOnline) {
+    const online = typeof navigator !== "undefined" ? navigator.onLine : isOnline;
+    if (!online) {
       setCloudBooks([]);
+      setToastMsg("🌧️ 书阁已处于离线状态，暂无法同步云端藏书阁。");
       return;
     }
     try {
@@ -707,18 +723,24 @@ export function LibraryDefault() {
       return;
     }
 
-    if (!confirm(strings.sync.offloadConfirm.replace("{title}", book.title))) return;
-
-    try {
-      await db.transaction("rw", [db.chapters], async () => {
-        await db.chapters.where("bookId").equals(book.id).delete();
-      });
-      setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
-      await fetchCloudBooks(); // 重新拉取对齐，由于本地 chapters 为空而云端有，书卡在 mergedBooks 会自动转为 Cloud Only 磨砂状态
-    } catch (err) {
-      console.error("释放本地空间失败:", err);
-      setToastMsg("💡 物理释放空间失败，存储数据库繁忙。");
-    }
+    setConfirmState({
+      isOpen: true,
+      title: "释放本地空间",
+      message: strings.sync.offloadConfirm.replace("{title}", book.title),
+      isDanger: false,
+      onConfirm: async () => {
+        try {
+          await db.transaction("rw", [db.chapters], async () => {
+            await db.chapters.where("bookId").equals(book.id).delete();
+          });
+          setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
+          await fetchCloudBooks(); // 重新拉取对齐，由于本地 chapters 为空而云端有，书卡在 mergedBooks 会自动转为 Cloud Only 磨砂状态
+        } catch (err) {
+          console.error("释放本地空间失败:", err);
+          setToastMsg("💡 物理释放空间失败，存储数据库繁忙。");
+        }
+      }
+    });
   };
 
   const books = useLiveQuery(async () => {
@@ -811,31 +833,37 @@ export function LibraryDefault() {
     window.localStorage.setItem(LIBRARY_VIEW_KEY, mode);
   };
 
-  const handleDelete = async (bookId: string, title: string) => {
-    if (!confirm(strings.shelf.deleteConfirm.replace("{title}", title))) return;
+  const handleDelete = (bookId: string, title: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "物理删除典籍",
+      message: strings.shelf.deleteConfirm.replace("{title}", title),
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await db.transaction(
+            "rw",
+            [db.books, db.chapters, db.progress, db.bookmarks],
+            async () => {
+              await db.chapters.where("bookId").equals(bookId).delete();
+              await db.progress.where("bookId").equals(bookId).delete();
+              await db.bookmarks.where("bookId").equals(bookId).delete();
+              await db.books.delete(bookId);
+            },
+          );
 
-    try {
-      await db.transaction(
-        "rw",
-        [db.books, db.chapters, db.progress, db.bookmarks],
-        async () => {
-          await db.chapters.where("bookId").equals(bookId).delete();
-          await db.progress.where("bookId").equals(bookId).delete();
-          await db.bookmarks.where("bookId").equals(bookId).delete();
-          await db.books.delete(bookId);
-        },
-      );
-
-      try {
-        await fetch(apiUrl(`/books/${bookId}`), { method: "DELETE" });
-      } catch (e) {
-        console.error("Backend delete failed", e);
+          try {
+            await fetch(apiUrl(`/books/${bookId}`), { method: "DELETE" });
+          } catch (e) {
+            console.error("Backend delete failed", e);
+          }
+          // 删除后拉取刷新云端对齐
+          fetchCloudBooks();
+        } catch (e) {
+          console.error(`Delete error: ${(e as Error).message}`);
+        }
       }
-      // 删除后拉取刷新云端对齐
-      fetchCloudBooks();
-    } catch (e) {
-      console.error(`Delete error: ${(e as Error).message}`);
-    }
+    });
   };
 
   const bookCount = books?.length || 0;
@@ -955,12 +983,12 @@ export function LibraryDefault() {
         <section className="mt-5 max-w-4xl">
           <div
             onClick={() => router.push(`/reader/${continueBook.id}`)}
-            className="group cursor-pointer rounded-[18px] border p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5"
+            className="group cursor-pointer rounded-[18px] border p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916]"
             style={{
               background: extractedColors
                 ? `linear-gradient(135deg, ${extractedColors.color1} 0%, ${extractedColors.color2} 100%)`
                 : undefined,
-              borderColor: extractedColors?.borderColor || "rgba(80, 65, 45, 0.12)",
+              borderColor: extractedColors?.borderColor || "rgba(227, 213, 190, 0.4)",
             }}
           >
             {/* 拟物装饰高光线 */}
@@ -1411,6 +1439,8 @@ export function LibraryDefault() {
                           e.stopPropagation();
                           handleDelete(book.id, book.title);
                         }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         className="absolute right-0 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
                         title={strings.shelf.delete}
                       >
@@ -1480,6 +1510,8 @@ export function LibraryDefault() {
                         e.stopPropagation();
                         handleDelete(book.id, book.title);
                       }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                       className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
                       title={strings.shelf.delete}
                     >
@@ -1669,6 +1701,16 @@ export function LibraryDefault() {
           <span>🍃</span> {toastMsg}
         </div>
       )}
+
+      {/* 🏮 国风宣纸拟物 Custom Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 }

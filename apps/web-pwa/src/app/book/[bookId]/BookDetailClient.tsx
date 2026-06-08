@@ -9,6 +9,7 @@ import { PageLayout } from "@/components/PageLayout";
 import { BookCover } from "@/components/BookCover";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function BookDetailPage({
   params,
@@ -19,6 +20,19 @@ export default function BookDetailPage({
   const [book, setBook] = useState<Book | null>(null);
   const [showCacheSheet, setShowCacheSheet] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
@@ -87,21 +101,25 @@ export default function BookDetailPage({
     : 0;
 
   // 清除本地缓存核心处理
-  const handleClearCache = async () => {
-    if (
-      !confirm(
-        `确定要清空「${book.title}」的本地正文缓存吗？\n（将保留阅读进度和您的全部笔记，重新开始阅读时会自动按需同步加载）`
-      )
-    )
-      return;
-    try {
-      await db.chapters.where("bookId").equals(book.id).delete();
-      setToastMsg("🍃 本地章节正文缓存已成功清空，本地存储资源已释放。");
-      setShowCacheSheet(false);
-    } catch (e) {
-      console.error("清空章节正文缓存发生故障:", e);
-      setToastMsg("💡 本地存储繁忙，清理缓存失败。");
-    }
+  const handleClearCache = () => {
+    setConfirmState({
+      isOpen: true,
+      title: "清空物理缓存",
+      message: `确定要清空典籍「${book.title}」的本地章节正文缓存吗？\n\n（此操作将释放 IndexedDB 本地占用空间。我们将永久保留您的阅读进度、书签和全部高亮手记。再次阅读该书时会自动按需拉取）`,
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await db.chapters.where("bookId").equals(book.id).delete();
+          setToastMsg("🍃 本地章节正文缓存已成功清空，本地存储资源已释放。");
+          setShowCacheSheet(false);
+        } catch (e) {
+          console.error("清空章节正文缓存发生故障:", e);
+          setToastMsg("💡 本地存储繁忙，清理缓存失败。");
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   return (
@@ -219,62 +237,63 @@ export default function BookDetailPage({
         </div>
       </div>
 
-      {/* 缓存管理抽屉 (CacheSheet) - 中式暖泥宣纸风格 */}
+      {/* 底部弹出式存储空间面板 */}
       {showCacheSheet && (
-        <div
-          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-xs animate-in fade-in duration-300"
-          onClick={() => setShowCacheSheet(false)}
-        />
-      )}
-      <div
-        className={`fixed bottom-0 inset-x-0 bg-[#FFFDF9] z-50 px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] border-t border-[#E9DCC8] rounded-t-[24px] shadow-[0_-12px_40px_rgba(80,65,45,0.08)] physics-spring md:max-w-md md:left-auto md:right-6 md:bottom-6 md:rounded-[24px] md:border ${
-          showCacheSheet ? "translate-y-0" : "translate-y-full"
-        }`}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold font-serif text-[#2F2A24] text-lg">
-            本地缓存管理
-          </h3>
-          <button
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-xs animate-in fade-in duration-300">
+          {/* 点击背景收起 */}
+          <div
+            className="absolute inset-0"
             onClick={() => setShowCacheSheet(false)}
-            className="text-[#6F665B] hover:text-[#2F2A24] p-1 font-bold text-base"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="space-y-6">
-          <div className="bg-[rgba(80,65,45,0.03)] p-5 rounded-20 border border-[rgba(80,65,45,0.06)]">
-            <p className="text-xs text-[#6F665B] mb-2 font-serif">
-              本地数据库估算占用空间
-            </p>
-            <div className="flex justify-between items-baseline">
-              <span className="text-sm font-serif text-[#3A3226]">
-                章节正文物理缓存
-              </span>
-              <span className="text-2xl font-bold font-mono text-[#5F7D52]">
-                {book.wordCount
-                  ? `${(book.wordCount * 0.003).toFixed(1)} KB`
-                  : "0.0 KB"}
-              </span>
-            </div>
-            <p className="text-[10px] text-[#9C9388] mt-3 font-serif leading-relaxed">
-              * 字数以中文 UTF-8 编码 1 字符 ≈ 3 字节换算数据库中正文物理体积。
-            </p>
-          </div>
+          />
 
-          <div className="space-y-4">
-            <button
-              onClick={handleClearCache}
-              className="w-full py-3.5 border border-[#B86B5C] text-[#B86B5C] bg-[#FFF0EC] hover:bg-[#FCE0DA] active:scale-[0.98] font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5"
-            >
-              🗑️ 清空章节本地正文缓存
-            </button>
-            <p className="text-[11px] text-[#9C9388] leading-relaxed font-serif px-1">
-              🍂 说明：此操作仅清除 IndexedDB 中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
-            </p>
+          <div className="relative w-full max-w-4xl bg-[#FAF6EE] border-t border-[#DFD1BF] rounded-t-[32px] shadow-2xl p-6 md:p-10 flex flex-col gap-6 animate-in slide-in-from-bottom duration-300">
+            {/* 中式边线装饰 */}
+            <div className="absolute inset-4 rounded-t-[24px] border border-[#E9DCC8]/60 pointer-events-none" />
+
+            <div className="flex justify-between items-center relative z-10">
+              <h2 className="text-xl font-bold font-serif text-[#2F2A24] flex items-center gap-2">
+                📦 案头藏书本地物理存储管理
+              </h2>
+              <button
+                onClick={() => setShowCacheSheet(false)}
+                className="w-8 h-8 rounded-full bg-[#EBE3D3]/50 text-[#6F665B] flex items-center justify-center hover:bg-[#EBE3D3] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-2 relative z-10">
+              <div className="bg-[#FFFDF9] border border-[#EBE3D3] p-5 rounded-2xl flex flex-col justify-center">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-serif text-[#3A3226]">
+                    章节正文物理缓存
+                  </span>
+                  <span className="text-2xl font-bold font-mono text-[#5F7D52]">
+                    {book.wordCount
+                      ? `${(book.wordCount * 0.003).toFixed(1)} KB`
+                      : "0.0 KB"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#9C9388] mt-3 font-serif leading-relaxed">
+                  * 字数以中文 UTF-8 编码 1 字符 ≈ 3 字节换算数据库中正文物理体积。
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={handleClearCache}
+                  className="w-full py-3.5 border border-[#B86B5C] text-[#B86B5C] bg-[#FFF0EC] hover:bg-[#FCE0DA] active:scale-[0.98] font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5"
+                >
+                  🗑️ 清空章节本地正文缓存
+                </button>
+                <p className="text-[11px] text-[#9C9388] leading-relaxed font-serif px-1">
+                  🍂 说明：此操作仅清除 IndexedDB 中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 优雅宣纸毛玻璃 Toast */}
       {toastMsg && (
@@ -282,6 +301,16 @@ export default function BookDetailPage({
           <span>🍃</span> {toastMsg}
         </div>
       )}
+
+      {/* 🏮 国风宣纸拟物 Custom Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </PageLayout>
   );
 }

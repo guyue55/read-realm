@@ -9,7 +9,7 @@ import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { useVirtualRouter } from "@/lib/route-store";
-import { useCallback, type MouseEvent } from "react";
+import { useCallback, useState, useEffect, type MouseEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
@@ -67,10 +67,62 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     updateAutoFlipAtBottom,
     autoFlipCountdown,
     rollbackProgress,
+    addBookmarkWithNote,
+    showToast,
   } = useReader(bookId);
+
+  const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
+  const [selectedText, setSelectedText] = useState("");
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [userNoteText, setUserNoteText] = useState("");
+  const [aiInput, setAiInput] = useState(""); // 🏮 联动 AI 伴读的输入框内容
+
+  const handleMouseOrTouchUp = useCallback((e: { target: EventTarget | null }) => {
+    // 排除点在气泡或弹窗内部的点击，防止点气泡按钮时选区被清空
+    if (e.target instanceof Element && (e.target.closest(".selection-popover") || e.target.closest(".note-dialog"))) {
+      return;
+    }
+    
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim().length > 0) {
+        const text = selection.toString().trim();
+        setSelectedText(text);
+        
+        try {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setSelectionRect(rect);
+        } catch (err) {
+          console.warn("无法捕获选区位置:", err);
+        }
+      } else {
+        // 清空
+        setSelectionRect(null);
+        setSelectedText("");
+      }
+    }, 50); // 稍微延迟，等待系统 Selection 更新
+  }, []);
+
+  // 监听全局划词选区事件
+  useEffect(() => {
+    document.addEventListener("mouseup", handleMouseOrTouchUp);
+    document.addEventListener("touchend", handleMouseOrTouchUp);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseOrTouchUp);
+      document.removeEventListener("touchend", handleMouseOrTouchUp);
+    };
+  }, [handleMouseOrTouchUp]);
 
   const handleReaderClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
+      // 🏮 [FIX] 拦截划词状态下的点击误触翻页，仅清空选区并关闭气泡
+      if (selectionRect) {
+        window.getSelection()?.removeAllRanges();
+        setSelectionRect(null);
+        return;
+      }
+
       if (isInteractiveReaderTarget(event.target) || activePanel) return;
 
       const bounds = event.currentTarget.getBoundingClientRect();
@@ -120,7 +172,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
       // 点击中间区域，隐藏菜单
       setShowMenu(false);
     },
-    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel, isPagination],
+    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel, isPagination, selectionRect],
   );
 
   if (!chapter) {
@@ -317,6 +369,8 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             isMobileDrawer={true}
             isDark={isDark}
             onClose={() => setActivePanel(null)}
+            aiInput={aiInput}
+            setAiInput={setAiInput}
           />
         </div>
 
@@ -436,6 +490,120 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           >
             ✨ {autoFlipCountdown.toFixed(1)}s 后自动切到下一章... [立即跳转]
           </button>
+        </div>
+      )}
+
+      {/* 极奢国风毛玻璃划词气泡 (SelectionPopover) */}
+      {selectionRect && !showNoteDialog && (
+        <div
+          className="selection-popover fixed z-40 bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md border border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] rounded-full shadow-[0_10px_32px_rgba(80,65,45,0.12)] px-4 py-1.5 flex items-center gap-3.5 transition-all duration-300 animate-in fade-in zoom-in-95"
+          style={{
+            // 🏮 [FIX] 修复 fixed 元素在页面滚动时漂移的问题，并增加顶部空间不足时的自适应底部避让
+            top: `${selectionRect.top - 54 < 12 ? selectionRect.bottom + 12 : selectionRect.top - 54}px`,
+            left: `${selectionRect.left + selectionRect.width / 2}px`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          <button
+            onClick={() => setShowNoteDialog(true)}
+            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+          >
+            ✍️ 记笔记
+          </button>
+          <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
+          <button
+            onClick={() => {
+              // AI 伴读强连通
+              setAiInput((prev) => prev ? `${prev}\n对于这段话：“${selectedText}”` : `我想请问关于这段话：“${selectedText}”的看法。`);
+              setActivePanel("ai");
+              // 清除
+              window.getSelection()?.removeAllRanges();
+              setSelectionRect(null);
+            }}
+            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+          >
+            ✨ AI伴读
+          </button>
+          <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(selectedText);
+              showToast("引文已成功复制至剪贴板");
+              window.getSelection()?.removeAllRanges();
+              setSelectionRect(null);
+            }}
+            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+          >
+            📖 复制
+          </button>
+        </div>
+      )}
+
+      {/* 文人落墨·写笔记宣纸小弹窗 (NoteDialog) */}
+      {showNoteDialog && (
+        <div 
+          className="fixed inset-0 z-50 flex sm:items-center sm:justify-center items-end justify-center bg-black/30 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            setShowNoteDialog(false);
+            setUserNoteText("");
+            window.getSelection()?.removeAllRanges();
+            setSelectionRect(null);
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="note-dialog relative w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-[24px] max-sm:rounded-b-none max-sm:pb-[calc(1.75rem+env(safe-area-inset-bottom))] max-w-md bg-[#FAF6EE] dark:bg-[#25231F] rounded-[24px] border border-[#DFD1BF] dark:border-[#4A4238] shadow-2xl p-7 flex flex-col gap-5 animate-in max-sm:slide-in-from-bottom sm:zoom-in-95 duration-300"
+          >
+            <div className="absolute inset-3.5 max-sm:inset-3 rounded-[18px] max-sm:rounded-t-[18px] max-sm:rounded-b-none border border-[#E9DCC8]/60 dark:border-[#5C5346]/40 pointer-events-none" />
+            
+            <h3 className="text-lg font-bold font-serif text-[#2F2A24] dark:text-[#E9DCC8] flex items-center gap-2 relative z-10">
+              ✍️ 文人落墨 · 记录读书笔记
+            </h3>
+            
+            <div className="bg-[#FFFDF9] dark:bg-[#1C1B19] border border-[#EBE3D3] dark:border-[#3D372E] rounded-[16px] p-4 relative z-10 max-h-[100px] overflow-y-auto">
+              <span className="text-[10px] text-[#A69B88] dark:text-[#807667] font-serif block mb-1 uppercase tracking-wider">所选引文</span>
+              <p className="text-xs font-serif text-[#5C5446] dark:text-[#BDB19F] italic leading-relaxed pl-3.5 border-l-2 border-[#D5C2B1] dark:border-[#6B5A49]">
+                “{selectedText}”
+              </p>
+            </div>
+            
+            <textarea
+              value={userNoteText}
+              onChange={(e) => setUserNoteText(e.target.value)}
+              placeholder="在此写下您的所思、所想、所悟，落墨留痕..."
+              rows={4}
+              className="w-full bg-[#FFFDF9] dark:bg-[#1C1B19] border border-[#EBE3D3] dark:border-[#3D372E] rounded-[16px] p-4 text-sm font-serif text-[#3A2D22] dark:text-[#E2D5C5] focus:border-[#678055] dark:focus:border-[#83A370] focus:outline-none transition-colors relative z-10 resize-none placeholder-[#A89F8F]"
+            />
+            
+            <div className="flex gap-3 justify-end relative z-10">
+              <button
+                onClick={() => {
+                  setShowNoteDialog(false);
+                  setUserNoteText("");
+                  window.getSelection()?.removeAllRanges();
+                  setSelectionRect(null);
+                }}
+                className="px-5 py-2.5 bg-[rgba(80,65,45,0.04)] dark:bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(80,65,45,0.08)] dark:hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(80,65,45,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#6F665B] dark:text-[#A89F8F] text-sm font-semibold rounded-full transition-colors font-serif"
+              >
+                作罢
+              </button>
+              <button
+                onClick={async () => {
+                  if (!userNoteText.trim()) {
+                    showToast("请输入您的笔记内容");
+                    return;
+                  }
+                  await addBookmarkWithNote(userNoteText, selectedText);
+                  setShowNoteDialog(false);
+                  setUserNoteText("");
+                  setSelectionRect(null);
+                }}
+                className="px-6 py-2.5 bg-[#678055] dark:bg-[#4E623E] hover:bg-[#4B633C] dark:hover:bg-[#3C4E2E] text-white text-sm font-semibold rounded-full shadow-md transition-colors font-serif"
+              >
+                落墨保存
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

@@ -6,6 +6,7 @@ import { useVirtualRouter } from "@/lib/route-store";
 import type { Bookmark } from "@reader/shared-types";
 import { PageLayout } from "@/components/PageLayout";
 import { EmptyState } from "@/components/EmptyState";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 // 勋章详情定义
 interface Medal {
@@ -91,6 +92,20 @@ export default function NotesPage() {
   const [bookCount, setBookCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"stats" | "notes">("stats");
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    isAlert?: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
   
   // 勋章详情弹窗彩蛋
   const [activeMedal, setActiveMedal] = useState<Medal | null>(null);
@@ -143,15 +158,29 @@ export default function NotesPage() {
     fetchNotesAndStats();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定删除这条笔记吗？")) return;
-    try {
-      await db.bookmarks.delete(id);
-      setBookmarks((prev) => prev.filter((b) => b.id !== id));
-    } catch (error) {
-      console.error("删除笔记发生异常:", error);
-      alert("抱歉，由于本地数据库异常，笔记删除失败，请稍后重试。");
-    }
+  const handleDelete = (id: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "物理删除笔记",
+      message: "确定删除这条笔记吗？此操作将使该条落墨永久从您的阅历中抹去，不可撤销。",
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await db.bookmarks.delete(id);
+          setBookmarks((prev) => prev.filter((b) => b.id !== id));
+        } catch (error) {
+          console.error("删除笔记发生异常:", error);
+          setConfirmState({
+            isOpen: true,
+            title: "山河受阻 · 记录未抹",
+            message: "抱歉，由于本地数据库异常，笔记物理删除失败，请稍后重试。",
+            isDanger: true,
+            isAlert: true,
+            onConfirm: () => {}
+          });
+        }
+      }
+    });
   };
 
   return (
@@ -427,14 +456,28 @@ export default function NotesPage() {
                       </button>
                     </div>
 
-                    <div className="flex-1 bg-[#F5ECE2]/42 p-5 rounded-[16px] border border-[#ECE0D3] relative mb-6">
-                      <div className="absolute top-3 left-4 text-4xl text-[#ECE0D3] font-serif leading-none select-none pointer-events-none">
+                    <div className="flex-1 bg-[#F5ECE2]/30 p-4 rounded-[16px] border border-[#ECE0D3] relative mb-4">
+                      <div className="absolute top-2 left-3 text-3xl text-[#ECE0D3] font-serif leading-none select-none pointer-events-none">
                         &ldquo;
                       </div>
-                      <p className="text-[#3A2D22] text-sm leading-relaxed relative z-10 font-serif italic pl-5 pr-2">
+                      <p className="text-[#5C5046] text-xs leading-relaxed relative z-10 font-serif italic pl-4 pr-1">
                         {bookmark.contentPreview || "（无内容预览）"}
                       </p>
                     </div>
+
+                    {/* 🏮 [NEW] 第二代中式国风：用户手写的心得/批注展示卡片 */}
+                    {bookmark.note && (
+                      <div className="mt-1 mb-5 p-4 rounded-[16px] bg-[#FAF6EE] border border-[#DFD1BF] relative shadow-inner overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                        {/* 极细中式小毛笔 🖌️ 徽标与古典印章微边 */}
+                        <div className="absolute right-3.5 top-3.5 text-lg select-none opacity-25">🖌️</div>
+                        <span className="text-[10px] text-[#A39683] font-bold font-serif uppercase tracking-widest block mb-1.5">
+                          阁主批注想法
+                        </span>
+                        <p className="text-sm font-serif text-[#3A2D22] leading-relaxed text-justify relative z-10 whitespace-pre-wrap pl-1 pr-4">
+                          {bookmark.note}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="flex justify-between items-center mt-auto border-t border-[rgba(80,65,45,0.06)] pt-4">
                       <span className="text-xs text-[var(--ui-quiet)] font-mono">
@@ -523,6 +566,16 @@ export default function NotesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        isAlert={confirmState.isAlert}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </PageLayout>
   );
 }

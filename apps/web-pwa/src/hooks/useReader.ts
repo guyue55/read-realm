@@ -1241,6 +1241,55 @@ export function useReader(bookId: string) {
     showToast(strings.reader.bookmarkAdded);
   }, [chapter, bookId, settings.pageMode, showToast, getPrecisePosition]);
 
+  /**
+   * 🏮 [NEW] 记录用户手写读书笔记并与高亮书签同构绑定
+   * 锁定原生段落与字偏移，保存当前选区引文和用户的 note 文本。
+   */
+  const addBookmarkWithNote = useCallback(
+    async (noteText: string, contentOverride?: string) => {
+      if (!chapter) return;
+      let offset = 0;
+      if (contentRef.current) {
+        offset =
+          settings.pageMode === "scroll"
+            ? contentRef.current.scrollTop
+            : contentRef.current.scrollLeft;
+      } else {
+        offset = window.scrollY;
+      }
+
+      const { paragraphIndex, characterOffset } = getPrecisePosition();
+
+      // 获取当前选中的引文，如果有覆盖值则使用覆盖值（防止异步清除导致丢失）
+      const selectionText = contentOverride || document.getSelection()?.toString().trim();
+      const contentPreview =
+        selectionText ||
+        document.querySelector(".reader-content")?.textContent?.slice(0, 50) ||
+        "";
+
+      const bookmark: Bookmark = {
+        id: Date.now().toString(),
+        bookId,
+        chapterIndex: chapter.index,
+        offset,
+        paragraphIndex,
+        characterOffset,
+        contentPreview: contentPreview.slice(0, 300), // 最多记录 300 字引文
+        note: noteText.trim(), // 🏮 保存用户批注心得
+        createdAt: new Date().toISOString(),
+      };
+
+      await db.bookmarks.add(bookmark);
+      setBookmarks((prev) => [...prev, bookmark]);
+      triggerHapticFeedback(15); // 书签笔记落盘震动反馈
+      
+      // 清除选区，释放 UI 焦点
+      window.getSelection()?.removeAllRanges();
+      showToast(strings.reader.bookmarkAdded); // 提示印刻成功
+    },
+    [chapter, bookId, settings.pageMode, showToast, getPrecisePosition]
+  );
+
   const jumpToBookmark = useCallback(
     async (bookmark: Bookmark) => {
       if (engine) {
@@ -1746,6 +1795,7 @@ export function useReader(bookId: string) {
     handlePageNext,
     handlePagePrev,
     addBookmark,
+    addBookmarkWithNote,
     jumpToBookmark,
     handleSummarize,
     updateFontSize,
@@ -1764,5 +1814,6 @@ export function useReader(bookId: string) {
     updateAutoFlipAtBottom,
     autoFlipCountdown,
     rollbackProgress,
+    showToast,
   };
 }

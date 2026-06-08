@@ -73,6 +73,7 @@ export const BookmarkSchema = z.object({
   createdAt: z.string(),
   paragraphIndex: z.number().optional(),
   characterOffset: z.number().optional(),
+  note: z.string().optional(), // 🏮 [NEW] 用户手写的心得/批注笔记，同构至书签数据中
 });
 
 export type Bookmark = z.infer<typeof BookmarkSchema>;
