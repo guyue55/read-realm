@@ -32,18 +32,6 @@ const navItems = [
     ),
   },
   {
-    label: "阅历",
-    href: "/notes",
-    icon: (
-      <>
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <path d="M9 6h7" />
-        <path d="M9 10h7" />
-      </>
-    ),
-  },
-  {
     label: "导入",
     href: "/import",
     icon: (
@@ -217,7 +205,7 @@ export function AppShell({
           </div>
 
           {/* 向上展开的磨砂宣纸卡片 (Tooltip) */}
-          <div className="absolute bottom-[115%] left-0 w-52 p-4 rounded-xl border border-[#E4D9C9] bg-[rgba(251,248,240,0.96)] shadow-[0_12px_36px_rgba(80,65,45,0.12)] backdrop-blur-md scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-300 origin-bottom z-50">
+          <div className="absolute bottom-[115%] left-0 w-52 p-4 rounded-xl border border-[#E4D9C9] bg-[rgba(251,248,240,0.96)] shadow-[0_12px_36px_rgba(80,65,45,0.12)] backdrop-blur-md scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-300 origin-bottom z-50">
             {/* 卡片下置小三角装饰 */}
             <div className="absolute -bottom-1 left-6 w-2 h-2 rotate-45 border-r border-b border-[#E4D9C9] bg-[#FBF8F0]" />
             
@@ -266,6 +254,17 @@ export function AppShell({
                     )}
                   </span>
                 </div>
+
+                {/* 🎴 一键直达阅历物理传送门 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push("/notes");
+                  }}
+                  className="mt-3 w-full py-1.5 rounded-lg border border-[#B86B5C]/30 bg-[#678055] text-white hover:bg-[#5a6e4a] active:scale-[0.98] transition-all text-[10px] font-bold tracking-wide flex items-center justify-center gap-1 font-serif shadow-sm"
+                >
+                  <span>🎴</span> 瞻仰阁主阅历
+                </button>
               </div>
             </div>
           </div>

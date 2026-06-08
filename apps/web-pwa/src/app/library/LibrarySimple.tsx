@@ -38,6 +38,8 @@ export default function LibraryPage() {
     });
   }, [sortBy]);
 
+  const totalNotesCount = useLiveQuery(() => db.bookmarks.count(), []);
+
   const handleDelete = (bookId: string, title: string) => {
     setConfirmState({
       isOpen: true,
@@ -134,6 +136,31 @@ export default function LibraryPage() {
             >
               {strings.shelf.sortRecent}
             </button>
+          </div>
+        </div>
+
+        {/* 🏮 「墨问修行」简易修行卡 */}
+        <div
+          onClick={() => router.push("/notes")}
+          className="mb-6 group cursor-pointer rounded-[14px] border border-[#E4D7C2]/60 p-4 shadow-[0_8px_24px_rgba(80,65,45,0.03)] bg-gradient-to-r from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916] flex items-center justify-between transition-all duration-300 hover:shadow-[0_12px_32px_rgba(80,65,45,0.06)] hover:-translate-y-0.5 relative overflow-hidden"
+        >
+          <div className="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-[radial-gradient(circle,rgba(103,128,85,0.05)_0%,transparent_70%)] pointer-events-none select-none" />
+          <div className="flex items-center gap-3 relative z-10">
+            {/* 拟物小印章 */}
+            <div className="w-10 h-10 rounded-full border border-double border-[#B86B5C] bg-[#B86B5C]/5 dark:bg-[#B86B5C]/10 flex items-center justify-center font-serif text-[#B86B5C] dark:text-[#E29B8C] font-bold text-[10px] leading-tight rotate-[-4deg] shrink-0">
+              修行
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[var(--ui-text)] flex items-center gap-1.5 font-reading-title">
+                💮 墨问修行 · 展卷 18 天
+              </p>
+              <p className="text-[11px] text-[var(--ui-muted)] mt-0.5 font-serif">
+                藏书 {books?.length || 0} 册 / 已落笔 {totalNotesCount || 0} 处随手批注
+              </p>
+            </div>
+          </div>
+          <div className="text-xs font-bold text-[var(--ui-accent)] opacity-80 group-hover:translate-x-0.5 transition-transform font-serif flex items-center gap-1 z-10">
+            <span>移步 ➔</span>
           </div>
         </div>
 

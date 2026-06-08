@@ -867,6 +867,7 @@ export function LibraryDefault() {
   };
 
   const bookCount = books?.length || 0;
+  const totalNotesCount = useLiveQuery(() => db.bookmarks.count(), []);
   const continueBook = books?.[0];
   const continueProgress = continueBook
     ? progressByBookId?.[continueBook.id]
@@ -980,111 +981,168 @@ export function LibraryDefault() {
       </section>
 
       {continueBook && (
-        <section className="mt-5 max-w-4xl">
-          <div
-            onClick={() => router.push(`/reader/${continueBook.id}`)}
-            className="group cursor-pointer rounded-[18px] border p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916]"
-            style={{
-              background: extractedColors
-                ? `linear-gradient(135deg, ${extractedColors.color1} 0%, ${extractedColors.color2} 100%)`
-                : undefined,
-              borderColor: extractedColors?.borderColor || "rgba(227, 213, 190, 0.4)",
-            }}
-          >
-            {/* 拟物装饰高光线 */}
-            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-            
-            <div className="flex items-center justify-between gap-4 relative z-10">
-              <div>
-                <h2
-                  className="text-xs font-bold font-reading-title tracking-wide uppercase flex items-center gap-1.5"
-                  style={{ color: extractedColors?.accentColor || "var(--ui-accent)" }}
-                >
-                  <span>🍃</span> 最近阅读 · Current Flow
-                </h2>
-                <p
-                  className="mt-1 text-xs font-medium opacity-80"
-                  style={{ color: extractedColors?.textColor || "var(--ui-text)" }}
-                >
-                  回到上次停下的地方，继续心流之旅
-                </p>
-              </div>
-              <div 
-                className="text-xs font-bold flex items-center gap-1 transition-transform duration-300 group-hover:translate-x-1"
-                style={{ color: extractedColors?.accentColor || "var(--ui-accent)" }}
+        <section className="mt-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* 左侧占 2/3：最近阅读卡 */}
+            <div className="md:col-span-2">
+              <div
+                onClick={() => router.push(`/reader/${continueBook.id}`)}
+                className="group cursor-pointer rounded-[18px] border p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916] h-full"
+                style={{
+                  background: extractedColors
+                    ? `linear-gradient(135deg, ${extractedColors.color1} 0%, ${extractedColors.color2} 100%)`
+                    : undefined,
+                  borderColor: extractedColors?.borderColor || "rgba(227, 213, 190, 0.4)",
+                }}
               >
-                <span>继续阅读</span>
-                <span>→</span>
-              </div>
-            </div>
-            <div className="mt-5 flex gap-5 items-center">
-              {/* 拟物旋转叠层阴影封面 */}
-              <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.02] group-hover:rotate-[1deg]">
-                {/* 仿真书后阴影叠层 */}
-                <div className="absolute -left-1.5 top-1.5 w-full h-full rounded-[10px] bg-black/10 blur-[4px] -z-10" />
-                <BookCover
-                  title={continueBook.title}
-                  className="h-[136px] w-[92px] rotate-[-3.5deg] shadow-[2px_12px_28px_rgba(47,42,36,0.22)]"
-                  hoverLift={true}
-                />
-              </div>
-              
-              <div className="min-w-0 flex-1 h-full flex flex-col justify-center">
-                <h3
-                  className="truncate text-xl font-bold font-reading-title"
-                  style={{ color: extractedColors?.textColor || "var(--ui-text)" }}
-                >
-                  {continueBook.title}
-                </h3>
-                <p
-                  className="mt-1.5 text-xs font-medium flex items-center gap-2"
-                  style={{ color: extractedColors?.accentColor || "var(--ui-muted)" }}
-                >
-                  <span
-                    className="px-2 py-0.5 rounded font-semibold text-[10px] uppercase"
-                    style={{
-                      backgroundColor: extractedColors ? `${extractedColors.color2}` : "var(--ui-accent-soft)",
-                      color: extractedColors?.accentColor || "var(--ui-accent)",
-                    }}
-                  >
-                    {continueBook.format}
-                  </span>
-                  <span>{getChapterSummary(continueProgress)}</span>
-                  <span className="text-[var(--ui-quiet)]">•</span>
-                  <span>{getFriendlyRelativeTime(continueBook.lastReadAt || continueBook.updatedAt)}</span>
-                </p>
+                {/* 拟物装饰高光线 */}
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
                 
-                {/* 高级精细进度条 */}
-                <div className="mt-6">
-                  <div
-                    className="flex justify-between text-[11px] font-bold mb-1.5"
-                    style={{ color: extractedColors?.accentColor || "var(--ui-quiet)" }}
-                  >
-                    <span>阅读进度</span>
-                    <span>{continuePercent}%</span>
+                <div className="flex items-center justify-between gap-4 relative z-10">
+                  <div>
+                    <h2
+                      className="text-xs font-bold font-reading-title tracking-wide uppercase flex items-center gap-1.5"
+                      style={{ color: extractedColors?.accentColor || "var(--ui-accent)" }}
+                    >
+                      <span>🍃</span> 最近阅读 · Current Flow
+                    </h2>
+                    <p
+                      className="mt-1 text-xs font-medium opacity-80"
+                      style={{ color: extractedColors?.textColor || "var(--ui-text)" }}
+                    >
+                      回到上次停下的地方，继续心流之旅
+                    </p>
                   </div>
-                  <div
-                    className="h-1.5 overflow-hidden rounded-full relative"
-                    style={{ backgroundColor: extractedColors ? `${extractedColors.borderColor}40` : "rgba(80, 65, 45, 0.06)" }}
+                  <div 
+                    className="text-xs font-bold flex items-center gap-1 transition-transform duration-300 group-hover:translate-x-1"
+                    style={{ color: extractedColors?.accentColor || "var(--ui-accent)" }}
                   >
-                    <div
-                      className="h-full rounded-full transition-[width] duration-500 ease-out"
-                      style={{
-                        width: `${continuePercent}%`,
-                        background: extractedColors
-                          ? `linear-gradient(90deg, ${extractedColors.accentColor} 0%, ${extractedColors.borderColor} 100%)`
-                          : "linear-gradient(90deg, var(--ui-accent) 0%, #81a073 100%)",
-                      }}
-                    />
+                    <span>继续阅读</span>
+                    <span>→</span>
                   </div>
                 </div>
+                <div className="mt-5 flex gap-5 items-center">
+                  {/* 拟物旋转叠层阴影封面 */}
+                  <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.02] group-hover:rotate-[1deg]">
+                    {/* 仿真书后阴影叠层 */}
+                    <div className="absolute -left-1.5 top-1.5 w-full h-full rounded-[10px] bg-black/10 blur-[4px] -z-10" />
+                    <BookCover
+                      title={continueBook.title}
+                      className="h-[136px] w-[92px] rotate-[-3.5deg] shadow-[2px_12px_28px_rgba(47,42,36,0.22)]"
+                      hoverLift={true}
+                    />
+                  </div>
+                  
+                  <div className="min-w-0 flex-1 h-full flex flex-col justify-center">
+                    <h3
+                      className="truncate text-xl font-bold font-reading-title"
+                      style={{ color: extractedColors?.textColor || "var(--ui-text)" }}
+                    >
+                      {continueBook.title}
+                    </h3>
+                    <p
+                      className="mt-1.5 text-xs font-medium flex items-center gap-2"
+                      style={{ color: extractedColors?.accentColor || "var(--ui-muted)" }}
+                    >
+                      <span
+                        className="px-2 py-0.5 rounded font-semibold text-[10px] uppercase"
+                        style={{
+                          backgroundColor: extractedColors ? `${extractedColors.color2}` : "var(--ui-accent-soft)",
+                          color: extractedColors?.accentColor || "var(--ui-accent)",
+                        }}
+                      >
+                        {continueBook.format}
+                      </span>
+                      <span>{getChapterSummary(continueProgress)}</span>
+                      <span className="text-[var(--ui-quiet)]">•</span>
+                      <span>{getFriendlyRelativeTime(continueBook.lastReadAt || continueBook.updatedAt)}</span>
+                    </p>
+                    
+                    {/* 高级精细进度条 */}
+                    <div className="mt-6">
+                      <div
+                        className="flex justify-between text-[11px] font-bold mb-1.5"
+                        style={{ color: extractedColors?.accentColor || "var(--ui-quiet)" }}
+                      >
+                        <span>阅读进度</span>
+                        <span>{continuePercent}%</span>
+                      </div>
+                      <div
+                        className="h-1.5 overflow-hidden rounded-full relative"
+                        style={{ backgroundColor: extractedColors ? `${extractedColors.borderColor}40` : "rgba(80, 65, 45, 0.06)" }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500 ease-out"
+                          style={{
+                            width: `${continuePercent}%`,
+                            background: extractedColors
+                              ? `linear-gradient(90deg, ${extractedColors.accentColor} 0%, ${extractedColors.borderColor} 100%)`
+                              : "linear-gradient(90deg, var(--ui-accent) 0%, #81a073 100%)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <p
+                      className="mt-4 text-xs leading-relaxed line-clamp-1 font-medium opacity-80"
+                      style={{ color: extractedColors?.accentColor || "var(--ui-quiet)" }}
+                    >
+                      💡 系统已将所有内容和微秒级进度安全保存在本地。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 右侧占 1/3：阁主阅历修行卡 */}
+            <div className="md:col-span-1">
+              <div
+                onClick={() => router.push("/notes")}
+                className="group cursor-pointer rounded-[18px] border border-[#E4D7C2]/70 p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916] flex flex-col justify-between h-full"
+              >
+                {/* 天青晕染背景与慢呼吸效果 */}
+                <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-[radial-gradient(circle,rgba(103,128,85,0.06)_0%,transparent_70%)] ink-breathe-layer pointer-events-none select-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(#F3D39E_1px,transparent_1px)] bg-[size:16px_16px] opacity-10 pointer-events-none" />
                 
-                <p
-                  className="mt-4 text-xs leading-relaxed line-clamp-1 font-medium opacity-80"
-                  style={{ color: extractedColors?.accentColor || "var(--ui-quiet)" }}
-                >
-                  💡 系统已将所有内容和微秒级进度安全保存在本地。
-                </p>
+                <div className="relative z-10 flex items-center justify-between">
+                  <h2 className="text-xs font-bold font-reading-title tracking-wide uppercase text-[var(--ui-accent)] flex items-center gap-1.5">
+                    <span>💮</span> 墨问修行 · Study
+                  </h2>
+                  <div className="text-[11px] font-bold text-[var(--ui-accent)] opacity-80 group-hover:translate-x-0.5 transition-transform font-serif">
+                    瞻仰 ➔
+                  </div>
+                </div>
+
+                {/* 朱砂红泥印章与天青勋章并立 */}
+                <div className="my-3 flex items-center justify-center gap-4 relative z-10">
+                  {/* 物理朱砂盖印 */}
+                  <div className="w-14 h-14 rounded-full border-2 border-double border-[#B86B5C] bg-[#B86B5C]/5 dark:bg-[#B86B5C]/10 flex flex-col items-center justify-center font-serif text-[#B86B5C] dark:text-[#E29B8C] font-bold leading-tight rotate-[-6deg] shrink-0 scale-100 group-hover:scale-105 transition-transform duration-300 relative shadow-sm">
+                    {/* 印泥斑驳质感 */}
+                    <div className="absolute inset-0 rounded-full bg-[radial-gradient(#B86B5C_15%,transparent_20%)] bg-[size:4px_4px] opacity-10" />
+                    <span className="text-[8px] scale-90 opacity-75 font-semibold">墨问</span>
+                    <span className="text-xs tracking-wider font-black -mt-0.5">修行</span>
+                  </div>
+                  {/* 动态天数汇总 */}
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-[10px] text-[var(--ui-quiet)] font-serif leading-none">连续展卷</p>
+                    <p className="text-base font-bold font-serif text-[var(--ui-text)] mt-1">
+                      <span className="text-xl text-[#B86B5C] dark:text-[#E29B8C] font-black font-mono">18</span> 天
+                    </p>
+                  </div>
+                </div>
+
+                {/* 指标展示栏 */}
+                <div className="border-t border-[rgba(80,65,45,0.06)] dark:border-white/10 pt-3 relative z-10 flex items-center justify-between text-[11px] font-serif text-[var(--ui-muted)]">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-[var(--ui-quiet)]">藏书数量</span>
+                    <span className="font-bold text-[var(--ui-text)] font-mono">{bookCount} 册</span>
+                  </div>
+                  <div className="h-5 w-px bg-[rgba(80,65,45,0.06)] dark:bg-white/10" />
+                  <div className="flex flex-col gap-0.5 items-end">
+                    <span className="text-[10px] text-[var(--ui-quiet)]">落墨想法</span>
+                    <span className="font-bold text-[var(--ui-text)] font-mono">{totalNotesCount || 0} 条</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
