@@ -2,26 +2,47 @@
 import { Controller, Post, Body, Delete, Param, Get } from '@nestjs/common';
 import { BookRepository } from './book.repository';
 import { Book } from '@reader/shared-types';
+import { ShareToken } from '../../common/decorators/share-token.decorator';
 
 @Controller('books')
 export class BookController {
   constructor(private readonly bookRepository: BookRepository) {}
 
   @Get()
-  async getBooks() {
-    return this.bookRepository.getAllBooks();
+  async getBooks(@ShareToken() token: string) {
+    return this.bookRepository.getAllBooks(token);
   }
 
   @Post('import')
-  async importBook(@Body() body: { metadata: Book; chapters: any[] }) {
-    await this.bookRepository.importBook(body.metadata, body.chapters);
+  async importBook(
+    @ShareToken() token: string,
+    @Body() body: { metadata: Book; chapters: any[] },
+  ) {
+    await this.bookRepository.importBook(body.metadata, body.chapters, token);
     return { success: true };
   }
 
   @Delete(':id')
-  async deleteBook(@Param('id') id: string) {
-    await this.bookRepository.deleteBook(id);
+  async deleteBook(@ShareToken() token: string, @Param('id') id: string) {
+    await this.bookRepository.deleteBook(id, token);
+    return { success: true };
+  }
+
+  @Post(':id/progress')
+  async updateProgress(
+    @ShareToken() token: string,
+    @Param('id') id: string,
+    @Body() body: { lastReadProgress: string; lastReadAt?: string },
+  ) {
+    await this.bookRepository.updateProgress(id, body.lastReadProgress, body.lastReadAt, token);
+    return { success: true };
+  }
+
+  @Delete()
+  async clearAllBooks(@ShareToken() token: string) {
+    await this.bookRepository.clearAllBooks(token);
     return { success: true };
   }
 }
+
 

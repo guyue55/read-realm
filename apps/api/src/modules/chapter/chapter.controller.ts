@@ -1,6 +1,7 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { ChapterRepository } from './chapter.repository';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
+import { ShareToken } from '../../common/decorators/share-token.decorator';
 
 @Controller('books/:bookId/chapters')
 export class ChapterController {
@@ -10,8 +11,11 @@ export class ChapterController {
   ) {}
 
   @Get()
-  async getAllChapters(@Param('bookId') bookId: string) {
-    const chapters = await this.chapterRepository.findByBookId(bookId);
+  async getAllChapters(
+    @ShareToken() token: string,
+    @Param('bookId') bookId: string,
+  ) {
+    const chapters = await this.chapterRepository.findByBookId(bookId, token);
     const chaptersWithContent = await Promise.all(
       chapters.map(async (chap) => {
         try {
@@ -26,13 +30,14 @@ export class ChapterController {
             content: '',
           };
         }
-      })
+      }),
     );
     return chaptersWithContent;
   }
 
   @Get(':index')
   async getChapter(
+    @ShareToken() token: string,
     @Param('bookId') bookId: string,
     @Param('index') index: string,
   ) {
@@ -40,6 +45,7 @@ export class ChapterController {
     const chapter = await this.chapterRepository.findByIndex(
       bookId,
       chapterIndex,
+      token,
     );
 
     if (!chapter) {

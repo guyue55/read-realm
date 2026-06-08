@@ -4,7 +4,7 @@ import { useEffect, useState, memo, useCallback, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getShareHeaders } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -18,6 +18,16 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 type LibraryViewMode = "cover" | "compact" | "list";
 
 const LIBRARY_VIEW_KEY = "library-view-mode";
+
+const POETIC_KEYS = [
+  "松风阅心", "煮字生涯", "寒夜客来", "静夜钟声", "西窗剪烛", 
+  "墨染秋池", "落木萧萧", "独钓寒江", "疏影横斜", "暗香浮动",
+  "云破月来", "小楼听雨", "青山对弈", "半窗晴翠", "石栏斜阳",
+  "竹露清响", "荷风晚照", "烟雨行舟", "梅雪争春", "枯木逢春",
+  "泉流石上", "草木含情", "琴心剑胆", "书香门第", "笔墨春秋",
+  "风回小院", "帘外芭蕉", "浮生若梦", "沧海一粟", "坐看云起",
+  "行到水穷", "晚风吹雨"
+];
 
 function loadLibraryViewMode(): LibraryViewMode {
   if (typeof window === "undefined") return "cover";
@@ -119,6 +129,91 @@ export function LibraryDefault() {
     window.localStorage.setItem("reader-sync-auto-progress", String(val));
   };
 
+  // 多端共享相关状态与方法
+  const [shareTokenInput, setShareTokenInput] = useState("");
+  const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem("reader-share-token") || "";
+  });
+
+  useEffect(() => {
+    setShareTokenInput(currentShareToken);
+  }, [currentShareToken]);
+
+  const handleGeneratePoeticKey = () => {
+    const idx = Math.floor(Math.random() * POETIC_KEYS.length);
+    const num = Math.floor(1000 + Math.random() * 9000);
+    const key = `${POETIC_KEYS[idx]}-${num}`;
+    setShareTokenInput(key);
+  };
+
+  const handleBindShareToken = async () => {
+    const trimmed = shareTokenInput.trim();
+    if (!trimmed) return;
+    
+    window.localStorage.setItem("reader-share-token", trimmed);
+    setCurrentShareToken(trimmed);
+    setCloudBooks([]);
+    setToastMsg(strings.sync.shareBindSuccess);
+    
+    // 立即静默触发双向 DualSync
+    setTimeout(() => {
+      handleDualSync(true); // isSilent = true
+    }, 200);
+  };
+
+  const handleClearShareToken = () => {
+    window.localStorage.removeItem("reader-share-token");
+    setCurrentShareToken("");
+    setShareTokenInput("");
+    setCloudBooks([]);
+    setToastMsg(strings.sync.shareClearSuccess);
+    
+    setTimeout(() => {
+      fetchCloudBooks();
+    }, 200);
+  };
+
+  const handleClearCloudBooks = async () => {
+    if (!currentShareToken || !isOnline) return;
+
+    setConfirmState({
+      isOpen: true,
+      title: "🧼 物理清空云端备份",
+      message: "确认要彻底物理擦除云端密阁下的所有藏书与进度备份吗？此操作极其决绝，且无法撤销。是否继续？",
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(apiUrl("/books"), {
+            method: "DELETE",
+            headers: getShareHeaders(),
+          });
+          if (res.ok) {
+            setToastMsg("🧼 拂尘一扫，云端密阁藏书已全物理清空！");
+            setCloudBooks([]);
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          console.error("清空云端备份失败:", err);
+          setToastMsg("💡 清空失败，云端同步通道繁忙，请稍后再试。");
+        }
+      },
+    });
+  };
+
+  const handleCopyPoeticKey = () => {
+    if (!currentShareToken) return;
+    navigator.clipboard.writeText(currentShareToken)
+      .then(() => {
+        setToastMsg(strings.sync.shareCopySuccess);
+      })
+      .catch((err) => {
+        console.error("复制秘钥失败", err);
+      });
+  };
+
   useEffect(() => {
     if (toastMsg) {
       const timer = setTimeout(() => setToastMsg(""), 3000);
@@ -135,7 +230,9 @@ export function LibraryDefault() {
       return;
     }
     try {
-      const res = await fetch(apiUrl("/books"));
+      const res = await fetch(apiUrl("/books"), {
+        headers: getShareHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setCloudBooks(data);
@@ -186,6 +283,34 @@ export function LibraryDefault() {
   const handleDualSync = async (isSilent: boolean = false) => {
     if (isSyncing || !isOnline) return;
 
+    // 限制同步：必须配置共享密钥才能同步
+    if (!currentShareToken) {
+      if (isSilent) {
+        return;
+      }
+      setConfirmState({
+        isOpen: true,
+        title: "🏯 阁主未启共享密阁",
+        message: "多端共享与云端同步需先在「同步设置」➔「墨问密阁」中生成或绑定属于您的专属「展卷秘钥」。是否立即前去展卷配置？",
+        isDanger: false,
+        onConfirm: () => {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+          setShowSyncConfig(true);
+          setTimeout(() => {
+            const el = document.getElementById("mo-wen-mi-ge-panel");
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              const inputEl = el.querySelector("input");
+              if (inputEl) {
+                (inputEl as HTMLInputElement).focus();
+              }
+            }
+          }, 150);
+        },
+      });
+      return;
+    }
+
     // 核心同步管道执行函数
     const executeSyncPipeline = async () => {
       if (syncMutexRef.current) return;
@@ -201,7 +326,9 @@ export function LibraryDefault() {
       let hasSyncFailures = false;
 
       try {
-        const res = await fetch(apiUrl("/books"));
+        const res = await fetch(apiUrl("/books"), {
+          headers: getShareHeaders(),
+        });
         if (!res.ok) throw new Error("获取云阁典籍列表失败");
         const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
         setCloudBooks(currentCloudBooks);
@@ -270,7 +397,10 @@ export function LibraryDefault() {
 
             const importRes = await fetch(apiUrl("/books/import"), {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...getShareHeaders(),
+              },
               body: JSON.stringify({ metadata: bookWithProgress, chapters }),
             });
             if (!importRes.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
@@ -303,7 +433,9 @@ export function LibraryDefault() {
               await new Promise((r) => setTimeout(r, 15));
             }
 
-            const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`));
+            const chapRes = await fetch(apiUrl(`/books/${book.id}/chapters`), {
+              headers: getShareHeaders(),
+            });
             if (!chapRes.ok) throw new Error(`拉取典籍「${book.title}」的章节失败`);
             
             const chapters = await chapRes.json();
@@ -441,18 +573,22 @@ export function LibraryDefault() {
                     }
                   });
                 } else if (winner === "local") {
-                  // 本地读得更深：反向上传覆盖备份到云端
-                  const chapters = await db.chapters.where("bookId").equals(localBook.id).toArray();
+                  // 本地读得更深：仅提交最轻量的进度数据覆盖云端，彻底免去重章节大文本传输
                   const progress = await db.progress.get(localBook.id);
                   const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
-                  const bookWithProgress = { ...localBook, lastReadProgress };
+                  const lastReadAt = localBook.lastReadAt || new Date().toISOString();
 
-                  const importRes = await fetch(apiUrl("/books/import"), {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ metadata: bookWithProgress, chapters }),
-                  });
-                  if (!importRes.ok) throw new Error(`云阁拒绝了最深本地读痕的上报请求`);
+                  if (lastReadProgress) {
+                    const progressRes = await fetch(apiUrl(`/books/${localBook.id}/progress`), {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        ...getShareHeaders(),
+                      },
+                      body: JSON.stringify({ lastReadProgress, lastReadAt }),
+                    });
+                    if (!progressRes.ok) throw new Error(`云阁拒绝了最深本地读痕的轻量进度上报`);
+                  }
                 }
               }
             } catch (singleBookErr) {
@@ -478,7 +614,9 @@ export function LibraryDefault() {
           }
         }
 
-        const finalRes = await fetch(apiUrl("/books"));
+        const finalRes = await fetch(apiUrl("/books"), {
+          headers: getShareHeaders(),
+        });
         if (finalRes.ok) {
           const finalData = await finalRes.json();
           setCloudBooks(finalData);
@@ -584,7 +722,10 @@ export function LibraryDefault() {
 
       const res = await fetch(apiUrl("/books/import"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getShareHeaders(),
+        },
         body: JSON.stringify({ metadata: bookWithProgress, chapters }),
       });
 
@@ -640,7 +781,9 @@ export function LibraryDefault() {
         await new Promise((r) => setTimeout(r, 40));
       }
 
-      const res = await fetch(apiUrl(`/books/${book.id}/chapters`));
+      const res = await fetch(apiUrl(`/books/${book.id}/chapters`), {
+        headers: getShareHeaders(),
+      });
       if (res.ok) {
         const chapters = await res.json();
         for (let p = 40; p <= 100; p += 20) {
@@ -853,7 +996,10 @@ export function LibraryDefault() {
           );
 
           try {
-            await fetch(apiUrl(`/books/${bookId}`), { method: "DELETE" });
+            await fetch(apiUrl(`/books/${bookId}`), {
+              method: "DELETE",
+              headers: getShareHeaders(),
+            });
           } catch (e) {
             console.error("Backend delete failed", e);
           }
@@ -1252,6 +1398,93 @@ export function LibraryDefault() {
                   }`}
                 />
               </button>
+            </div>
+
+            {/* 墨问密阁 · 多端共享 */}
+            <div className="pt-4 border-t border-[rgba(80,65,45,0.06)] flex flex-col gap-3.5">
+              <div className="flex-1 min-w-0">
+                <label className="text-xs font-bold text-[var(--ui-text)] flex items-center gap-1.5">
+                  <span>🏯</span> {strings.sync.shareTitle}
+                </label>
+                <p className="text-[11px] text-[var(--ui-muted)] leading-relaxed mt-1">
+                  {strings.sync.shareDesc}
+                </p>
+              </div>
+
+              {/* 宣纸肌理微透卡片 */}
+              <div id="mo-wen-mi-ge-panel" className="bg-[#FAF6EE] dark:bg-[#1E1B15] border border-[rgba(139,115,85,0.18)] rounded-lg p-3.5 space-y-3 shadow-inner relative overflow-hidden">
+                {/* 斑驳洒金宣纸肌理衬底 (CSS 拟物) */}
+                <div className="absolute inset-0 bg-[radial-gradient(#8b7355_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.03] pointer-events-none" />
+                
+                <div className="flex flex-col gap-1.5 relative z-10">
+                  <span className="text-[11px] font-bold text-[var(--ui-quiet)]">
+                    {strings.sync.shareKeyLabel}
+                  </span>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shareTokenInput}
+                      onChange={(e) => setShareTokenInput(e.target.value)}
+                      placeholder={strings.sync.shareKeyPlaceholder}
+                      className="flex-1 px-3 py-1.5 text-xs rounded border border-[rgba(139,115,85,0.2)] bg-white/60 dark:bg-black/30 text-[var(--ui-text)] placeholder-[var(--ui-quiet)] focus:outline-none focus:border-[var(--ui-accent)] font-mono transition-colors"
+                    />
+                    {currentShareToken && currentShareToken === shareTokenInput.trim() ? (
+                      <button
+                        onClick={handleCopyPoeticKey}
+                        className="px-2.5 py-1 text-xs border border-[rgba(139,115,85,0.25)] rounded text-[var(--ui-text)] bg-white/40 hover:bg-white/80 active:scale-95 transition-all font-bold flex items-center gap-1"
+                        title="复制秘钥"
+                      >
+                        <span>📋</span>
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1 relative z-10">
+                  {/* 感念天机 */}
+                  <button
+                    onClick={handleGeneratePoeticKey}
+                    className="px-3 py-1.5 text-xs border border-[rgba(139,115,85,0.25)] rounded text-[var(--ui-text)] bg-[rgba(139,115,85,0.06)] hover:bg-[rgba(139,115,85,0.12)] active:scale-98 transition-all font-medium flex items-center gap-1"
+                  >
+                    <span>🖌️</span> {strings.sync.shareGenerateBtn}
+                  </button>
+
+                  <div className="flex-1" />
+
+                  {/* 动作按钮 */}
+                  {currentShareToken ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleClearCloudBooks}
+                        disabled={!isOnline}
+                        className={`px-2.5 py-1.5 text-xs border border-[#c25042]/30 text-[#c25042] bg-[#c25042]/5 hover:bg-[#c25042]/10 active:scale-98 rounded transition-all font-bold flex items-center gap-1 ${
+                          !isOnline ? "opacity-40 cursor-not-allowed" : ""
+                        }`}
+                        title="彻底擦除该共享密钥在云端存放的书籍及阅读记录"
+                      >
+                        <span>🧼</span> 物理清空云端备份
+                      </button>
+                      <button
+                        onClick={handleClearShareToken}
+                        className="px-3 py-1.5 text-xs bg-[#8b7355]/80 hover:bg-[#8b7355] active:scale-98 text-white rounded transition-all font-bold flex items-center gap-1"
+                      >
+                        <span>🍃</span> {strings.sync.shareClearBtn}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleBindShareToken}
+                      disabled={!shareTokenInput.trim()}
+                      className={`px-3 py-1.5 text-xs bg-[var(--ui-accent)] hover:bg-[var(--ui-accent-hover)] active:scale-98 text-white rounded transition-all font-bold flex items-center gap-1 ${
+                        !shareTokenInput.trim() ? "opacity-40 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <span>🤝</span> {strings.sync.shareBindBtn}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

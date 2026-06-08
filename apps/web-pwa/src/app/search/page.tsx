@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useVirtualRouter } from "@/lib/route-store";
 import { useLiveQuery } from "dexie-react-hooks";
-import { apiUrl, getApiBaseUrl } from "@/lib/api";
+import { apiUrl, getApiBaseUrl, getShareHeaders } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { db } from "@reader/storage-core";
 import type { Book } from "@reader/shared-types";
@@ -135,6 +135,9 @@ export default function SearchPage() {
     try {
       const response = await fetch(
         apiUrl(`/search?q=${encodeURIComponent(queryToSearch)}`),
+        {
+          headers: getShareHeaders(),
+        }
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const contentType = response.headers.get("content-type") || "";
@@ -198,6 +201,9 @@ export default function SearchPage() {
           try {
             const res = await fetch(
               apiUrl(`/books/${book.id}/chapters/${index}`),
+              {
+                headers: getShareHeaders(),
+              }
             );
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const chap = await res.json();

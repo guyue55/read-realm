@@ -8,7 +8,7 @@ import { inArray, sql } from 'drizzle-orm';
 export class SearchRepository {
   constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
-  async searchBooks(query: string) {
+  async searchBooks(query: string, shareToken: string) {
     if (!query) return [];
 
     const results = await this.db.all<{ id: string }>(sql`
@@ -21,9 +21,27 @@ export class SearchRepository {
 
     if (ids.length === 0) return [];
 
-    // Fetch full book details
-    return this.db.query.books.findMany({
-      where: inArray(schema.books.id, ids),
+    // Filter IDs matching current shareToken scoping in memory
+    const isDefault = shareToken === 'default';
+    const filteredIds = ids.filter((id) => {
+      if (isDefault) {
+        return id.endsWith('#default') || !id.includes('#');
+      } else {
+        return id.endsWith(`#${shareToken}`);
+      }
     });
+
+    if (filteredIds.length === 0) return [];
+
+    // Fetch full book details
+    const dbBooks = await this.db.query.books.findMany({
+      where: inArray(schema.books.id, filteredIds),
+    });
+
+    // Strip physical suffixes on return
+    return dbBooks.map((book) => ({
+      ...book,
+      id: book.id.split('#')[0],
+    }));
   }
 }

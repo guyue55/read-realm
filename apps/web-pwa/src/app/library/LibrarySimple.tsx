@@ -8,7 +8,7 @@ import { BookCard } from "@/components/BookCard";
 import { EmptyState } from "@/components/EmptyState";
 import { AppHeader } from "@/components/AppHeader";
 import { useVirtualRouter } from "@/lib/route-store";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getShareHeaders } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function LibraryPage() {
@@ -62,6 +62,7 @@ export default function LibraryPage() {
           try {
             await fetch(apiUrl(`/books/${bookId}`), {
               method: "DELETE",
+              headers: getShareHeaders(),
             });
           } catch (e) {
             console.error("Backend delete failed", e);

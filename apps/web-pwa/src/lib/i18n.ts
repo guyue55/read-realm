@@ -144,6 +144,18 @@ export const strings = {
     // 安全卸载校验
     offloadNoCloudError: "💡 无法物理释放：此藏书尚未在云端创建索引，请先点击「备份」",
     offloadCountMismatchError: "💡 无法物理释放：检测到云阁中的章节数（{cloudCount}章）与本地（{localCount}章）不匹配，请先执行「备份」覆盖更新云端，以免数据丢失！",
+
+    // 多端共享
+    shareTitle: "墨问密阁 · 多端共享",
+    shareDesc: "在不同设备和浏览器中输入同一「展卷秘钥」，即可打破浏览器壁垒，共享属于您的密阁藏书与阅读心流进度。",
+    shareKeyLabel: "密阁展卷秘钥 / 共享令牌",
+    shareKeyPlaceholder: "请输入共享秘钥，例如：松风阅心-1008",
+    shareGenerateBtn: "感念天机 · 生成秘钥",
+    shareBindBtn: "一键绑定并同步",
+    shareClearBtn: "断开共享",
+    shareBindSuccess: "✨ 秘钥绑定成功！正在拉取专属密阁藏书...",
+    shareClearSuccess: "🍃 已断开共享，自动恢复为独立单机书阁。",
+    shareCopySuccess: "📋 秘钥已复制到剪贴板，快去其他设备上绑定吧！",
   },
 };
 

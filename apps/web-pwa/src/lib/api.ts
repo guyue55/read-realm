@@ -16,3 +16,13 @@ export function getApiBaseUrl() {
 export function apiUrl(path: string) {
   return `${getApiBaseUrl()}${path}`;
 }
+
+export function getShareHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.localStorage.getItem("reader-share-token");
+  if (!token) return {};
+  return {
+    "x-share-token": token.trim(),
+  };
+}
+
