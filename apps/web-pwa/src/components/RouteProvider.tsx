@@ -93,6 +93,7 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== "undefined") {
         try {
           const { db } = await import("@reader/storage-core");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (window as any).db = db;
         } catch (e) {
           console.warn("[Storage] 动态挂载全局 window.db 失败:", e);

@@ -37,10 +37,10 @@ const MEDALS: Medal[] = [
     conditionText: "藏书 ≥ 3 册",
     check: (books) => books >= 3,
     theme: {
-      bgActive: "linear-gradient(135deg, #FFF0E5 0%, #E29B7A 100%)",
-      shadowActive: "0 16px 36px rgba(226, 155, 122, 0.28)",
-      textActive: "#5C3A24",
-      badgeBg: "#F6DCC7",
+      bgActive: "linear-gradient(135deg, #FAF6EE 0%, #C87A63 100%)",
+      shadowActive: "0 16px 36px rgba(200, 122, 99, 0.22)",
+      textActive: "#4A2E1A",
+      badgeBg: "#F0E1D4",
     },
   },
   {
@@ -53,10 +53,10 @@ const MEDALS: Medal[] = [
     conditionText: "笔记 ≥ 5 条",
     check: (_, notes) => notes >= 5,
     theme: {
-      bgActive: "linear-gradient(135deg, #EEF7E8 0%, #89B37A 100%)",
-      shadowActive: "0 16px 36px rgba(137, 179, 122, 0.28)",
-      textActive: "#2B4724",
-      badgeBg: "#D1E6C8",
+      bgActive: "linear-gradient(135deg, #F4F8F0 0%, #769C67 100%)",
+      shadowActive: "0 16px 36px rgba(118, 156, 103, 0.22)",
+      textActive: "#223E1E",
+      badgeBg: "#DFEBD8",
     },
   },
   {
@@ -69,10 +69,10 @@ const MEDALS: Medal[] = [
     conditionText: "进入墨问阅读",
     check: () => true, // 全员默认亮起
     theme: {
-      bgActive: "linear-gradient(135deg, #E6F3F7 0%, #7CB0C2 100%)",
-      shadowActive: "0 16px 36px rgba(124, 176, 194, 0.28)",
-      textActive: "#1A4150",
-      badgeBg: "#C4E2EE",
+      bgActive: "linear-gradient(135deg, #EAF4F6 0%, #6F9CAE 100%)",
+      shadowActive: "0 16px 36px rgba(111, 156, 174, 0.22)",
+      textActive: "#14333E",
+      badgeBg: "#D4E7EC",
     },
   },
 ];
@@ -229,8 +229,10 @@ export default function NotesPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 读书小传卡片 (占 2/3 宽度) */}
               <div className="lg:col-span-2 bg-[#FFFDF8] rounded-[24px] border border-[#E9DCC8] p-8 md:p-10 shadow-[0_12px_40px_rgba(80,65,45,0.04)] relative overflow-hidden flex flex-col sm:flex-row items-center gap-8">
-                {/* 天青晕染光圈背景 */}
-                <div className="absolute -right-16 -bottom-16 w-48 h-48 rounded-full bg-[rgba(103,128,85,0.04)] filter blur-3xl pointer-events-none" />
+                {/* 拟物洒金微茫与水墨呼吸光圈 */}
+                <div className="absolute -right-10 -top-10 w-64 h-64 rounded-full bg-[radial-gradient(circle,rgba(103,128,85,0.06)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
+                <div className="absolute left-10 -bottom-10 w-48 h-48 rounded-full bg-[radial-gradient(circle,rgba(154,106,58,0.05)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(#F3D39E_1.2px,transparent_1.2px)] bg-[size:24px_24px] opacity-[0.14] pointer-events-none" />
                 
                 <div className="h-16 w-16 md:h-20 md:w-20 shrink-0 rounded-2xl bg-[#EEF2E9] border border-[#CDD8C5] flex items-center justify-center text-3xl shadow-inner relative z-10">
                   🍃
@@ -239,7 +241,7 @@ export default function NotesPage() {
                   <h3 className="text-xl font-bold font-serif text-[var(--ui-text)]">
                     漫游者的读书小传
                   </h3>
-                  <p className="text-sm md:text-base text-[var(--ui-muted)] leading-relaxed font-serif text-justify">
+                  <p className="text-sm md:text-base text-[var(--ui-muted)] leading-relaxed font-serif text-justify relative z-10">
                     在「墨问」安静的灯光里，您拂去书页尘埃，已经在书桌上收藏了{" "}
                     <strong className="text-[var(--ui-accent)] text-lg px-1 font-bold">{bookCount}</strong>{" "}
                     册经典。
