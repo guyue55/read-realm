@@ -11,6 +11,7 @@ import { THEMES, type ThemeName } from "@/styles/themes";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { useVirtualRouter } from "@/lib/route-store";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function SettingsPage() {
   const router = useVirtualRouter();
@@ -25,6 +26,19 @@ export default function SettingsPage() {
     DEFAULT_READER_SETTINGS,
   );
   const [saved, setSaved] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     setSettings(loadReaderSettings());
@@ -70,9 +84,15 @@ export default function SettingsPage() {
   };
 
   const handleReset = () => {
-    if (confirm("确定要恢复默认排版设置吗？")) {
-      saveNextSettings(DEFAULT_READER_SETTINGS);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: "重置排版配置",
+      message: "确定要恢复默认排版设置吗？此操作将立即恢复纸墨底色、字号行间至初始状态。",
+      isDanger: false,
+      onConfirm: () => {
+        saveNextSettings(DEFAULT_READER_SETTINGS);
+      }
+    });
   };
 
   const currentTheme = THEMES[settings.theme];
@@ -396,6 +416,15 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 }

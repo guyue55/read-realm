@@ -9,10 +9,24 @@ import { EmptyState } from "@/components/EmptyState";
 import { AppHeader } from "@/components/AppHeader";
 import { useVirtualRouter } from "@/lib/route-store";
 import { apiUrl } from "@/lib/api";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function LibraryPage() {
   const router = useVirtualRouter();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
 
   const books = useLiveQuery(async () => {
     const allBooks = await db.books.toArray();
@@ -24,31 +38,37 @@ export default function LibraryPage() {
     });
   }, [sortBy]);
 
-  const handleDelete = async (bookId: string, title: string) => {
-    if (!confirm(strings.shelf.deleteConfirm.replace("{title}", title))) return;
+  const handleDelete = (bookId: string, title: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "物理删除典籍",
+      message: strings.shelf.deleteConfirm.replace("{title}", title),
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await db.transaction(
+            "rw",
+            [db.books, db.chapters, db.progress, db.bookmarks],
+            async () => {
+              await db.chapters.where("bookId").equals(bookId).delete();
+              await db.progress.where("bookId").equals(bookId).delete();
+              await db.bookmarks.where("bookId").equals(bookId).delete();
+              await db.books.delete(bookId);
+            },
+          );
 
-    try {
-      await db.transaction(
-        "rw",
-        [db.books, db.chapters, db.progress, db.bookmarks],
-        async () => {
-          await db.chapters.where("bookId").equals(bookId).delete();
-          await db.progress.where("bookId").equals(bookId).delete();
-          await db.bookmarks.where("bookId").equals(bookId).delete();
-          await db.books.delete(bookId);
-        },
-      );
-
-      try {
-        await fetch(apiUrl(`/books/${bookId}`), {
-          method: "DELETE",
-        });
-      } catch (e) {
-        console.error("Backend delete failed", e);
+          try {
+            await fetch(apiUrl(`/books/${bookId}`), {
+              method: "DELETE",
+            });
+          } catch (e) {
+            console.error("Backend delete failed", e);
+          }
+        } catch (e) {
+          console.error(`Delete error: ${(e as Error).message}`);
+        }
       }
-    } catch (e) {
-      console.error(`Delete error: ${(e as Error).message}`);
-    }
+    });
   };
 
   return (
@@ -146,6 +166,15 @@ export default function LibraryPage() {
           </div>
         )}
       </main>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

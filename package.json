@@ -11,9 +11,10 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
+    "prettier": "latest",
+    "puppeteer-core": "^25.1.0",
     "turbo": "latest",
     "typescript": "latest",
-    "prettier": "latest",
     "vitest": "latest"
   }
 }

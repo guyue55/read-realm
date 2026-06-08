@@ -7,6 +7,8 @@ export interface AIReaderPanelProps {
   isMobileDrawer?: boolean;
   isDark?: boolean;
   onClose?: () => void;
+  aiInput?: string; // 🏮 [NEW] AI 输入框受控绑定内容
+  setAiInput?: (val: string) => void; // 🏮 [NEW] 更新 AI 输入框的回调
 }
 
 export function AIReaderPanel({
@@ -15,6 +17,8 @@ export function AIReaderPanel({
   isMobileDrawer = false,
   isDark = false,
   onClose,
+  aiInput,
+  setAiInput,
 }: AIReaderPanelProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
 
@@ -116,6 +120,8 @@ export function AIReaderPanel({
         >
           <input
             type="text"
+            value={aiInput || ""}
+            onChange={(e) => setAiInput?.(e.target.value)}
             placeholder={strings.reader.aiInputPlaceholder}
             className="flex-1 bg-transparent border-none outline-none text-sm py-1 text-inherit"
           />

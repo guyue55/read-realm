@@ -6,6 +6,7 @@ import { useVirtualRouter } from "@/lib/route-store";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function PreviewPage({
   params,
@@ -16,6 +17,19 @@ export default function PreviewPage({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [visibleCount, setVisibleCount] = useState(60);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDanger: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDanger: false,
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
@@ -81,11 +95,18 @@ export default function PreviewPage({
     }
   };
 
-  const handleDiscard = async () => {
+  const handleDiscard = () => {
     if (!task) return;
-    if (!confirm("确定放弃此次导入吗？")) return;
-    await db.importTasks.delete(task.id);
-    router.push("/import");
+    setConfirmState({
+      isOpen: true,
+      title: "放弃书籍导入",
+      message: "确定放弃此次导入吗？未保存的书籍元数据及已解析章节将被彻底移除，不可撤销。",
+      isDanger: true,
+      onConfirm: async () => {
+        await db.importTasks.delete(task.id);
+        router.push("/import");
+      }
+    });
   };
 
   if (error) {
@@ -232,6 +253,15 @@ export default function PreviewPage({
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 }

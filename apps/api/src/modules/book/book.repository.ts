@@ -18,9 +18,9 @@ export class BookRepository {
     chapters: (typeof schema.chapters.$inferInsert)[],
   ) {
     await this.db.transaction(async (tx) => {
-      // Omit tags if it's not in the schema
+      // Omit tags and toc if they are not in the database schema
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { tags, ...bookData } = book;
+      const { tags, toc, ...bookData } = book;
 
       // 1. Clean delete existing chapters & book under same ID to guarantee idempotency and support overwrite update
       await tx.delete(schema.chapters).where(eq(schema.chapters.bookId, book.id));
