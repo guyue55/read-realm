@@ -70,6 +70,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     addBookmarkWithNote,
     showToast,
     clearAiSession,
+    error,
   } = useReader(bookId);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
@@ -175,6 +176,73 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     },
     [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel, isPagination, selectionRect],
   );
+
+  if (error) {
+    const bg = currentThemeColors?.bg || "#F8F8F5";
+    const text = currentThemeColors?.text || "#2F2A24";
+    const isDark = settings.theme === "dark";
+    return (
+      <div
+        className="flex h-screen items-center justify-center transition-colors duration-300 relative overflow-hidden"
+        style={{ backgroundColor: bg, color: text }}
+      >
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#2f2a24_1px,transparent_1px)] [background-size:16px_1px]" />
+        
+        <div 
+          className="relative max-w-md w-[90%] p-8 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all duration-500 transform hover:scale-[1.01] flex flex-col items-center text-center animate-in fade-in zoom-in duration-300"
+          style={{
+            backgroundColor: isDark ? "rgba(40, 40, 40, 0.85)" : "rgba(255, 252, 245, 0.85)",
+            borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(80, 65, 45, 0.15)",
+            boxShadow: isDark 
+              ? "0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255,255,255,0.05)" 
+              : "0 20px 40px rgba(80, 65, 45, 0.08), inset 0 0 0 1px rgba(255,255,255,0.6)"
+          }}
+        >
+          <div 
+            className="w-16 h-16 rounded-full flex items-center justify-center mb-6 border-2 border-dashed relative animate-spin-slow"
+            style={{
+              borderColor: isDark ? "#c84c3c" : "#b23e2d",
+              color: isDark ? "#e06c5c" : "#b23e2d",
+              backgroundColor: isDark ? "rgba(200, 76, 60, 0.05)" : "rgba(178, 62, 45, 0.03)",
+            }}
+          >
+            <span className="font-serif text-2xl font-bold">🏮</span>
+          </div>
+
+          <h2 className="text-xl font-serif font-bold mb-3 tracking-wider">
+            {strings.shelf.title}
+          </h2>
+
+          <p className="text-sm opacity-85 mb-8 leading-relaxed font-serif max-w-[280px]">
+            {error}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+            <button
+              onClick={() => router.push("/library")}
+              className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 border shadow-sm hover:opacity-90 active:scale-95"
+              style={{
+                backgroundColor: isDark ? "#3a3a3a" : "#fdfbf7",
+                borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(80, 65, 45, 0.25)",
+                color: isDark ? "#E5E5E5" : "#2F2A24",
+              }}
+            >
+              {strings.settings?.backToShelf || "返回书架"}
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 shadow-md text-white hover:opacity-95 active:scale-95"
+              style={{
+                backgroundColor: isDark ? "#c84c3c" : "#b23e2d",
+              }}
+            >
+              重新展卷
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!chapter) {
     const bg = currentThemeColors?.bg || "#F8F8F5";

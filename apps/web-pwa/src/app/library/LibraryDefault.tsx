@@ -94,6 +94,11 @@ export function LibraryDefault() {
   });
 
   // 云端同步及状态判定核心字段
+  const cachedBookIdsSet = useLiveQuery(async () => {
+    const allKeys = await db.chapters.orderBy("bookId").uniqueKeys() as string[];
+    return new Set(allKeys);
+  }, []);
+
   const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
@@ -795,7 +800,15 @@ export function LibraryDefault() {
 
           await db.books.put(book);
           for (const chap of chapters) {
-            await db.chapters.put(chap);
+            // 🏮 核心适配转换层：对准后端异构字段，抵抗变更，保障未来接口防腐性
+            const transformed = {
+              id: chap.id ? chap.id.split("#")[0] : `${book.id}-${chap.index !== undefined ? chap.index : chap.chapterIndex}`,
+              bookId: book.id,
+              index: chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0),
+              title: chap.title || chap.name || `第 ${(chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0)) + 1} 章`,
+              content: chap.content || chap.body || chap.text || "",
+            };
+            await db.chapters.put(transformed);
           }
           if (book.lastReadProgress) {
             try {
@@ -1619,19 +1632,13 @@ export function LibraryDefault() {
                           {book.title}
                         </h3>
                         {/* 状态徽标 */}
-                        {isLocalOnly && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FAF5EB] text-[#8C6239] border border-[#E4D7C2] whitespace-nowrap">
-                            {strings.sync.localOnly}
+                        {cachedBookIdsSet?.has(book.id) ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#F1F6F0] text-[#4C664B] border border-[#DCE8DB] whitespace-nowrap">
+                            🌾 松墨离线
                           </span>
-                        )}
-                        {isCloudOnly && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-100 whitespace-nowrap animate-pulse-slow">
-                            {strings.sync.cloudOnly}
-                          </span>
-                        )}
-                        {isSynced && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#F1F6F0] text-[#4C664B] border border-[#D5E5D3] whitespace-nowrap">
-                            {strings.sync.bothSynced} ☁️
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EBF3F6] text-[#4E7A94] border border-[#D1E4EC] whitespace-nowrap">
+                            ☁️ 密阁天青
                           </span>
                         )}
                       </div>
@@ -1681,7 +1688,7 @@ export function LibraryDefault() {
                         {syncingBookId === book.id ? "拉取中" : isOnline ? strings.sync.downloadBtn : "🌧️ 待连"}
                       </button>
                     )}
-                    {isSynced && syncingBookId !== book.id && (
+                    {isSynced && cachedBookIdsSet?.has(book.id) && syncingBookId !== book.id && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1798,19 +1805,13 @@ export function LibraryDefault() {
 
                   {/* 状态徽标 (右上角挂载，左移以让出删除按钮空间) */}
                   <div className="absolute left-2 top-2 z-20 flex gap-1">
-                    {isLocalOnly && (
-                      <span className="rounded bg-[#FAF5EB] border border-[#E4D7C2] px-1.5 py-0.5 text-[9px] font-bold text-[#8C6239] shadow-sm">
-                        {strings.sync.localOnly}
+                    {cachedBookIdsSet?.has(book.id) ? (
+                      <span className="rounded bg-[#F1F6F0] border border-[#DCE8DB] px-1.5 py-0.5 text-[9px] font-bold text-[#4C664B] shadow-sm">
+                        🌾 松墨离线
                       </span>
-                    )}
-                    {isCloudOnly && (
-                      <span className="rounded bg-blue-50 border border-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 shadow-sm animate-pulse-slow">
-                        {strings.sync.cloudOnly}
-                      </span>
-                    )}
-                    {isSynced && (
-                      <span className="rounded bg-[#F1F6F0] border border-[#D5E5D3] px-1.5 py-0.5 text-[9px] font-bold text-[#4C664B] shadow-sm">
-                        {strings.sync.bothSynced} ☁️
+                    ) : (
+                      <span className="rounded bg-[#EBF3F6] border border-[#D1E4EC] px-1.5 py-0.5 text-[9px] font-bold text-[#4E7A94] shadow-sm">
+                        ☁️ 密阁天青
                       </span>
                     )}
                   </div>
@@ -1874,7 +1875,7 @@ export function LibraryDefault() {
                             {syncingBookId === book.id ? "拉取中" : isOnline ? strings.sync.downloadBtn : "🌧️ 待连"}
                           </button>
                         )}
-                        {isSynced && syncingBookId !== book.id && (
+                        {isSynced && cachedBookIdsSet?.has(book.id) && syncingBookId !== book.id && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

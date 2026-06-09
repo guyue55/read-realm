@@ -10,20 +10,15 @@ export class ChapterRepository {
 
   async findByIndex(bookId: string, index: number, shareToken: string = 'default') {
     const dbBookId = `${bookId}#${shareToken}`;
-    const isDefault = shareToken === 'default';
 
-    const whereClause = isDefault
-      ? and(
-          or(
-            eq(schema.chapters.bookId, dbBookId),
-            eq(schema.chapters.bookId, bookId),
-          ),
-          eq(schema.chapters.index, index),
-        )
-      : and(
-          eq(schema.chapters.bookId, dbBookId),
-          eq(schema.chapters.index, index),
-        );
+    const whereClause = and(
+      or(
+        eq(schema.chapters.bookId, dbBookId),
+        eq(schema.chapters.bookId, `${bookId}#default`),
+        eq(schema.chapters.bookId, bookId),
+      ),
+      eq(schema.chapters.index, index),
+    );
 
     const results = await this.db
       .select()
@@ -42,14 +37,12 @@ export class ChapterRepository {
 
   async findByBookId(bookId: string, shareToken: string = 'default') {
     const dbBookId = `${bookId}#${shareToken}`;
-    const isDefault = shareToken === 'default';
 
-    const whereClause = isDefault
-      ? or(
-          eq(schema.chapters.bookId, dbBookId),
-          eq(schema.chapters.bookId, bookId),
-        )
-      : eq(schema.chapters.bookId, dbBookId);
+    const whereClause = or(
+      eq(schema.chapters.bookId, dbBookId),
+      eq(schema.chapters.bookId, `${bookId}#default`),
+      eq(schema.chapters.bookId, bookId),
+    );
 
     const results = await this.db
       .select()
