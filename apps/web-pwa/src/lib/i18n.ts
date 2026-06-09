@@ -87,6 +87,9 @@ export const strings = {
     lineHeightLabel: "行间距",
     paragraphSpacingLabel: "段落间距",
     letterSpacingLabel: "字间距",
+    loadChapterFailed: "加载新章节失败，请检查网络",
+    bookNotFound: "书籍不存在或已被物理移除",
+    noChapters: "此藏书尚无章节内容或加载失败",
     autoFlipAtBottomLabel: "触底自动切章",
   },
   settings: {

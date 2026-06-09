@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import { strings } from "@/lib/i18n";
 import { BookCard } from "@/components/BookCard";
+import type { Book } from "@reader/shared-types";
 import { EmptyState } from "@/components/EmptyState";
 import { AppHeader } from "@/components/AppHeader";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -14,6 +15,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 export default function LibraryPage() {
   const router = useVirtualRouter();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
+  const [toastMsg, setToastMsg] = useState("");
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -28,6 +30,13 @@ export default function LibraryPage() {
     onConfirm: () => {},
   });
 
+  useEffect(() => {
+    if (toastMsg) {
+      const timer = setTimeout(() => setToastMsg(""), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMsg]);
+
   const books = useLiveQuery(async () => {
     const allBooks = await db.books.toArray();
     return allBooks.sort((a, b) => {
@@ -39,6 +48,29 @@ export default function LibraryPage() {
   }, [sortBy]);
 
   const totalNotesCount = useLiveQuery(() => db.bookmarks.count(), []);
+
+  const cachedBookIdsSet = useLiveQuery(async () => {
+    const allKeys = await db.chapters.orderBy("bookId").uniqueKeys() as string[];
+    return new Set(allKeys);
+  }, []);
+
+  const handleSpaceOffload = (book: Book) => {
+    setConfirmState({
+      isOpen: true,
+      title: "释放本地空间",
+      message: `确定要释放「${book.title}」的本地章节正文空间吗？释放后，再次阅读时将通过按需 network 静默缓存。`,
+      isDanger: false,
+      onConfirm: async () => {
+        try {
+          await db.chapters.where("bookId").equals(book.id).delete();
+          setToastMsg(`☁️ 成功释放「${book.title}」的本地正文，该书已归于云端。`);
+        } catch (e) {
+          console.error("Failed to offload space:", e);
+          setToastMsg("🌧️ 释放空间失败，请稍后重试。");
+        }
+      }
+    });
+  };
 
   const handleDelete = (bookId: string, title: string) => {
     setConfirmState({
@@ -67,8 +99,10 @@ export default function LibraryPage() {
           } catch (e) {
             console.error("Backend delete failed", e);
           }
+          setToastMsg(`🗑️ 「${title}」已从书架中物理删除。`);
         } catch (e) {
           console.error(`Delete error: ${(e as Error).message}`);
+          setToastMsg("🌧️ 删除典籍失败，请稍后重试。");
         }
       }
     });
@@ -189,6 +223,8 @@ export default function LibraryPage() {
                 book={book}
                 onRead={(id) => router.push(`/reader/${id}`)}
                 onDelete={handleDelete}
+                hasChaptersLocal={cachedBookIdsSet?.has(book.id)}
+                onSpaceOffload={handleSpaceOffload}
               />
             ))}
           </div>
@@ -203,6 +239,13 @@ export default function LibraryPage() {
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* 优雅宣纸毛玻璃 Toast 提示 */}
+      {toastMsg && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.85)] px-5 py-2.5 text-xs font-bold text-[var(--ui-text)] shadow-lg backdrop-blur-md physics-spring flex items-center gap-2 animate-bounce-short">
+          <span>🍃</span> {toastMsg}
+        </div>
+      )}
     </div>
   );
 }

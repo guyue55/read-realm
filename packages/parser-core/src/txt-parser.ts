@@ -23,12 +23,12 @@ export function parseTxtBook(
   let currentChapterLines: string[] = [];
   let chapterIndex = 0;
 
-  // Basic heuristic: lines starting with 第X章, 卷, or special words
+  // 🏮 高可用多规制章节识别匹配器：支持【】等括号包裹、第X章节回卷、Chapter英语、阿拉伯/中文数字序号列表引导
   const chapterRegex =
-    /^\s*(第\s*[零一二三四五六七八九十百千0-9]+\s*[章回节卷]|序章|终章|前言|楔子|番外)/;
+    /^\s*[【\[(（“‘]?\s*(?:第\s*[零一二三四五六七八九十百千两0-9]+\s*[章节回卷集部篇折幕]|序章|终章|前言|楔子|番外|Chapter\s*[零一二三四五六七八九十百千0-9IVXLCDMivxlcdm]+|CHAPTER\s*[零一二三四五六七八九十百千0-9IVXLCDMivxlcdm]+|(?:\d+|[零一二三四五六七八九十百千两]+)[\s.、:：-]+)/i;
 
   for (const line of lines) {
-    if (line.length < 50 && chapterRegex.test(line)) {
+    if (line.length < 80 && chapterRegex.test(line)) {
       // Save previous chapter if it has content
       if (currentChapterLines.length > 0) {
         chapters.push({
