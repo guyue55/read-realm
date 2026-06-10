@@ -145,22 +145,32 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     };
   }, [handleMouseOrTouchUp]);
 
+  const setActiveContentRef = useCallback(
+    (node: HTMLDivElement | null, target: "desktop" | "mobile") => {
+      if (!node || typeof window === "undefined") return;
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      if ((target === "desktop" && isDesktop) || (target === "mobile" && !isDesktop)) {
+        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }
+    },
+    [contentRef],
+  );
+
   useEffect(() => {
     const updateActiveRef = () => {
       if (!mainRef.current) return;
-      const containers = mainRef.current.querySelectorAll(".reader-gpu-accelerated");
-      for (const el of Array.from(containers)) {
-        if ((el as HTMLElement).offsetParent !== null) {
-          (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = el as HTMLDivElement;
-          break;
-        }
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      const selector = `[data-reader-content-canvas="${isDesktop ? "desktop" : "mobile"}"]`;
+      const container = mainRef.current.querySelector(selector) as HTMLDivElement | null;
+      if (container) {
+        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = container;
       }
     };
 
     updateActiveRef();
     window.addEventListener("resize", updateActiveRef);
     return () => window.removeEventListener("resize", updateActiveRef);
-  }, [contentRef]);
+  }, [contentRef, isPagination]);
 
   const handleMobileReaderClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -384,6 +394,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onNextChapter={handleNextChapterActive}
           />
           <div
+            ref={(node) => setActiveContentRef(node, "desktop")}
+            data-reader-content-canvas="desktop"
+            onClick={handleMobileReaderClick}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
                 ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
@@ -537,6 +550,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Scrollable / Paginable Content Canvas */}
         <div
+          ref={(node) => setActiveContentRef(node, "mobile")}
+          data-reader-content-canvas="mobile"
           onClick={handleMobileReaderClick}
           onTouchStart={handleContentTouchStart}
           onTouchEnd={handleContentTouchEnd}
