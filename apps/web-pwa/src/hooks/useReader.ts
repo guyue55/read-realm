@@ -1226,7 +1226,9 @@ export function useReader(bookId: string) {
       setSettings(loadedSettings);
       const loadedToc = await chapterRepo.getToc(bookId);
       setToc(loadedToc);
-      db.bookmarks.where("bookId").equals(bookId).toArray().then(setBookmarks);
+      db.bookmarks.where("bookId").equals(bookId).toArray()
+        .then(setBookmarks)
+        .catch(err => console.warn("[useReader] 加载书签发生非致命异常:", err));
 
       // 触发 lastReadAt 同步，将书阁的最近阅读智能置顶并打通排序
       void db.books.update(bookId, { lastReadAt: new Date().toISOString() }).catch((err) => {
