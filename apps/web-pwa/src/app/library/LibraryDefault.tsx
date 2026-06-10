@@ -11,7 +11,9 @@ import { BookCover } from "@/components/BookCover";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import type { Book, ReadingProgress } from "@reader/shared-types";
+import type { Book, ReadingProgress, LibraryFolder } from "@reader/shared-types";
+import { createId } from "@reader/shared-types";
+import { cacheEntireBook } from "@/hooks/useReader";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -93,6 +95,51 @@ export function LibraryDefault() {
     onConfirm: () => {},
   });
 
+  // 逻辑文件夹层级导航
+  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
+  // 藏书治理相关状态
+  const [selectedGovBook, setSelectedGovBook] = useState<Book | null>(null);
+  const [isGovOpen, setIsGovOpen] = useState(false);
+
+  // 检索所有的逻辑文件夹
+  const folders = useLiveQuery(() => db.libraryFolders.toArray()) || [];
+
+  const currentFolders = folders
+    .filter((f) => f.parentId === currentFolderId)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name));
+
+  const navigateToFolder = (folderId: string | undefined) => {
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        setCurrentFolderId(folderId);
+      });
+    } else {
+      setCurrentFolderId(folderId);
+    }
+  };
+
+  const handleDissolveFolder = async (folderId: string, name: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "🍃 解散书箧",
+      message: `您确认要解散「${name}」书箧吗？解散后，其内的所有藏书将自动归入书架主阁，书籍本身及阅读进度绝不受损。`,
+      isDanger: false,
+      onConfirm: async () => {
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await db.transaction("rw", [db.books, db.libraryFolders], async () => {
+            await db.books.where("sourceFolderId").equals(folderId).modify({ sourceFolderId: undefined });
+            await db.libraryFolders.delete(folderId);
+          });
+          setToastMsg(`📖 书箧「${name}」已解散，藏书重归主阁。`);
+        } catch (e) {
+          console.error("解散文件夹失败:", e);
+          setToastMsg("💡 解散书箧失败，存储数据库繁忙。");
+        }
+      }
+    });
+  };
+
   // 云端同步及状态判定核心字段
   const cachedBookIdsSet = useLiveQuery(async () => {
     const allKeys = await db.chapters.orderBy("bookId").uniqueKeys() as string[];
@@ -110,6 +157,28 @@ export function LibraryDefault() {
 
   // 物理互斥信号锁，防止高频点按引起 IndexedDB 写入竞态
   const syncMutexRef = useRef(false);
+
+  // 长按手势防抖/定时器引用
+  const longPressTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  const handleTouchStart = (bookId: string, title: string) => () => {
+    if (longPressTimeoutRef.current[bookId]) {
+      clearTimeout(longPressTimeoutRef.current[bookId]);
+    }
+    longPressTimeoutRef.current[bookId] = setTimeout(() => {
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // 移动端极其高雅之拟物物理微震动
+      }
+      handleDelete(bookId, title);
+    }, 600);
+  };
+
+  const handleTouchEndOrMove = (bookId: string) => () => {
+    if (longPressTimeoutRef.current[bookId]) {
+      clearTimeout(longPressTimeoutRef.current[bookId]);
+      delete longPressTimeoutRef.current[bookId];
+    }
+  };
 
   // 用户同步首选项配置
   const [autoSyncOnStartup, setAutoSyncOnStartupState] = useState<boolean>(() => {
@@ -749,6 +818,10 @@ export function LibraryDefault() {
 
   // 单书快捷拉取 (物理还原进度快照)
   const handleSingleDownload = async (book: Book & { lastReadProgress?: string }) => {
+    if (!navigator.onLine) {
+      setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
+      return;
+    }
     if (isSyncing || syncingBookId || !isOnline || syncMutexRef.current) return;
     syncMutexRef.current = true;
     setSyncingBookId(book.id);
@@ -826,7 +899,11 @@ export function LibraryDefault() {
         throw new Error();
       }
     } catch {
-      setToastMsg("💡 拉取失败，该书籍可能在云端已被清除。");
+      if (!navigator.onLine) {
+        setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
+      } else {
+        setToastMsg("💡 拉取失败，该书籍可能在云端已被清除。");
+      }
     } finally {
       // 任务完结，清除落盘记录
       const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
@@ -962,6 +1039,33 @@ export function LibraryDefault() {
       return getBookTimestamp(b) - getBookTimestamp(a);
     });
   })();
+
+  // 进行逻辑文件夹层级过滤后的书籍，安全归栈、防丢自愈
+  const filteredMergedBooks = mergedBooks.filter((book) => {
+    if (currentFolderId === undefined) {
+      return !book.sourceFolderId || !folders.some((f) => f.id === book.sourceFolderId);
+    }
+    return book.sourceFolderId === currentFolderId;
+  });
+
+  const getBookAvailabilityStatus = (book: Book, cachedSet: Set<string> | undefined) => {
+    if (book.cacheStatus === 'chapters_full' || book.sourceAvailability === 'full_cached') {
+      return { label: "⛩️ 雅阅离线", style: "bg-[#2C3539] text-[#E5E9EC] border-[#1C2327]" };
+    }
+    if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
+      if (book.sourceAvailability === 'permission_required') {
+        return { label: "🔌 唤醒授权", style: "bg-[#FFF0F0] text-[#A64B4B] border-[#FCE1E1]" };
+      }
+      if (book.sourceAvailability === 'source_missing') {
+        return { label: "❓ 书卷失落", style: "bg-[#F3F4F6] text-[#6E7275] border-[#E5E7EB]" };
+      }
+      return { label: "🟢 藏书手卷", style: "bg-[#F1F6F0] text-[#5F7D52] border-[#DCE8DB]" };
+    }
+    if (cachedSet?.has(book.id)) {
+      return { label: "🌾 松墨离线", style: "bg-[#F1F6F0] text-[#4C664B] border-[#DCE8DB]" };
+    }
+    return { label: "☁️ 密阁天青", style: "bg-[#EBF3F6] text-[#4E7A94] border-[#D1E4EC]" };
+  };
 
   const progressByBookId = useLiveQuery(async () => {
     const allProgress = await db.progress.toArray();
@@ -1134,14 +1238,22 @@ export function LibraryDefault() {
                 onClick={() => router.push(`/reader/${continueBook.id}`)}
                 className="group cursor-pointer rounded-[18px] border p-5 shadow-[0_12px_36px_rgba(80,65,45,0.05)] backdrop-blur-md relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-[0_18px_48px_rgba(80,65,45,0.09)] hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF6EE] to-[#F3EBD3] dark:from-[#25231F] dark:to-[#1A1916] h-full"
                 style={{
-                  background: extractedColors
-                    ? `linear-gradient(135deg, ${extractedColors.color1} 0%, ${extractedColors.color2} 100%)`
-                    : undefined,
                   borderColor: extractedColors?.borderColor || "rgba(227, 213, 190, 0.4)",
                 }}
               >
+                {/* 🏮 极奢双层渐变宣纸淡入层 (Dual-Layer Gradient Fade-In)，物理规避重排闪烁，实现水墨慢呼吸 */}
+                <div
+                  className="absolute inset-0 z-0 transition-opacity duration-700 ease-in-out pointer-events-none"
+                  style={{
+                    background: extractedColors
+                      ? `linear-gradient(135deg, ${extractedColors.color1} 0%, ${extractedColors.color2} 100%)`
+                      : "transparent",
+                    opacity: extractedColors ? 1 : 0,
+                  }}
+                />
+
                 {/* 拟物装饰高光线 */}
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent z-10" />
                 
                 <div className="flex items-center justify-between gap-4 relative z-10">
                   <div>
@@ -1166,7 +1278,7 @@ export function LibraryDefault() {
                     <span>→</span>
                   </div>
                 </div>
-                <div className="mt-5 flex gap-5 items-center">
+                <div className="mt-5 flex gap-5 items-center relative z-10">
                   {/* 拟物旋转叠层阴影封面 */}
                   <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.02] group-hover:rotate-[1deg]">
                     {/* 仿真书后阴影叠层 */}
@@ -1508,11 +1620,49 @@ export function LibraryDefault() {
       <section className="mt-7">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[var(--ui-text)]">
-              我的私人藏书 ({bookCount})
-            </h2>
+            {/* 可交互多级面包屑 */}
+            <div className="flex items-center flex-wrap gap-2 text-xl font-bold text-[var(--ui-text)] select-none">
+              {(() => {
+                const list: { id: string | undefined; name: string }[] = [];
+                let currentId = currentFolderId;
+                while (currentId) {
+                  const folder = folders.find((f) => f.id === currentId);
+                  if (folder) {
+                    list.unshift({ id: folder.id, name: folder.name });
+                    currentId = folder.parentId;
+                  } else {
+                    break;
+                  }
+                }
+                list.unshift({ id: undefined, name: "📖 私人藏书" });
+                return list;
+              })().map((crumb, idx, arr) => {
+                const isLast = idx === arr.length - 1;
+                return (
+                  <div key={crumb.id || "root"} className="flex items-center gap-1.5">
+                    {idx > 0 && <span className="text-sm text-[var(--ui-quiet)]">➔</span>}
+                    <button
+                      onClick={() => !isLast && navigateToFolder(crumb.id)}
+                      className={`font-reading-title transition-all flex items-center gap-1 ${
+                        isLast
+                          ? "text-[#5C4533] cursor-default"
+                          : "text-[var(--ui-muted)] hover:text-[var(--ui-accent)] hover:scale-101 active:scale-98"
+                      }`}
+                    >
+                      {crumb.id && <span>📁</span>}
+                      <span>{crumb.name}</span>
+                    </button>
+                    {isLast && (
+                      <span className="text-xs font-normal text-[var(--ui-quiet)] ml-1">
+                        ({bookCount})
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             <p className="mt-1 text-sm text-[var(--ui-muted)]">
-              封面、进度和本地状态集中在一个安静列表里。
+              封面、进度和本地状态集中在一个安静书箧中。
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
@@ -1585,9 +1735,51 @@ export function LibraryDefault() {
               onClick={() => router.push("/import")}
               className="ui-focus-ring flex min-h-[54px] w-full items-center justify-center bg-white/30 px-4 text-sm font-semibold text-[var(--ui-muted)] transition-all duration-300 hover:bg-[var(--ui-accent-soft)] hover:text-[var(--ui-accent)]"
             >
-              ＋ 导入书籍
+              ＋ 导入书籍 / 关联目录
             </button>
-            {mergedBooks.map((book) => {
+
+            {/* 1. 渲染当前层级的逻辑文件夹 (书箧) */}
+            {currentFolders.map((folder) => (
+              <div
+                key={folder.id}
+                onClick={() => navigateToFolder(folder.id)}
+                className="group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-[#FFFDF9]/60 to-[#FDF9F2]/60 transition-all duration-300 hover:bg-[#FAF5EB]/50"
+              >
+                {/* 左侧绿点指示 */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--ui-accent)] opacity-0 scale-50 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100" />
+                
+                <div className="flex items-center gap-5 min-w-0 flex-1 pl-3">
+                  {/* 拟物双耳竹箧图标 */}
+                  <div className="relative shrink-0 flex items-center justify-center h-11 w-11 rounded-lg bg-[rgba(154,106,58,0.06)] border border-[rgba(154,106,58,0.12)] text-xl group-hover:scale-105 transition-transform duration-300">
+                    📁
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-reading-title text-[15px] font-bold text-[#5C4533] group-hover:text-[var(--ui-accent)] transition-colors">
+                      {folder.name}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[var(--ui-muted)]">
+                      逻辑书箧 · 共 {mergedBooks.filter(b => b.sourceFolderId === folder.id).length} 本藏书
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 shrink-0 pr-8 sm:pr-10 relative z-20">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDissolveFolder(folder.id, folder.name);
+                    }}
+                    className="px-2.5 py-1 rounded bg-white/85 hover:bg-[#FFF2ED] hover:text-[var(--ui-danger)] border border-[#E9DCC8] text-xs font-semibold text-[#A64B4B] transition-colors"
+                    title="解散书箧，书籍将重归主阁"
+                  >
+                    解散
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* 2. 渲染当前层级的藏书 (Books) */}
+            {filteredMergedBooks.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
 
@@ -1607,6 +1799,9 @@ export function LibraryDefault() {
                       router.push(`/reader/${book.id}`);
                     }
                   }}
+                  onTouchStart={isLocal ? handleTouchStart(book.id, book.title) : undefined}
+                  onTouchEnd={isLocal ? handleTouchEndOrMove(book.id) : undefined}
+                  onTouchMove={isLocal ? handleTouchEndOrMove(book.id) : undefined}
                   className={`group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50 ${
                     isCloudOnly ? "opacity-75 backdrop-blur-[0.5px]" : ""
                   }`}
@@ -1615,9 +1810,8 @@ export function LibraryDefault() {
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--ui-accent)] opacity-0 scale-50 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100" />
                   
                   <div className="flex items-center gap-5 min-w-0 flex-1 pl-3">
-                    {/* 实体比例微型 3D 封面，支持 hover 物理弹簧微幅倾斜抬升 */}
+                    {/* 实体比例微型 3D 封面 */}
                     <div className="relative shrink-0 select-none transition-transform duration-300 group-hover:scale-[1.03] group-hover:rotate-[1deg]">
-                      {/* 仿真书后叠层漫反射微阴影 */}
                       <div className="absolute -left-1 top-1 w-full h-full rounded-[4px] bg-black/5 blur-[2px] -z-10" />
                       <BookCover
                         title={book.title}
@@ -1631,19 +1825,26 @@ export function LibraryDefault() {
                         <h3 className="truncate font-reading-title text-[15px] font-bold text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors tracking-wide">
                           {book.title}
                         </h3>
-                        {/* 状态徽标 */}
-                        {cachedBookIdsSet?.has(book.id) ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#F1F6F0] text-[#4C664B] border border-[#DCE8DB] whitespace-nowrap">
-                            🌾 松墨离线
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EBF3F6] text-[#4E7A94] border border-[#D1E4EC] whitespace-nowrap">
-                            ☁️ 密阁天青
-                          </span>
-                        )}
+                        {/* 自适应极奢状态徽标 */}
+                        {(() => {
+                          const status = getBookAvailabilityStatus(book, cachedBookIdsSet);
+                          return (
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap shadow-sm ${status.style}`}>
+                              {status.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="mt-1 flex items-center gap-2 text-xs text-[var(--ui-muted)]">
                         <span>{book.author || "本地书籍"}</span>
+                        {book.contentLocator && (
+                          <>
+                            <span className="text-[var(--ui-quiet)]">•</span>
+                            <span className="text-[10px] text-[#8C6239] bg-[#FAF5EB] px-1.5 py-0.5 rounded border border-[#E9DCC8]/40 truncate max-w-[120px]" title={book.contentLocator.relativePath}>
+                              📁 {book.contentLocator.relativePath.split("/").pop()}
+                            </span>
+                          </>
+                        )}
                         <span className="text-[var(--ui-quiet)]">•</span>
                         <span className="uppercase text-[10px] font-bold text-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-1.5 py-0.5 rounded">
                           {book.format}
@@ -1652,8 +1853,22 @@ export function LibraryDefault() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0 pr-8 sm:pr-10 relative z-20">
-                    {/* 单书备份/拉取/释放 快捷控制按钮 */}
+                  <div className="flex items-center gap-3 shrink-0 pr-8 sm:pr-10 relative z-20">
+                    {/* 🏮 藏书治理快捷动作 */}
+                    {isLocal && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedGovBook(book);
+                          setIsGovOpen(true);
+                        }}
+                        className="px-2.5 py-1 rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white border border-[#E4D7C2] text-xs font-semibold text-[#8C6239] transition-all shadow-sm"
+                        title="藏书管理与目录治理"
+                      >
+                        🏮 治理
+                      </button>
+                    )}
+
                     {isLocalOnly && (
                       <button
                         onClick={(e) => {
@@ -1716,7 +1931,7 @@ export function LibraryDefault() {
                       </div>
                     )}
 
-                    {/* 悬展删除操作：PC 端 Hover 淡出，移动端小屏常驻 */}
+                    {/* 悬展删除操作 */}
                     {isLocal && (
                       <button
                         onClick={(e) => {
@@ -1725,7 +1940,7 @@ export function LibraryDefault() {
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 hidden sm:flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-[#FFF0EC]"
                         title={strings.shelf.delete}
                       >
                         ×
@@ -1733,7 +1948,7 @@ export function LibraryDefault() {
                     )}
                   </div>
 
-                  {/* 单书同步微型黄金阻尼进度条 */}
+                  {/* 单书同步进度条 */}
                   {syncingBookId === book.id && (
                     <div className="absolute bottom-0 inset-x-0 h-1 bg-[rgba(80,65,45,0.06)] overflow-hidden">
                       <div
@@ -1763,7 +1978,57 @@ export function LibraryDefault() {
               <span className="mb-2 text-2xl font-light">＋</span>
               <span className="text-sm font-semibold">导入书籍</span>
             </button>
-            {mergedBooks.map((book) => {
+
+            {/* 1. 渲染当前层级的逻辑文件夹 (网格/紧凑卡片) */}
+            {currentFolders.map((folder) => (
+              <div
+                key={folder.id}
+                onClick={() => navigateToFolder(folder.id)}
+                className={`group relative overflow-hidden cursor-pointer ui-card flex flex-col justify-between rounded-[18px] p-4 physics-spring hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,65,45,0.07)] bg-gradient-to-br from-[#FFFDF9] via-[#FCFAF2] to-[#FAF6EE] border border-[#E4D7C2]/70 ${
+                  viewMode === "compact" ? "min-h-[110px]" : "min-h-[148px]"
+                }`}
+              >
+                {/* 装饰用：黄铜提手拉扣 */}
+                <div className="absolute top-1/2 -translate-y-1/2 right-4 w-2 h-8 rounded-full border border-[rgba(139,115,85,0.35)] bg-[#FAF0D9]/80 flex flex-col items-center justify-center gap-1.5 shrink-0 opacity-80 group-hover:bg-[#EEDBB5] group-hover:scale-105 transition-all">
+                  <div className="w-1 h-1 rounded-full bg-[#8B7355]/40" />
+                  <div className="w-1 h-2 rounded-full bg-[#8B7355]/30" />
+                  <div className="w-1 h-1 rounded-full bg-[#8B7355]/40" />
+                </div>
+
+                <div className="flex gap-4 mt-2">
+                  {/* 书箧大图标 */}
+                  <div className="relative shrink-0 select-none flex items-center justify-center h-[54px] w-[54px] rounded-2xl bg-[rgba(154,106,58,0.05)] border border-[rgba(154,106,58,0.12)] text-3xl group-hover:scale-105 transition-transform duration-300">
+                    📁
+                  </div>
+                  <div className="min-w-0 flex-1 pr-4">
+                    <h3 className="line-clamp-2 text-[15px] font-bold leading-snug font-reading-title text-[#5C4533] group-hover:text-[var(--ui-accent)] transition-colors">
+                      {folder.name}
+                    </h3>
+                    <p className="mt-1 text-xs text-[var(--ui-muted)]">
+                      逻辑书箧
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#E4D7C2]/30 flex justify-between items-center relative z-20">
+                  <span className="text-[10px] text-[var(--ui-quiet)] font-bold">
+                    共 {mergedBooks.filter(b => b.sourceFolderId === folder.id).length} 本藏书
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDissolveFolder(folder.id, folder.name);
+                    }}
+                    className="px-2 py-0.5 rounded bg-white hover:bg-[#FFF2ED] hover:text-[var(--ui-danger)] border border-[#E4D7C2] text-[10px] font-bold text-[#A64B4B] transition-colors"
+                    title="解散书箧，书籍将重归主阁"
+                  >
+                    解散
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {filteredMergedBooks.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
 
@@ -1783,11 +2048,14 @@ export function LibraryDefault() {
                       router.push(`/reader/${book.id}`);
                     }
                   }}
+                  onTouchStart={isLocal ? handleTouchStart(book.id, book.title) : undefined}
+                  onTouchEnd={isLocal ? handleTouchEndOrMove(book.id) : undefined}
+                  onTouchMove={isLocal ? handleTouchEndOrMove(book.id) : undefined}
                   className={`group relative overflow-hidden cursor-pointer ui-card flex flex-col justify-between rounded-[18px] p-4 physics-spring hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,65,45,0.07)] ${
                     viewMode === "compact" ? "min-h-[110px]" : "min-h-[148px]"
                   } ${isCloudOnly ? "opacity-75 backdrop-blur-[0.5px]" : ""}`}
                 >
-                  {/* Delete button: visible on mobile, hover-fade-in on desktop */}
+                  {/* Delete button: visible on mobile, hover-fade-in on desktop, hidden on mobile for better aesthetics and prevention of misclicks */}
                   {isLocal && (
                     <button
                       onClick={(e) => {
@@ -1796,24 +2064,23 @@ export function LibraryDefault() {
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
-                      className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FFF0EC]"
+                      className="absolute right-2 top-2 z-20 hidden sm:flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(184,107,92,0.12)] bg-white/95 text-xs font-bold text-[var(--ui-danger)] opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-[#FFF0EC]"
                       title={strings.shelf.delete}
                     >
                       ×
                     </button>
                   )}
 
-                  {/* 状态徽标 (右上角挂载，左移以让出删除按钮空间) */}
+                  {/* 状态徽标 (右上角挂载) */}
                   <div className="absolute left-2 top-2 z-20 flex gap-1">
-                    {cachedBookIdsSet?.has(book.id) ? (
-                      <span className="rounded bg-[#F1F6F0] border border-[#DCE8DB] px-1.5 py-0.5 text-[9px] font-bold text-[#4C664B] shadow-sm">
-                        🌾 松墨离线
-                      </span>
-                    ) : (
-                      <span className="rounded bg-[#EBF3F6] border border-[#D1E4EC] px-1.5 py-0.5 text-[9px] font-bold text-[#4E7A94] shadow-sm">
-                        ☁️ 密阁天青
-                      </span>
-                    )}
+                    {(() => {
+                      const status = getBookAvailabilityStatus(book, cachedBookIdsSet);
+                      return (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap shadow-sm ${status.style}`}>
+                          {status.label}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex gap-4 mt-6">
@@ -1840,7 +2107,20 @@ export function LibraryDefault() {
                         <span className="rounded bg-[var(--ui-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ui-accent)]">
                           {book.format}
                         </span>
-                        
+
+                        {isLocal && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedGovBook(book);
+                              setIsGovOpen(true);
+                            }}
+                            className="rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white px-2 py-0.5 text-[10px] font-semibold text-[#8C6239] transition-all border border-[#E4D7C2]"
+                            title="藏书管理与目录治理"
+                          >
+                            🏮 治理
+                          </button>
+                        )}
                         {isLocalOnly && (
                           <button
                             onClick={(e) => {
@@ -1988,6 +2268,18 @@ export function LibraryDefault() {
         isDanger={confirmState.isDanger}
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* 🏮 落砚·藏书治理弹窗 */}
+      <BookGovernanceDialog
+        isOpen={isGovOpen}
+        book={selectedGovBook}
+        folders={folders}
+        onClose={() => {
+          setIsGovOpen(false);
+          setSelectedGovBook(null);
+        }}
+        onToast={(msg) => setToastMsg(msg)}
       />
     </AppShell>
   );
@@ -2164,6 +2456,309 @@ const CuratedDrawer = memo(function CuratedDrawer({ isOpen, onClose, onCollect }
           <p className="text-[10px] text-[var(--ui-quiet)] font-medium">
             🍃 江上清风，山间明月，静享数字书室之美。
           </p>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ==========================================
+// 🏮 落砚·藏书治理弹窗 (BookGovernanceDialog)
+// ==========================================
+const BookGovernanceDialog = memo(function BookGovernanceDialog({
+  isOpen,
+  book,
+  folders,
+  onClose,
+  onToast,
+}: {
+  isOpen: boolean;
+  book: Book | null;
+  folders: LibraryFolder[];
+  onClose: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [cacheProgress, setCacheProgress] = useState<number | null>(null);
+  const [isCaching, setIsCaching] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      if (book) {
+        setSelectedFolderId(book.sourceFolderId || "root");
+      }
+    } else {
+      document.body.style.overflow = "";
+      setIsCreatingFolder(false);
+      setNewFolderName("");
+      setCacheProgress(null);
+      setIsCaching(false);
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, book]);
+
+  if (!isOpen || !book) return null;
+
+  const handleMove = async (folderId: string) => {
+    try {
+      const targetId = folderId === "root" ? undefined : folderId;
+      await db.books.update(book.id, { sourceFolderId: targetId });
+      onToast(`📖 藏书已归置到 ${folderId === "root" ? "书架主阁" : folders.find(f => f.id === folderId)?.name || "指定书箧"}`);
+    } catch (e) {
+      console.error(e);
+      onToast("💡 移动藏书失败");
+    }
+  };
+
+  const handleCreateAndMove = async () => {
+    if (!newFolderName.trim()) {
+      onToast("💡 书箧名称不能为空");
+      return;
+    }
+    try {
+      const newId = createId();
+      await db.libraryFolders.add({
+        id: newId,
+        name: newFolderName.trim(),
+        sourceType: "virtual",
+        depth: 0,
+        sortOrder: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      await db.books.update(book.id, { sourceFolderId: newId });
+      onToast(`🎨 已新建书箧「${newFolderName.trim()}」并移入藏书`);
+      setIsCreatingFolder(false);
+      setNewFolderName("");
+      setSelectedFolderId(newId);
+    } catch (e) {
+      console.error(e);
+      onToast("💡 新建书箧并移动失败");
+    }
+  };
+
+  const handleCache = async () => {
+    if (isCaching) return;
+    setIsCaching(true);
+    setCacheProgress(0);
+    try {
+      await cacheEntireBook(book.id, (p) => {
+        setCacheProgress(Math.round(p));
+      });
+      onToast(`🌾 「${book.title}」已全量成功缓存，归入松墨离线阁。`);
+      setCacheProgress(100);
+      setTimeout(() => setCacheProgress(null), 1000);
+    } catch (e) {
+      console.error(e);
+      onToast("💡 缓存整本书失败，请检查网络或物理源目录权限");
+    } finally {
+      setIsCaching(false);
+    }
+  };
+
+  const handleUnbind = async () => {
+    if (!confirm(`您确信要从当前设备下架「${book.title}」吗？\n\n此操作会彻底清空其在本机的章节正文缓存并从书架中移除。\n\n⚠️ 注意：此操作为逻辑解绑，绝不会伤害或移动您本地磁盘上的任何实际小说文件！`)) {
+      return;
+    }
+    try {
+      await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+        await db.chapters.where("bookId").equals(book.id).delete();
+        await db.progress.where("bookId").equals(book.id).delete();
+        await db.books.delete(book.id);
+      });
+      onToast(`🍃 藏书「${book.title}」已下架，缓存已彻底物理清空。`);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      onToast("💡 下架失败");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* 磨砂背景 */}
+      <div onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity" />
+
+      {/* 弹窗框 (宣纸风格) */}
+      <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border border-[#E9DCC8] bg-[#FAF8F2] shadow-2xl transition-all p-7 text-[#5C4533] z-10 animate-scale-in">
+        {/* 注入淡入和缩放动画 */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+          }
+          .animate-scale-in {
+            animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}} />
+
+        {/* 顶部栏 */}
+        <div className="flex items-center justify-between border-b border-[#E9DCC8]/60 pb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🏮</span>
+            <div>
+              <h3 className="font-reading-title text-base font-bold text-[#4A321F]">
+                落砚 · 藏书治理阁
+              </h3>
+              <p className="text-[11px] text-[var(--ui-muted)]">
+                治理、归档及缓存对策管理
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(80,65,45,0.05)] text-[var(--ui-muted)] transition-colors hover:bg-[rgba(80,65,45,0.1)]"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* 书籍预览详情卡 */}
+        <div className="mt-5 rounded-2xl border border-[#E9DCC8]/40 bg-[#FFFDFB]/60 p-4 flex gap-4">
+          <BookCover title={book.title} className="h-16 w-11 shrink-0 rounded shadow-[1px_2px_6px_rgba(0,0,0,0.08)]" compact />
+          <div className="min-w-0 flex-1 flex flex-col justify-center">
+            <h4 className="truncate font-reading-title text-sm font-bold text-[#4A321F]">
+              {book.title}
+            </h4>
+            <p className="mt-0.5 truncate text-xs text-[var(--ui-muted)]">
+              作者：{book.author || "本地佚名"}
+            </p>
+            <p className="mt-1 text-[10px] text-[var(--ui-quiet)] font-medium">
+              格式：<span className="uppercase">{book.format}</span>
+              {book.contentLocator?.relativePath && (
+                <> · 相对路径: <span className="truncate max-w-[150px] inline-block align-bottom">{book.contentLocator.relativePath}</span></>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* 治理内容区分三板块 */}
+        <div className="mt-6 space-y-6">
+          {/* 版块一：归属逻辑文件夹 */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold tracking-wide text-[#7C624E]">
+              📦 逻辑归置 (当前所属：{folders.find(f => f.id === book.sourceFolderId)?.name || "书架主阁"})
+            </label>
+            {!isCreatingFolder ? (
+              <div className="flex gap-2">
+                <select
+                  value={selectedFolderId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__create__") {
+                      setIsCreatingFolder(true);
+                    } else {
+                      setSelectedFolderId(val);
+                      handleMove(val);
+                    }
+                  }}
+                  className="flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
+                >
+                  <option value="root">📜 书架主阁 (未分类)</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      📁 {f.name}
+                    </option>
+                  ))}
+                  <option value="__create__" className="text-[var(--ui-accent)] font-bold">
+                    ＋ 新建逻辑书箧...
+                  </option>
+                </select>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="请输入新书箧名称..."
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
+                />
+                <button
+                  onClick={handleCreateAndMove}
+                  className="rounded-xl bg-[var(--ui-accent)] hover:bg-[#527047] text-white px-3 text-xs font-bold transition-colors"
+                >
+                  新建并移入
+                </button>
+                <button
+                  onClick={() => setIsCreatingFolder(false)}
+                  className="rounded-xl border border-[#E9DCC8] bg-white hover:bg-gray-50 text-[var(--ui-muted)] px-3 text-xs font-bold transition-colors"
+                >
+                  取消
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 版块二：全量离线缓存 */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold tracking-wide text-[#7C624E]">
+              🌾 全量离线缓存
+            </label>
+            <div className="rounded-xl border border-[#E9DCC8]/40 bg-white/50 p-3.5">
+              <div className="flex justify-between items-center gap-4">
+                <div>
+                  <h5 className="text-xs font-bold text-[#5C4533]">一键物理缓存全卷</h5>
+                  <p className="mt-0.5 text-[10px] text-[var(--ui-muted)] leading-normal">
+                    解析整本书并入库存储，供在断网或离线设备时完整阅读。
+                  </p>
+                </div>
+                <button
+                  onClick={handleCache}
+                  disabled={isCaching}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
+                    isCaching
+                      ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                      : "bg-[#F1F6F0] hover:bg-[var(--ui-accent)] hover:text-white text-[var(--ui-accent)] border-[var(--ui-accent-soft)]"
+                  }`}
+                >
+                  {isCaching ? "缓存中..." : "一键缓存"}
+                </button>
+              </div>
+
+              {/* 300ms 黄金阻尼微百分比进度加载条 */}
+              {cacheProgress !== null && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[9px] font-bold text-[var(--ui-quiet)] mb-1">
+                    <span>切片解析与安全写入中</span>
+                    <span>{cacheProgress}%</span>
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] to-[#81a073] transition-[width] duration-300"
+                      style={{ width: `${cacheProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 版块三：物理下架 */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold tracking-wide text-[#7C624E]">
+              🍂 藏书下架治理
+            </label>
+            <div className="rounded-xl border border-red-200/40 bg-red-50/20 p-3.5 flex justify-between items-center gap-4">
+              <div>
+                <h5 className="text-xs font-bold text-[#A64B4B]">从本机下架解绑</h5>
+                <p className="mt-0.5 text-[10px] text-[var(--ui-muted)] leading-normal">
+                  移除此书并清空其在 IndexedDB 内的正文。不影响任何磁盘物理文件。
+                </p>
+              </div>
+              <button
+                onClick={handleUnbind}
+                className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-[#A64B4B] hover:text-white text-xs font-bold text-[#A64B4B] border border-red-200 transition-colors shrink-0"
+              >
+                解绑下架
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

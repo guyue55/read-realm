@@ -8,7 +8,11 @@ import { eq, and, or } from 'drizzle-orm';
 export class ChapterRepository {
   constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
-  async findByIndex(bookId: string, index: number, shareToken: string = 'default') {
+  async findByIndex(
+    bookId: string,
+    index: number,
+    shareToken: string = 'default',
+  ) {
     const dbBookId = `${bookId}#${shareToken}`;
 
     const whereClause = and(

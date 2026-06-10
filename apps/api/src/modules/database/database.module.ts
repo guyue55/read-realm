@@ -76,8 +76,12 @@ export type Database = LibSQLDatabase<typeof schema> & {
 
         // Self-healing: Upgrade existing sqlite schema dynamically by adding last_read_progress column
         try {
-          await client.execute('ALTER TABLE books ADD COLUMN last_read_progress TEXT;');
-          console.log('[SQLite DB] 自动升级自愈：成功在 books 表中增加 last_read_progress 列。');
+          await client.execute(
+            'ALTER TABLE books ADD COLUMN last_read_progress TEXT;',
+          );
+          console.log(
+            '[SQLite DB] 自动升级自愈：成功在 books 表中增加 last_read_progress 列。',
+          );
         } catch (e) {
           // If column already exists, ignore SQLite error code
         }

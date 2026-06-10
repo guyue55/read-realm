@@ -313,7 +313,10 @@ export function AppShell({
         </div>
       </main>
 
-      <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid grid-cols-5 rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden">
+      <nav
+        className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-50 grid rounded-[22px] border border-[var(--ui-border)] bg-[rgba(255,252,245,0.94)] p-2 shadow-[0_18px_50px_rgba(47,42,36,0.16)] backdrop-blur-xl md:hidden"
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+      >
         {navItems.map((item) => {
           const active =
             currentView === item.href.slice(1) ||

@@ -34,7 +34,12 @@ export class BookController {
     @Param('id') id: string,
     @Body() body: { lastReadProgress: string; lastReadAt?: string },
   ) {
-    await this.bookRepository.updateProgress(id, body.lastReadProgress, body.lastReadAt, token);
+    await this.bookRepository.updateProgress(
+      id,
+      body.lastReadProgress,
+      body.lastReadAt,
+      token,
+    );
     return { success: true };
   }
 
@@ -44,5 +49,3 @@ export class BookController {
     return { success: true };
   }
 }
-
-

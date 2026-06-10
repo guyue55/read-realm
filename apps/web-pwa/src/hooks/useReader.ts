@@ -7,7 +7,7 @@ import {
 } from "react";
 import { ReaderEngine, type ChapterData } from "@reader/reader-core";
 import { Dexie, db } from "@reader/storage-core";
-import { generateAiSigKeyAsync, type ReadingProgress, type Bookmark } from "@reader/shared-types";
+import { generateAiSigKeyAsync, createId, type ReadingProgress, type Bookmark, type Book, type LibraryFolder } from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { apiUrl, getShareHeaders } from "@/lib/api";
@@ -50,6 +50,42 @@ function transformChapterData(data: any, bookId: string): any {
     title,
     content,
   };
+}
+
+/**
+ * 沿相对路径向下探寻获取 FileSystemFileHandle 句柄，支持多级目录，严格拦截逃逸
+ */
+async function getFileHandleByRelativePath(
+  rootHandle: FileSystemDirectoryHandle,
+  relativePath: string
+): Promise<FileSystemFileHandle> {
+  const parts = relativePath.split("/").filter(Boolean);
+  let current: FileSystemDirectoryHandle = rootHandle;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (part === ".." || part === ".") {
+      throw new Error("PATH_TRAVERSAL_FORBIDDEN");
+    }
+    current = await current.getDirectoryHandle(part);
+  }
+  const last = parts[parts.length - 1];
+  if (last === ".." || last === ".") {
+    throw new Error("PATH_TRAVERSAL_FORBIDDEN");
+  }
+  return await current.getFileHandle(last);
+}
+
+/**
+ * 针对流式大文本进行 TextDecoder 自适应字符集解密
+ */
+async function decodeBlobAsync(
+  blob: Blob,
+  preferredEncoding: "utf-8" | "gb18030" | "big5" | "unknown" = "utf-8"
+): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const encoding = preferredEncoding === "unknown" ? "gb18030" : preferredEncoding;
+  const decoder = new TextDecoder(encoding);
+  return decoder.decode(buffer);
 }
 
 function throttle<Args extends unknown[]>(
@@ -296,6 +332,109 @@ function triggerHapticFeedback(ms = 12) {
       // 忽略安全策略可能拦截的异常
     }
   }
+}
+
+/**
+ * 递归安全地向上反解查找书籍的物理来源 sourceId
+ */
+async function findPhysicalSourceId(book: Book): Promise<string | null> {
+  if (book.contentLocator?.sourceId) {
+    return book.contentLocator.sourceId;
+  }
+  
+  let currentFolderId = book.sourceFolderId;
+  if (!currentFolderId) return null;
+
+  try {
+    // 1. 如果 sourceFolderId 直接是物理来源 ID
+    const directSource = await db.librarySources.get(currentFolderId);
+    if (directSource) {
+      return currentFolderId;
+    }
+
+    // 2. 否则，递归向上寻根 logical folders
+    while (currentFolderId) {
+      const folder: LibraryFolder | undefined = await db.libraryFolders.get(currentFolderId);
+      if (!folder) break;
+      if (folder.sourceId) {
+        return folder.sourceId;
+      }
+      currentFolderId = folder.parentId;
+    }
+  } catch (err) {
+    console.error("findPhysicalSourceId 递归解算物理来源时发生异常:", err);
+  }
+
+  return null;
+}
+
+/**
+ * 针对首读"not_parsed"的本地TXT小说进行高可用自愈解析，将整本全量切章并存入db.chapters
+ */
+async function autoParseAndCacheTxtBook(book: Book): Promise<void> {
+  const locator = book.contentLocator;
+  if (!locator) {
+    throw new Error("Missing content locator for local book.");
+  }
+  const sourceId = await findPhysicalSourceId(book);
+  if (!sourceId) {
+    throw new Error("Missing physical source reference.");
+  }
+  const source = await db.librarySources.get(sourceId);
+  if (!source) {
+    throw new Error("Physical library source not found in database.");
+  }
+  const handle = (source as unknown as { directoryHandle?: FileSystemDirectoryHandle }).directoryHandle;
+  if (!handle) {
+    throw new Error("Missing native directory handle reference.");
+  }
+
+  // 校验或申请权限
+  const perm = await (handle as unknown as { queryPermission(options?: { mode: "read" | "readwrite" }): Promise<PermissionState> }).queryPermission({ mode: "read" });
+  if (perm !== "granted") {
+    // 自动更新书籍的状态为需要授权
+    await db.books.update(book.id, { sourceAvailability: "permission_required" });
+    throw new Error("PERMISSION_REQUIRED");
+  }
+
+  // 获取文件
+  const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+  const file = await fileHandle.getFile();
+  const buffer = await file.arrayBuffer();
+
+  // 运行解算 (动态导入隔离 jsdom 对 SSR 构建造成的影响)
+  const { parseTxtBook } = await import("@reader/parser-core");
+  const parsedBook = parseTxtBook(book.title + ".txt", buffer);
+  if (!parsedBook || parsedBook.chapters.length === 0) {
+    throw new Error("Zero chapters parsed or parsing engine failed.");
+  }
+
+  // 存入 db.chapters
+  const now = new Date().toISOString();
+  const chaptersToSave = parsedBook.chapters.map((ch, index) => ({
+    id: createId(),
+    bookId: book.id,
+    index,
+    title: ch.title || `第 ${index + 1} 章`,
+    content: ch.content,
+    wordCount: ch.content.length,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  // 事务写入，安全保障
+  await db.transaction("rw", [db.books, db.chapters], async () => {
+    await db.chapters.bulkPut(chaptersToSave);
+    await db.books.update(book.id, {
+      parseStatus: "parsed",
+      toc: parsedBook.chapters.map(ch => ({ index: ch.index, title: ch.title })),
+      chapterCount: parsedBook.chapters.length,
+      cacheStatus: "chapters_full",
+      sourceAvailability: "full_cached"
+    });
+  });
+
+  console.log(`[Self Healing] Successfully auto-parsed & cached local book: ${book.title}`);
 }
 
 export function useReader(bookId: string) {
@@ -841,6 +980,71 @@ export function useReader(bookId: string) {
           console.error("本地数据库章节检索异常:", dbErr);
         }
 
+        // 针对本地书籍外壳 (BookShell) 的按需懒加载截取机制 (ContentLocator 路由)
+        if (!c) {
+          try {
+            const book = await db.books.get(id);
+            if (book && (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book")) {
+              const locator = book.contentLocator;
+              const sourceId = await findPhysicalSourceId(book);
+              if (sourceId) {
+                const source = await db.librarySources.get(sourceId);
+                const handle = (source as unknown as { directoryHandle?: FileSystemDirectoryHandle })?.directoryHandle;
+                if (source && handle) {
+                  const perm = await (handle as unknown as { queryPermission(options?: { mode: "read" | "readwrite" }): Promise<PermissionState> }).queryPermission({ mode: "read" });
+                  if (perm !== "granted") {
+                    await db.books.update(id, { sourceAvailability: "permission_required" });
+                    console.warn(`[Lazy Loader] 物理目录 ${source.name} 权限已过期，需重新授权`);
+                  } else {
+                    if (book.sourceType === "folder_multi_file_book" && book.multiFileBook) {
+                      const chFile = book.multiFileBook.chapterFiles.find(cf => cf.index === index);
+                      if (chFile) {
+                        const fileHandle = await getFileHandleByRelativePath(handle, chFile.relativePath);
+                        const file = await fileHandle.getFile();
+                        const content = await decodeBlobAsync(file, "gb18030");
+                        
+                        const newCh = {
+                          id: createId(),
+                          bookId: id,
+                          index,
+                          title: chFile.title,
+                          content,
+                        };
+                        await db.chapters.put(newCh);
+                        c = newCh;
+                      }
+                    } else if (book.sourceType === "folder_index" && locator) {
+                      const idxRecord = await db.txtChapterIndices
+                        .where("[bookId+index]")
+                        .equals([id, index])
+                        .first();
+                      
+                      if (idxRecord) {
+                        const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+                        const file = await fileHandle.getFile();
+                        const slicedBlob = file.slice(idxRecord.startOffset, idxRecord.endOffset);
+                        const content = await decodeBlobAsync(slicedBlob, idxRecord.encoding);
+                        
+                        const newCh = {
+                          id: createId(),
+                          bookId: id,
+                          index,
+                          title: idxRecord.title,
+                          content,
+                        };
+                        await db.chapters.put(newCh);
+                        c = newCh;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } catch (localErr) {
+            console.error("[Reader Lazy Loader] 本地外壳按需解算失败:", localErr);
+          }
+        }
+
         if (!c && typeof window !== "undefined" && navigator.onLine) {
           try {
             const res = await fetch(apiUrl(`/books/${id}/chapters/${index}`), {
@@ -895,6 +1099,23 @@ export function useReader(bookId: string) {
     db.books.get(bookId).then(async (b) => {
       if (!b) {
         throw new Error(strings.reader?.bookNotFound || "书籍不存在或已被物理移除");
+      }
+
+      if (b.parseStatus === "not_parsed" && b.sourceType === "folder_index") {
+        try {
+          await autoParseAndCacheTxtBook(b);
+          // 重新读取一次，以便后续载入到正确的 TOC 结构
+          const updatedB = await db.books.get(bookId);
+          if (updatedB) {
+            b = updatedB;
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (errMsg === "PERMISSION_REQUIRED") {
+            throw new Error("物理起封授权缺失，请返回书房重新授权唤醒本卷。");
+          }
+          throw err;
+        }
       }
 
       await reader.load();
@@ -1965,6 +2186,29 @@ export function useReader(bookId: string) {
     [clearAutoFlipTimer],
   );
 
+  const regrantPermission = useCallback(async () => {
+    try {
+      const book = await db.books.get(bookId);
+      if (!book) return false;
+      const sourceId = await findPhysicalSourceId(book);
+      if (!sourceId) return false;
+      const source = await db.librarySources.get(sourceId);
+      if (!source) return false;
+      const handle = (source as unknown as { directoryHandle?: FileSystemDirectoryHandle }).directoryHandle;
+      if (handle) {
+        const res = await (handle as unknown as { requestPermission(options?: { mode: "read" | "readwrite" }): Promise<PermissionState> }).requestPermission({ mode: "read" });
+        if (res === "granted") {
+          await db.books.update(bookId, { sourceAvailability: "source_available" });
+          setError(null);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.error("regrantPermission 唤醒权限失败:", err);
+    }
+    return false;
+  }, [bookId]);
+
   const currentThemeColors = THEMES[settings.theme] || THEMES.paper;
   const isPagination = settings.pageMode === "pagination";
 
@@ -2018,5 +2262,92 @@ export function useReader(bookId: string) {
     rollbackProgress,
     showToast,
     error,
+    cacheEntireBook: async (onProg?: (p: number) => void) => {
+      await cacheEntireBook(bookId, onProg);
+    },
+    regrantPermission,
   };
+}
+
+/**
+ * 🍃 原子化全量离线缓存整本书
+ * 从 ContentLocator 或 MultiFileBook 递归批量读取并塞满 db.chapters，变更 cacheStatus = 'chapters_full'
+ */
+export async function cacheEntireBook(
+  bookId: string,
+  onProgress?: (progress: number) => void
+): Promise<void> {
+  const book = await db.books.get(bookId);
+  if (!book) throw new Error("书籍不存在");
+
+  if (book.sourceType !== "folder_index" && book.sourceType !== "folder_multi_file_book") {
+    throw new Error("此书不支持本地缓存");
+  }
+
+  const locator = book.contentLocator;
+  const sourceId = await findPhysicalSourceId(book);
+  if (!sourceId) throw new Error("未找到物理来源标识");
+
+  const source = await db.librarySources.get(sourceId);
+  if (!source) throw new Error("未找到对应的物理来源");
+
+  const handle = (source as unknown as { directoryHandle?: FileSystemDirectoryHandle }).directoryHandle;
+  if (!handle) throw new Error("物理句柄已丢失，请重新授权");
+
+  const perm = await (handle as unknown as { queryPermission(options?: { mode: "read" | "readwrite" }): Promise<PermissionState> }).queryPermission({ mode: "read" });
+  if (perm !== "granted") {
+    throw new Error("PERMISSION_REQUIRED");
+  }
+
+  if (book.sourceType === "folder_multi_file_book" && book.multiFileBook) {
+    const chapterFiles = book.multiFileBook.chapterFiles;
+    const total = chapterFiles.length;
+    for (let i = 0; i < total; i++) {
+      const chFile = chapterFiles[i];
+      const exists = await db.chapters.where("[bookId+index]").equals([bookId, chFile.index]).first();
+      if (!exists) {
+        const fileHandle = await getFileHandleByRelativePath(handle, chFile.relativePath);
+        const file = await fileHandle.getFile();
+        const content = await decodeBlobAsync(file, "gb18030");
+        await db.chapters.put({
+          id: createId(),
+          bookId,
+          index: chFile.index,
+          title: chFile.title,
+          content,
+        });
+      }
+      onProgress?.(Math.round(((i + 1) / total) * 100));
+    }
+  } else if (book.sourceType === "folder_index" && locator) {
+    const indices = await db.txtChapterIndices.where("bookId").equals(bookId).toArray();
+    indices.sort((a, b) => a.index - b.index);
+    const total = indices.length;
+    if (total === 0) throw new Error("未生成章节索引目录");
+
+    const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+    const file = await fileHandle.getFile();
+
+    for (let i = 0; i < total; i++) {
+      const idxRecord = indices[i];
+      const exists = await db.chapters.where("[bookId+index]").equals([bookId, idxRecord.index]).first();
+      if (!exists) {
+        const slicedBlob = file.slice(idxRecord.startOffset, idxRecord.endOffset);
+        const content = await decodeBlobAsync(slicedBlob, idxRecord.encoding);
+        await db.chapters.put({
+          id: createId(),
+          bookId,
+          index: idxRecord.index,
+          title: idxRecord.title,
+          content,
+        });
+      }
+      onProgress?.(Math.round(((i + 1) / total) * 100));
+    }
+  }
+
+  await db.books.update(bookId, {
+    cacheStatus: "chapters_full",
+    sourceAvailability: "full_cached",
+  });
 }
