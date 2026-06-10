@@ -76,6 +76,61 @@ async function getFileHandleByRelativePath(
 }
 
 /**
+ * 带有数据库反查并自动更新功能的 getFileHandle 包装器，100% 物理层平滑自愈
+ */
+async function getFileHandleWithHealing(
+  rootHandle: FileSystemDirectoryHandle,
+  relativePath: string,
+  bookId: string,
+  type: "file" | "multi_file_chapter" = "file",
+  chapterIndex?: number
+): Promise<FileSystemFileHandle> {
+  try {
+    return await getFileHandleByRelativePath(rootHandle, relativePath);
+  } catch (err) {
+    console.warn(`[Self Healing] 路径失联 (${relativePath})，正在尝试通过本地索引执行冷自愈...`, err);
+    const indexedFile = await db.indexedNovelFiles.where("bookId").equals(bookId).first();
+    if (indexedFile) {
+      if (type === "file") {
+        if (indexedFile.relativePath !== relativePath) {
+          console.log(`[Self Healing] 成功反查到最新物理相对路径: ${indexedFile.relativePath}，执行元数据自愈覆盖。`);
+          await db.books.update(bookId, {
+            "contentLocator.relativePath": indexedFile.relativePath
+          });
+          return await getFileHandleByRelativePath(rootHandle, indexedFile.relativePath);
+        }
+      } else if (type === "multi_file_chapter" && typeof chapterIndex === "number") {
+        const book = await db.books.get(bookId);
+        if (book && book.multiFileBook) {
+          const fileName = relativePath.split("/").pop();
+          if (fileName) {
+            const potentialFile = await db.indexedNovelFiles
+              .where("sourceId")
+              .equals(indexedFile.sourceId)
+              .filter(f => f.name === fileName)
+              .first();
+            if (potentialFile && potentialFile.relativePath !== relativePath) {
+              console.log(`[Self Healing] 多文件章节 [${fileName}] 成功反查到最新路径: ${potentialFile.relativePath}`);
+              const updatedChapterFiles = book.multiFileBook.chapterFiles.map(cf => {
+                if (cf.index === chapterIndex) {
+                  return { ...cf, relativePath: potentialFile.relativePath };
+                }
+                return cf;
+              });
+              await db.books.update(bookId, {
+                "multiFileBook.chapterFiles": updatedChapterFiles
+              });
+              return await getFileHandleByRelativePath(rootHandle, potentialFile.relativePath);
+            }
+          }
+        }
+      }
+    }
+    throw err;
+  }
+}
+
+/**
  * 针对流式大文本进行 TextDecoder 自适应字符集解密
  */
 async function decodeBlobAsync(
@@ -398,9 +453,27 @@ async function autoParseAndCacheTxtBook(book: Book): Promise<void> {
   }
 
   // 获取文件
-  const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+  let fileHandle: FileSystemFileHandle;
+  try {
+    fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+  } catch (err) {
+    console.warn(`[Self Healing] 路径失联，正在尝试通过本地索引执行冷自愈...`, err);
+    // 尝试从 indexedNovelFiles 反查最新的相对路径
+    const indexedFile = await db.indexedNovelFiles.where("bookId").equals(book.id).first();
+    if (indexedFile && indexedFile.relativePath !== locator.relativePath) {
+      console.log(`[Self Healing] 成功反查到最新物理相对路径: ${indexedFile.relativePath}，执行元数据自愈覆盖。`);
+      await db.books.update(book.id, {
+        "contentLocator.relativePath": indexedFile.relativePath
+      });
+      // 重新使用自愈后的相对路径载入句柄
+      fileHandle = await getFileHandleByRelativePath(handle, indexedFile.relativePath);
+    } else {
+      throw err;
+    }
+  }
   const file = await fileHandle.getFile();
   const buffer = await file.arrayBuffer();
+
 
   // 运行解算 (动态导入隔离 jsdom 对 SSR 构建造成的影响)
   const { parseTxtBook } = await import("@reader/parser-core");
@@ -438,6 +511,7 @@ async function autoParseAndCacheTxtBook(book: Book): Promise<void> {
 }
 
 export function useReader(bookId: string) {
+  const [book, setBook] = useState<Book | null>(null);
   const [chapter, setChapter] = useState<ChapterData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [renderedChapters, setRenderedChapters] = useState<ChapterData[]>([]);
@@ -999,7 +1073,7 @@ export function useReader(bookId: string) {
                     if (book.sourceType === "folder_multi_file_book" && book.multiFileBook) {
                       const chFile = book.multiFileBook.chapterFiles.find(cf => cf.index === index);
                       if (chFile) {
-                        const fileHandle = await getFileHandleByRelativePath(handle, chFile.relativePath);
+                        const fileHandle = await getFileHandleWithHealing(handle, chFile.relativePath, id, "multi_file_chapter", index);
                         const file = await fileHandle.getFile();
                         const content = await decodeBlobAsync(file, "gb18030");
                         
@@ -1020,7 +1094,7 @@ export function useReader(bookId: string) {
                         .first();
                       
                       if (idxRecord) {
-                        const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+                        const fileHandle = await getFileHandleWithHealing(handle, locator.relativePath, id, "file");
                         const file = await fileHandle.getFile();
                         const slicedBlob = file.slice(idxRecord.startOffset, idxRecord.endOffset);
                         const content = await decodeBlobAsync(slicedBlob, idxRecord.encoding);
@@ -1100,6 +1174,7 @@ export function useReader(bookId: string) {
       if (!b) {
         throw new Error(strings.reader?.bookNotFound || "书籍不存在或已被物理移除");
       }
+      setBook(b);
 
       if (b.parseStatus === "not_parsed" && b.sourceType === "folder_index") {
         try {
@@ -1108,6 +1183,7 @@ export function useReader(bookId: string) {
           const updatedB = await db.books.get(bookId);
           if (updatedB) {
             b = updatedB;
+            setBook(updatedB);
           }
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
@@ -2266,6 +2342,8 @@ export function useReader(bookId: string) {
       await cacheEntireBook(bookId, onProg);
     },
     regrantPermission,
+    book,
+    sourceFolderId: book?.sourceFolderId,
   };
 }
 
@@ -2306,7 +2384,7 @@ export async function cacheEntireBook(
       const chFile = chapterFiles[i];
       const exists = await db.chapters.where("[bookId+index]").equals([bookId, chFile.index]).first();
       if (!exists) {
-        const fileHandle = await getFileHandleByRelativePath(handle, chFile.relativePath);
+        const fileHandle = await getFileHandleWithHealing(handle, chFile.relativePath, bookId, "multi_file_chapter", chFile.index);
         const file = await fileHandle.getFile();
         const content = await decodeBlobAsync(file, "gb18030");
         await db.chapters.put({
@@ -2325,7 +2403,7 @@ export async function cacheEntireBook(
     const total = indices.length;
     if (total === 0) throw new Error("未生成章节索引目录");
 
-    const fileHandle = await getFileHandleByRelativePath(handle, locator.relativePath);
+    const fileHandle = await getFileHandleWithHealing(handle, locator.relativePath, bookId, "file");
     const file = await fileHandle.getFile();
 
     for (let i = 0; i < total; i++) {

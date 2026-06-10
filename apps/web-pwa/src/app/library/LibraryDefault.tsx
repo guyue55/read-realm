@@ -16,6 +16,7 @@ import { createId } from "@reader/shared-types";
 import { cacheEntireBook } from "@/hooks/useReader";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScanService";
 
 type LibraryViewMode = "cover" | "compact" | "list";
 
@@ -117,6 +118,316 @@ export function LibraryDefault() {
       setCurrentFolderId(folderId);
     }
   };
+
+  // ==========================================
+  // 🧭 智能记忆与精准漫反：原路折返参数解析
+  // ==========================================
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const folderId = params.get("folderId");
+      if (folderId) {
+        navigateToFolder(folderId);
+      }
+    }
+  }, []);
+
+  // ==========================================
+  // 🖌️ 「落墨·治理微型下拉菜单（Mini Popover）」
+  // ==========================================
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // Light Dismiss 自动冷退散
+  useEffect(() => {
+    if (!activeMenuId) return;
+    const handleGlobalClick = () => {
+      setActiveMenuId(null);
+    };
+    window.addEventListener("click", handleGlobalClick);
+    return () => {
+      window.removeEventListener("click", handleGlobalClick);
+    };
+  }, [activeMenuId]);
+
+  // 1. 增量重新扫描对比合并事务 (Scan Reconciliation)
+  const handleIncrementalScan = async (folderId: string, folderName: string) => {
+    setToastMsg(`🧭 正在对「${folderName}」进行指纹增量重扫...`);
+    try {
+      let currentId: string | undefined = folderId;
+      let sourceId: string | null = null;
+      
+      const directSource = await db.librarySources.get(currentId);
+      if (directSource) {
+        sourceId = currentId;
+      } else {
+        while (currentId) {
+          const folder: LibraryFolder | undefined = await db.libraryFolders.get(currentId);
+          if (!folder) break;
+          if (folder.sourceId) {
+            sourceId = folder.sourceId;
+            break;
+          }
+          currentId = folder.parentId;
+        }
+      }
+
+      if (!sourceId) {
+        setToastMsg("⚠️ 无法定位物理导入来源，无法重扫。");
+        return;
+      }
+
+      const source = await db.librarySources.get(sourceId);
+      if (!source) {
+        setToastMsg("🔌 未找到对应的物理书箱，可能已被手动擦除。");
+        return;
+      }
+
+      const rootHandle = (source as unknown as { directoryHandle?: FileSystemDirectoryHandle }).directoryHandle;
+      if (!rootHandle) {
+        setToastMsg("🔌 物理句柄已失效，请重新授权。");
+        return;
+      }
+
+      const perm = await (rootHandle as unknown as { queryPermission(options?: { mode: "read" | "readwrite" }): Promise<PermissionState> }).queryPermission({ mode: "read" });
+      if (perm !== "granted") {
+        setToastMsg("🔌 权限已失效，请在导入页面重新授权。");
+        return;
+      }
+
+      const folderRecord = await db.libraryFolders.get(folderId);
+      const subRelativePath = folderRecord?.relativePath || "";
+
+      let currentHandle = rootHandle;
+      if (subRelativePath) {
+        const parts = subRelativePath.split("/").filter(Boolean);
+        for (const part of parts) {
+          currentHandle = await currentHandle.getDirectoryHandle(part);
+        }
+      }
+
+      const rootPreview = await FolderScanService.scanDirectoryToPreviewTree(currentHandle, undefined, subRelativePath);
+
+      const newFiles: { relativePath: string; size: number; lastModified: number }[] = [];
+      const collectFiles = (node: ImportPreviewNode) => {
+        if (node.kind === "file") {
+          newFiles.push({
+            relativePath: node.relativePath,
+            size: node.size || 0,
+            lastModified: node.lastModified || 0,
+          });
+        }
+        if (node.children) {
+          for (const child of node.children) {
+            collectFiles(child);
+          }
+        }
+      };
+      collectFiles(rootPreview);
+
+      let oldIndexedFiles = await db.indexedNovelFiles.where("sourceId").equals(sourceId).toArray();
+      if (subRelativePath) {
+        oldIndexedFiles = oldIndexedFiles.filter(f => f.relativePath.startsWith(subRelativePath));
+      }
+
+      const oldFiles = oldIndexedFiles.map(f => ({
+        relativePath: f.relativePath,
+        size: f.size || 0,
+        lastModified: f.lastModified || 0,
+        bookId: f.bookId,
+      }));
+
+      const reconciliation = FolderScanService.reconcileScanResults(oldFiles, newFiles);
+
+      await db.transaction("rw", [db.indexedNovelFiles, db.books, db.chapters], async () => {
+        // (A) 处理移动/改名 (moved) - 100% 元数据及章节句柄自愈
+        for (const item of reconciliation.moved) {
+          if (item.bookId) {
+            await db.indexedNovelFiles
+              .where({ sourceId, relativePath: item.from })
+              .modify({ relativePath: item.to, updatedAt: new Date().toISOString() });
+
+            const book = await db.books.get(item.bookId);
+            if (book) {
+              if (book.sourceType === "folder_index" && book.contentLocator) {
+                await db.books.update(item.bookId, {
+                  "contentLocator.relativePath": item.to,
+                  updatedAt: new Date().toISOString()
+                });
+              } else if (book.sourceType === "folder_multi_file_book" && book.multiFileBook) {
+                const updatedChapterFiles = book.multiFileBook.chapterFiles.map(cf => {
+                  if (cf.relativePath === item.from) {
+                    return { ...cf, relativePath: item.to };
+                  }
+                  return cf;
+                });
+                await db.books.update(item.bookId, {
+                  "multiFileBook.chapterFiles": updatedChapterFiles,
+                  updatedAt: new Date().toISOString()
+                });
+              }
+            }
+          }
+        }
+
+        // (B) 内容更新 (changed) - 智能重新标记 TOC 为 not_parsed，清空旧缓存
+        for (const relativePath of reconciliation.changed) {
+          const idxFile = oldIndexedFiles.find(f => f.relativePath === relativePath);
+          if (idxFile && idxFile.bookId) {
+            await db.chapters.where("bookId").equals(idxFile.bookId).delete();
+            await db.books.update(idxFile.bookId, {
+              parseStatus: "not_parsed",
+              cacheStatus: "metadata_only",
+              sourceAvailability: "source_available",
+              updatedAt: new Date().toISOString()
+            });
+            await db.indexedNovelFiles
+              .where({ sourceId, relativePath })
+              .modify({ status: "changed", updatedAt: new Date().toISOString() });
+          }
+        }
+
+        // (C) 处理删除缺失 (deleted)
+        for (const relativePath of reconciliation.deleted) {
+          const idxFile = oldIndexedFiles.find(f => f.relativePath === relativePath);
+          if (idxFile) {
+            await db.indexedNovelFiles
+              .where({ sourceId, relativePath })
+              .modify({ status: "missing", updatedAt: new Date().toISOString() });
+
+            if (idxFile.bookId) {
+              await db.books.update(idxFile.bookId, {
+                sourceAvailability: "source_missing",
+                updatedAt: new Date().toISOString()
+              });
+            }
+          }
+        }
+      });
+
+      const totalMoved = reconciliation.moved.length;
+      const totalChanged = reconciliation.changed.length;
+      const totalDeleted = reconciliation.deleted.length;
+      setToastMsg(`📖 重扫归档结束！自愈改名移动 ${totalMoved} 本，内容变动重编缓存 ${totalChanged} 本，缺失 ${totalDeleted} 本。`);
+    } catch (err) {
+      console.error("增量重新勘探失败:", err);
+      setToastMsg("⚠️ 增量重扫由于磁盘或文件状态读取失败。");
+    }
+  };
+
+  // 2. 批量将文件夹藏书一键上传云端
+  const handleBackupFolder = async (folderId: string, folderName: string) => {
+    setToastMsg(`📤 正在并发将「${folderName}」下的书籍同步至云端...`);
+    try {
+      const subBooks = await db.books.where("sourceFolderId").equals(folderId).toArray();
+      const unbackedBooks = subBooks.filter(b => !cloudBooks.some(cb => cb.id === b.id));
+      if (unbackedBooks.length === 0) {
+        setToastMsg("⛩️ 此书箧内的所有藏书早已全量备份至云端。");
+        return;
+      }
+      
+      let successCount = 0;
+      for (const book of unbackedBooks) {
+        try {
+          await handleSingleUpload(book);
+          successCount++;
+        } catch (e) {
+          console.error(`备份藏书 [${book.title}] 失败:`, e);
+        }
+      }
+      setToastMsg(`⛩️ 「${folderName}」一键备份完成，成功同步 ${successCount} 卷，全部归档。`);
+    } catch (err) {
+      console.error("一键同步失败:", err);
+      setToastMsg("⚠️ 一键备份数据库同步队列处理失败。");
+    }
+  };
+
+  // 3. 文件夹解除物理绑定
+  const handleDisconnectFolder = async (folderId: string, folderName: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "🔏 解除物理句柄硬绑定",
+      message: `确认要解除「${folderName}」书箧与本地物理文件夹的关联绑定吗？解绑定后，它将完全转为“纯离线/缓存模式”，安全存储进度，切断对磁盘的 Native Handle 直连。`,
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await db.transaction("rw", [db.libraryFolders, db.books], async () => {
+            await db.libraryFolders.update(folderId, {
+              sourceId: undefined,
+              sourceType: "virtual",
+              updatedAt: new Date().toISOString()
+            });
+            const subBooks = await db.books.where("sourceFolderId").equals(folderId).toArray();
+            for (const b of subBooks) {
+              await db.books.update(b.id, {
+                sourceFileId: undefined,
+                sourceType: undefined,
+                contentLocator: undefined,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          });
+          setToastMsg(`🔏 「${folderName}」已转换为虚拟书柜，物理句柄成功切断绑定。`);
+        } catch (err) {
+          console.error("解绑文件夹失败:", err);
+          setToastMsg("💡 解绑定失败，存储数据库繁忙。");
+        }
+      }
+    });
+  };
+
+  // 4. 单本藏书解除物理绑定
+  const handleDisconnectBook = async (bookId: string, title: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "🔏 解除藏书物理绑定",
+      message: `您确认要安全切断《${title}》与本地磁盘物理原文件的硬绑定吗？解绑定后，它将转化为“纯粹离线藏书模式”，原有缓存章节、阅读进度和手写笔记绝不丢失！`,
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await db.books.update(bookId, {
+            sourceFileId: undefined,
+            sourceType: undefined,
+            contentLocator: undefined,
+            updatedAt: new Date().toISOString()
+          });
+          setToastMsg(`🔏 《${title}》已转换为纯离线缓存藏书模式，安全切断直连。`);
+        } catch (err) {
+          console.error("解绑书籍失败:", err);
+          setToastMsg("💡 书籍解除硬关联失败。");
+        }
+      }
+    });
+  };
+
+  // 5. 单本藏书强制重新切章自愈
+  const handleReconstructBook = async (bookId: string, title: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: "📥 重构自愈藏书",
+      message: `您确认要清空《${title}》的旧有章节缓存并强制重新切章吗？这将重新解算原大文件或多章节目录，但原有的阅读进度、书签和手写笔记将绝对保留！`,
+      isDanger: true,
+      onConfirm: async () => {
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await db.transaction("rw", [db.chapters, db.books], async () => {
+            await db.chapters.where("bookId").equals(bookId).delete();
+            await db.books.update(bookId, {
+              parseStatus: "not_parsed",
+              cacheStatus: "metadata_only",
+              updatedAt: new Date().toISOString()
+            });
+          });
+          setToastMsg(`📥 《${title}》已成功重置，下次打开时将重新切章自愈。`);
+        } catch (err) {
+          console.error("重构书籍失败:", err);
+          setToastMsg("💡 书籍重构重设失败。");
+        }
+      }
+    });
+  };
+
 
   const handleDissolveFolder = async (folderId: string, name: string) => {
     setConfirmState({
@@ -1764,6 +2075,58 @@ export function LibraryDefault() {
                 </div>
 
                 <div className="flex items-center gap-4 shrink-0 pr-8 sm:pr-10 relative z-20">
+                  {/* 🖌️ 逻辑文件夹独立治理菜单 */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setActiveMenuId(activeMenuId === `folder-${folder.id}` ? null : `folder-${folder.id}`);
+                      }}
+                      className="p-1.5 rounded-full hover:bg-white/85 dark:hover:bg-[#3d3a37] text-sm text-[#8C6239] hover:text-[var(--ui-accent)] transition-all flex items-center justify-center active:scale-95 border border-transparent hover:border-[#E9DCC8]"
+                      title="书箧落墨治理"
+                    >
+                      🖌️
+                    </button>
+                    {activeMenuId === `folder-${folder.id}` && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 mt-2 w-48 bg-[#FCF9F2]/95 dark:bg-[#1E1E1E]/95 backdrop-blur-md border border-[#E9DCC8] dark:border-white/10 rounded-xl shadow-2xl py-2 z-50 origin-top-right transition-all duration-200"
+                      >
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(null);
+                            await handleIncrementalScan(folder.id, folder.name);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                        >
+                          <span>🧭</span> 增量重扫目录
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(null);
+                            await handleBackupFolder(folder.id, folder.name);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                        >
+                          <span>📤</span> 备份书箧云端
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(null);
+                            await handleDisconnectFolder(folder.id, folder.name);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#A64B4B] hover:bg-[#FFF2ED] flex items-center gap-2.5 transition-colors"
+                        >
+                          <span>🔏</span> 解除物理绑定
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1854,6 +2217,64 @@ export function LibraryDefault() {
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0 pr-8 sm:pr-10 relative z-20">
+                    {/* 🖌️ 藏书独立治理菜单 */}
+                    {isLocal && (
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setActiveMenuId(activeMenuId === `book-${book.id}` ? null : `book-${book.id}`);
+                          }}
+                          className="p-1.5 rounded-full hover:bg-white/85 dark:hover:bg-[#3d3a37] text-sm text-[#8C6239] hover:text-[var(--ui-accent)] transition-all flex items-center justify-center active:scale-95 border border-transparent hover:border-[#E9DCC8]"
+                          title="藏书落墨治理"
+                        >
+                          🖌️
+                        </button>
+                        {activeMenuId === `book-${book.id}` && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 mt-2 w-48 bg-[#FCF9F2]/95 dark:bg-[#1E1E1E]/95 backdrop-blur-md border border-[#E9DCC8] dark:border-white/10 rounded-xl shadow-2xl py-2 z-50 origin-top-right transition-all duration-200"
+                          >
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(null);
+                                await handleSingleUpload(book);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                            >
+                              <span>📤</span> 单独同步备份
+                            </button>
+                            {book.contentLocator && (
+                              <>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuId(null);
+                                    await handleReconstructBook(book.id, book.title);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                                >
+                                  <span>📥</span> 强制重构自愈
+                                </button>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuId(null);
+                                    await handleDisconnectBook(book.id, book.title);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#A64B4B] hover:bg-[#FFF2ED] flex items-center gap-2.5 transition-colors"
+                                >
+                                  <span>🔏</span> 解除物理绑定
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* 🏮 藏书治理快捷动作 */}
                     {isLocal && (
                       <button
@@ -2014,16 +2435,69 @@ export function LibraryDefault() {
                   <span className="text-[10px] text-[var(--ui-quiet)] font-bold">
                     共 {mergedBooks.filter(b => b.sourceFolderId === folder.id).length} 本藏书
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDissolveFolder(folder.id, folder.name);
-                    }}
-                    className="px-2 py-0.5 rounded bg-white hover:bg-[#FFF2ED] hover:text-[var(--ui-danger)] border border-[#E4D7C2] text-[10px] font-bold text-[#A64B4B] transition-colors"
-                    title="解散书箧，书籍将重归主阁"
-                  >
-                    解散
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* 🖌️ 逻辑文件夹独立治理菜单 (网格模式) */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setActiveMenuId(activeMenuId === `folder-${folder.id}` ? null : `folder-${folder.id}`);
+                        }}
+                        className="p-1 rounded-full hover:bg-white/85 dark:hover:bg-[#3d3a37] text-xs text-[#8C6239] hover:text-[var(--ui-accent)] transition-all flex items-center justify-center active:scale-95 border border-[#E9DCC8]"
+                        title="书箧落墨治理"
+                      >
+                        🖌️
+                      </button>
+                      {activeMenuId === `folder-${folder.id}` && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-0 bottom-full mb-2 w-48 bg-[#FCF9F2]/95 dark:bg-[#1E1E1E]/95 backdrop-blur-md border border-[#E9DCC8] dark:border-white/10 rounded-xl shadow-2xl py-2 z-50 origin-bottom-right transition-all duration-200"
+                        >
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                              await handleIncrementalScan(folder.id, folder.name);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                          >
+                            <span>🧭</span> 增量重扫目录
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                              await handleBackupFolder(folder.id, folder.name);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                          >
+                            <span>📤</span> 备份书箧云端
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(null);
+                              await handleDisconnectFolder(folder.id, folder.name);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#A64B4B] hover:bg-[#FFF2ED] flex items-center gap-2.5 transition-colors"
+                          >
+                            <span>🔏</span> 解除物理绑定
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDissolveFolder(folder.id, folder.name);
+                      }}
+                      className="px-2 py-0.5 rounded bg-white hover:bg-[#FFF2ED] hover:text-[var(--ui-danger)] border border-[#E4D7C2] text-[10px] font-bold text-[#A64B4B] transition-colors"
+                      title="解散书箧，书籍将重归主阁"
+                    >
+                      解散
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2107,6 +2581,63 @@ export function LibraryDefault() {
                         <span className="rounded bg-[var(--ui-accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--ui-accent)]">
                           {book.format}
                         </span>
+
+                        {isLocal && (
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setActiveMenuId(activeMenuId === `book-${book.id}` ? null : `book-${book.id}`);
+                              }}
+                              className="rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white px-1.5 py-0.5 text-[10px] font-semibold text-[#8C6239] transition-all border border-[#E4D7C2] flex items-center justify-center"
+                              title="藏书落墨治理"
+                            >
+                              🖌️
+                            </button>
+                            {activeMenuId === `book-${book.id}` && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute left-0 bottom-full mb-2 w-48 bg-[#FCF9F2]/95 dark:bg-[#1E1E1E]/95 backdrop-blur-md border border-[#E9DCC8] dark:border-white/10 rounded-xl shadow-2xl py-2 z-50 origin-bottom-left transition-all duration-200"
+                              >
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuId(null);
+                                    await handleSingleUpload(book);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                                >
+                                  <span>📤</span> 单独同步备份
+                                </button>
+                                {book.contentLocator && (
+                                  <>
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        setActiveMenuId(null);
+                                        await handleReconstructBook(book.id, book.title);
+                                      }}
+                                      className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#5C4533] dark:text-[#E5E5E5] hover:bg-[#F2EADA] dark:hover:bg-[#3a3a3a] flex items-center gap-2.5 transition-colors border-b border-[#E9DCC8]/30 dark:border-white/5"
+                                    >
+                                      <span>📥</span> 强制重构自愈
+                                    </button>
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        setActiveMenuId(null);
+                                        await handleDisconnectBook(book.id, book.title);
+                                      }}
+                                      className="w-full px-4 py-2.5 text-left text-xs font-serif font-bold text-[#A64B4B] hover:bg-[#FFF2ED] flex items-center gap-2.5 transition-colors"
+                                    >
+                                      <span>🔏</span> 解除物理绑定
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {isLocal && (
                           <button

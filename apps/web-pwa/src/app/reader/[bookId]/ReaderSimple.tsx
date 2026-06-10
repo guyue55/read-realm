@@ -72,6 +72,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     clearAiSession,
     error,
     regrantPermission,
+    sourceFolderId,
   } = useReader(bookId);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
@@ -241,7 +242,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
 
           <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
             <button
-              onClick={() => router.push("/library")}
+              onClick={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
               className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 border shadow-sm hover:opacity-90 active:scale-95"
               style={{
                 backgroundColor: isDark ? "#3a3a3a" : "#fdfbf7",
@@ -332,7 +333,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               progress={readingProgress}
               currentChapterIndex={chapter.index}
               totalChapters={toc.length}
-              onBack={() => router.push("/library")}
+              onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
               onBookmark={addBookmark}
               onSettings={() => togglePanel("settings")}
               onPrevChapter={handlePrevChapterActive}
