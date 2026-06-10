@@ -111,9 +111,25 @@ export function LibraryDefault() {
 
   const navigateToFolder = (folderId: string | undefined) => {
     if (typeof document !== "undefined" && "startViewTransition" in document) {
-      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+      try {
+        const transition = (document as unknown as {
+          startViewTransition: (cb: () => void) => {
+            ready?: Promise<void>;
+            finished?: Promise<void>;
+            catch?: (cb: () => void) => void;
+          };
+        }).startViewTransition(() => {
+          setCurrentFolderId(folderId);
+        });
+        if (transition) {
+          if (transition.ready) transition.ready.catch(() => {});
+          if (transition.finished) transition.finished.catch(() => {});
+          if (typeof transition.catch === "function") transition.catch(() => {});
+        }
+      } catch (e) {
+        console.warn("[Library] 视图转场 ViewTransition 启动异常，自动降级为无动画状态同步:", e);
         setCurrentFolderId(folderId);
-      });
+      }
     } else {
       setCurrentFolderId(folderId);
     }

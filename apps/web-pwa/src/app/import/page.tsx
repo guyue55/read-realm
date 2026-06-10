@@ -22,6 +22,56 @@ interface BatchTask {
   progressText: string;
 }
 
+
+/**
+ * 🎨 内存归并优化：递归折叠单链逻辑文件夹，原样保留多分支结构
+ * 规则：
+ * 1. 若为叶子节点（物理文件或多物理文件组成的一体书），直接原样返回
+ * 2. 递归优化所有物理子节点。若优化后子节点数量为 0，代表空文件夹，剔除
+ * 3. 若优化后有效子节点数量为 1，说明该节点属于“单子单链多余文件夹壳”，执行折叠：抛弃自身，将唯一子节点提升
+ * 4. 若优化后子节点数量多于 1，说明存在多分支结构（有多本书或多个子文件夹），必须原样完整保存层级结构
+ */
+function optimizeImportTree(
+  node: ImportPreviewNode,
+  ignoredNodes: Set<string>,
+  customTypes: Map<string, ImportPreviewNode["detectedType"] | "ignore">
+): ImportPreviewNode[] {
+  const isIgnored = ignoredNodes.has(node.id) || customTypes.get(node.id) === "ignore";
+  if (isIgnored) return [];
+
+  const currentType = customTypes.get(node.id) || node.detectedType;
+
+  // 1. 文件节点，或者被强制识别、装配为“多文件整书”的逻辑节点，视同最终实体，无需折叠
+  if (node.kind === "file" || currentType === "multi_file_book") {
+    return [node];
+  }
+
+  // 2. 递归净化所有子树
+  if (node.kind === "directory" && node.children) {
+    const optimizedChildren: ImportPreviewNode[] = [];
+    for (const child of node.children) {
+      const result = optimizeImportTree(child, ignoredNodes, customTypes);
+      optimizedChildren.push(...result);
+    }
+
+    // 2.1 变为空文件夹，排除
+    if (optimizedChildren.length === 0) {
+      return [];
+    }
+
+    // 2.2 核心合并：该目录下只有一本书/文件，执行折叠拆解多余外层！直接返回其唯一子节点
+    if (optimizedChildren.length === 1) {
+      return optimizedChildren;
+    }
+
+    // 2.3 有多个（书籍/文件夹），原样保留层级
+    node.children = optimizedChildren;
+    return [node];
+  }
+
+  return [node];
+}
+
 export default function ImportPage() {
   const isOnline = useOnlineStatus();
   const [status, setStatus] = useState<string>("等待导入");
@@ -637,11 +687,18 @@ export default function ImportPage() {
         }
       };
 
-      // 根目录如果是作为 category 导入
+      // 🏮 核心结构折叠优化：在真正写入 IndexedDB 前，递归剪枝与折叠单链多余文件夹
+      const optimizedTopNodes: ImportPreviewNode[] = [];
       if (previewTree.children) {
         for (const child of previewTree.children) {
-          await importNodeRecursive(child, undefined, 0);
+          const optimized = optimizeImportTree(child, ignoredNodes, customTypes);
+          optimizedTopNodes.push(...optimized);
         }
+      }
+
+      // 遍历优化后的高内聚、简练化节点数组，原样递归落库
+      for (const node of optimizedTopNodes) {
+        await importNodeRecursive(node, undefined, 0);
       }
 
       setScanStatus("🎉 一键入阁大功告成！已成功将整书库及逻辑结构导入书架！");
