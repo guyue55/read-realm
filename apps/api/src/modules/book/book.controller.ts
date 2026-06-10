@@ -32,13 +32,14 @@ export class BookController {
   async updateProgress(
     @ShareToken() token: string,
     @Param('id') id: string,
-    @Body() body: { lastReadProgress: string; lastReadAt?: string },
+    @Body() body: { lastReadProgress: string; lastReadAt?: string; sourceFolderId?: string | null },
   ) {
     await this.bookRepository.updateProgress(
       id,
       body.lastReadProgress,
       body.lastReadAt,
       token,
+      body.sourceFolderId,
     );
     return { success: true };
   }

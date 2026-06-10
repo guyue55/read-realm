@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useVirtualRouter } from "@/lib/route-store";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@reader/storage-core";
-import type { Book } from "@reader/shared-types";
-import { PageLayout } from "@/components/PageLayout";
 import { BookCover } from "@/components/BookCover";
-import { extractColorsFromTitle } from "@/lib/color-extraction";
-import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { PageLayout } from "@/components/PageLayout";
+import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { extractColorsFromTitle } from "@/lib/color-extraction";
+import { useVirtualRouter } from "@/lib/route-store";
+import type { Book } from "@reader/shared-types";
+import { db } from "@reader/storage-core";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useEffect, useState } from "react";
 
 export default function BookDetailPage({
   params,
@@ -287,7 +287,7 @@ export default function BookDetailPage({
                   🗑️ 清空章节本地正文缓存
                 </button>
                 <p className="text-[11px] text-[#9C9388] leading-relaxed font-serif px-1">
-                  🍂 说明：此操作仅清除 IndexedDB 中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
+                  🍂 说明：此操作仅清除本地书阁中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
                 </p>
               </div>
             </div>

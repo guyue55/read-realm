@@ -124,13 +124,62 @@ export function LibraryDefault() {
   // ==========================================
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const folderId = params.get("folderId");
+      let folderId: string | null = null;
+      
+      // A. 优先从 Hash 后面的 Query 参数中解析（适应 SPA 虚拟路由 Hash 模式）
+      const hash = window.location.hash;
+      const queryIndex = hash.indexOf("?");
+      if (queryIndex !== -1) {
+        const hashParams = new URLSearchParams(hash.slice(queryIndex));
+        folderId = hashParams.get("folderId");
+      }
+      
+      // B. 降级从 window.location.search 获取
+      if (!folderId) {
+        const params = new URLSearchParams(window.location.search);
+        folderId = params.get("folderId");
+      }
+
       if (folderId) {
         navigateToFolder(folderId);
       }
     }
   }, []);
+
+  // ==========================================
+  // 🛡️ 幽灵文件夹容错防线（不存在的逻辑文件夹自动软重置回书架主阁，并清洗 URL 脏参数）
+  // ==========================================
+  useEffect(() => {
+    if (!currentFolderId) return;
+
+    let active = true;
+    const verifyAndRecoverGhostFolder = async () => {
+      try {
+        const folder = await db.libraryFolders.get(currentFolderId);
+        if (!folder && active) {
+          console.warn(`[Library] 幽灵书箧拦截：检测到不存在的文件夹 ID: ${currentFolderId}，自动软重置回书房主阁并清洗 URL。`);
+          navigateToFolder(undefined);
+          
+          // 🏮 极高可用抗灾：静默抹去浏览器 URL Hash 中已被解散、删除的幽灵 folderId 字段，杜绝返回/刷新死锁
+          if (typeof window !== "undefined") {
+            const hash = window.location.hash;
+            const queryIndex = hash.indexOf("?");
+            if (queryIndex !== -1) {
+              const baseHash = hash.slice(0, queryIndex);
+              window.history.replaceState(window.history.state, "", baseHash);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Library] 校验幽灵文件夹合法性失败:", err);
+      }
+    };
+
+    verifyAndRecoverGhostFolder();
+    return () => {
+      active = false;
+    };
+  }, [currentFolderId]);
 
   // ==========================================
   // 🖌️ 「落墨·治理微型下拉菜单（Mini Popover）」
@@ -718,6 +767,45 @@ export function LibraryDefault() {
         const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
         setCloudBooks(currentCloudBooks);
 
+        // 🏮 1. 先拉取云端文件夹，准备比对与合并逻辑
+        let cloudFolders: LibraryFolder[] = [];
+        try {
+          const foldersRes = await fetch(apiUrl("/folders"), {
+            headers: getShareHeaders(),
+          });
+          if (foldersRes.ok) {
+            cloudFolders = await foldersRes.json();
+          } else {
+            console.error("获取云端书箧列表失败，接口可能不可用");
+          }
+        } catch (foldersErr) {
+          console.error("获取云端书箧遭遇网络问题:", foldersErr);
+        }
+
+        const localFolders = await db.libraryFolders.toArray();
+
+        // 计算逻辑书箧（文件夹）变动差异
+        const localOnlyFolders = localFolders.filter(
+          (lf) => !cloudFolders.some((cf) => cf.id === lf.id)
+        );
+        const cloudOnlyFolders = cloudFolders.filter(
+          (cf) => !localFolders.some((lf) => lf.id === cf.id)
+        );
+        const bothFolders = localFolders.filter(
+          (lf) => cloudFolders.some((cf) => cf.id === lf.id)
+        );
+
+        let foldersDiff = localOnlyFolders.length > 0 || cloudOnlyFolders.length > 0;
+        if (!foldersDiff) {
+          for (const lf of bothFolders) {
+            const cf = cloudFolders.find((c) => c.id === lf.id);
+            if (cf && cf.updatedAt !== lf.updatedAt) {
+              foldersDiff = true;
+              break;
+            }
+          }
+        }
+
         const localBooks = await db.books.toArray();
         const localOnly = localBooks.filter(
           (lb) => !currentCloudBooks.some((cb) => cb.id === lb.id)
@@ -730,7 +818,7 @@ export function LibraryDefault() {
         );
 
         // 专家级快速无损拦截：若两端数量完全对齐且没有最后阅读时间戳变动，则 50ms 内极静秒退，不触发任何重绘和动画
-        let hasDiff = localOnly.length > 0 || cloudOnly.length > 0;
+        let hasDiff = localOnly.length > 0 || cloudOnly.length > 0 || foldersDiff;
         if (!hasDiff) {
           for (const localBook of both) {
             const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
@@ -746,8 +834,69 @@ export function LibraryDefault() {
         }
 
         if (!hasDiff) {
-          console.log("[Sync Check] 两端书阁完美一致，50ms 内极静退出同步。");
+          console.log("[Sync Check] 两端书阁与书箧分类完美一致，50ms 内极静退出同步。");
           return;
+        }
+
+        // 🏮 2. 如果存在书箧差异，执行 2-Way Merging 双向对碰（LWW - Last Write Wins）
+        if (foldersDiff) {
+          if (!isSilent) {
+            setSyncStepText("正在对齐两端书箧分类...");
+          }
+          const foldersToUpload: LibraryFolder[] = [];
+          const foldersToSaveLocally: LibraryFolder[] = [];
+
+          for (const lf of localFolders) {
+            const cf = cloudFolders.find((c) => c.id === lf.id);
+            if (!cf) {
+              foldersToUpload.push(lf);
+            } else {
+              const localTime = lf.updatedAt ? new Date(lf.updatedAt).getTime() : 0;
+              const cloudTime = cf.updatedAt ? new Date(cf.updatedAt).getTime() : 0;
+              if (localTime > cloudTime) {
+                foldersToUpload.push(lf);
+              } else if (cloudTime > localTime) {
+                foldersToSaveLocally.push(cf);
+              }
+            }
+          }
+
+          for (const cf of cloudFolders) {
+            if (!localFolders.some((l) => l.id === cf.id)) {
+              foldersToSaveLocally.push(cf);
+            }
+          }
+
+          // A. 同步上报至云端
+          if (foldersToUpload.length > 0) {
+            try {
+              const uploadRes = await fetch(apiUrl("/folders"), {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...getShareHeaders(),
+                },
+                body: JSON.stringify({ folders: foldersToUpload }),
+              });
+              if (!uploadRes.ok) throw new Error("同步本地书箧分类至云端失败");
+            } catch (uploadErr) {
+              console.error("[Sync] 上报书箧失败，安全防丢断路隔离:", uploadErr);
+              hasSyncFailures = true;
+            }
+          }
+
+          // B. 写入本地 IndexedDB 库
+          if (foldersToSaveLocally.length > 0) {
+            try {
+              await db.transaction("rw", [db.libraryFolders], async () => {
+                await db.libraryFolders.bulkPut(foldersToSaveLocally);
+              });
+            } catch (dbErr) {
+              console.error("[Sync] 本地覆写书箧失败，安全防丢断路隔离:", dbErr);
+              hasSyncFailures = true;
+            }
+          }
+          console.log(`[Folder Sync] 同步完成。上传了 ${foldersToUpload.length} 个书箧，更新本地 ${foldersToSaveLocally.length} 个书箧。`);
         }
 
         const totalSteps = localOnly.length + cloudOnly.length + both.length;
@@ -933,7 +1082,10 @@ export function LibraryDefault() {
                       }
                     }
 
-                    await db.books.update(localBook.id, { lastReadAt: cloudBook.lastReadAt });
+                    await db.books.update(localBook.id, {
+                      lastReadAt: cloudBook.lastReadAt,
+                      sourceFolderId: cloudBook.sourceFolderId,
+                    });
                     if (cloudBook.lastReadProgress) {
                       try {
                         const parsedProgress = JSON.parse(cloudBook.lastReadProgress);
@@ -956,7 +1108,11 @@ export function LibraryDefault() {
                         "Content-Type": "application/json",
                         ...getShareHeaders(),
                       },
-                      body: JSON.stringify({ lastReadProgress, lastReadAt }),
+                      body: JSON.stringify({
+                        lastReadProgress,
+                        lastReadAt,
+                        sourceFolderId: localBook.sourceFolderId || null,
+                      }),
                     });
                     if (!progressRes.ok) throw new Error(`云阁拒绝了最深本地读痕的轻量进度上报`);
                   }
@@ -1942,6 +2098,9 @@ export function LibraryDefault() {
                     list.unshift({ id: folder.id, name: folder.name });
                     currentId = folder.parentId;
                   } else {
+                    // 🏮 极端防死锁自救：如果当前的 currentFolderId 存在但找不到对应的物理/逻辑文件夹，
+                    // 依旧优雅塞入占位项，以此让父级面包屑“私人藏书”恢复为可点击交互状态，赋予阁主 100% 手动脱困自愈的能力！
+                    list.unshift({ id: currentId, name: "未知逻辑空间" });
                     break;
                   }
                 }

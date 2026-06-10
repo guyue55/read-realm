@@ -207,6 +207,7 @@ export class BookRepository {
     lastReadProgress: string,
     lastReadAt: string = new Date().toISOString(),
     shareToken: string = 'default',
+    sourceFolderId?: string | null,
   ) {
     const dbBookId =
       shareToken === 'default' ? bookId : `${bookId}#${shareToken}`;
@@ -216,6 +217,7 @@ export class BookRepository {
         lastReadProgress,
         lastReadAt,
         updatedAt: new Date().toISOString(),
+        ...(sourceFolderId !== undefined ? { sourceFolderId } : {}),
       })
       .where(eq(schema.books.id, dbBookId));
   }

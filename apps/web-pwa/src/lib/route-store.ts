@@ -286,7 +286,28 @@ export function useVirtualRouter() {
       // 4. 处理其他基础页面跳转 /library, /search, /settings, /notes, /import 等
       else {
         const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
-        virtualRouter.navigateTo(cleanUrl as AppView);
+        const queryIndex = cleanUrl.indexOf("?");
+        
+        let view = cleanUrl;
+        if (queryIndex !== -1) {
+          view = cleanUrl.slice(0, queryIndex);
+        }
+        
+        if (view === "library") {
+          if (typeof window !== "undefined") {
+            const nextState: RouteState = {
+              currentView: "library",
+              activeBookId: null,
+              activeChapterIndex: null,
+              activePanel: null,
+              activeTaskId: null,
+            };
+            window.history.pushState(nextState, "", `#/${cleanUrl}`);
+            virtualRouter.emitChange(nextState);
+          }
+        } else {
+          virtualRouter.navigateTo(view as AppView);
+        }
       }
     },
     replace(url: string) {

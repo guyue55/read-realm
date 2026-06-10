@@ -72,6 +72,19 @@ export class ReaderDatabase extends Dexie {
       txtChapterIndices: "chapterId, bookId, index",
     });
 
+    this.version(8).stores({
+      books: "id, title, createdAt, lastReadAt, sourceFolderId",
+      chapters: "id, [bookId+index], bookId, index",
+      progress: "bookId",
+      bookmarks: "id, bookId, chapterIndex",
+      importTasks: "id",
+      aiViews: "id, bookId, chapterIndex, sourceHash",
+      librarySources: "id, type, permissionState, lastScanAt",
+      libraryFolders: "id, parentId, sourceId, relativePath",
+      indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
+      txtChapterIndices: "chapterId, [bookId+index], bookId, index", // 🏮 补全复合索引，彻底修复 SchemaError 崩溃
+    });
+
     // 挂载 Dexie AOP 拦截 Hook：当用户进行任何增删改书籍、进度或书签操作时，
     // 自动捕获并触发 1.2 秒缓释防抖双轨备份，从底层打通无侵入式的多端“防蒸发”闭环。
     if (typeof window !== "undefined") {
