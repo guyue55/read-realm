@@ -1,5 +1,13 @@
 import Dexie, { Table } from "dexie";
-import type { Book, ReadingProgress, Bookmark } from "@reader/shared-types";
+import type {
+  Book,
+  ReadingProgress,
+  Bookmark,
+  LibrarySource,
+  LibraryFolder,
+  IndexedNovelFile,
+  TxtChapterIndex,
+} from "@reader/shared-types";
 
 export interface LocalChapter {
   id: string;
@@ -35,6 +43,11 @@ export class ReaderDatabase extends Dexie {
   importTasks!: Table<ImportTask, string>;
   aiViews!: Table<LocalAIView, string>;
 
+  librarySources!: Table<LibrarySource, string>;
+  libraryFolders!: Table<LibraryFolder, string>;
+  indexedNovelFiles!: Table<IndexedNovelFile, string>;
+  txtChapterIndices!: Table<TxtChapterIndex, string>;
+
   constructor() {
     super("ReaderDatabase");
     this.version(6).stores({
@@ -44,6 +57,19 @@ export class ReaderDatabase extends Dexie {
       bookmarks: "id, bookId, chapterIndex",
       importTasks: "id",
       aiViews: "id, bookId, chapterIndex, sourceHash",
+    });
+
+    this.version(7).stores({
+      books: "id, title, createdAt, lastReadAt, sourceFolderId",
+      chapters: "id, [bookId+index], bookId, index",
+      progress: "bookId",
+      bookmarks: "id, bookId, chapterIndex",
+      importTasks: "id",
+      aiViews: "id, bookId, chapterIndex, sourceHash",
+      librarySources: "id, type, permissionState, lastScanAt",
+      libraryFolders: "id, parentId, sourceId, relativePath",
+      indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
+      txtChapterIndices: "chapterId, bookId, index",
     });
 
     // 挂载 Dexie AOP 拦截 Hook：当用户进行任何增删改书籍、进度或书签操作时，

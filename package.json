@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "turbo dev --ui=stream",
     "build": "turbo build",
+    "start": "pnpm --filter web-pwa start",
     "test": "turbo test",
     "lint": "turbo lint",
     "format": "prettier --write ."
