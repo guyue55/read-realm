@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createId, type Book } from "@reader/shared-types";
-import type { ParsedBook } from "@reader/parser-core";
-import { db } from "@reader/storage-core";
-import { useVirtualRouter } from "@/lib/route-store";
 import { AppShell } from "@/components/AppShell";
-import { apiUrl } from "@/lib/api";
-import { parseUrlBookInBrowser } from "@/lib/url-import";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { apiUrl } from "@/lib/api";
 import { strings } from "@/lib/i18n";
+import { useVirtualRouter } from "@/lib/route-store";
+import { parseUrlBookInBrowser } from "@/lib/url-import";
+import type { ParsedBook } from "@reader/parser-core";
+import { createId, type Book } from "@reader/shared-types";
+import { db } from "@reader/storage-core";
+import { useEffect, useRef, useState } from "react";
 
-import { FolderScanService, type ImportPreviewNode, getFileFormat } from "@/services/FolderScanService";
 import { FolderPreviewTree } from "@/components/FolderPreviewTree";
+import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/services/FolderScanService";
 
 interface BatchTask {
   id: string;
@@ -461,7 +461,7 @@ export default function ImportPage() {
   // 执行最终的文件夹预览树快速索引入库
   const commitFolderImport = async () => {
     if (!previewTree || !scanningSourceHandle) return;
-    setScanStatus("🍁 正在向 IndexedDB 大量篆刻元数据与逻辑文件夹结构...");
+    setScanStatus("🍁 正在向本地书阁大量篆刻元数据与逻辑文件夹结构...");
     
     const sourceId = createId();
     const rootName = scanningSourceHandle.name;
@@ -644,7 +644,7 @@ export default function ImportPage() {
         }
       }
 
-      setScanStatus("🎉 一键篆刻归档大功告成！已成功将整书库及逻辑结构导入书架！");
+      setScanStatus("🎉 一键入阁大功告成！已成功将整书库及逻辑结构导入书架！");
       setTimeout(() => {
         router.push("/library");
       }, 1500);
@@ -750,7 +750,7 @@ export default function ImportPage() {
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
               }`}
             >
-              批量上传 (场景B)
+              批量上传
             </button>
             <button
               type="button"
@@ -761,7 +761,7 @@ export default function ImportPage() {
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
               }`}
             >
-              绑定文件夹 (场景C/D)
+              绑定文件夹
             </button>
             <button
               type="button"
@@ -923,7 +923,7 @@ export default function ImportPage() {
 
                   {/* 画卷预览树渲染 */}
                   <div className="rounded-[16px] border border-[#E9DCC8]/60 bg-white/40 p-3 md:p-5 max-h-[420px] overflow-y-auto">
-                    <h3 className="mb-4 text-sm font-bold text-[var(--ui-text)] border-b border-[#E9DCC8]/40 pb-2">📂 勘测成果与结构治理预览</h3>
+                    <h3 className="mb-4 text-sm font-bold text-[var(--ui-text)] border-b border-[#E9DCC8]/40 pb-2">📂 勘测与预览</h3>
                     <FolderPreviewTree
                       node={previewTree}
                       ignoredNodes={ignoredNodes}
@@ -947,7 +947,7 @@ export default function ImportPage() {
                       onClick={commitFolderImport}
                       className="rounded-full bg-[var(--ui-accent)] px-6 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#527047]"
                     >
-                      🖋 一键篆刻归档入库
+                      🖋 一键入阁
                     </button>
                   </div>
                 </div>
@@ -1014,9 +1014,9 @@ export default function ImportPage() {
             </h2>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--ui-muted)]">
               <li><b>单本上传</b>：支持极速解析大 TXT 及精致排版 EPUB。</li>
-              <li><b>批量上传 (场景B)</b>：队列分析，背景自动归档。</li>
-              <li><b>本地小说文件夹 (场景C/D)</b>：不复制物理原文件，仅在切章阅读时按需解密 slice 截取，零占用手机空间。</li>
-              <li><b>多文件小说 (场景D)</b>：自动整合成序，一目录下文件名连续即自成一书。</li>
+              <li><b>批量上传</b>：队列分析，背景自动归档。</li>
+              <li><b>本地小说文件夹</b>：不复制物理原文件，仅在切章阅读时按需解密 slice 截取，零占用手机空间。</li>
+              <li><b>多文件小说</b>：自动整合成序，一目录下文件名连续即自成一书。</li>
             </ul>
           </div>
         </aside>

@@ -76,7 +76,7 @@ export function FolderPreviewTree({
               <span className="border border-[#D0E2CF] bg-[#F1F6F0] text-[#4C664B]">📂 分类文件夹</span>
             )}
             {currentType === "multi_file_book" && (
-              <span className="border border-[#E5C9A6] bg-[#FAF4EB] text-[#8C6239]">📚 多章节小说 (场景D)</span>
+              <span className="border border-[#E5C9A6] bg-[#FAF4EB] text-[#8C6239]">📚 多章节小说</span>
             )}
             {currentType === "single_book" && (
               <span className="border border-blue-200 bg-blue-50 text-blue-700">📜 单本小说</span>

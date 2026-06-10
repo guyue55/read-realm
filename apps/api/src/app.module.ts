@@ -7,6 +7,7 @@ import { ChapterModule } from './modules/chapter/chapter.module';
 import { SearchModule } from './modules/search/search.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ImportsModule } from './modules/imports/imports.module';
+import { FolderModule } from './modules/folder/folder.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ImportsModule } from './modules/imports/imports.module';
     SearchModule,
     AiModule,
     ImportsModule,
+    FolderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

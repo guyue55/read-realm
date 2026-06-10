@@ -1174,6 +1174,21 @@ export function useReader(bookId: string) {
       if (!b) {
         throw new Error(strings.reader?.bookNotFound || "书籍不存在或已被物理移除");
       }
+
+      // 🏮 核心自愈防线：校验书籍的所属书箧是否在数据库中真实存在，若已在外部解散或物理删除，自动清洗此脏数据，持久化自愈。
+      if (b.sourceFolderId) {
+        try {
+          const folderExists = await db.libraryFolders.get(b.sourceFolderId);
+          if (!folderExists) {
+            console.warn(`[useReader] 发现幽灵书箧元数据! 书籍《${b.title}》归属的文件夹 ID [${b.sourceFolderId}] 实际不存在。自动擦除此脏属性并写回持久化数据库自愈。`);
+            b.sourceFolderId = undefined;
+            await db.books.update(bookId, { sourceFolderId: undefined });
+          }
+        } catch (err) {
+          console.error("[useReader] 校验书籍所属书箧合法性时发生异常:", err);
+        }
+      }
+
       setBook(b);
 
       if (b.parseStatus === "not_parsed" && b.sourceType === "folder_index") {

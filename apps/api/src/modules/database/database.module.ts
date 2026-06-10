@@ -38,7 +38,22 @@ export type Database = LibSQLDatabase<typeof schema> & {
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             last_read_at TEXT,
-            last_read_progress TEXT
+            last_read_progress TEXT,
+            source_folder_id TEXT -- 存放所属书箧分类文件夹 ID
+          );
+        `);
+        await client.execute(`
+          CREATE TABLE IF NOT EXISTS library_folders (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            parent_id TEXT,
+            source_id TEXT,
+            source_type TEXT NOT NULL,
+            relative_path TEXT,
+            depth INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
           );
         `);
         await client.execute(`
@@ -81,6 +96,17 @@ export type Database = LibSQLDatabase<typeof schema> & {
           );
           console.log(
             '[SQLite DB] 自动升级自愈：成功在 books 表中增加 last_read_progress 列。',
+          );
+        } catch (e) {
+          // If column already exists, ignore SQLite error code
+        }
+
+        try {
+          await client.execute(
+            'ALTER TABLE books ADD COLUMN source_folder_id TEXT;',
+          );
+          console.log(
+            '[SQLite DB] 自动升级自愈：成功在 books 表中增加 source_folder_id 列。',
           );
         } catch (e) {
           // If column already exists, ignore SQLite error code

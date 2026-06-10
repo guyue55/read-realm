@@ -17,6 +17,20 @@ export const books = sqliteTable('books', {
   updatedAt: text('updated_at').notNull(),
   lastReadAt: text('last_read_at'),
   lastReadProgress: text('last_read_progress'),
+  sourceFolderId: text('source_folder_id'), // 🏮 存放所属书箧分类文件夹 ID
+});
+
+export const libraryFolders = sqliteTable('library_folders', {
+  id: text('id').primaryKey(), // 格式为 {folderId}#{shareToken}，与藏书多端隔离一致
+  name: text('name').notNull(),
+  parentId: text('parent_id'),
+  sourceId: text('source_id'),
+  sourceType: text('source_type').notNull(),
+  relativePath: text('relative_path'),
+  depth: integer('depth').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const chapters = sqliteTable('chapters', {
