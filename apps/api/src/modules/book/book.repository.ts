@@ -34,20 +34,26 @@ export class BookRepository {
 
       // 1. Clean delete existing chapters & book under same ID to guarantee idempotency and support overwrite update
       if (isDefault) {
-        await tx.delete(schema.chapters).where(
-          or(
-            eq(schema.chapters.bookId, dbBookId),
-            eq(schema.chapters.bookId, `${book.id}#default`),
-          ),
-        );
-        await tx.delete(schema.books).where(
-          or(
-            eq(schema.books.id, dbBookId),
-            eq(schema.books.id, `${book.id}#default`),
-          ),
-        );
+        await tx
+          .delete(schema.chapters)
+          .where(
+            or(
+              eq(schema.chapters.bookId, dbBookId),
+              eq(schema.chapters.bookId, `${book.id}#default`),
+            ),
+          );
+        await tx
+          .delete(schema.books)
+          .where(
+            or(
+              eq(schema.books.id, dbBookId),
+              eq(schema.books.id, `${book.id}#default`),
+            ),
+          );
       } else {
-        await tx.delete(schema.chapters).where(eq(schema.chapters.bookId, dbBookId));
+        await tx
+          .delete(schema.chapters)
+          .where(eq(schema.chapters.bookId, dbBookId));
         await tx.delete(schema.books).where(eq(schema.books.id, dbBookId));
       }
 
@@ -64,7 +70,10 @@ export class BookRepository {
           const content = chapter.content;
 
           if (!contentHash && content !== undefined) {
-            contentHash = crypto.createHash('sha256').update(content).digest('hex');
+            contentHash = crypto
+              .createHash('sha256')
+              .update(content)
+              .digest('hex');
           } else if (!contentHash) {
             contentHash = createId();
           }
@@ -199,7 +208,8 @@ export class BookRepository {
     lastReadAt: string = new Date().toISOString(),
     shareToken: string = 'default',
   ) {
-    const dbBookId = shareToken === 'default' ? bookId : `${bookId}#${shareToken}`;
+    const dbBookId =
+      shareToken === 'default' ? bookId : `${bookId}#${shareToken}`;
     await this.db
       .update(schema.books)
       .set({
@@ -226,4 +236,3 @@ export class BookRepository {
     }
   }
 }
-

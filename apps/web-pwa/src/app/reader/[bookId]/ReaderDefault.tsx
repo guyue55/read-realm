@@ -77,6 +77,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     showToast,
     clearAiSession,
     error,
+    regrantPermission,
   } = useReader(bookId);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
@@ -84,6 +85,27 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
   const [aiInput, setAiInput] = useState(""); // 🏮 联动 AI 伴读的输入框内容
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleResize = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const height = window.innerHeight - vv.height;
+      setKeyboardHeight(height > 60 ? height : 0);
+    };
+
+    const vv = window.visualViewport;
+    vv.addEventListener("resize", handleResize);
+    vv.addEventListener("scroll", handleResize);
+
+    return () => {
+      vv.removeEventListener("resize", handleResize);
+      vv.removeEventListener("scroll", handleResize);
+    };
+  }, []);
 
   const handleMouseOrTouchUp = useCallback((e: { target: EventTarget | null }) => {
     // 排除点在气泡或弹窗内部的点击，防止点气泡按钮时选区被清空
@@ -261,15 +283,32 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             >
               {strings.settings?.backToShelf || "返回书架"}
             </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 shadow-md text-white hover:opacity-95 active:scale-95"
-              style={{
-                backgroundColor: isDark ? "#c84c3c" : "#b23e2d",
-              }}
-            >
-              重新展卷
-            </button>
+            {error && (error.includes("权限") || error.includes("授权") || error.includes("PERMISSION_REQUIRED")) ? (
+              <button
+                onClick={async () => {
+                  const granted = await regrantPermission();
+                  if (granted) {
+                    window.location.reload();
+                  }
+                }}
+                className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 shadow-md text-white hover:opacity-95 active:scale-95"
+                style={{
+                  backgroundColor: isDark ? "#678055" : "#4e623e",
+                }}
+              >
+                🔌 唤醒物理授权
+              </button>
+            ) : (
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 shadow-md text-white hover:opacity-95 active:scale-95"
+                style={{
+                  backgroundColor: isDark ? "#c84c3c" : "#b23e2d",
+                }}
+              >
+                重新展卷
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -859,6 +898,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           <div 
             onClick={(e) => e.stopPropagation()}
             className="note-dialog relative w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-[24px] max-sm:rounded-b-none max-sm:pb-[calc(1.75rem+env(safe-area-inset-bottom))] max-w-md bg-[#FAF6EE] dark:bg-[#25231F] rounded-[24px] border border-[#DFD1BF] dark:border-[#4A4238] shadow-2xl p-7 flex flex-col gap-5 animate-in max-sm:slide-in-from-bottom sm:zoom-in-95 duration-300"
+            style={{
+              transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : undefined,
+              transition: "transform 0.15s ease-out"
+            }}
           >
             <div className="absolute inset-3.5 max-sm:inset-3 rounded-[18px] max-sm:rounded-t-[18px] max-sm:rounded-b-none border border-[#E9DCC8]/60 dark:border-[#5C5346]/40 pointer-events-none" />
             

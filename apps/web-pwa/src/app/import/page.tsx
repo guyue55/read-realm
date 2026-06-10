@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { createId } from "@reader/shared-types";
+import { createId, type Book } from "@reader/shared-types";
 import type { ParsedBook } from "@reader/parser-core";
 import { db } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -10,6 +10,17 @@ import { apiUrl } from "@/lib/api";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { strings } from "@/lib/i18n";
+
+import { FolderScanService, type ImportPreviewNode, getFileFormat } from "@/services/FolderScanService";
+import { FolderPreviewTree } from "@/components/FolderPreviewTree";
+
+interface BatchTask {
+  id: string;
+  name: string;
+  size: number;
+  status: "waiting" | "parsing" | "success" | "failed";
+  progressText: string;
+}
 
 export default function ImportPage() {
   const isOnline = useOnlineStatus();
@@ -22,12 +33,10 @@ export default function ImportPage() {
       window.location.replace(`/#${window.location.pathname}${window.location.search}`);
     }
 
-    // React 离场清理 Hook (E07-S06-2)：停止使用/中途切换页面时，物理清扫无实质章节的任务
     return () => {
-      // 强行终止空转线程，杜绝主线程事件积压
       if (workerRef.current) {
         workerRef.current.terminate();
-        console.log("[Worker GC] 🧹 组件离场自愈！已成功强制中止并在后台物理销毁空转解析 Worker 进程。");
+        console.log("[Worker GC] 已强制物理销毁空转解析 Worker 进程。");
         workerRef.current = null;
       }
 
@@ -36,10 +45,9 @@ export default function ImportPage() {
         void (async () => {
           try {
             const task = await db.importTasks.get(staleId);
-            // 若任务仍为 chapters 空白，或者由于用户离场导致解析夭折，则直接强拆
             if (task && task.chapters.length === 0) {
               await db.importTasks.delete(staleId);
-              console.log(`[Storage GC] 🧹 组件离场自愈！已成功将未导入完成的临时空白占位任务物理驱逐: ${staleId}`);
+              console.log(`[Storage GC] 组件离场！已清除临时空白任务: ${staleId}`);
             }
           } catch (err) {
             console.warn("[Storage GC] 离场自愈清理失败:", err);
@@ -48,12 +56,23 @@ export default function ImportPage() {
       }
     };
   }, []);
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeMode, setActiveMode] = useState<"file" | "url">("file");
+  const [activeMode, setActiveMode] = useState<"single" | "batch" | "folder" | "url">("single");
   const [urlInput, setUrlInput] = useState("");
-  // 拖拽激活状态，用于控制拟物压紧与浅绿漫反射呼吸高光
-  const [isDragActive, setIsDragActive] = useState(false);
   const router = useVirtualRouter();
+
+  // 1. 批量上传相关 State
+  const [batchTasks, setBatchTasks] = useState<BatchTask[]>([]);
+  const batchQueueRef = useRef<File[]>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+
+  // 2. 文件夹扫描相关 State
+  const [scanStatus, setScanStatus] = useState("");
+  const [previewTree, setPreviewTree] = useState<ImportPreviewNode | null>(null);
+  const [ignoredNodes, setIgnoredNodes] = useState<Set<string>>(new Set());
+  const [customTypes, setCustomTypes] = useState<Map<string, ImportPreviewNode["detectedType"] | "ignore" | "category_folder">>(new Map());
+  const [scanningSourceHandle, setScanningSourceHandle] = useState<FileSystemDirectoryHandle | null>(null);
 
   const createImportTask = async (
     parsedBook: ParsedBook,
@@ -104,6 +123,9 @@ export default function ImportPage() {
     router.push(`/import/preview/${taskId}`);
   };
 
+  // ==========================================
+  // 【场景 A】：上传单本小说流程
+  // ==========================================
   const handleFile = async (file: File) => {
     if (!file) return;
 
@@ -115,15 +137,12 @@ export default function ImportPage() {
       setStatus("启动解析引擎...");
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
 
-      // 实例化 Next.js 原生支持的 Web Worker 异步解析，解放主线程
       const worker = new Worker(
         new URL("./parser.worker.ts", import.meta.url)
       );
       workerRef.current = worker;
 
-      // 使用 Transferable Objects 传递 buffer，无内存拷贝，0 感延迟
       worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
-
       setStatus("引擎解析章节中...");
 
       let taskId = "";
@@ -145,7 +164,7 @@ export default function ImportPage() {
           const { title, chapterCount } = e.data;
           taskId = createId();
           bookId = createId();
-          activeTaskIdRef.current = taskId; // 锁存当前正在进行的导入任务，防止中途离场残留空白垃圾 (E07-S06-2)
+          activeTaskIdRef.current = taskId;
 
           setStatus("引擎识别成功，正在空降初始化书册骨架...");
 
@@ -219,7 +238,7 @@ export default function ImportPage() {
           worker.terminate();
           workerRef.current = null;
           setStatus("完美解析完成！");
-          activeTaskIdRef.current = null; // 完美解析并合并完毕，安全解锁，防止离场卸载误删 (E07-S06-2)
+          activeTaskIdRef.current = null;
           router.push(`/import/preview/${taskId}`);
         }
       };
@@ -237,55 +256,413 @@ export default function ImportPage() {
     }
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) await handleFile(file);
   };
 
-  // 鼠标拖拽进入区域
-  const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isProcessing) {
-      setIsDragActive(true);
+  // ==========================================
+  // 【场景 B】：批量上传多本小说流程（不阻塞 UI）
+  // ==========================================
+  const handleBatchFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newTasks: BatchTask[] = [];
+    const addedFiles: File[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const format = getFileFormat(f.name);
+      if (format === "txt" || format === "epub") {
+        const id = createId();
+        newTasks.push({
+          id,
+          name: f.name,
+          size: f.size,
+          status: "waiting",
+          progressText: "排队中...",
+        });
+        addedFiles.push(f);
+      }
+    }
+
+    if (newTasks.length > 0) {
+      setBatchTasks((prev) => [...prev, ...newTasks]);
+      batchQueueRef.current.push(...addedFiles);
+      triggerBatchQueue();
     }
   };
 
-  // 鼠标拖拽在区域内悬停
-  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isProcessing && !isDragActive) {
-      setIsDragActive(true);
+  const triggerBatchQueue = () => {
+    if (isBatchProcessing || batchQueueRef.current.length === 0) return;
+    setIsBatchProcessing(true);
+    void processNextBatchItem();
+  };
+
+  const processNextBatchItem = async () => {
+    const file = batchQueueRef.current.shift();
+    if (!file) {
+      setIsBatchProcessing(false);
+      return;
+    }
+
+    // 匹配 task
+    setBatchTasks((prev) =>
+      prev.map((t) => (t.name === file.name ? { ...t, status: "parsing", progressText: "正在分析章节..." } : t))
+    );
+
+    try {
+      const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
+      const buffer = await file.arrayBuffer();
+
+      const worker = new Worker(new URL("./parser.worker.ts", import.meta.url));
+      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
+
+      const bookId = createId();
+      const now = new Date().toISOString();
+      const collectedChapters: {
+        id: string;
+        bookId: string;
+        index: number;
+        title: string;
+        content: string;
+        wordCount: number;
+        createdAt: string;
+        updatedAt: string;
+      }[] = [];
+
+      worker.onmessage = async (e) => {
+        const { type: msgType, success, error } = e.data;
+
+        if (!success) {
+          worker.terminate();
+          setBatchTasks((prev) =>
+            prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `解析失败: ${error}` } : t))
+          );
+          void processNextBatchItem();
+          return;
+        }
+
+        if (msgType === "CHUNK") {
+          const { startIndex, chapters: chunkChapters } = e.data;
+          const formatted = (chunkChapters as { title?: string; content: string }[]).map((ch, idx: number) => ({
+            id: createId(),
+            bookId,
+            index: startIndex + idx,
+            title: ch.title || `第 ${startIndex + idx + 1} 章`,
+            content: ch.content,
+            wordCount: ch.content.length,
+            createdAt: now,
+            updatedAt: now,
+          }));
+          collectedChapters.push(...formatted);
+
+          setBatchTasks((prev) =>
+            prev.map((t) =>
+              t.name === file.name
+                ? { ...t, progressText: `流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...` }
+                : t
+            )
+          );
+        } else if (msgType === "FINISHED") {
+          worker.terminate();
+
+          // 批量模式：直接归档加入书架！不弹出预览中断流，极致顺滑
+          const bookMetadata = {
+            id: bookId,
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            sourceType: "upload" as const,
+            format: type as "epub" | "txt",
+            status: "to_read" as const,
+            tags: [],
+            chapterCount: collectedChapters.length,
+            wordCount: collectedChapters.reduce((sum, ch) => sum + ch.content.length, 0),
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          await db.transaction("rw", [db.books, db.chapters], async () => {
+            await db.books.add(bookMetadata);
+            await db.chapters.bulkPut(collectedChapters);
+          });
+
+          setBatchTasks((prev) =>
+            prev.map((t) => (t.name === file.name ? { ...t, status: "success", progressText: "已成功加入书架！" } : t))
+          );
+          void processNextBatchItem();
+        }
+      };
+
+      worker.onerror = (e) => {
+        worker.terminate();
+        setBatchTasks((prev) =>
+          prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `异常: ${e.message}` } : t))
+        );
+        void processNextBatchItem();
+      };
+
+    } catch (err) {
+      const error = err as Error;
+      setBatchTasks((prev) =>
+        prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `读取失败: ${error.message}` } : t))
+      );
+      void processNextBatchItem();
     }
   };
 
-  // 鼠标拖拽离开区域
-  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
+  // ==========================================
+  // 【场景 C/D】：选择本地小说文件夹勘测与画卷预览树
+  // ==========================================
+  const handleFolderSelect = async () => {
+    if (typeof window === "undefined" || !("showDirectoryPicker" in window)) {
+      setScanStatus("⚠️ 您的浏览器不支持 File System Access API，已为您自动降级至多文件批量上传模式。");
+      setActiveMode("batch");
+      return;
+    }
+
+    try {
+      setScanStatus("正在申请本地目录起封授权...");
+      const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+      setScanningSourceHandle(handle);
+
+      setScanStatus("授权通过，正在递归探照文件树中 (0% 卡死物理熔断隔离已生效)...");
+      const rootNode = await FolderScanService.scanDirectoryToPreviewTree(handle, (p) => {
+        setScanStatus(`📁 勘探进度：已扫 ${p.scannedDirectories} 目录，${p.scannedFiles} 小说文件。${p.currentStatus}`);
+      });
+
+      setPreviewTree(rootNode);
+      setScanStatus("✨ 画卷展开完成！您可以微调类型判定，随后一键确认落墨入库。");
+    } catch (err) {
+      const error = err as Error;
+      setScanStatus(`❌ 授权或扫描中断: ${error.message}`);
+    }
   };
 
-  // 鼠标松开释放文件
-  const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDragActive(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file && !isProcessing) await handleFile(file);
+  const handleNodeTypeChange = (nodeId: string, newType: ImportPreviewNode["detectedType"] | "ignore") => {
+    setCustomTypes((prev) => {
+      const next = new Map(prev);
+      next.set(nodeId, newType);
+      return next;
+    });
+    if (newType === "ignore") {
+      setIgnoredNodes((prev) => {
+        const next = new Set(prev);
+        next.add(nodeId);
+        return next;
+      });
+    } else {
+      setIgnoredNodes((prev) => {
+        const next = new Set(prev);
+        next.delete(nodeId);
+        return next;
+      });
+    }
   };
 
+  // 执行最终的文件夹预览树快速索引入库
+  const commitFolderImport = async () => {
+    if (!previewTree || !scanningSourceHandle) return;
+    setScanStatus("🍁 正在向 IndexedDB 大量篆刻元数据与逻辑文件夹结构...");
+    
+    const sourceId = createId();
+    const rootName = scanningSourceHandle.name;
+    const now = new Date().toISOString();
+
+    // 1. 创建 LibrarySource 记录存入数据库 (含原生 Handle 持久化克隆)
+    const sourceRecord = {
+      id: sourceId,
+      name: rootName,
+      type: "browser_directory" as const,
+      rootName: rootName,
+      permissionState: "granted" as const,
+      lastScanAt: now,
+      scanMode: "manual" as const,
+      createdAt: now,
+      updatedAt: now,
+      directoryHandle: scanningSourceHandle, // IndexedDB 物理直存
+    };
+
+    try {
+      await db.librarySources.put(sourceRecord);
+
+      // 递归处理树并快速索引
+      const importNodeRecursive = async (
+        node: ImportPreviewNode,
+        parentId?: string,
+        depth = 0
+      ) => {
+        const isNodeIgnored = ignoredNodes.has(node.id) || customTypes.get(node.id) === "ignore";
+        if (isNodeIgnored) return;
+
+        const currentType = customTypes.get(node.id) || node.detectedType;
+
+        if (node.kind === "directory") {
+          if (currentType === "multi_file_book") {
+            // 装配为一书壳
+            const sortedChildren = [...(node.children || [])]
+              .filter(child => !(ignoredNodes.has(child.id) || customTypes.get(child.id) === "ignore"))
+              .sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { numeric: true }));
+
+            const chapterFiles = sortedChildren.map((child, idx) => ({
+              fileId: child.id,
+              title: child.name.replace(/\.[^/.]+$/, ""),
+              index: idx,
+              relativePath: child.relativePath,
+              size: child.size || 0,
+              lastModified: child.lastModified || 0,
+              quickFingerprint: child.size ? `${child.name}:${child.size}:${child.lastModified}` : undefined,
+            }));
+
+             const bookShell = {
+              id: node.id,
+              title: node.name,
+              author: "逸名",
+              sourceType: "folder_multi_file_book" as const,
+              sourceFolderId: parentId,
+              format: "txt",
+              status: "to_read" as const,
+              tags: ["多章节小说"],
+              chapterCount: chapterFiles.length,
+              wordCount: sortedChildren.reduce((sum, ch) => sum + (ch.size || 0), 0), // 字节大小占位
+              createdAt: now,
+              updatedAt: now,
+              parseStatus: "toc_ready" as const,
+              cacheStatus: "metadata_only" as const,
+              sourceAvailability: "source_available" as const,
+              multiFileBook: {
+                id: node.id,
+                title: node.name,
+                sourceType: "folder_multi_file_book" as const,
+                folderFileId: node.id,
+                chapterFiles,
+                parseStatus: "toc_ready" as const,
+                cacheStatus: "metadata_only" as const,
+              },
+              toc: chapterFiles.map(cf => ({ index: cf.index, title: cf.title })),
+              contentLocator: {
+                sourceId,
+                sourceType: "browser_directory" as const,
+                rootName: rootName,
+                relativePath: node.relativePath,
+              },
+            };
+
+            await db.books.add(bookShell as unknown as Book);
+
+            // 注册文件索引
+            await db.indexedNovelFiles.add({
+              id: node.id,
+              sourceId,
+              parentFolderId: parentId,
+              name: node.name,
+              relativePath: node.relativePath,
+              kind: "directory",
+              status: "indexed",
+              bookId: node.id,
+              createdAt: now,
+              updatedAt: now,
+            });
+
+          } else {
+            // 普通分类逻辑文件夹
+            const folderId = node.id;
+            await db.libraryFolders.add({
+              id: folderId,
+              name: node.name,
+              parentId: parentId,
+              sourceId: sourceId,
+              sourceType: "imported_directory",
+              relativePath: node.relativePath,
+              depth: depth,
+              sortOrder: 0,
+              createdAt: now,
+              updatedAt: now,
+            });
+
+            // 递归处理子节点
+            if (node.children) {
+              for (const child of node.children) {
+                await importNodeRecursive(child, folderId, depth + 1);
+              }
+            }
+          }
+        } else {
+          // 单本小说文件外壳快速索引
+          const format = node.format || "unknown";
+          const bookShell = {
+            id: node.id,
+            title: node.name.replace(/\.[^/.]+$/, ""),
+            author: "逸名",
+            sourceType: "folder_index" as const,
+            sourceFolderId: parentId,
+            sourceFileId: node.id,
+            format,
+            status: "to_read" as const,
+            tags: ["文件夹索引"],
+            chapterCount: 0,
+            wordCount: node.size || 0,
+            createdAt: now,
+            updatedAt: now,
+            parseStatus: "not_parsed" as const,
+            cacheStatus: "metadata_only" as const,
+            sourceAvailability: "source_available" as const,
+            contentLocator: {
+              sourceId,
+              sourceType: "browser_directory" as const,
+              rootName: rootName,
+              relativePath: node.relativePath,
+              size: node.size,
+              lastModified: node.lastModified,
+              quickFingerprint: node.size ? `${node.name}:${node.size}:${node.lastModified}` : undefined,
+            },
+          };
+
+          await db.books.add(bookShell as unknown as Book);
+
+          // 注册文件索引
+          await db.indexedNovelFiles.add({
+            id: node.id,
+            sourceId,
+            parentFolderId: parentId,
+            name: node.name,
+            relativePath: node.relativePath,
+            kind: "file",
+            format: node.format as "txt" | "epub" | "html" | "md" | "pdf" | "docx" | "mobi" | "azw3" | "unknown",
+            size: node.size,
+            lastModified: node.lastModified,
+            status: "indexed",
+            bookId: node.id,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      };
+
+      // 根目录如果是作为 category 导入
+      if (previewTree.children) {
+        for (const child of previewTree.children) {
+          await importNodeRecursive(child, undefined, 0);
+        }
+      }
+
+      setScanStatus("🎉 一键篆刻归档大功告成！已成功将整书库及逻辑结构导入书架！");
+      setTimeout(() => {
+        router.push("/library");
+      }, 1500);
+
+    } catch (err) {
+      const error = err as Error;
+      setScanStatus(`❌ 数据库写入断点: ${error.message}`);
+    }
+  };
+
+  // ==========================================
+  // 【场景 E】: URL 解析 (保留原有模式)
+  // ==========================================
   const parseUrlWithBackendFallback = async (url: string) => {
     try {
       return await parseUrlBookInBrowser(url, setStatus);
     } catch (frontendError) {
-      console.warn(
-        "Frontend URL parse failed, falling back to backend",
-        frontendError,
-      );
+      console.warn("Frontend URL parse failed, falling back to backend", frontendError);
       setStatus("前端直接解析受限，切换后端兜底...");
       const response = await fetch(apiUrl("/imports/url/parse"), {
         method: "POST",
@@ -339,8 +716,8 @@ export default function ImportPage() {
 
   return (
     <AppShell
-      title="导入书籍"
-      subtitle="本地文件、链接解析与内容治理"
+      title="落墨治书"
+      subtitle="多端大本多选、选择小说文件夹勘测与内容治理"
       rightNodes={
         <button
           onClick={() => router.push("/library")}
@@ -352,21 +729,43 @@ export default function ImportPage() {
     >
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="ui-card rounded-[18px] p-4 md:p-6">
-          <div className="mb-5 inline-flex rounded-full border border-[var(--ui-border)] bg-white/64 p-1 text-sm">
+          <div className="mb-6 flex flex-wrap rounded-full border border-[var(--ui-border)] bg-white/64 p-1 text-sm max-w-max">
             <button
               type="button"
-              onClick={() => setActiveMode("file")}
+              onClick={() => { setActiveMode("single"); setStatus("等待导入"); }}
               className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
-                activeMode === "file"
+                activeMode === "single"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
               }`}
             >
-              本地文件
+              单本导入
             </button>
             <button
               type="button"
-              onClick={() => setActiveMode("url")}
+              onClick={() => { setActiveMode("batch"); setStatus("等待导入"); }}
+              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+                activeMode === "batch"
+                  ? "bg-[var(--ui-accent)] text-white shadow-sm"
+                  : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
+              }`}
+            >
+              批量上传 (场景B)
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveMode("folder"); setStatus("等待导入"); }}
+              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+                activeMode === "folder"
+                  ? "bg-[var(--ui-accent)] text-white shadow-sm"
+                  : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
+              }`}
+            >
+              绑定文件夹 (场景C/D)
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveMode("url"); setStatus("等待导入"); }}
               className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "url"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
@@ -377,68 +776,33 @@ export default function ImportPage() {
             </button>
           </div>
 
-          {activeMode === "file" ? (
+          {/* ==================================== */}
+          {/* TAB 1: 单本导入                      */}
+          {/* ==================================== */}
+          {activeMode === "single" && (
             <label
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`group ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed p-8 text-center transition-all duration-300 physics-spring ${
-                isDragActive
-                  ? "border-[var(--ui-accent)] bg-[rgba(95,125,82,0.06)] scale-[0.98] shadow-[0_8px_30px_rgba(95,125,82,0.08)]"
-                  : "border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
-              }`}
+              className="group ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-8 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
             >
               <div className="pointer-events-none flex flex-col items-center justify-center">
-                {/* 精装仿真感图标：Hover 时轻微顺时针偏角和放大 */}
                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm physics-spring group-hover:scale-[1.1] group-hover:rotate-[-3deg]">
-                  <svg
-                    aria-hidden="true"
-                    className="h-8 w-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-                    <path d="M14 3v5h5" />
-                    <path d="M12 17V10" />
-                    <path d="m9 13 3-3 3 3" />
-                  </svg>
+                  📖
                 </div>
                 <h2 className="text-xl font-bold text-[var(--ui-text)]">
-                  {isDragActive ? "松开鼠标即可解析并导入书籍" : "拖拽文件到此处，或点击选择文件"}
+                  拖拽单个小说，或点击选择文件
                 </h2>
-                <p className="mt-2 text-sm text-[var(--ui-muted)] flex flex-col items-center gap-1.5">
-                  <span>支持 TXT、EPUB 格式，解析后先进入章节预览页</span>
-                  {!isOnline && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#F1F6F0]/90 border border-[#D0E2CF]/60 text-[#4C664B] tracking-wide animate-fade-in">
-                      <span className="w-1 h-1 rounded-full bg-[#4C664B] animate-pulse" />
-                      100% 支持离线导入
-                    </span>
-                  )}
+                <p className="mt-2 text-sm text-[var(--ui-muted)]">
+                  支持 TXT、EPUB 格式，解析后进入章节预览页
                 </p>
-
-                {/* “选择文件”拟物按钮，支持物理拉伸与群组联动 hover 色变 */}
-                <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm physics-spring group-hover:scale-[1.05] group-hover:bg-[#527047]">
-                  选择文件
+                <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm">
+                  选择单本文卷
                 </div>
-
                 {isProcessing && (
-                  <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(154,106,58,0.18)] border-t-[var(--ui-warm)]" />
+                  <div className="mt-4 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
                     {status}
                   </div>
                 )}
-                {!isProcessing && status !== "等待导入" && (
-                  <p className="mt-4 text-sm font-medium text-[var(--ui-danger)]">
-                    {status}
-                  </p>
-                )}
               </div>
-
               <input
                 type="file"
                 accept=".txt,.epub"
@@ -447,32 +811,166 @@ export default function ImportPage() {
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
               />
             </label>
-          ) : (
+          )}
+
+          {/* ==================================== */}
+          {/* TAB 2: 批量上传                      */}
+          {/* ==================================== */}
+          {activeMode === "batch" && (
+            <div className="flex flex-col gap-5">
+              <label
+                className="group ui-focus-ring relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-5 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+              >
+                <div className="pointer-events-none flex flex-col items-center justify-center">
+                  <div className="mb-3 text-2xl">📚</div>
+                  <h2 className="text-base font-bold text-[var(--ui-text)]">
+                    多选多本文卷，或批量拖入此区域
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--ui-muted)]">
+                    TXT/EPUB 在后台全并发流式空降落库，不阻塞阅读
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  multiple
+                  accept=".txt,.epub"
+                  onChange={(e) => handleBatchFiles(e.target.files)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </label>
+
+              {batchTasks.length > 0 && (
+                <div className="rounded-[16px] border border-[#E9DCC8]/50 bg-white/40 p-4">
+                  <h3 className="mb-3 text-sm font-bold text-[var(--ui-text)]">批量队列任务</h3>
+                  <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                    {batchTasks.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center justify-between gap-4 rounded-lg bg-white/60 p-3 text-xs"
+                      >
+                        <span className="truncate font-semibold text-[var(--ui-text)] flex-1">{t.name}</span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                              t.status === "success"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : t.status === "failed"
+                                ? "bg-red-50 text-red-700 border border-red-200"
+                                : t.status === "parsing"
+                                ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                                : "bg-gray-50 text-[var(--ui-muted)]"
+                            }`}
+                          >
+                            {t.status === "success" && "✓ 成功"}
+                            {t.status === "failed" && "❌ 失败"}
+                            {t.status === "parsing" && "⚙ 载入中"}
+                            {t.status === "waiting" && "排队"}
+                          </span>
+                          <span className="text-[var(--ui-muted)] font-medium max-w-[120px] truncate">
+                            {t.progressText}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ==================================== */}
+          {/* TAB 3: 选择文件夹 (预览与一键入库)     */}
+          {/* ==================================== */}
+          {activeMode === "folder" && (
+            <div className="flex flex-col gap-5">
+              {!previewTree ? (
+                <div className="flex flex-col items-center justify-center rounded-[16px] border border-[#E9DCC8]/50 bg-[#FFFDFB]/60 p-10 text-center">
+                  <div className="mb-4 text-3xl">🧭</div>
+                  <h2 className="text-xl font-extrabold text-[var(--ui-text)]">
+                    绑定本地小说文件夹
+                  </h2>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-[var(--ui-muted)]">
+                    选择一个包含大量小说、或章节结构的物理目录。系统将以“快速索引模式”瞬间装配藏书骨架，保留完整阅读进度与重扫机制。
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleFolderSelect}
+                    className="ui-focus-ring mt-6 rounded-full bg-[var(--ui-accent)] px-8 py-3 text-sm font-bold text-white shadow-sm transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  >
+                    🧭 选择本地小说文件夹
+                  </button>
+                  {scanStatus && (
+                    <p className="mt-4 text-xs font-semibold text-[var(--ui-accent)] max-w-lg">
+                      {scanStatus}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3 rounded-xl border border-[#E5C9A6]/50 bg-[#FAF4EB]/60 px-4 py-3 text-xs font-semibold text-[#8C6239]">
+                    <div className="flex items-center gap-2">
+                      <span>已成功绑定物理根卷: <b>{scanningSourceHandle?.name}</b></span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleFolderSelect}
+                        className="rounded-full bg-white px-3 py-1 text-[10px] hover:bg-white/80"
+                      >
+                        重新绑定目录
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 画卷预览树渲染 */}
+                  <div className="rounded-[16px] border border-[#E9DCC8]/60 bg-white/40 p-3 md:p-5 max-h-[420px] overflow-y-auto">
+                    <h3 className="mb-4 text-sm font-bold text-[var(--ui-text)] border-b border-[#E9DCC8]/40 pb-2">📂 勘测成果与结构治理预览</h3>
+                    <FolderPreviewTree
+                      node={previewTree}
+                      ignoredNodes={ignoredNodes}
+                      customTypes={customTypes}
+                      onNodeTypeChange={handleNodeTypeChange}
+                    />
+                  </div>
+
+                  {scanStatus && (
+                    <p className="text-xs font-semibold text-[var(--ui-accent)]">{scanStatus}</p>
+                  )}
+
+                  <div className="flex justify-end gap-3 border-t border-[#E9DCC8]/40 pt-4">
+                    <button
+                      onClick={() => setPreviewTree(null)}
+                      className="rounded-full border border-[var(--ui-border)] bg-white px-5 py-2 text-xs font-bold text-[var(--ui-muted)]"
+                    >
+                      清空放弃
+                    </button>
+                    <button
+                      onClick={commitFolderImport}
+                      className="rounded-full bg-[var(--ui-accent)] px-6 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#527047]"
+                    >
+                      🖋 一键篆刻归档入库
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ==================================== */}
+          {/* TAB 4: URL 解析                      */}
+          {/* ==================================== */}
+          {activeMode === "url" && (
             <form
               onSubmit={handleUrlImport}
               className="flex min-h-[280px] flex-col justify-center rounded-[16px] border border-[rgba(95,125,82,0.18)] bg-[rgba(255,255,255,0.52)] p-5 md:p-8"
             >
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm">
-                <svg
-                  aria-hidden="true"
-                  className="h-8 w-8"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.9 5.03" />
-                  <path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.1a5 5 0 0 0 7.07 7.08l1.22-1.22" />
-                </svg>
+                🪶
               </div>
               <h2 className="text-center text-xl font-bold text-[var(--ui-text)]">
                 粘贴小说目录页或章节页链接
               </h2>
               <p className="mx-auto mt-2 max-w-xl text-center text-sm leading-6 text-[var(--ui-muted)]">
-                优先在前端直接解析；遇到
-                CORS、反爬提示或动态页面时自动切到后端兜底。章节内的“下一页”会合并为同一章。
+                优先在前端直接解析；遇到 CORS、反爬提示或动态页面时自动切到后端代理。
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -482,13 +980,11 @@ export default function ImportPage() {
                   onChange={(event) => setUrlInput(event.currentTarget.value)}
                   placeholder="https://example.com/book/123/"
                   disabled={isProcessing || !isOnline}
-                  // 输入框 Focus 时，应用 physics-spring 伴随微幅拉宽，并散发浅绿漫反射光圈，与搜索页视觉风格一脉相承
                   className="ui-focus-ring min-h-12 flex-1 rounded-full border border-[var(--ui-border)] bg-white px-5 text-[var(--ui-text)] shadow-sm disabled:opacity-60 physics-spring focus:scale-[1.015] focus:shadow-[0_15px_35px_rgba(95,125,82,0.12)] focus:border-[var(--ui-accent)]"
                 />
                 <button
                   type="submit"
                   disabled={isProcessing || !urlInput.trim() || !isOnline}
-                  // 解析按钮：hover 微放大，active 微缩拢
                   className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isProcessing ? "解析中" : "解析 URL"}
@@ -496,21 +992,16 @@ export default function ImportPage() {
               </div>
 
               {!isOnline && (
-                <p className="mt-4 text-center text-sm font-medium text-[#8C6239] px-4 py-2.5 bg-[#FAF4EB] border border-[#E5C9A6]/40 rounded-xl animate-fade-in select-none leading-relaxed max-w-xl mx-auto">
+                <p className="mt-4 text-center text-sm font-medium text-[#8C6239] px-4 py-2.5 bg-[#FAF4EB] border border-[#E5C9A6]/40 rounded-xl max-w-xl mx-auto">
                   {strings.network.offlineImportHint}
                 </p>
               )}
 
               {isProcessing && (
                 <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(154,106,58,0.18)] border-t-[var(--ui-warm)]" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
                   {status}
                 </div>
-              )}
-              {!isProcessing && status !== "等待导入" && (
-                <p className="mt-4 text-center text-sm font-medium text-[var(--ui-danger)]">
-                  {status}
-                </p>
               )}
             </form>
           )}
@@ -519,26 +1010,14 @@ export default function ImportPage() {
         <aside className="flex flex-col gap-4">
           <div className="ui-card rounded-[16px] p-5">
             <h2 className="text-base font-bold text-[var(--ui-text)]">
-              导入说明
+              治书章法
             </h2>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--ui-muted)]">
-              <li>TXT 会根据章节标题自动拆分。</li>
-              <li>EPUB 会读取目录与正文结构。</li>
-              <li>URL 目录页会尝试批量识别章节链接。</li>
-              <li>单章多分页会按“下一页”合并，避免误跳到下一章。</li>
-              <li>确认前不会写入正式书架。</li>
+              <li><b>单本上传</b>：支持极速解析大 TXT 及精致排版 EPUB。</li>
+              <li><b>批量上传 (场景B)</b>：队列分析，背景自动归档。</li>
+              <li><b>本地小说文件夹 (场景C/D)</b>：不复制物理原文件，仅在切章阅读时按需解密 slice 截取，零占用手机空间。</li>
+              <li><b>多文件小说 (场景D)</b>：自动整合成序，一目录下文件名连续即自成一书。</li>
             </ul>
-          </div>
-
-          <div className="ui-soft-card rounded-[16px] p-5">
-            <div>
-              <h2 className="mb-1 text-base font-bold text-[var(--ui-text)]">
-                URL 稳定性说明
-              </h2>
-              <p className="text-sm leading-6 text-[var(--ui-muted)]">
-                浏览器能直接访问的站点会本地解析；遇到跨域限制则走后端代理。验证码、登录墙、纯动态渲染页面会给出明确失败提示。
-              </p>
-            </div>
           </div>
         </aside>
       </div>
