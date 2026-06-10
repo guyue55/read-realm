@@ -5,7 +5,16 @@ import {
   useCallback,
   type TouchEvent,
 } from "react";
-import { ReaderEngine, type ChapterData } from "@reader/reader-core";
+import {
+  ReaderEngine,
+  getChapterOffsetRatio,
+  getChapterRelativeOffset,
+  getNextPaginationOffset,
+  getPaginationStep,
+  getPreviousPaginationOffset,
+  getSnappedPaginationOffset,
+  type ChapterData,
+} from "@reader/reader-core";
 import { Dexie, db } from "@reader/storage-core";
 import { generateAiSigKeyAsync, createId, type ReadingProgress, type Bookmark, type Book, type LibraryFolder } from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
@@ -196,14 +205,62 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-function snapPaginationOffset(
-  offset: number,
-  pageWidth: number,
-  maxOffset: number,
+function getReaderPaginationStep(container: HTMLDivElement): number {
+  const readerContentEl = container.querySelector(".reader-content") as HTMLElement | null;
+  const columnGap = readerContentEl && typeof window !== "undefined"
+    ? Number.parseFloat(window.getComputedStyle(readerContentEl).columnGap || "0")
+    : 0;
+
+  return getPaginationStep(
+    container.clientWidth,
+    readerContentEl?.clientWidth,
+    Number.isFinite(columnGap) ? columnGap : 0,
+  );
+}
+
+function getContainerOffsetRatio(
+  container: HTMLDivElement,
+  pageMode: "scroll" | "pagination",
 ) {
-  if (pageWidth <= 0) return Math.max(0, Math.min(maxOffset, offset));
-  const snappedOffset = Math.round(offset / pageWidth) * pageWidth;
-  return Math.max(0, Math.min(maxOffset, snappedOffset));
+  if (pageMode === "scroll") {
+    return container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
+  }
+
+  return container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
+}
+
+function getRenderedChapterElement(
+  container: HTMLDivElement | null,
+  chapterIndex: number,
+): HTMLElement | null {
+  if (!container) return null;
+  return container.querySelector(
+    `.chapter-container[data-chapter-index="${chapterIndex}"]`,
+  );
+}
+
+function getScrollChapterMetrics(
+  container: HTMLDivElement | null,
+  chapterIndex: number,
+) {
+  const chapterElement = getRenderedChapterElement(container, chapterIndex);
+  if (!container || !chapterElement) {
+    return { relativeOffset: 0, maxOffset: 0, remaining: Number.POSITIVE_INFINITY };
+  }
+
+  const relativeOffset = getChapterRelativeOffset(
+    container.scrollTop,
+    chapterElement.offsetTop,
+  );
+  const maxOffset = Math.max(0, chapterElement.scrollHeight - container.clientHeight);
+  const chapterBottom = chapterElement.offsetTop + chapterElement.offsetHeight;
+  const viewportBottom = container.scrollTop + container.clientHeight;
+
+  return {
+    relativeOffset,
+    maxOffset,
+    remaining: chapterBottom - viewportBottom,
+  };
 }
 
 /**
@@ -273,7 +330,11 @@ function restoreScrollPositionStable(
               targetEl.scrollIntoView({ block: "nearest", inline: "start", behavior: "auto" });
               // 重新吸附分页位置
               const maxOffset = Math.max(0, container.scrollWidth - container.clientWidth);
-              container.scrollLeft = snapPaginationOffset(container.scrollLeft, container.clientWidth, maxOffset);
+              container.scrollLeft = getSnappedPaginationOffset(
+                container.scrollLeft,
+                getReaderPaginationStep(container),
+                maxOffset,
+              );
             }
             offsetApplied = true;
           } catch (err) {
@@ -360,7 +421,11 @@ function restoreScrollByRatioStable(
       if (pageMode === "scroll") {
         container.scrollTop = targetOffset;
       } else {
-        container.scrollLeft = targetOffset;
+        container.scrollLeft = getSnappedPaginationOffset(
+          targetOffset,
+          getReaderPaginationStep(container),
+          maxOffset,
+        );
       }
 
       onSettled(targetOffset, maxOffset);
@@ -531,8 +596,10 @@ export function useReader(bookId: string) {
 
   const [autoFlipCountdown, setAutoFlipCountdown] = useState<number | null>(null);
   const autoFlipTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const handleNextRef = useRef<(() => Promise<void>) | null>(null);
+  const handleNextRef = useRef<((targetIndex?: number) => Promise<void>) | null>(null);
+  const autoFlipTargetIndexRef = useRef<number | null>(null);
   const isAppendingRef = useRef(false);
+  const appendChapterByIndexRef = useRef<((index: number) => Promise<void>) | null>(null);
   const lastLoadedChapterIndexRef = useRef<number | null>(null);
   const pendingScrollRestoreRef = useRef<{
     offset?: number;
@@ -549,11 +616,14 @@ export function useReader(bookId: string) {
       clearInterval(autoFlipTimerRef.current);
       autoFlipTimerRef.current = null;
     }
+    autoFlipTargetIndexRef.current = null;
     setAutoFlipCountdown(null);
   }, []);
 
-  const startAutoFlipTimer = useCallback(() => {
+  const startAutoFlipTimer = useCallback((targetIndex?: number) => {
     if (autoFlipTimerRef.current) return;
+    autoFlipTargetIndexRef.current =
+      typeof targetIndex === "number" ? targetIndex : null;
     let remaining = 1.5;
     setAutoFlipCountdown(remaining);
     autoFlipTimerRef.current = setInterval(() => {
@@ -567,7 +637,7 @@ export function useReader(bookId: string) {
         setAutoFlipCountdown(null);
         triggerHapticFeedback(12);
         if (handleNextRef.current) {
-          void handleNextRef.current();
+          void handleNextRef.current(autoFlipTargetIndexRef.current ?? undefined);
         }
       }
     }, 100);
@@ -686,7 +756,16 @@ export function useReader(bookId: string) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapter?.id, renderedChapters, settings.pageMode]);
+  }, [
+    chapter?.id,
+    renderedChapters,
+    settings.pageMode,
+    settings.fontSize,
+    settings.fontFamily,
+    settings.paragraphSpacing,
+    settings.letterSpacing,
+    settings.lineHeight,
+  ]);
 
   const [activePanel, setActivePanel] = useState<
     "toc" | "progress" | "ai" | "settings" | null
@@ -801,9 +880,9 @@ export function useReader(bookId: string) {
           0,
           container.scrollWidth - container.clientWidth,
         );
-        const offset = snapPaginationOffset(
+        const offset = getSnappedPaginationOffset(
           maxOffset * safeRatio,
-          container.clientWidth,
+          getReaderPaginationStep(container),
           maxOffset,
         );
         container.scrollTo({ left: offset, behavior: "smooth" });
@@ -822,16 +901,16 @@ export function useReader(bookId: string) {
   useEffect(() => {
     if (!chapter || !bookId) return;
 
-    const saveScrollProgress = debounce((offset: number, paragraphIndex?: number, characterOffset?: number) => {
+    const saveScrollProgress = debounce((chapterData: ChapterData, offset: number, paragraphIndex?: number, characterOffset?: number) => {
       const nowIso = new Date().toISOString();
       db.progress.put({
         bookId,
-        chapterId: chapter.id,
-        chapterIndex: chapter.index,
+        chapterId: chapterData.id,
+        chapterIndex: chapterData.index,
         offset,
         paragraphIndex,
         characterOffset,
-        percentage: toc.length > 0 ? (chapter.index / toc.length) * 100 : 0,
+        percentage: toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
         updatedAt: nowIso,
       }).then(() => {
         void db.books.update(bookId, { lastReadAt: nowIso }).catch((err) => {
@@ -840,7 +919,7 @@ export function useReader(bookId: string) {
         if (
           pendingProgressRef.current &&
           pendingProgressRef.current.offset === offset &&
-          pendingProgressRef.current.chapterId === chapter.id
+          pendingProgressRef.current.chapterId === chapterData.id
         ) {
           pendingProgressRef.current = null;
         }
@@ -854,14 +933,19 @@ export function useReader(bookId: string) {
       const { offset, maxOffset } = getOffsetState();
       
       let currentActiveChapter = chapter;
+      let activeChapterOffset = offset;
+      let activeChapterMaxOffset = maxOffset;
+      let activeChapterRemaining = maxOffset - offset;
       
       if (settings.pageMode === "scroll" && contentRef.current) {
         const containers = contentRef.current.querySelectorAll(".chapter-container");
+        const containerRect = contentRef.current.getBoundingClientRect();
+        const activeLineY = containerRect.top + Math.min(120, Math.max(24, containerRect.height * 0.22));
         let activeIdx = -1;
         for (let i = 0; i < containers.length; i++) {
           const rect = containers[i].getBoundingClientRect();
-          // 第一个底端还在视口顶部 120px 以下的章节，就是读者目前视线所在的章节
-          if (rect.bottom > 120) {
+          // 第一个底端越过阅读视线锚点的章节，就是读者目前视线所在的章节。
+          if (rect.bottom > activeLineY) {
             const idxStr = containers[i].getAttribute("data-chapter-index");
             if (idxStr !== null) {
               activeIdx = parseInt(idxStr, 10);
@@ -877,21 +961,38 @@ export function useReader(bookId: string) {
             setChapter(targetCh);
           }
         }
+
+        if (currentActiveChapter) {
+          const metrics = getScrollChapterMetrics(
+            contentRef.current,
+            currentActiveChapter.index,
+          );
+          activeChapterOffset = metrics.relativeOffset;
+          activeChapterMaxOffset = metrics.maxOffset;
+          activeChapterRemaining = metrics.remaining;
+        }
       }
 
-      const offsetRatio = maxOffset > 0 ? offset / maxOffset : 0;
+      const offsetRatio =
+        settings.pageMode === "scroll" && contentRef.current
+          ? getChapterOffsetRatio(
+              activeChapterOffset,
+              activeChapterMaxOffset + contentRef.current.clientHeight,
+              contentRef.current.clientHeight,
+            )
+          : maxOffset > 0 ? offset / maxOffset : 0;
       const activeChapterIndex = currentActiveChapter ? currentActiveChapter.index : (chapter?.index || 0);
       const overallProgress = computeOverallProgress(activeChapterIndex, toc.length, offsetRatio);
       throttledSetReadingProgressRef.current(overallProgress);
 
       // 触底自动切章逻辑监控
       if (settings.pageMode === "scroll" && settings.autoFlipAtBottom && activeChapterIndex < toc.length - 1) {
-        if (maxOffset > 0 && maxOffset - offset <= 10) {
+        if (activeChapterRemaining <= 10) {
           // 触底且未处于倒计时状态，启动倒计时
           if (!autoFlipTimerRef.current) {
-            startAutoFlipTimer();
+            startAutoFlipTimer(activeChapterIndex + 1);
           }
-        } else if (maxOffset - offset > 30) {
+        } else if (activeChapterRemaining > 30) {
           // 往上滚动超过 30px，立刻撤销并清除倒计时
           if (autoFlipTimerRef.current) {
             clearAutoFlipTimer();
@@ -901,14 +1002,12 @@ export function useReader(bookId: string) {
 
       // 触底 200px 自动无缝拼接下一章
       if (settings.pageMode === "scroll" && activeChapterIndex < toc.length - 1) {
-        if (maxOffset > 0 && maxOffset - offset < 200) {
+        if (activeChapterRemaining < 200) {
           const nextIndex = activeChapterIndex + 1;
           const hasNextRendered = renderedChapters.some((ch) => ch.index === nextIndex);
           const isNextAlreadyLoadingOrLoaded = lastLoadedChapterIndexRef.current !== null && lastLoadedChapterIndexRef.current >= nextIndex;
           if (!hasNextRendered && !isAppendingRef.current && !isNextAlreadyLoadingOrLoaded) {
-            if (handleNextRef.current) {
-              void handleNextRef.current();
-            }
+            void appendChapterByIndexRef.current?.(nextIndex);
           }
         }
       }
@@ -919,11 +1018,11 @@ export function useReader(bookId: string) {
           bookId,
           chapterId: currentActiveChapter.id,
           chapterIndex: currentActiveChapter.index,
-          offset,
+          offset: activeChapterOffset,
           paragraphIndex,
           characterOffset,
         };
-        saveScrollProgress(offset, paragraphIndex, characterOffset);
+        saveScrollProgress(currentActiveChapter, activeChapterOffset, paragraphIndex, characterOffset);
       }
     };
 
@@ -1027,9 +1126,9 @@ export function useReader(bookId: string) {
         0,
         container.scrollWidth - container.clientWidth,
       );
-      const offset = snapPaginationOffset(
+      const offset = getSnappedPaginationOffset(
         container.scrollLeft + event.deltaY,
-        container.clientWidth,
+        getReaderPaginationStep(container),
         maxOffset,
       );
       container.scrollTo({ left: offset, behavior: "smooth" });
@@ -1487,44 +1586,42 @@ export function useReader(bookId: string) {
     [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, getPrecisePosition, clearAutoFlipTimer, setIsPositionRestored, showToast],
   );
 
-  const handleNext = useCallback(async () => {
-    if (isAppendingRef.current) return;
+  const appendChapterByIndex = useCallback(async (index: number) => {
+    if (isAppendingRef.current || !engine || index < 0 || index >= toc.length) return;
     isAppendingRef.current = true;
     try {
-      if (engine && chapter && chapter.index < toc.length - 1) {
-        const nextIndex = chapter.index + 1;
-        if (settings.pageMode === "scroll") {
-          clearAutoFlipTimer();
-          await engine.loadChapter(nextIndex);
-          const nextChapter = engine.getCurrentChapter();
-          if (nextChapter) {
-            setRenderedChapters((prev) => {
-              if (prev.some((ch) => ch.index === nextChapter.index)) return prev;
-              return [...prev, nextChapter];
-            });
-            // 1. 同步加载挂锁
-            lastLoadedChapterIndexRef.current = nextChapter.index;
-            showToast(`已加载：${nextChapter.title}`);
-            // 2. 绝对不要 setChapter(nextChapter)、不要设置 readingProgress、不要 saveCurrentProgress
-          }
-        } else {
-          await jumpToChapter(nextIndex);
-        }
-      } else {
-        showToast(strings.reader.endOfBook);
+      await engine.loadChapter(index);
+      const nextChapter = engine.getCurrentChapter();
+      if (nextChapter) {
+        setRenderedChapters((prev) => {
+          if (prev.some((ch) => ch.index === nextChapter.index)) return prev;
+          return [...prev, nextChapter].sort((a, b) => a.index - b.index);
+        });
+        lastLoadedChapterIndexRef.current = Math.max(
+          lastLoadedChapterIndexRef.current ?? nextChapter.index,
+          nextChapter.index,
+        );
       }
     } finally {
       isAppendingRef.current = false;
     }
-  }, [
-    engine,
-    chapter,
-    toc.length,
-    settings.pageMode,
-    jumpToChapter,
-    showToast,
-    clearAutoFlipTimer,
-  ]);
+  }, [engine, toc.length]);
+
+  appendChapterByIndexRef.current = appendChapterByIndex;
+
+  const handleNext = useCallback(async (targetIndex?: number) => {
+    if (!engine || !chapter) return;
+    const nextIndex =
+      typeof targetIndex === "number"
+        ? targetIndex
+        : autoFlipTargetIndexRef.current ?? chapter.index + 1;
+    if (nextIndex < toc.length) {
+      clearAutoFlipTimer();
+      await jumpToChapter(nextIndex);
+    } else {
+      showToast(strings.reader.endOfBook);
+    }
+  }, [engine, chapter, toc.length, jumpToChapter, showToast, clearAutoFlipTimer]);
 
   // 同步 handleNext 引用，消除定时器的循环依赖
   handleNextRef.current = handleNext;
@@ -1562,13 +1659,13 @@ export function useReader(bookId: string) {
       const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
       const maxScrollLeft = scrollWidth - clientWidth;
 
-      // 🏮 动态计算高保真翻页步长（列宽 + columnGap）
-      const readerContentEl = contentRef.current.querySelector(".reader-content") as HTMLElement;
-      const step = readerContentEl ? readerContentEl.clientWidth + 48 : clientWidth;
-
       if (scrollLeft < maxScrollLeft - 10) {
         contentRef.current.scrollTo({
-          left: scrollLeft + step,
+          left: getNextPaginationOffset(
+            scrollLeft,
+            getReaderPaginationStep(contentRef.current),
+            maxScrollLeft,
+          ),
           behavior: "smooth",
         });
         return;
@@ -1592,14 +1689,15 @@ export function useReader(bookId: string) {
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
       const { scrollLeft, clientWidth } = contentRef.current;
-
-      // 🏮 动态计算高保真翻页步长（列宽 + columnGap）
-      const readerContentEl = contentRef.current.querySelector(".reader-content") as HTMLElement;
-      const step = readerContentEl ? readerContentEl.clientWidth + 48 : clientWidth;
+      const maxScrollLeft = Math.max(0, contentRef.current.scrollWidth - clientWidth);
 
       if (scrollLeft > 10) {
         contentRef.current.scrollTo({
-          left: Math.max(0, scrollLeft - step),
+          left: getPreviousPaginationOffset(
+            scrollLeft,
+            getReaderPaginationStep(contentRef.current),
+            maxScrollLeft,
+          ),
           behavior: "smooth",
         });
         return;
@@ -2066,11 +2164,9 @@ export function useReader(bookId: string) {
       const container = contentRef.current;
       let percentage = 0;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage = container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage = container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
+        pendingScrollRestoreRef.current = { ratio: percentage };
+        setIsPositionRestored(false);
       }
 
       setSettings((prev) => {
@@ -2081,16 +2177,8 @@ export function useReader(bookId: string) {
         return newSettings;
       });
 
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          settings.pageMode,
-          () => {}
-        );
-      }
     },
-    [engine, settings.pageMode],
+    [engine, settings.pageMode, setIsPositionRestored],
   );
 
   const updateTheme = useCallback(
@@ -2110,11 +2198,9 @@ export function useReader(bookId: string) {
       const container = contentRef.current;
       let percentage = 0;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage = container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage = container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
+        pendingScrollRestoreRef.current = { ratio: percentage };
+        setIsPositionRestored(false);
       }
 
       setSettings((prev) => {
@@ -2124,34 +2210,22 @@ export function useReader(bookId: string) {
         return newSettings;
       });
 
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          settings.pageMode,
-          () => {}
-        );
-      }
     },
-    [engine, settings.pageMode],
+    [engine, settings.pageMode, setIsPositionRestored],
   );
 
   const updatePageMode = useCallback(
     (mode: "scroll" | "pagination") => {
       if (!chapter) return;
+      if (mode === settings.pageMode) return;
       let percentage = 0;
       const container = contentRef.current;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage =
-            container.scrollTop /
-            (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage =
-            container.scrollLeft /
-            (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
       }
+
+      pendingScrollRestoreRef.current = { ratio: percentage };
+      setIsPositionRestored(false);
 
       setSettings((prev) => {
         const newSettings = { ...prev, pageMode: mode };
@@ -2159,17 +2233,8 @@ export function useReader(bookId: string) {
         engine?.updateSettings(newSettings);
         return newSettings;
       });
-
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          mode,
-          () => {}
-        );
-      }
     },
-    [chapter, settings.pageMode, engine],
+    [chapter, settings.pageMode, engine, setIsPositionRestored],
   );
 
   const updateParagraphSpacing = useCallback(
@@ -2177,11 +2242,9 @@ export function useReader(bookId: string) {
       const container = contentRef.current;
       let percentage = 0;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage = container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage = container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
+        pendingScrollRestoreRef.current = { ratio: percentage };
+        setIsPositionRestored(false);
       }
 
       setSettings((prev) => {
@@ -2191,16 +2254,8 @@ export function useReader(bookId: string) {
         return newSettings;
       });
 
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          settings.pageMode,
-          () => {}
-        );
-      }
     },
-    [engine, settings.pageMode],
+    [engine, settings.pageMode, setIsPositionRestored],
   );
 
   const updateLetterSpacing = useCallback(
@@ -2208,11 +2263,9 @@ export function useReader(bookId: string) {
       const container = contentRef.current;
       let percentage = 0;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage = container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage = container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
+        pendingScrollRestoreRef.current = { ratio: percentage };
+        setIsPositionRestored(false);
       }
 
       setSettings((prev) => {
@@ -2222,16 +2275,8 @@ export function useReader(bookId: string) {
         return newSettings;
       });
 
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          settings.pageMode,
-          () => {}
-        );
-      }
     },
-    [engine, settings.pageMode],
+    [engine, settings.pageMode, setIsPositionRestored],
   );
 
   const updateLineHeight = useCallback(
@@ -2239,11 +2284,9 @@ export function useReader(bookId: string) {
       const container = contentRef.current;
       let percentage = 0;
       if (container) {
-        if (settings.pageMode === "scroll") {
-          percentage = container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-        } else {
-          percentage = container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-        }
+        percentage = getContainerOffsetRatio(container, settings.pageMode);
+        pendingScrollRestoreRef.current = { ratio: percentage };
+        setIsPositionRestored(false);
       }
 
       setSettings((prev) => {
@@ -2253,16 +2296,8 @@ export function useReader(bookId: string) {
         return newSettings;
       });
 
-      if (container) {
-        restoreScrollByRatioStable(
-          container,
-          percentage,
-          settings.pageMode,
-          () => {}
-        );
-      }
     },
-    [engine, settings.pageMode],
+    [engine, settings.pageMode, setIsPositionRestored],
   );
 
   const updateAutoFlipAtBottom = useCallback(

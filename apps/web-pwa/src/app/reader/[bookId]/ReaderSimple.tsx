@@ -370,7 +370,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
               style={{
                 fontSize: `${settings.fontSize}px`,
                 lineHeight: settings.lineHeight,
-                columnWidth: "calc(100vw - 48px)",
+                columnWidth: "100%",
                 columnGap: "48px",
                 height: "100%",
                 "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
