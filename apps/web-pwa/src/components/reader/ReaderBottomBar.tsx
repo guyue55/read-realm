@@ -74,8 +74,8 @@ export function ReaderBottomBar({
       onClick: onToggleProgress,
     },
     {
-      label: "AI",
-      glyph: "AI",
+      label: "伴读",
+      glyph: "✨",
       active: activePanel === "ai",
       onClick: onToggleAi,
     },
@@ -102,13 +102,13 @@ export function ReaderBottomBar({
           : "translate-y-6 opacity-0 pointer-events-none"
       }`}
     >
-      <div className="mb-3 grid grid-cols-[32px_32px_minmax(0,1fr)_32px_32px_42px] items-center gap-1.5">
+      <div className="mb-3 grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px_42px] items-center gap-1.5">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onPrevChapter?.();
           }}
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
           title="上一章"
           aria-label="上一章"
         >
@@ -119,7 +119,7 @@ export function ReaderBottomBar({
             e.stopPropagation();
             onPagePrev();
           }}
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="上一页"
         >
           ‹
@@ -156,7 +156,7 @@ export function ReaderBottomBar({
             e.stopPropagation();
             onPageNext();
           }}
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="下一页"
         >
           ›
@@ -166,7 +166,7 @@ export function ReaderBottomBar({
             e.stopPropagation();
             onNextChapter?.();
           }}
-          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
           title="下一章"
           aria-label="下一章"
         >
@@ -182,6 +182,7 @@ export function ReaderBottomBar({
           <button
             key={action.label}
             onClick={action.onClick}
+            aria-pressed={action.active}
             className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold transition-all active:scale-95 ${
               action.active
                 ? activeClass

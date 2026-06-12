@@ -34,7 +34,55 @@ export class AiService {
       .digest('hex');
   }
 
-  async summarize(bookId: string, chapterIndex: number, shareToken: string) {
+  /**
+   * 解析用户 AI 配置优先级：
+   * 1. 请求头中的用户个人配置 (x-ai-* headers)
+   * 2. 服务端环境变量 (OPENAI_API_KEY)
+   * 3. 均无则抛出友好错误
+   */
+  private resolveAIProvider(userHeaders?: {
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+  }): { provider: OpenAIProvider; model: string } {
+    const userApiKey = userHeaders?.apiKey;
+    const userBaseUrl = userHeaders?.baseUrl;
+    const userModel = userHeaders?.model;
+    const serverApiKey = process.env.OPENAI_API_KEY;
+    const serverBaseUrl = process.env.OPENAI_BASE_URL;
+
+    // 优先使用用户配置
+    if (userApiKey && userApiKey.trim().length > 0 && userApiKey !== 'undefined') {
+      console.log('[AI-Service] 🔑 使用用户个人 AI 配置');
+      return {
+        provider: new OpenAIProvider(userApiKey, userBaseUrl || undefined),
+        model: userModel || 'gpt-3.5-turbo',
+      };
+    }
+
+    // 回退到服务端环境变量
+    if (serverApiKey && serverApiKey.trim().length > 0 && serverApiKey !== 'dummy-key') {
+      console.log('[AI-Service] 🏭 使用服务端全局 AI 配置');
+      return {
+        provider: this.openAIProvider,
+        model: 'gpt-3.5-turbo',
+      };
+    }
+
+    // 无可用配置
+    throw new Error('AI_NOT_CONFIGURED');
+  }
+
+  async summarize(
+    bookId: string,
+    chapterIndex: number,
+    shareToken: string,
+    userAIHeaders?: {
+      apiKey?: string;
+      baseUrl?: string;
+      model?: string;
+    },
+  ) {
     const chapter = await this.chapterRepository.findByIndex(
       bookId,
       chapterIndex,
@@ -44,48 +92,47 @@ export class AiService {
       throw new NotFoundException('Chapter not found');
     }
 
-    const model = 'gpt-3.5-turbo';
-    const promptVersion = '2.0'; // 升级到 2.0 强裁剪 Prompt 模板版本
+    // 解析 AI 配置（用户优先，服务端回退）
+    const { provider, model } = this.resolveAIProvider(userAIHeaders);
+    const promptVersion = '2.0';
 
-    // 1. 在后端物理计算唯一的 AISigKey 签名主键
+    // 1. 计算唯一 AISigKey 签名主键
     const aiSigKey = this.generateAiSigKey(
       chapter.contentHash,
       model,
       promptVersion,
     );
     console.log(
-      `[AI-Service] 🛡️ 正在进行 L2 级 SQLite 哈希缓存拦截校验. Key: ${aiSigKey}`,
+      `[AI-Service] 🛡️ L2 SQLite 缓存拦截. Key: ${aiSigKey}`,
     );
 
-    // 2. 二级拦截：优先在 SQLite 数据库中以此签名主键极速索引
+    // 2. L2 缓存拦截
     const cached = await this.db.query.aiViews.findFirst({
       where: eq(schema.aiViews.id, aiSigKey),
     });
 
     if (cached) {
-      console.log(
-        `[AI-Service] 🎉 L2 级 SQLite 拦截成功！命中已有摘要，未发生 API 穿透。`,
-      );
+      console.log(`[AI-Service] 🎉 L2 缓存命中！`);
       return {
         ...cached,
         bookId: cached.bookId.split('#')[0],
       };
     }
 
-    console.log(`[AI-Service] 🚨 L2 缓存未命中，开始读取原文章节并穿透生成...`);
+    console.log(`[AI-Service] 🚨 L2 未命中，读取原文并穿透生成...`);
 
-    // 3. 读取正文大文件
+    // 3. 读取正文
     const contentBuffer = await this.storage.getObject(chapter.contentHash);
     const content = contentBuffer.toString('utf-8');
 
-    // 4. 调用 packages/ai-core 生成摘要（内部已挂载智能 Token 滑动窗裁剪，安全不爆仓）
-    const summary = await this.openAIProvider.generateSummary(content, model);
+    // 4. 生成摘要
+    const summary = await provider.generateSummary(content, model);
 
     const dbBookId = `${bookId}#${shareToken}`;
 
-    // 5. 将生成的摘要进行原子化落库，归档此 AISigKey 以阻断后续请求
+    // 5. 原子落库
     const aiView = {
-      id: aiSigKey, // 强签名直接作为数据库主键
+      id: aiSigKey,
       bookId: dbBookId,
       chapterIndex,
       sourceHash: chapter.contentHash,
@@ -96,13 +143,61 @@ export class AiService {
     };
 
     await this.db.insert(schema.aiViews).values(aiView);
-    console.log(
-      `[AI-Service] ✨ 大模型摘要生成完毕，并已原子落盘 SQLite L2 缓存。`,
-    );
+    console.log(`[AI-Service] ✨ 摘要生成完毕并落库。`);
 
     return {
       ...aiView,
       bookId: bookId.split('#')[0],
     };
+  }
+
+  /**
+   * 检查 AI 服务是否可用（用于前端判断）
+   */
+
+
+
+  /**
+   * AI 问答：针对当前章节回答用户问题
+   */
+  async chat(
+    bookId: string,
+    chapterIndex: number,
+    question: string,
+    shareToken: string,
+    userAIHeaders?: {
+      apiKey?: string;
+      baseUrl?: string;
+      model?: string;
+    },
+  ) {
+    const chapter = await this.chapterRepository.findByIndex(
+      bookId,
+      chapterIndex,
+      shareToken,
+    );
+    if (!chapter) {
+      throw new NotFoundException('Chapter not found');
+    }
+
+    const { provider, model } = this.resolveAIProvider(userAIHeaders);
+
+    // 读取正文
+    const contentBuffer = await this.storage.getObject(chapter.contentHash);
+    const content = contentBuffer.toString('utf-8');
+
+    console.log(`[AI-Service] 💬 用户提问: "${question.substring(0, 60)}..."`);
+
+    const answer = await provider.chat(content, question, model);
+    return { answer, question };
+  }
+
+  checkAvailability(): { available: boolean; source: 'user' | 'server' | 'none' } {
+    const serverApiKey = process.env.OPENAI_API_KEY;
+    if (serverApiKey && serverApiKey.trim().length > 0 && serverApiKey !== 'dummy-key') {
+      return { available: true, source: 'server' };
+    }
+    // 用户配置状态由前端自行判断
+    return { available: false, source: 'none' };
   }
 }

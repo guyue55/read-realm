@@ -8,9 +8,11 @@ export interface AIReaderPanelProps {
   isMobileDrawer?: boolean;
   isDark?: boolean;
   onClose?: () => void;
-  aiInput?: string; // 🏮 [NEW] AI 输入框受控绑定内容
-  setAiInput?: (val: string) => void; // 🏮 [NEW] 更新 AI 输入框的回调
-  onClearSession?: () => void | Promise<void>; // 🧹 [NEW] 拂尘清理回调
+  aiInput?: string;
+  setAiInput?: (val: string) => void;
+  onClearSession?: () => void | Promise<void>;
+  /** AI 问答回调：用户输入问题后触发 */
+  onAsk?: (question: string) => void;
 }
 
 export function AIReaderPanel({
@@ -22,6 +24,7 @@ export function AIReaderPanel({
   aiInput,
   setAiInput,
   onClearSession,
+  onAsk,
 }: AIReaderPanelProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -119,11 +122,13 @@ export function AIReaderPanel({
           </h3>
           <div className="grid grid-cols-1 gap-2">
             <button
+              onClick={() => onAsk?.(strings.reader.questionCharacters)}
               className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
             >
               {strings.reader.questionCharacters}
             </button>
             <button
+              onClick={() => onAsk?.(strings.reader.questionPlots)}
               className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
             >
               {strings.reader.questionPlots}
@@ -141,10 +146,24 @@ export function AIReaderPanel({
             type="text"
             value={aiInput || ""}
             onChange={(e) => setAiInput?.(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && aiInput?.trim()) {
+                onAsk?.(aiInput.trim());
+                setAiInput?.("");
+              }
+            }}
             placeholder={strings.reader.aiInputPlaceholder}
             className="flex-1 bg-transparent border-none outline-none text-sm py-1 text-inherit"
           />
-          <button className="ml-2 text-[#9A6A3A] font-bold text-sm">
+          <button
+            onClick={() => {
+              if (aiInput?.trim()) {
+                onAsk?.(aiInput.trim());
+                setAiInput?.("");
+              }
+            }}
+            className="ml-2 text-[#9A6A3A] font-bold text-sm hover:opacity-80 active:scale-95 transition-all"
+          >
             {strings.reader.send}
           </button>
         </div>

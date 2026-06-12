@@ -57,7 +57,8 @@ export function ReaderTopBar({
       >
         <button
           onClick={onBack}
-          className={`mr-4 text-sm font-medium ${iconColor} active:scale-95`}
+          aria-label="返回书架"
+          className={`mr-4 min-w-[44px] min-h-[44px] flex items-center justify-center text-base font-medium ${iconColor} active:scale-95`}
         >
           ←
         </button>
@@ -80,7 +81,8 @@ export function ReaderTopBar({
         </div>
         <button
           onClick={onSettings}
-          className={`ml-4 text-sm font-medium ${iconColor} active:scale-95`}
+          aria-label="阅读设置"
+          className={`ml-4 min-w-[44px] min-h-[44px] flex items-center justify-center text-base font-medium ${iconColor} active:scale-95`}
         >
           ⚙
         </button>
