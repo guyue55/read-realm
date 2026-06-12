@@ -374,12 +374,13 @@ function restoreScrollPositionStable(
  * 能够完美解决调整字号、字体、pageMode 切换等导致的行位置漂移。
  */
 function restoreScrollByRatioStable(
-  container: HTMLDivElement | null,
+  containerRef: React.MutableRefObject<HTMLDivElement | null>,
   ratio: number,
   pageMode: "scroll" | "pagination",
   onSettled: (offset: number, maxOffset: number) => void,
 ) {
-  if (!container) {
+  const initialContainer = containerRef.current;
+  if (!initialContainer) {
     onSettled(0, 0);
     return () => {};
   }
@@ -393,6 +394,13 @@ function restoreScrollByRatioStable(
 
   const check = () => {
     attempts++;
+    // 动态读取 containerRef，支持 Page Mode 切换时的 contentRef 重定向
+    const container = containerRef.current;
+    if (!container) {
+      // 容器已卸载，尽早退出
+      onSettled(0, 0);
+      return;
+    }
     const currentHeight = container.scrollHeight;
     const currentWidth = container.scrollWidth;
 
@@ -599,6 +607,10 @@ export function useReader(bookId: string) {
   const isAppendingRef = useRef(false);
   const appendChapterByIndexRef = useRef<((index: number) => Promise<void>) | null>(null);
   const lastLoadedChapterIndexRef = useRef<number | null>(null);
+  // 无感切章标志：跳过 hide/show 过渡动画，直接定位到章首
+  const seamlessChapterSwitchRef = useRef(false);
+  // 用于在追加章节时保留当前滚动位置
+  const preservedScrollTopRef = useRef<number | null>(null);
   const pendingScrollRestoreRef = useRef<{
     offset?: number;
     ratio?: number;
@@ -687,6 +699,29 @@ export function useReader(bookId: string) {
       pendingScrollRestoreRef.current = null;
       const container = contentRef.current;
 
+      // 无感切章：跳过 hide/show 过渡，直接定位
+      if (seamlessChapterSwitchRef.current) {
+        // 防御性重置：确保标志不会泄漏到后续非切章触发的 effect
+        seamlessChapterSwitchRef.current = false;
+        // 立即设置滚动位置，不等稳定帧
+        if (container) {
+          if (settings.pageMode === "scroll") {
+            container.scrollTop = pending.offset ?? 0;
+          } else {
+            container.scrollLeft = pending.offset ?? 0;
+          }
+        }
+        setIsPositionRestored(true);
+        if (pending.onSettled) {
+          const finalOffset = pending.offset ?? 0;
+          const maxOffset = settings.pageMode === "scroll"
+            ? Math.max(0, (container?.scrollHeight || 0) - (container?.clientHeight || 0))
+            : Math.max(0, (container?.scrollWidth || 0) - (container?.clientWidth || 0));
+          void pending.onSettled(finalOffset, maxOffset);
+        }
+        return;
+      }
+
       const onSettleCallback = async (finalOffset: number, maxOffset: number) => {
         if (container && pending.flashElement) {
           let targetEl: Element | null = null;
@@ -734,7 +769,7 @@ export function useReader(bookId: string) {
 
       if (typeof pending.ratio === "number") {
         const cleanup = restoreScrollByRatioStable(
-          container,
+          contentRef,
           pending.ratio,
           settings.pageMode,
           onSettleCallback
@@ -1116,16 +1151,18 @@ export function useReader(bookId: string) {
     const handleWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
       event.preventDefault();
-      const maxOffset = Math.max(
-        0,
-        container.scrollWidth - container.clientWidth,
-      );
-      const offset = getSnappedPaginationOffset(
-        container.scrollLeft + event.deltaY,
-        getReaderPaginationStep(container),
-        maxOffset,
-      );
-      container.scrollTo({ left: offset, behavior: "smooth" });
+      // 新分页引擎：鼠标滚轮上下 = 翻页
+      if (event.deltaY > 0) {
+        const next = getNextPageScrollLeft(
+          container.scrollLeft,
+          container.clientWidth,
+          999,
+        );
+        container.scrollTo({ left: next, behavior: "smooth" });
+      } else if (event.deltaY < 0) {
+        const prev = getPrevPageScrollLeft(container.scrollLeft, container.clientWidth);
+        container.scrollTo({ left: prev, behavior: "smooth" });
+      }
     };
 
     container.addEventListener("wheel", handleWheel, { passive: false });
@@ -1486,10 +1523,13 @@ export function useReader(bookId: string) {
           await engine.loadChapter(index);
           const currentChapter = engine.getCurrentChapter();
 
+          // 0. 无感切章标志：跳过 hide/show 过渡动画
+          seamlessChapterSwitchRef.current = true;
+
           // 1. 设置挂锁 Ref，阻断一切追加
           lastLoadedChapterIndexRef.current = index;
 
-          // 2. 写入定位调停
+          // 2. 写入定位调停（offset: 0 表示章首）
           pendingScrollRestoreRef.current = {
             offset: 0,
             onSettled: async () => {
@@ -1499,10 +1539,22 @@ export function useReader(bookId: string) {
                 );
                 await saveCurrentProgress(currentChapter, 0);
               }
+              // 切章完成后重置标志
+              seamlessChapterSwitchRef.current = false;
             }
           };
 
-          // 3. 更新状态，触发 React 重绘与 Effect 定位
+          // 3. 立即设置容器滚动位置到顶部，避免先看到旧位置再跳转
+          const container = contentRef.current;
+          if (container) {
+            if (settings.pageMode === "scroll") {
+              container.scrollTop = 0;
+            } else {
+              container.scrollLeft = 0;
+            }
+          }
+
+          // 4. 更新状态，触发 React 重绘与 Effect 定位
           setChapter(currentChapter);
           if (currentChapter) {
             setRenderedChapters([currentChapter]);
@@ -1511,12 +1563,13 @@ export function useReader(bookId: string) {
           setShowMenu(false);
         } catch (error) {
           console.error("jumpToChapter 失败:", error);
+          seamlessChapterSwitchRef.current = false;
           setIsPositionRestored(true); // 强行恢复显示，防止页面白屏
           showToast(strings.reader?.loadChapterFailed || "加载新章节失败，请检查网络");
         }
       }
     },
-    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer, setIsPositionRestored, showToast],
+    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer, setIsPositionRestored, showToast, settings.pageMode],
   );
 
   const seekToProgress = useCallback(
@@ -1538,7 +1591,8 @@ export function useReader(bookId: string) {
       setReadingProgress(safeProgress);
 
       if (targetChapterIndex !== chapter.index) {
-        setIsPositionRestored(false); // 跨章时暂时隐藏正文
+        // 跨章定位：使用无感切换，避免闪烁
+        seamlessChapterSwitchRef.current = true;
         try {
           await engine.loadChapter(targetChapterIndex);
           const targetChapter = engine.getCurrentChapter();
@@ -1554,6 +1608,7 @@ export function useReader(bookId: string) {
               if (targetChapter) {
                 await saveCurrentProgress(targetChapter, finalOffset, paragraphIndex, characterOffset);
               }
+              seamlessChapterSwitchRef.current = false;
             }
           };
 
@@ -1565,17 +1620,17 @@ export function useReader(bookId: string) {
           setActivePanel(null);
         } catch (error) {
           console.error("seekToProgress 跨章加载失败:", error);
+          seamlessChapterSwitchRef.current = false;
           setIsPositionRestored(true); // 强行恢复显示，防止页面白屏
           showToast(strings.reader?.loadChapterFailed || "加载新章节失败，请检查网络");
         }
         return;
       }
 
-      setIsPositionRestored(false); // 同章内跨页跳跃也应用优雅淡入，避免硬跳眼球疲劳
-      const offset = scrollToOffsetRatio(targetOffsetRatio);
+      // 同章内跨页跳跃：平滑滚动，不隐藏内容
+      scrollToOffsetRatio(targetOffsetRatio);
       const { paragraphIndex, characterOffset } = getPrecisePosition();
-      await saveCurrentProgress(chapter, offset, paragraphIndex, characterOffset);
-      setIsPositionRestored(true); // 瞬间淡出后淡入还原
+      await saveCurrentProgress(chapter, 0, paragraphIndex, characterOffset);
     },
     [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, getPrecisePosition, clearAutoFlipTimer, setIsPositionRestored, showToast],
   );
@@ -1583,13 +1638,28 @@ export function useReader(bookId: string) {
   const appendChapterByIndex = useCallback(async (index: number) => {
     if (isAppendingRef.current || !engine || index < 0 || index >= toc.length) return;
     isAppendingRef.current = true;
+    // 保存当前滚动位置，防止追加章节时滚动跳跃
+    const container = contentRef.current;
+    if (container && settings.pageMode === "scroll") {
+      preservedScrollTopRef.current = container.scrollTop;
+    }
     try {
       await engine.loadChapter(index);
       const nextChapter = engine.getCurrentChapter();
       if (nextChapter) {
         setRenderedChapters((prev) => {
           if (prev.some((ch) => ch.index === nextChapter.index)) return prev;
-          return [...prev, nextChapter].sort((a, b) => a.index - b.index);
+          const next = [...prev, nextChapter].sort((a, b) => a.index - b.index);
+          // 在下一微任务中恢复滚动位置
+          if (container && settings.pageMode === "scroll" && preservedScrollTopRef.current !== null) {
+            requestAnimationFrame(() => {
+              if (container && preservedScrollTopRef.current !== null) {
+                container.scrollTop = preservedScrollTopRef.current;
+                preservedScrollTopRef.current = null;
+              }
+            });
+          }
+          return next;
         });
         lastLoadedChapterIndexRef.current = Math.max(
           lastLoadedChapterIndexRef.current ?? nextChapter.index,
@@ -1599,7 +1669,7 @@ export function useReader(bookId: string) {
     } finally {
       isAppendingRef.current = false;
     }
-  }, [engine, toc.length]);
+  }, [engine, toc.length, settings.pageMode]);
 
   appendChapterByIndexRef.current = appendChapterByIndex;
 
@@ -1628,13 +1698,8 @@ export function useReader(bookId: string) {
     }
   }, [engine, chapter, jumpToChapter, showToast]);
 
-  const handlePrevChapterActive = useCallback(async () => {
-    if (engine && chapter && chapter.index > 0) {
-      await jumpToChapter(chapter.index - 1);
-    } else {
-      showToast(strings.reader.startOfBook);
-    }
-  }, [engine, chapter, jumpToChapter, showToast]);
+  // handlePrevChapterActive 与 handlePrev 语义相同，直接复用避免重复代码
+  const handlePrevChapterActive = handlePrev;
 
   const handleNextChapterActive = useCallback(async () => {
     if (engine && chapter && chapter.index < toc.length - 1) {
