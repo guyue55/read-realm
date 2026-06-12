@@ -3,7 +3,7 @@
 import { strings } from "@/lib/i18n";
 import { TocDrawer } from "@/components/reader/TocDrawer";
 import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
-import { PaginatedReader } from "@/components/reader/PaginatedReader";
+import { PaginatedReader, type PaginatedReaderHandle } from "@/components/reader/PaginatedReader";
 import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
@@ -28,6 +28,7 @@ const recognizer = new GestureRecognizer();
 export function ReaderDefault({ bookId }: { bookId: string }) {
   const router = useVirtualRouter();
   const mainRef = useRef<HTMLDivElement>(null);
+  const paginatedReaderRef = useRef<PaginatedReaderHandle>(null);
   const {
     chapter,
     renderedChapters,
@@ -87,6 +88,16 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [selectedText, setSelectedText] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
+  // 🏮 分页模式下将 contentRef 指向 PaginatedReader 内部的 scroll 容器
+  useEffect(() => {
+    if (isPagination && paginatedReaderRef.current) {
+      const scrollContainer = paginatedReaderRef.current.getScrollContainer();
+      if (scrollContainer) {
+        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = scrollContainer;
+      }
+    }
+  }, [isPagination, contentRef, chapter?.id]);
+
   const [aiInput, setAiInput] = useState(""); // 🏮 联动 AI 伴读的输入框内容
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -401,14 +412,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onClick={handleMobileReaderClick}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
-                ? "overflow-y-auto overflow-x-hidden"
+                ? "overflow-hidden"
                 : "overflow-y-auto overflow-x-hidden"
             } transition-all duration-300 ease-out ${
-              isPositionRestored
+              isPagination || isPositionRestored
                 ? "opacity-100 blur-0 scale-100"
                 : "opacity-0 blur-md scale-[0.995] pointer-events-none"
             }`}
-            style={{ scrollBehavior: "smooth" }}
+            style={{ scrollBehavior: isPagination ? "auto" : "smooth" }}
           >
             {/* 🏮 高级常驻侧栏展示时，点击 Canvas 内容区域自动优雅折叠收起遮罩 */}
             {activePanel && (activePanel === "toc" || activePanel === "ai") && (
@@ -467,6 +478,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
             {isPagination ? (
               <PaginatedReader
+                ref={paginatedReaderRef}
                 title={chapter.title}
                 content={chapter.content}
                 isDark={isDark}
