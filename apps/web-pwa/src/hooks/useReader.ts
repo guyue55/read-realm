@@ -1481,7 +1481,7 @@ export function useReader(bookId: string) {
     async (index: number) => {
       if (engine) {
         clearAutoFlipTimer();
-        setIsPositionRestored(false); // 切章瞬间前置隐藏，阻止渲染突变
+        // 切章不隐藏内容，由 scroll-restore effect 无感定位到章首
         try {
           await engine.loadChapter(index);
           const currentChapter = engine.getCurrentChapter();

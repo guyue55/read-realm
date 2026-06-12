@@ -22,7 +22,6 @@ export interface PaginatedReaderProps {
   paragraphSpacing: number;
   letterSpacing: number;
   onPageChange?: (pageIndex: number, totalPages: number) => void;
-  /** 初始页码 */
   initialPage?: number;
 }
 
@@ -38,10 +37,13 @@ export function PaginatedReader({
   onPageChange,
   initialPage = 0,
 }: PaginatedReaderProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // 🏮 关键：ref 始终挂载在同一个外层容器上，避免 ResizeObserver 丢失
+  const outerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [measured, setMeasured] = useState(false);
 
   const paddingTop = 48;
   const paddingBottom = 120;
@@ -63,9 +65,7 @@ export function PaginatedReader({
       return { pages: [] as PaginationPage[], totalPages: 0 };
     }
 
-    // 构建完整 HTML（含标题）
     const fullHtml = `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;">${title}</h1>${content}`;
-
     return paginateContentAdaptive(fullHtml, containerWidth, containerHeight, style);
   }, [content, title, containerWidth, containerHeight, style, fontSize]);
 
@@ -73,7 +73,6 @@ export function PaginatedReader({
   const pageContent = useMemo(() => {
     if (pages.length === 0 || !content) return [];
 
-    // 从原始内容提取段落
     const paraRegex = /<p\b[^>]*>.*?<\/p>/gi;
     const allMatches: string[] = [];
     let match;
@@ -82,7 +81,6 @@ export function PaginatedReader({
     }
 
     return pages.map((page) => {
-      // 包含标题
       let html = '';
       if (page.startParaIndex === 0) {
         html += `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;color:inherit;">${title}</h1>`;
@@ -94,29 +92,33 @@ export function PaginatedReader({
     });
   }, [pages, content, title, fontSize]);
 
-  // 监听容器尺寸
+  // 🏮 监听外层容器尺寸（ref 始终稳定，不会在渲染间切换）
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = outerRef.current;
+    if (!el) return;
 
     const updateSize = () => {
-      setContainerWidth(container.clientWidth);
-      setContainerHeight(container.clientHeight);
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        setContainerWidth(w);
+        setContainerHeight(h);
+        setMeasured(true);
+      }
     };
 
+    // 立即测量一次
     updateSize();
 
-    const observer = new ResizeObserver(() => {
-      updateSize();
-    });
-    observer.observe(container);
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(el);
 
     return () => observer.disconnect();
   }, []);
 
   // 监听滚动事件更新当前页
   const handleScroll = useCallback(() => {
-    const container = containerRef.current;
+    const container = scrollRef.current;
     if (!container || containerWidth <= 0) return;
 
     const pageIdx = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
@@ -129,7 +131,7 @@ export function PaginatedReader({
   // 键盘翻页
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const container = containerRef.current;
+      const container = scrollRef.current;
       if (!container || containerWidth <= 0) return;
 
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
@@ -149,36 +151,33 @@ export function PaginatedReader({
 
   // 初始化滚动位置
   useEffect(() => {
-    if (containerRef.current && initialPage > 0 && containerWidth > 0) {
+    if (scrollRef.current && initialPage > 0 && containerWidth > 0) {
       const targetLeft = initialPage * (containerWidth + PAGE_GAP);
-      containerRef.current.scrollLeft = targetLeft;
+      scrollRef.current.scrollLeft = targetLeft;
     }
   }, [initialPage, containerWidth]);
-
-  if (totalPages === 0) {
-    return (
-      <div
-        ref={containerRef}
-        className="flex-1 flex items-center justify-center"
-      >
-        <p className="text-sm opacity-50">正在计算分页...</p>
-      </div>
-    );
-  }
 
   const pageWidth = containerWidth;
 
   return (
-    <div className="flex-1 flex flex-col relative">
+    <div ref={outerRef} className="flex-1 flex flex-col relative">
+      {/* Loading overlay: 用 visibility 而非条件渲染，保持 ref 稳定 */}
+      {!measured && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-inherit">
+          <p className="text-sm opacity-50">正在计算分页...</p>
+        </div>
+      )}
+
       {/* 页面容器：横向滚动 + scroll-snap */}
       <div
-        ref={containerRef}
+        ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-x-auto overflow-y-hidden"
         style={{
           scrollSnapType: 'x mandatory',
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
+          visibility: measured ? 'visible' : 'hidden',
         }}
       >
         <div className="flex h-full" style={{ gap: `${PAGE_GAP}px` }}>
@@ -211,7 +210,7 @@ export function PaginatedReader({
       </div>
 
       {/* 页码指示器 */}
-      {totalPages > 1 && (
+      {totalPages > 1 && measured && (
         <div
           className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
             isDark
