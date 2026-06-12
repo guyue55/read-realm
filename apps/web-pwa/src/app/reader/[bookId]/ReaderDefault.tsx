@@ -3,6 +3,7 @@
 import { strings } from "@/lib/i18n";
 import { TocDrawer } from "@/components/reader/TocDrawer";
 import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
+import { PaginatedReader } from "@/components/reader/PaginatedReader";
 import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
@@ -465,25 +466,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             </div>
 
             {isPagination ? (
-              <ReaderContent
+              <PaginatedReader
                 title={chapter.title}
                 content={chapter.content}
                 isDark={isDark}
-                isPagination={isPagination}
-                buttonVariant="default"
-                onPrev={handlePrev}
-                onNext={handleNext}
-                className="mx-auto px-6 pt-12 pb-[120px] md:px-12"
-                style={{
-                  maxWidth: `100%`,
-                  fontSize: `${settings.fontSize}px`,
-                  lineHeight: settings.lineHeight,
-                  "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-                  "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-                  "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-                } as React.CSSProperties}
-                titleClassName="text-3xl font-bold mb-10 font-serif text-center"
-                titleStyle={{ color: currentThemeColors.text }}
+                fontSize={settings.fontSize}
+                lineHeight={settings.lineHeight}
+                fontFamily={settings.fontFamily || "kaiti"}
+                paragraphSpacing={settings.paragraphSpacing ?? 16}
+                letterSpacing={settings.letterSpacing ?? 0.03}
               />
             ) : (
               renderedChapters.map((ch) => (

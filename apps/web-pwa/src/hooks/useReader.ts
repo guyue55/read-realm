@@ -9,10 +9,10 @@ import {
   ReaderEngine,
   getChapterOffsetRatio,
   getChapterRelativeOffset,
-  getNextPaginationOffset,
-  getPaginationStep,
-  getPreviousPaginationOffset,
   getSnappedPaginationOffset,
+  getNextPageScrollLeft,
+  getPrevPageScrollLeft,
+  PAGE_GAP,
   type ChapterData,
 } from "@reader/reader-core";
 import { Dexie, db } from "@reader/storage-core";
@@ -207,16 +207,13 @@ function isInteractiveTarget(target: EventTarget | null) {
 }
 
 function getReaderPaginationStep(container: HTMLDivElement): number {
+  // 新分页引擎：页宽 = 容器宽度 + 页间间隔
   const readerContentEl = container.querySelector(".reader-content") as HTMLElement | null;
-  const columnGap = readerContentEl && typeof window !== "undefined"
-    ? Number.parseFloat(window.getComputedStyle(readerContentEl).columnGap || "0")
-    : 0;
-
-  return getPaginationStep(
-    container.clientWidth,
-    readerContentEl?.clientWidth,
-    Number.isFinite(columnGap) ? columnGap : 0,
-  );
+  if (readerContentEl) {
+    return container.clientWidth + PAGE_GAP;
+  }
+  // 回退：无 .reader-content 时使用容器宽度
+  return container.clientWidth + PAGE_GAP;
 }
 
 function getContainerOffsetRatio(
@@ -881,12 +878,8 @@ export function useReader(bookId: string) {
           0,
           container.scrollWidth - container.clientWidth,
         );
-        const offset = getSnappedPaginationOffset(
-          maxOffset * safeRatio,
-          getReaderPaginationStep(container),
-          maxOffset,
-        );
-        container.scrollTo({ left: offset, behavior: "smooth" });
+        const offset = Math.round(safeRatio * maxOffset / (container.clientWidth + PAGE_GAP)) * (container.clientWidth + PAGE_GAP);
+        container.scrollTo({ left: Math.min(offset, maxOffset), behavior: "smooth" });
         return offset;
       }
 
@@ -1657,18 +1650,17 @@ export function useReader(bookId: string) {
     triggerHapticFeedback(12); // 微颤物理触感
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
-      const { scrollLeft, clientWidth, scrollWidth } = contentRef.current;
-      const maxScrollLeft = scrollWidth - clientWidth;
+      const container = contentRef.current;
+      const { scrollLeft, clientWidth, scrollWidth } = container;
+      const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
 
       if (scrollLeft < maxScrollLeft - 10) {
-        contentRef.current.scrollTo({
-          left: getNextPaginationOffset(
-            scrollLeft,
-            getReaderPaginationStep(contentRef.current),
-            maxScrollLeft,
-          ),
-          behavior: "smooth",
-        });
+        const nextLeft = getNextPageScrollLeft(
+          scrollLeft,
+          clientWidth,
+          999, // totalPages unknown here, clamped internally
+        );
+        container.scrollTo({ left: nextLeft, behavior: "smooth" });
         return;
       }
     } else if (!isPagination && contentRef.current) {
@@ -1689,18 +1681,12 @@ export function useReader(bookId: string) {
     triggerHapticFeedback(12); // 微颤物理触感
     const isPagination = settings.pageMode === "pagination";
     if (isPagination && contentRef.current) {
-      const { scrollLeft, clientWidth } = contentRef.current;
-      const maxScrollLeft = Math.max(0, contentRef.current.scrollWidth - clientWidth);
+      const container = contentRef.current;
+      const { scrollLeft, clientWidth } = container;
 
       if (scrollLeft > 10) {
-        contentRef.current.scrollTo({
-          left: getPreviousPaginationOffset(
-            scrollLeft,
-            getReaderPaginationStep(contentRef.current),
-            maxScrollLeft,
-          ),
-          behavior: "smooth",
-        });
+        const prevLeft = getPrevPageScrollLeft(scrollLeft, clientWidth);
+        container.scrollTo({ left: prevLeft, behavior: "smooth" });
         return;
       }
     } else if (!isPagination && contentRef.current) {
