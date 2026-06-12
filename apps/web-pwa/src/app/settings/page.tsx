@@ -12,6 +12,7 @@ import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { useVirtualRouter } from "@/lib/route-store";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 
 export default function SettingsPage() {
   const router = useVirtualRouter();
@@ -96,6 +97,7 @@ export default function SettingsPage() {
   };
 
   const currentTheme = THEMES[settings.theme];
+  const isDark = settings.theme === "dark";
 
   return (
     <AppShell
@@ -416,6 +418,11 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+        {/* AI 配置面板 */}
+        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+          <AIConfigPanel isDark={isDark} />
+        </section>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

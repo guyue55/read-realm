@@ -62,6 +62,7 @@ export const strings = {
     aiInputPlaceholder: "问问 AI 助手...",
     send: "发送",
     aiError: "AI 总结失败，请检查后端服务是否启动。",
+    aiNotConfigured: "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。",
     questionCharacters: "解释本章的关键人物关系",
     questionPlots: "这章有哪些重要的情节伏笔？",
     chapterIndexLabel: "第 {index} 章",

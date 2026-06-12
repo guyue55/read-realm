@@ -20,6 +20,7 @@ import { generateAiSigKeyAsync, createId, type ReadingProgress, type Bookmark, t
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { apiUrl, getShareHeaders } from "@/lib/api";
+import { getAIConfigHeaders } from "@/lib/ai-config";
 import { strings } from "@/lib/i18n";
 import {
   loadReaderSettings,
@@ -624,10 +625,10 @@ export function useReader(bookId: string) {
     if (autoFlipTimerRef.current) return;
     autoFlipTargetIndexRef.current =
       typeof targetIndex === "number" ? targetIndex : null;
-    let remaining = 1.5;
+    let remaining = 3;
     setAutoFlipCountdown(remaining);
     autoFlipTimerRef.current = setInterval(() => {
-      remaining = Math.max(0, parseFloat((remaining - 0.1).toFixed(1)));
+      remaining = Math.max(0, parseFloat((remaining - 0.05).toFixed(1)));
       setAutoFlipCountdown(remaining);
       if (remaining <= 0) {
         if (autoFlipTimerRef.current) {
@@ -640,7 +641,7 @@ export function useReader(bookId: string) {
           void handleNextRef.current(autoFlipTargetIndexRef.current ?? undefined);
         }
       }
-    }, 100);
+    }, 50);
   }, []);
   const throttledSetReadingProgressRef = useRef(
     throttle((progress: number) => {
@@ -987,13 +988,13 @@ export function useReader(bookId: string) {
 
       // 触底自动切章逻辑监控
       if (settings.pageMode === "scroll" && settings.autoFlipAtBottom && activeChapterIndex < toc.length - 1) {
-        if (activeChapterRemaining <= 10) {
-          // 触底且未处于倒计时状态，启动倒计时
+        if (activeChapterRemaining <= 5) {
+          // 触发阈值：剩余 ≤ 5px 时才认为真正触底
           if (!autoFlipTimerRef.current) {
             startAutoFlipTimer(activeChapterIndex + 1);
           }
-        } else if (activeChapterRemaining > 30) {
-          // 往上滚动超过 30px，立刻撤销并清除倒计时
+        } else if (activeChapterRemaining > 40) {
+          // 往上滚动超过 40px，立刻撤销并清除倒计时
           if (autoFlipTimerRef.current) {
             clearAutoFlipTimer();
           }
@@ -2080,6 +2081,7 @@ export function useReader(bookId: string) {
         headers: {
           "Content-Type": "application/json",
           ...getShareHeaders(),
+          ...(await getAIConfigHeaders()),
         },
         body: JSON.stringify({
           text: chapter.content,
@@ -2113,6 +2115,55 @@ export function useReader(bookId: string) {
       setAiSummary(generatedSummary);
     } catch (error) {
       console.error("AI Summarize failed:", error);
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setAiSummary(strings.network.offlineAiHint);
+      } else {
+        setAiSummary(strings.reader.aiError);
+      }
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [chapter, bookId]);
+
+
+  const handleAsk = useCallback(async (question: string) => {
+    if (!chapter || !question.trim()) return;
+    setIsAiLoading(true);
+    setActivePanel("ai");
+
+    try {
+      const response = await fetch(apiUrl("/ai/chat"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getShareHeaders(),
+          ...(await getAIConfigHeaders()),
+        },
+        body: JSON.stringify({
+          bookId,
+          chapterIndex: chapter.index,
+          question: question.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 500 && (errorData.message || "").includes("AI_NOT_CONFIGURED")) {
+          setAiSummary(strings.reader.aiNotConfigured || "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。");
+        } else {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+        return;
+      }
+
+      const data = await response.json();
+      // 格式化回答为可读的对话式摘要
+      const formattedAnswer = `💬 **${question.trim()}**
+
+${data.answer || "未能生成回答。"}`;
+      setAiSummary(formattedAnswer);
+    } catch (error) {
+      console.error("AI Chat failed:", error);
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         setAiSummary(strings.network.offlineAiHint);
       } else {
@@ -2371,6 +2422,7 @@ export function useReader(bookId: string) {
     addBookmarkWithNote,
     jumpToBookmark,
     handleSummarize,
+    handleAsk,
     clearAiSession,
     updateFontSize,
     updateTheme,

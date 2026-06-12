@@ -21,7 +21,9 @@ export const DEFAULT_READER_SETTINGS: ReaderSettingsState = {
   uiMode: "default",
   paragraphSpacing: 16,
   letterSpacing: 0.03,
-  autoFlipAtBottom: true,
+  // 默认关闭自动切章：防止滚动阅读时意外跳章，
+  // 用户可手动在阅读设置中开启。
+  autoFlipAtBottom: false,
 };
 
 export function isThemeName(value: unknown): value is ThemeName {

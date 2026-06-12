@@ -71,6 +71,7 @@ export function SettingsSheet({
             >
               <button
                 onClick={() => updateUiMode("default")}
+                aria-pressed={settings.uiMode === "default"}
                 className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                   settings.uiMode === "default"
                     ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
@@ -81,6 +82,7 @@ export function SettingsSheet({
               </button>
               <button
                 onClick={() => updateUiMode("simple")}
+                aria-pressed={settings.uiMode === "simple"}
                 className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                   settings.uiMode === "simple"
                     ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
@@ -135,6 +137,7 @@ export function SettingsSheet({
                   onClick={() =>
                     updateFontFamily(f.key as "kaiti" | "songti" | "heiti")
                   }
+                  aria-pressed={settings.fontFamily === f.key}
                   className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                     settings.fontFamily === f.key
                       ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
@@ -158,7 +161,7 @@ export function SettingsSheet({
               <button
                 key={name}
                 onClick={() => updateTheme(name as ThemeName)}
-                className={`w-8 h-8 rounded-full border-2 transition-all ${
+                className={`w-10 h-10 rounded-full border-2 transition-all ${
                   settings.theme === name
                     ? "border-[#678055] scale-110"
                     : "border-[rgba(80,65,45,0.12)] hover:scale-105"
@@ -180,6 +183,7 @@ export function SettingsSheet({
           >
             <button
               onClick={() => updatePageMode("scroll")}
+              aria-pressed={settings.pageMode === "scroll"}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                 settings.pageMode === "scroll"
                   ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
@@ -190,6 +194,7 @@ export function SettingsSheet({
             </button>
             <button
               onClick={() => updatePageMode("pagination")}
+              aria-pressed={settings.pageMode === "pagination"}
               className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
                 settings.pageMode === "pagination"
                   ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`

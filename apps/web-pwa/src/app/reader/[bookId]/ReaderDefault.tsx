@@ -57,6 +57,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     addBookmark,
     jumpToBookmark,
     handleSummarize,
+    handleAsk,
     updateFontSize,
     updateTheme,
     updatePageMode,
@@ -399,7 +400,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onClick={handleMobileReaderClick}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
-                ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
+                ? "overflow-y-auto overflow-x-hidden"
                 : "overflow-y-auto overflow-x-hidden"
             } transition-all duration-300 ease-out ${
               isPositionRestored
@@ -454,6 +455,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   onClose={() => setActivePanel(null)}
                   aiInput={aiInput}
                   setAiInput={setAiInput}
+                  onAsk={handleAsk}
                   onClearSession={async () => {
                     await clearAiSession();
                     setAiInput("");
@@ -473,12 +475,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 onNext={handleNext}
                 className="mx-auto px-6 pt-12 pb-[120px] md:px-12"
                 style={{
-                  maxWidth: `${readerTokens.layout.desktopContentMaxWidth}px`,
+                  maxWidth: `100%`,
                   fontSize: `${settings.fontSize}px`,
                   lineHeight: settings.lineHeight,
-                  columnWidth: "100%",
-                  columnGap: "48px",
-                  height: "100%",
                   "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
                   "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
                   "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
@@ -557,7 +556,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onTouchEnd={handleContentTouchEnd}
           className={`flex-1 relative reader-gpu-accelerated ${
             isPagination
-              ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
+              ? "overflow-y-auto overflow-x-hidden"
               : "overflow-y-auto overflow-x-hidden"
           } transition-all duration-300 ease-out ${
             isPositionRestored
@@ -577,12 +576,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               onNext={handleNext}
               className="mx-auto px-6 pt-12 pb-[120px]"
               style={{
-                maxWidth: `${readerTokens.layout.tabletContentMaxWidth}px`,
+                maxWidth: `100%`,
                 fontSize: `${settings.fontSize}px`,
                 lineHeight: settings.lineHeight,
-                columnWidth: "100%",
-                columnGap: "48px",
-                height: "100%",
                 "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
                 "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
                 "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
@@ -653,6 +649,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Settings Sheet */}
         <div
+          inert={activePanel !== "settings" ? true : undefined}
+          aria-hidden={activePanel !== "settings"}
           className="fixed bottom-3 inset-x-3 bg-transparent z-50 physics-spring reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
           style={{
             transform: activePanel === "settings" ? "translateY(0)" : "translateY(calc(100% + 24px))"
@@ -675,6 +673,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
         {/* Progress Sheet */}
         <div
+          inert={activePanel !== "progress" ? true : undefined}
+          aria-hidden={activePanel !== "progress"}
           className={`fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl physics-spring reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
           style={{
             transform: activePanel === "progress" ? "translateY(0)" : "translateY(calc(100% + 24px))"
@@ -777,6 +777,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
       {/* TOC Drawer (Shared) */}
       <div
+        inert={activePanel !== "toc" ? true : undefined}
+        aria-hidden={activePanel !== "toc"}
         className="fixed inset-y-0 left-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
@@ -798,6 +800,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
       {/* AI Drawer (Shared) */}
       <div
+        inert={activePanel !== "ai" ? true : undefined}
+        aria-hidden={activePanel !== "ai"}
         className="fixed inset-y-0 right-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
@@ -812,6 +816,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onClose={() => setActivePanel(null)}
           aiInput={aiInput}
           setAiInput={setAiInput}
+          onAsk={handleAsk}
           onClearSession={async () => {
             await clearAiSession();
             setAiInput("");

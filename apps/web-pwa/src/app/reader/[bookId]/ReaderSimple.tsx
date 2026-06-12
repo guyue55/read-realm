@@ -55,6 +55,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
     addBookmark,
     jumpToBookmark,
     handleSummarize,
+    handleAsk,
     updateFontSize,
     updateTheme,
     updatePageMode,
@@ -350,7 +351,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
           onTouchEnd={handleContentTouchEnd}
           className={`flex-1 relative ${
             isPagination
-              ? "overflow-x-auto overflow-y-hidden h-full flex flex-col"
+              ? "overflow-y-auto overflow-x-hidden"
               : "overflow-y-auto overflow-x-hidden"
           } transition-all duration-300 transition-opacity duration-200 ease-out ${
             isPositionRestored ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -480,6 +481,7 @@ export function ReaderSimple({ bookId }: { bookId: string }) {
             onClose={() => setActivePanel(null)}
             aiInput={aiInput}
             setAiInput={setAiInput}
+            onAsk={handleAsk}
             onClearSession={async () => {
               await clearAiSession();
               setAiInput("");

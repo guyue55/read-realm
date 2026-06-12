@@ -135,6 +135,9 @@ importers:
 
   apps/web-pwa:
     dependencies:
+      '@reader/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@reader/gesture-core':
         specifier: workspace:*
         version: link:../../packages/gesture-core

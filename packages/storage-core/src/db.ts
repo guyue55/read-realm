@@ -24,6 +24,16 @@ export interface ImportTask {
   createdAt: string;
 }
 
+export interface LocalAIUserConfig {
+  id: string;
+  encryptedKey: string;
+  encryptedBaseUrl: string;
+  iv: string;
+  model: string;
+  format: string;
+  updatedAt: string;
+}
+
 export interface LocalAIView {
   id: string;
   bookId: string;
@@ -42,6 +52,7 @@ export class ReaderDatabase extends Dexie {
   bookmarks!: Table<Bookmark, string>;
   importTasks!: Table<ImportTask, string>;
   aiViews!: Table<LocalAIView, string>;
+  aiUserConfigs!: Table<LocalAIUserConfig, string>;
 
   librarySources!: Table<LibrarySource, string>;
   libraryFolders!: Table<LibraryFolder, string>;
@@ -83,6 +94,20 @@ export class ReaderDatabase extends Dexie {
       libraryFolders: "id, parentId, sourceId, relativePath",
       indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
       txtChapterIndices: "chapterId, [bookId+index], bookId, index", // 🏮 补全复合索引，彻底修复 SchemaError 崩溃
+    });
+
+    this.version(9).stores({
+      books: "id, title, createdAt, lastReadAt, sourceFolderId",
+      chapters: "id, [bookId+index], bookId, index",
+      progress: "bookId",
+      bookmarks: "id, bookId, chapterIndex",
+      importTasks: "id",
+      aiViews: "id, bookId, chapterIndex, sourceHash",
+      librarySources: "id, type, permissionState, lastScanAt",
+      libraryFolders: "id, parentId, sourceId, relativePath",
+      indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
+      txtChapterIndices: "chapterId, [bookId+index], bookId, index",
+      aiUserConfigs: "id", // 🏮 AI 用户配置加密存储
     });
 
     // 挂载 Dexie AOP 拦截 Hook：当用户进行任何增删改书籍、进度或书签操作时，

@@ -63,6 +63,39 @@ export class OpenAIProvider {
     return trimmed;
   }
 
+
+  /**
+   * 针对章节内容回答用户问题
+   */
+  async chat(
+    content: string,
+    question: string,
+    model: string = "gpt-3.5-turbo",
+  ): Promise<string> {
+    const trimmedText = this.trimChapterText(content);
+
+    const response = await this.client.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: "system",
+          content:
+            "你是一位博学的阅读伴读助手。请根据以下章节内容，用中文回答读者的问题。回答应简洁、准确、有启发性。",
+        },
+        {
+          role: "user",
+          content: `以下是一本书的章节内容：
+
+${trimmedText}
+
+读者的问题是：${question}`,
+        },
+      ],
+    });
+
+    return response.choices[0]?.message?.content || "未能生成回答。";
+  }
+
   async generateSummary(
     text: string,
     model: string = "gpt-3.5-turbo",
