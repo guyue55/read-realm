@@ -198,6 +198,9 @@ export default function ImportPage() {
       let taskId = "";
       let bookId = "";
       const now = new Date().toISOString();
+      // 内存累积所有章节分片，FINISHED 时整批落库，消除 requestIdleCallback 竞态
+      const accumulatedChapters: { id: string; bookId: string; index: number; title: string; content: string; wordCount: number; createdAt: string; updatedAt: string }[] = [];
+      let accumulatedWordCount = 0;
       
       worker.onmessage = async (e) => {
         const { type: msgType, success, error } = e.data;
@@ -256,37 +259,33 @@ export default function ImportPage() {
             };
           });
 
-          const appendAction = async () => {
-            try {
-              await db.transaction("rw", db.importTasks, async () => {
-                const task = await db.importTasks.get(taskId);
-                if (task) {
-                  task.chapters.push(...formattedChapters);
-                  if (isFinished) {
-                    task.bookMetadata.wordCount = task.chapters.reduce(
-                      (sum, ch) => sum + (ch.content ? ch.content.length : 0),
-                      0,
-                    );
-                  }
-                  await db.importTasks.put(task);
-                }
-              });
-            } catch (err) {
-              console.error("分片追加落库发生异常:", err);
-            }
-          };
-
-          if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-            window.requestIdleCallback(async () => {
-              await appendAction();
-            });
-          } else {
-            await appendAction();
+          // 内存累积章节分片，FINISHED 时整批落库，消除 requestIdleCallback 竞态
+          accumulatedChapters.push(...formattedChapters);
+          if (isFinished) {
+            accumulatedWordCount = accumulatedChapters.reduce(
+              (sum, ch) => sum + (ch.content ? ch.content.length : 0),
+              0,
+            );
           }
 
         } else if (msgType === "FINISHED") {
           worker.terminate();
           workerRef.current = null;
+
+          // 一次性将所有章节写入 DB，确保导航前数据已完整落库
+          try {
+            await db.transaction("rw", db.importTasks, async () => {
+              const task = await db.importTasks.get(taskId);
+              if (task) {
+                task.chapters = accumulatedChapters;
+                task.bookMetadata.wordCount = accumulatedWordCount;
+                await db.importTasks.put(task);
+              }
+            });
+          } catch (err) {
+            console.error("章节整批入库异常:", err);
+          }
+
           setStatus("完美解析完成！");
           activeTaskIdRef.current = null;
           router.push(`/import/preview/${taskId}`);
@@ -766,7 +765,14 @@ export default function ImportPage() {
       });
     } catch (e) {
       const error = e as Error;
-      setStatus(`URL 解析失败: ${error.message}`);
+      const message = error.message || "未知错误";
+      if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+        setStatus("网络请求失败：目标网站拒绝跨域访问，且后端代理未启动。请确认 API 服务运行于端口 4000。");
+      } else if (message.includes("章节内容")) {
+        setStatus(message);
+      } else {
+        setStatus(`URL 解析失败: ${message}`);
+      }
       setIsProcessing(false);
     }
   };
