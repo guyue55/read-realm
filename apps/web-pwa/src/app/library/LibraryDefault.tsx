@@ -929,6 +929,19 @@ export function LibraryDefault() {
           try {
             setSyncStepText(`正在备份「${book.title}」至云阁...`);
             const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
+            
+            // 若本地章节缓存为空且为本地文件系统类型书籍，触发强制解析，确保云端存有完整章节
+            if (chapters.length === 0 && (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book")) {
+              try {
+                setSyncStepText(`正在解析「${book.title}」...`);
+                await cacheEntireBook(book.id);
+                const parsedChapters = await db.chapters.where("bookId").equals(book.id).toArray();
+                chapters.push(...parsedChapters);
+                console.log(`[Sync] 上传前预解析完成:「${book.title}」共 ${parsedChapters.length} 章。`);
+              } catch (parseErr) {
+                console.warn(`[Sync] 上传前预解析「${book.title}」失败，将以无章节状态上传:`, parseErr);
+              }
+            }
             const progress = await db.progress.get(book.id);
             const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
             
@@ -997,7 +1010,6 @@ export function LibraryDefault() {
               }
 
               await db.books.put(book);
-              // 反序列化云端进度落库，打通跨设备重现
               if (book.lastReadProgress) {
                 try {
                   const parsedProgress = JSON.parse(book.lastReadProgress);
@@ -1008,6 +1020,46 @@ export function LibraryDefault() {
               }
             });
 
+
+            // 同步拉取云阁章节内容，避免同步后「查看」出现 404 白屏
+            try {
+              setSyncStepText(`正在下载「${book.title}」章节内容...`);
+              const chaptersRes = await fetch(apiUrl(`/books/${book.id}/chapters`), {
+                headers: getShareHeaders(),
+              });
+              if (chaptersRes.ok) {
+                const remoteChapters = await chaptersRes.json();
+                if (remoteChapters.length > 0) {
+                  await db.transaction("rw", [db.chapters], async () => {
+                    for (const chap of remoteChapters) {
+                      const transformed = {
+                        id: chap.id ? chap.id.split("#")[0] : `${book.id}-${chap.index !== undefined ? chap.index : chap.chapterIndex}`,
+                        bookId: book.id,
+                        index: chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0),
+                        title: chap.title || chap.name || `第 ${(chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0)) + 1} 章`,
+                        content: chap.content || chap.body || chap.text || "",
+                      };
+                      await db.chapters.put(transformed);
+                    }
+                  });
+                  console.log(`[Sync] 已拉取「${book.title}」的 ${remoteChapters.length} 个章节。`);
+                } else {
+                  console.warn(`[Sync] 云阁中「${book.title}」暂无章节内容，该书可能仅同步了元数据。`);
+                // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
+                if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
+                  await db.books.update(book.id, { parseStatus: "not_parsed" });
+                }
+                }
+              } else {
+                console.warn(`[Sync] 无法从云阁拉取「${book.title}」的章节内容: HTTP ${chaptersRes.status}`);
+              }
+            } catch (chaptersErr) {
+              console.warn(`[Sync] 拉取「${book.title}」章节时网络异常:`, chaptersErr);
+              if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
+                try { await db.books.update(book.id, { parseStatus: "not_parsed" }); } catch {}
+              }
+              // 不阻断：章节缺失不触发整书同步失败
+            }
             // 任务完结，清除落盘记录
             const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
             delete nextTasks[book.id];
@@ -1235,7 +1287,18 @@ export function LibraryDefault() {
 
   // 单书快捷备份 (细粒度隔离进度状态)
   const handleSingleUpload = async (book: Book) => {
-    if (isSyncing || syncingBookId || !isOnline || syncMutexRef.current) return;
+    if (syncMutexRef.current) {
+      setToastMsg("⏳ 上一项同步操作尚未完成，请稍后再试。");
+      return;
+    }
+    if (isSyncing || syncingBookId) {
+      setToastMsg("⏳ 全量同步正在进行中，请等待完成后再拉取单本书籍。");
+      return;
+    }
+    if (!isOnline) {
+      setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
+      return;
+    }
     syncMutexRef.current = true;
     setSyncingBookId(book.id);
     setIsSyncing(true);
@@ -1251,6 +1314,19 @@ export function LibraryDefault() {
       localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
 
       const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
+            
+            // 若本地章节缓存为空且为本地文件系统类型书籍，触发强制解析，确保云端存有完整章节
+            if (chapters.length === 0 && (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book")) {
+              try {
+                setSyncStepText(`正在解析「${book.title}」...`);
+                await cacheEntireBook(book.id);
+                const parsedChapters = await db.chapters.where("bookId").equals(book.id).toArray();
+                chapters.push(...parsedChapters);
+                console.log(`[Sync] 上传前预解析完成:「${book.title}」共 ${parsedChapters.length} 章。`);
+              } catch (parseErr) {
+                console.warn(`[Sync] 上传前预解析「${book.title}」失败，将以无章节状态上传:`, parseErr);
+              }
+            }
       const progress = await db.progress.get(book.id);
       const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
       const bookWithProgress = { ...book, lastReadProgress };
@@ -1301,11 +1377,18 @@ export function LibraryDefault() {
 
   // 单书快捷拉取 (物理还原进度快照)
   const handleSingleDownload = async (book: Book & { lastReadProgress?: string }) => {
-    if (!navigator.onLine) {
+    if (syncMutexRef.current) {
+      setToastMsg("⏳ 上一项同步操作尚未完成，请稍后再试。");
+      return;
+    }
+    if (isSyncing || syncingBookId) {
+      setToastMsg("⏳ 全量同步正在进行中，请等待完成后再拉取单本书籍。");
+      return;
+    }
+    if (!navigator.onLine || !isOnline) {
       setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
       return;
     }
-    if (isSyncing || syncingBookId || !isOnline || syncMutexRef.current) return;
     syncMutexRef.current = true;
     setSyncingBookId(book.id);
     setIsSyncing(true);
@@ -1333,6 +1416,22 @@ export function LibraryDefault() {
       });
       if (res.ok) {
         const chapters = await res.json();
+
+        if (chapters.length === 0) {
+          console.warn(`[Download] 云阁中「${book.title}」暂无章节内容，该书章节可能未完成初次上传。`);
+          if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
+            setToastMsg("📂 此书的章节内容源自本地文件系统，需在原设备上打开一次阅读器完成解析后重新同步，方可在其他设备拉取。");
+          } else {
+            setToastMsg("💡 云阁中暂无此书的章节内容，请确认原设备已完成章节同步上传。");
+          }
+          // 不落库空章节，但仍存储元数据供书架展示
+          await db.books.put(book);
+          // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
+          if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
+            await db.books.update(book.id, { parseStatus: "not_parsed" });
+          }          await fetchCloudBooks();
+          return;
+        }
         for (let p = 40; p <= 100; p += 20) {
           setBookSyncStates((prev) => ({
             ...prev,
@@ -1355,8 +1454,8 @@ export function LibraryDefault() {
           }
 
           await db.books.put(book);
-          for (const chap of chapters) {
             // 🏮 核心适配转换层：对准后端异构字段，抵抗变更，保障未来接口防腐性
+          for (const chap of chapters) {
             const transformed = {
               id: chap.id ? chap.id.split("#")[0] : `${book.id}-${chap.index !== undefined ? chap.index : chap.chapterIndex}`,
               bookId: book.id,

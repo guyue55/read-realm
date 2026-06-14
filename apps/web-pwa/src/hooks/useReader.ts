@@ -1251,8 +1251,9 @@ export function useReader(bookId: string) {
 
         if (!c && typeof window !== "undefined" && navigator.onLine) {
           try {
+            const headers = getShareHeaders();
             const res = await fetch(apiUrl(`/books/${id}/chapters/${index}`), {
-              headers: getShareHeaders(),
+              headers,
             });
             if (res.ok) {
               const remoteChapter = await res.json();
@@ -1261,9 +1262,13 @@ export function useReader(bookId: string) {
                 await db.chapters.put(transformed);
                 c = transformed;
               }
+            } else if (res.status === 401 || res.status === 403) {
+              console.error(`[Reader] 云端鉴权失败 (HTTP ${res.status})，请检查分享令牌是否已配置。`);
+            } else {
+              console.error(`[Reader] 云端章节拉取失败: HTTP ${res.status}`);
             }
           } catch (err) {
-            console.error("按需懒加载章节失败:", err);
+            console.error("[Reader] 按需懒加载章节网络异常:", err);
           }
         }
         return c
@@ -1321,6 +1326,15 @@ export function useReader(bookId: string) {
 
       setBook(b);
 
+      // 安全网：若 parseStatus 标记为已解析但本地章节为空（同步后数据不一致），重置并重新解析
+      if (b.parseStatus !== "not_parsed" && b.sourceType === "folder_index") {
+        const chapterCount = await db.chapters.where("bookId").equals(bookId).count();
+        if (chapterCount === 0) {
+          console.warn("[useReader] 检测到 parseStatus 与实际章节数不一致，重置为 not_parsed 并尝试重新解析。");
+          await db.books.update(bookId, { parseStatus: "not_parsed" });
+          b.parseStatus = "not_parsed";
+        }
+      }
       if (b.parseStatus === "not_parsed" && b.sourceType === "folder_index") {
         try {
           await autoParseAndCacheTxtBook(b);
@@ -1344,6 +1358,14 @@ export function useReader(bookId: string) {
       const currentChapter = reader.getCurrentChapter();
       
       if (!currentChapter) {
+        const chaptersInDb = await db.chapters.where("bookId").equals(bookId).count();
+        if (chaptersInDb === 0) {
+          // 检查此书是否为云端同步书（sourceType === "upload" 且本地无章节）
+          if ((b.sourceType === "upload" || b.sourceType === "folder_index" || b.sourceType === "folder_multi_file_book") && typeof navigator !== "undefined" && navigator.onLine) {
+            throw new Error("此书为云端藏书，请先在书阁中点击「拉取」下载章节内容，或确认网络连接正常后重试。");
+          }
+          throw new Error(strings.reader?.noChapters || "此藏书尚无章节内容或加载失败，请返回书阁拉取章节。");
+        }
         throw new Error(strings.reader?.noChapters || "此藏书尚无章节内容或加载失败");
       }
 
