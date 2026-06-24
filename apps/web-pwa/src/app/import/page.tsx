@@ -3,7 +3,7 @@
 import { AppShell } from "@/components/AppShell";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { apiUrl } from "@/lib/api";
-import { strings } from "@/lib/i18n";
+import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
 import type { ParsedBook } from "@reader/parser-core";
@@ -295,12 +295,11 @@ export default function ImportPage() {
       worker.onerror = (e) => {
         worker.terminate();
         workerRef.current = null;
-        setStatus(`解析异常: ${e.message}`);
+        setStatus(`解析异常: ${describeAppError(e.message)}`);
         setIsProcessing(false);
       };
     } catch (e) {
-      const error = e as Error;
-      setStatus(`解析失败: ${error.message}`);
+      setStatus(`解析失败: ${describeAppError(e)}`);
       setIsProcessing(false);
     }
   };
@@ -444,15 +443,14 @@ export default function ImportPage() {
       worker.onerror = (e) => {
         worker.terminate();
         setBatchTasks((prev) =>
-          prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `异常: ${e.message}` } : t))
+          prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `异常: ${describeAppError(e.message)}` } : t))
         );
         void processNextBatchItem();
       };
 
     } catch (err) {
-      const error = err as Error;
       setBatchTasks((prev) =>
-        prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `读取失败: ${error.message}` } : t))
+        prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `读取失败: ${describeAppError(err)}` } : t))
       );
       void processNextBatchItem();
     }
@@ -481,8 +479,7 @@ export default function ImportPage() {
       setPreviewTree(rootNode);
       setScanStatus("✨ 画卷展开完成！您可以微调类型判定，随后一键确认落墨入库。");
     } catch (err) {
-      const error = err as Error;
-      setScanStatus(`❌ 授权或扫描中断: ${error.message}`);
+      setScanStatus(`❌ 授权或扫描中断: ${describeAppError(err)}`);
     }
   };
 
@@ -706,8 +703,7 @@ export default function ImportPage() {
       }, 1500);
 
     } catch (err) {
-      const error = err as Error;
-      setScanStatus(`❌ 数据库写入断点: ${error.message}`);
+      setScanStatus(`❌ 数据库写入断点: ${describeAppError(err)}`);
     }
   };
 
@@ -765,7 +761,7 @@ export default function ImportPage() {
       });
     } catch (e) {
       const error = e as Error;
-      const message = error.message || "未知错误";
+      const message = describeAppError(error) || "未知错误";
       if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
         setStatus("网络请求失败：目标网站拒绝跨域访问，且后端代理未启动。请确认 API 服务运行于端口 4000。");
       } else if (message.includes("章节内容")) {
