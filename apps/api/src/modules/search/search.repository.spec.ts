@@ -32,7 +32,7 @@ describe('SearchRepository', () => {
     repository = module.get<SearchRepository>(SearchRepository);
   });
 
-  it('should search books using MATCH', async () => {
+  it('should search books using MATCH for default library scope', async () => {
     db.all.mockResolvedValueOnce([{ id: '1' }]);
     db.query.books.findMany.mockResolvedValueOnce([{ id: '1', title: 'Test' }]);
 
@@ -54,5 +54,18 @@ describe('SearchRepository', () => {
     const result = await repository.searchBooks('Nothing');
     expect(result).toEqual([]);
     expect(db.query.books.findMany).not.toHaveBeenCalled();
+  });
+
+  it('should only return books for the requested share token', async () => {
+    db.all.mockResolvedValueOnce([
+      { id: '1' },
+      { id: '2#friend' },
+      { id: '3#other' },
+    ]);
+    db.query.books.findMany.mockResolvedValueOnce([{ id: '2#friend', title: 'Shared' }]);
+
+    const result = await repository.searchBooks('Shared', 'friend');
+
+    expect(result).toEqual([{ id: '2', title: 'Shared' }]);
   });
 });
