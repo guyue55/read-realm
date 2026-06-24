@@ -21,6 +21,8 @@ describe('BookRepository', () => {
         const tx = {
           insert: jest.fn().mockReturnThis(),
           values: jest.fn().mockResolvedValue(undefined),
+          delete: jest.fn().mockReturnThis(),
+          where: jest.fn().mockResolvedValue(undefined),
         };
         return await cb(tx);
       }),
@@ -70,6 +72,8 @@ describe('BookRepository', () => {
       capturedTx = {
         insert: jest.fn().mockReturnThis(),
         values: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockReturnThis(),
+        where: jest.fn().mockResolvedValue(undefined),
       };
       await cb(capturedTx);
     });
