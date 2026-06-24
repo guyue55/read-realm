@@ -209,17 +209,28 @@ export class BookRepository {
     shareToken: string = 'default',
     sourceFolderId?: string | null,
   ) {
-    const dbBookId =
-      shareToken === 'default' ? bookId : `${bookId}#${shareToken}`;
-    await this.db
-      .update(schema.books)
-      .set({
-        lastReadProgress,
-        lastReadAt,
-        updatedAt: new Date().toISOString(),
-        ...(sourceFolderId !== undefined ? { sourceFolderId } : {}),
-      })
-      .where(eq(schema.books.id, dbBookId));
+    const isDefault = shareToken === 'default';
+    const dbBookId = isDefault ? bookId : `${bookId}#${shareToken}`;
+    const patch = {
+      lastReadProgress,
+      lastReadAt,
+      updatedAt: new Date().toISOString(),
+      ...(sourceFolderId !== undefined ? { sourceFolderId } : {}),
+    };
+    // 🏮 默认书架同时兼容历史 `${bookId}#default` 写入，避免老数据丢失进度。
+    if (isDefault) {
+      await this.db
+        .update(schema.books)
+        .set(patch)
+        .where(
+          or(eq(schema.books.id, bookId), eq(schema.books.id, `${bookId}#default`)),
+        );
+    } else {
+      await this.db
+        .update(schema.books)
+        .set(patch)
+        .where(eq(schema.books.id, dbBookId));
+    }
   }
 
   async clearAllBooks(shareToken: string) {
