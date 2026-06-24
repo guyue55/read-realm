@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { strings } from "@/lib/i18n";
+import { buildReaderHtml } from "@/lib/reader-html";
 
 export interface ReaderContentProps {
   title: string;
@@ -37,28 +38,8 @@ export const ReaderContent = memo(
     const containerSpacingClass =
       buttonVariant === "simple" ? "mt-12" : "mt-16";
 
-    const processedContent = React.useMemo(() => {
-      const hasHtmlParagraphs = /<p\b|<div\b/i.test(content);
-      let idx = 0;
-      if (!hasHtmlParagraphs) {
-        // Raw plain text with newlines (e.g. from TXT files)
-        const lines = content.split(/\r?\n/);
-        return lines
-          .map((line) => {
-            const trimmed = line.trim();
-            if (trimmed.length === 0) return "";
-            return `<p data-idx="${idx++}">${trimmed}</p>`;
-          })
-          .filter(Boolean)
-          .join("");
-      } else {
-        // Existing HTML paragraphs (e.g. from EPUB/HTML files)
-        // Decorate existing <p> tags with data-idx attribute
-        return content.replace(/<p([\s>])/gi, (_, suffix) => {
-          return `<p data-idx="${idx++}"${suffix}`;
-        });
-      }
-    }, [content]);
+    // 🏮 统一走 reader-html 工具：TXT 原文做 HTML 转义，已是 HTML 段落则只补 data-idx，避免 <script> 类内容被直接 inline。
+    const processedContent = React.useMemo(() => buildReaderHtml(content), [content]);
 
     if (isPagination) {
       const titleClassAttr = titleClassName ? `class="${titleClassName}"` : "";
@@ -208,4 +189,3 @@ export const ReaderContent = memo(
 );
 
 ReaderContent.displayName = "ReaderContent";
-

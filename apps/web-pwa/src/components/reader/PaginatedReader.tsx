@@ -11,6 +11,7 @@ import {
   PAGE_GAP,
 } from '@reader/reader-core';
 import { readerTokens } from '@reader/shared-types';
+import { buildReaderHtml } from '@/lib/reader-html';
 
 export interface PaginatedReaderProps {
   title: string;
@@ -73,7 +74,13 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       if (containerWidth <= 0 || containerHeight <= 0 || !content) {
         return { pages: [] as PaginationPage[], totalPages: 0 };
       }
-      const fullHtml = `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;">${title}</h1>${content}`;
+      // 🏮 先把 TXT/HTML 段落归一化为带 data-idx 的安全 HTML，避免 TXT 中的 <>& 字符被当作真实标签注入分栏视图。
+      const safeBody = buildReaderHtml(content);
+      const safeTitle = title
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const fullHtml = `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;">${safeTitle}</h1>${safeBody}`;
       return paginateContentAdaptive(fullHtml, containerWidth, containerHeight, style);
     }, [content, title, containerWidth, containerHeight, style, fontSize]);
 
