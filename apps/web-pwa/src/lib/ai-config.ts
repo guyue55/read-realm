@@ -20,6 +20,7 @@ import {
   DEFAULT_AI_CONFIG,
   hasAIConfig,
 } from '@reader/ai-core';
+import { apiUrl } from './api';
 
 export type { AIUserConfig };
 export { hasAIConfig, DEFAULT_AI_CONFIG, generateDeviceFingerprint };
@@ -116,7 +117,8 @@ export async function isAIAvailable(): Promise<{
 
   // 检查后端是否有全局 AI 配置
   try {
-    const response = await fetch('/api/ai/status');
+    // 直接走 apiUrl() 指向真实后端，避免相对路径在 PWA / 多端壳里被 Service Worker 误导致 404。
+    const response = await fetch(apiUrl('/ai/status'));
     if (response.ok) {
       const data = await response.json();
       if (data.available) {
