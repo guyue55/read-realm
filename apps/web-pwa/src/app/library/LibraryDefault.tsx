@@ -2429,6 +2429,7 @@ export function LibraryDefault() {
               return (
                 <div
                   key={book.id}
+                  data-book-id={book.id}
                   onClick={() => {
                     if (isCloudOnly) {
                       handleSingleDownload(book);
@@ -2789,6 +2790,7 @@ export function LibraryDefault() {
               return (
                 <div
                   key={book.id}
+                  data-book-id={book.id}
                   onClick={() => {
                     if (isCloudOnly) {
                       handleSingleDownload(book);

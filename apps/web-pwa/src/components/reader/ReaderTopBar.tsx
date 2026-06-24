@@ -156,6 +156,7 @@ export function ReaderTopBar({
             onClick={onToggleToc}
             className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center gap-1"
             title="展开目录"
+            aria-label="展开目录"
           >
             ☰ {strings.reader.toc}
           </button>
@@ -164,6 +165,7 @@ export function ReaderTopBar({
           onClick={onBookmark}
           className="text-sm font-medium text-[#678055] hover:text-[#5F7D52] transition-colors active:scale-95"
           title="添加书签"
+          aria-label="添加书签"
         >
           + {strings.reader.bookmark}
         </button>
@@ -172,6 +174,7 @@ export function ReaderTopBar({
             onClick={onToggleAi}
             className="text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] transition-colors active:scale-95 flex items-center gap-1"
             title="智能阅读助手"
+            aria-label="智能阅读助手"
           >
             ✨ {strings.reader.aiSummary}
           </button>

@@ -10,13 +10,12 @@ test.describe("我的阅读世界 - 阅读页 (Reader Page) 极致 UI & 交互 E
 
   test.beforeEach(async ({ page }) => {
     await page.goto("/library");
-    const firstBookLink = page
-      .locator("a[href^='/reader/']")
-      .first();
-    if ((await firstBookLink.count()) === 0) {
+    // 书架卡片用的是 `router.push` 而非 <a>，全部书卡都挂了 data-book-id。
+    const firstCard = page.locator("[data-book-id]").first();
+    if ((await firstCard.count()) === 0) {
       test.skip(true, "书架为空，跳过阅读页 E2E（请先导入任意一本书或注入夹具）");
     }
-    await firstBookLink.click();
+    await firstCard.click();
     await page.waitForSelector(".reader-content p[data-idx]");
   });
 

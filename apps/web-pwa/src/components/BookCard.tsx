@@ -20,7 +20,10 @@ export function BookCard({
   onSpaceOffload,
 }: BookCardProps) {
   return (
-    <div className="bg-white p-6 rounded-[20px] shadow-[0_4px_16px_rgba(80,65,45,0.06)] border border-[rgba(80,65,45,0.08)] flex flex-col justify-between hover:shadow-[0_8px_24px_rgba(80,65,45,0.12)] transition-shadow">
+    <div
+      data-book-id={book.id}
+      className="bg-white p-6 rounded-[20px] shadow-[0_4px_16px_rgba(80,65,45,0.06)] border border-[rgba(80,65,45,0.08)] flex flex-col justify-between hover:shadow-[0_8px_24px_rgba(80,65,45,0.12)] transition-shadow"
+    >
       <div>
         <div className="flex justify-between items-start gap-2 mb-2">
           <h3 className="font-bold text-lg line-clamp-2 text-[#2F2A24]">
@@ -79,4 +82,3 @@ export function BookCard({
     </div>
   );
 }
-
