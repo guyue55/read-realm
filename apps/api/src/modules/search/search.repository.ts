@@ -8,7 +8,11 @@ import { inArray, sql } from 'drizzle-orm';
 export class SearchRepository {
   constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
-  async searchBooks(query: string, shareToken: string) {
+  /**
+   * 在「默认书架」与「分享书架」之间做物理隔离的全文检索。
+   * shareToken 缺省时按默认书架（无后缀或以 #default 结尾）过滤，避免把其他人的私享书一起返回。
+   */
+  async searchBooks(query: string, shareToken: string = 'default') {
     if (!query) return [];
 
     const results = await this.db.all<{ id: string }>(sql`
@@ -22,7 +26,7 @@ export class SearchRepository {
     if (ids.length === 0) return [];
 
     // Filter IDs matching current shareToken scoping in memory
-    const isDefault = shareToken === 'default';
+    const isDefault = !shareToken || shareToken === 'default';
     const filteredIds = ids.filter((id) => {
       if (isDefault) {
         return id.endsWith('#default') || !id.includes('#');
