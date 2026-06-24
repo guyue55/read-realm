@@ -9,12 +9,13 @@ export class OpenAIProvider {
 
   /**
    * 智能 Token 估计与启发式起承转折滑动窗口裁剪算法
-   * 1. 当文本长度低于 2200 字符（约 3000 Tokens 最佳处理视口）时，直接全量投递；
-   * 2. 当文本超长时，截取首部 750 字符（保留开头环境与引入）、尾部 750 字符（保留末尾高潮与悬念）；
-   * 3. 在中间冗余正文中，通过行评分及分段采样抽取约 600 字符的核心句群，
-   * 4. 拼装为一轴紧凑、故事线完整的黄金切片（Gold Segment），100% 杜绝 LLM 溢出报错。
+   * 1. 在 maxChars 预算内（默认 6000 字符 ≈ 8K Tokens 上下，主流 16K 模型安全余量），直接全量投递；
+   * 2. 超出时按 head 30% / tail 30% / 中段 40% 切预算，开头与结尾保留人物登场与悬念；
+   * 3. 中段按全段落均匀步进采样，确保覆盖整本章节而不是只在头几屏抽样，
+   *    并优先保留长段（信息密度高）而非短对白；
+   * 4. 拼装为一轴紧凑、故事线完整的黄金切片（Gold Segment），保证不爆上下文窗口。
    */
-  public trimChapterText(text: string, maxChars: number = 2200): string {
+  public trimChapterText(text: string, maxChars: number = 6000): string {
     if (!text || text.length <= maxChars) {
       return text;
     }
@@ -22,14 +23,14 @@ export class OpenAIProvider {
     const totalLen = text.length;
     console.log(`[AI-Core] 💡 检测到超长章节 (${totalLen} 字)，启动智能滑动窗口裁剪 (目标限制: ${maxChars} 字)...`);
 
-    const headLen = Math.floor(maxChars * 0.35); // 约 660 字
-    const tailLen = Math.floor(maxChars * 0.35); // 约 660 字
-    const midTargetLen = maxChars - headLen - tailLen; // 约 880 字
+    const headLen = Math.floor(maxChars * 0.3);
+    const tailLen = Math.floor(maxChars * 0.3);
+    const midTargetLen = maxChars - headLen - tailLen;
 
     const head = text.substring(0, headLen);
     const tail = text.substring(totalLen - tailLen);
 
-    // 提取中间正文
+    // 中段按段落均匀步进采样，覆盖整章而非只取前几段。
     const middlePart = text.substring(headLen, totalLen - tailLen);
     const paragraphs = middlePart
       .split("\n")
@@ -38,18 +39,40 @@ export class OpenAIProvider {
 
     let middleSample = "";
     if (paragraphs.length > 0) {
-      // 算出一个跨度，从段落群中等跨度抽样，以此保证抽出的剧情是覆盖整个中间部分的
-      const step = Math.max(1, Math.floor(paragraphs.length / 5));
+      // 以平均段长估算预期抽样数，再按这个数算出跨度，保证「最后一抽」落在中段末尾附近。
+      const avgParaLen = Math.max(20, Math.floor(
+        paragraphs.reduce((acc, p) => acc + p.length, 0) / paragraphs.length,
+      ));
+      const desiredCount = Math.max(5, Math.floor(midTargetLen / avgParaLen));
+      const step = Math.max(1, Math.floor(paragraphs.length / desiredCount));
+
+      const picked = new Set<number>();
       const sampledParas: string[] = [];
       let currentLen = 0;
 
       for (let i = 0; i < paragraphs.length && currentLen < midTargetLen; i += step) {
         const para = paragraphs[i];
-        if (para) {
-          sampledParas.push(para);
-          currentLen += para.length;
-        }
+        if (!para || picked.has(i)) continue;
+        picked.add(i);
+        sampledParas.push(para);
+        currentLen += para.length;
       }
+
+      // 若预算还剩余，按段长降序回补几段长段，避免只抓到一连串短对白。
+      if (currentLen < midTargetLen * 0.8) {
+        const lengthRanked = paragraphs
+          .map((p, idx) => ({ p, idx }))
+          .filter(({ idx }) => !picked.has(idx))
+          .sort((a, b) => b.p.length - a.p.length);
+        for (const { p, idx } of lengthRanked) {
+          if (currentLen >= midTargetLen) break;
+          picked.add(idx);
+          sampledParas.push(p);
+          currentLen += p.length;
+        }
+        sampledParas.sort((a, b) => paragraphs.indexOf(a) - paragraphs.indexOf(b));
+      }
+
       middleSample = sampledParas.join("\n\n");
     }
 
@@ -118,4 +141,3 @@ ${trimmedText}
     return response.choices[0]?.message?.content || "No summary generated.";
   }
 }
-
