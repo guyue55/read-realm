@@ -164,3 +164,36 @@ export const strings = {
 };
 
 export type Strings = typeof strings;
+
+/**
+ * 🏮 把 shared-types 中的 `AppErrorCode` 翻译成可读中文文案。
+ * 解析、网络、AI、同步等链路抛出的 Error.message 若刚好是 AppErrorCode，
+ * UI 层用 `describeAppError(err)` 就能拿到一句友好提示；否则原样返回 message。
+ */
+const APP_ERROR_MESSAGES: Record<string, string> = {
+  FILE_TOO_LARGE: "文件超出本地处理上限，请尝试拆分后再导入。",
+  UNSUPPORTED_FORMAT: "暂不支持该格式，目前仅支持 TXT 与 EPUB。",
+  ENCODING_DETECT_FAILED: "无法识别文本编码，请尝试转码为 UTF-8 或 GBK 后再导入。",
+  CHAPTER_PARSE_FAILED: "章节切分失败，原文档可能没有规范的章节结构。",
+  EPUB_PARSE_FAILED: "EPUB 解析失败，文件可能已损坏或加密。",
+  URL_CORS_BLOCKED: "目标站点拒绝跨域抓取，可尝试改用后端兜底解析或导出原文后再导入。",
+  URL_DYNAMIC_RENDER_REQUIRED: "页面依赖前端渲染，静态抓取拿不到正文。",
+  SOURCE_RATE_LIMITED: "源站访问过于频繁，请稍后再试。",
+  AI_QUOTA_EXCEEDED: "AI 配额已用尽，请检查账户余额或更换密钥。",
+  SYNC_CONFLICT: "云端与本地数据冲突，请在设置中手动选择保留版本。",
+  STORAGE_QUOTA_EXCEEDED: "本地存储空间不足，可在书阁中释放部分书籍后再试。",
+  NETWORK_OFFLINE: "网络不可用，请检查后再试。",
+  TASK_TIMEOUT: "任务执行超时，已自动中止。",
+  TASK_CANCELLED: "任务已被取消。",
+};
+
+export function describeAppError(err: unknown): string {
+  if (err instanceof Error) {
+    const mapped = APP_ERROR_MESSAGES[err.message];
+    return mapped ?? err.message;
+  }
+  if (typeof err === "string") {
+    return APP_ERROR_MESSAGES[err] ?? err;
+  }
+  return "未知错误，请稍后再试。";
+}
