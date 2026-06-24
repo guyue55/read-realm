@@ -134,14 +134,33 @@ function assertPublicUrl(rawUrl: string) {
   }
 
   const host = url.hostname.toLowerCase();
-  if (
-    host === 'localhost' ||
-    host.endsWith('.local') ||
-    host === '0.0.0.0' ||
+  // 🏮 SSRF 兜底名单：不让用户粘贴的 URL 探查本机/内网/链路本地/IPv6 回环与 ULA。
+  const isIpv6Literal = host.startsWith('[') && host.endsWith(']');
+  const bareHost = isIpv6Literal ? host.slice(1, -1) : host;
+  const isPrivateIpv4 =
     host.startsWith('127.') ||
     host.startsWith('10.') ||
     host.startsWith('192.168.') ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    host.startsWith('169.254.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+  const isPrivateIpv6 =
+    bareHost === '::1' ||
+    bareHost === '::' ||
+    bareHost.startsWith('fc') ||
+    bareHost.startsWith('fd') ||
+    bareHost.startsWith('fe80:') ||
+    bareHost.startsWith('::ffff:127.') ||
+    bareHost.startsWith('::ffff:10.') ||
+    bareHost.startsWith('::ffff:192.168.') ||
+    bareHost.startsWith('::ffff:169.254.');
+  if (
+    host === 'localhost' ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    host === '0.0.0.0' ||
+    host === 'broadcasthost' ||
+    isPrivateIpv4 ||
+    isPrivateIpv6
   ) {
     throw new BadRequestException('后端兜底解析不访问本机或内网地址');
   }
