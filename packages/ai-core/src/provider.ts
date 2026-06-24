@@ -132,12 +132,12 @@ ${trimmedText}
         {
           role: "system",
           content:
-            "You are a helpful assistant that summarizes book chapters. Provide a concise summary of the following text in Chinese (中文). Highlight key characters, main plot points, and the ending hook.",
+            "你是一位资深的中文小说阅读伴读。请用中文为下文章节生成一段简明扼要的内容总结，依次涵盖：主要人物、关键剧情走向、本章结尾的悬念与情绪铺垫。语言务求自然、易读，避免堆砌套话与英文术语。",
         },
         { role: "user", content: trimmedText },
       ],
     });
 
-    return response.choices[0]?.message?.content || "No summary generated.";
+    return response.choices[0]?.message?.content || "未能生成本章总结。";
   }
 }
