@@ -15,9 +15,15 @@ export class SearchRepository {
   async searchBooks(query: string, shareToken: string = 'default') {
     if (!query) return [];
 
+    // 🏮 FTS5 query 语法对 `"` `*` `(` `)` `:` 等字符有特殊含义，
+    // 用户直接搜索 `JS:权威指南` 之类的字符会触发 `SQLITE_ERROR: fts5 syntax error`。
+    // 这里采用 phrase 包裹 + 转义双引号 的方式，把整串当作短语匹配。
+    const sanitized = query.replace(/"/g, '""').trim();
+    if (!sanitized) return [];
+    const ftsQuery = `"${sanitized}"`;
     const results = await this.db.all<{ id: string }>(sql`
       SELECT id FROM books_search_v 
-      WHERE books_search_v MATCH ${query} 
+      WHERE books_search_v MATCH ${ftsQuery} 
       ORDER BY rank
     `);
 
