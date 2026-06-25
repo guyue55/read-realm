@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import * as path from 'path';
 import { BookController } from './book.controller';
 import { BookRepository } from './book.repository';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
+import { resolveBlobStoragePath } from '../../common/blob-storage-path';
 
 @Module({
   controllers: [BookController],
@@ -10,13 +10,7 @@ import { LocalFileBlobStorage } from '@reader/storage-core/node';
     BookRepository,
     {
       provide: LocalFileBlobStorage,
-      useFactory: () => {
-        const storagePath = path.resolve(
-          process.cwd(),
-          '../../data/storage/chapter_blobs/',
-        );
-        return new LocalFileBlobStorage(storagePath);
-      },
+      useFactory: () => new LocalFileBlobStorage(resolveBlobStoragePath()),
     },
   ],
 })
