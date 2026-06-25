@@ -4,7 +4,7 @@ import { AiService } from './ai.service';
 import { ChapterModule } from '../chapter/chapter.module';
 import { OpenAIProvider } from '@reader/ai-core';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
-import * as path from 'path';
+import { resolveBlobStoragePath } from '../../common/blob-storage-path';
 
 @Module({
   imports: [ChapterModule],
@@ -22,13 +22,7 @@ import * as path from 'path';
     },
     {
       provide: LocalFileBlobStorage,
-      useFactory: () => {
-        const storagePath = path.resolve(
-          process.cwd(),
-          '../../data/storage/chapter_blobs/',
-        );
-        return new LocalFileBlobStorage(storagePath);
-      },
+      useFactory: () => new LocalFileBlobStorage(resolveBlobStoragePath()),
     },
   ],
 })
