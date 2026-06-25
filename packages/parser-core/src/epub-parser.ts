@@ -206,7 +206,7 @@ export async function parseEpubBook(
     }
 
     if (!chapterTitle) {
-      chapterTitle = `Chapter ${i + 1}`;
+      chapterTitle = `第 ${i + 1} 章`;
     }
 
     chapters.push({
