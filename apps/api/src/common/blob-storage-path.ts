@@ -27,3 +27,21 @@ export function resolveBlobStoragePath(): string {
     return path.resolve(process.cwd(), '../../data/storage/chapter_blobs/');
   }
 }
+
+/**
+ * 🏮 同样的逻辑兜底 SQLite 数据库文件位置。
+ * 优先级：`READER_SQLITE_DB_PATH` 环境变量 -> 仓库根 `data/app.sqlite` -> CWD 推断。
+ */
+export function resolveSqliteDbPath(): string {
+  const fromEnv = process.env.READER_SQLITE_DB_PATH;
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return path.resolve(fromEnv);
+  }
+
+  try {
+    const repoRoot = path.resolve(__dirname, '../../../..');
+    return path.join(repoRoot, 'data', 'app.sqlite');
+  } catch {
+    return path.resolve(process.cwd(), '../../data/app.sqlite');
+  }
+}

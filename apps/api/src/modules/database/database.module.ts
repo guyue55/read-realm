@@ -3,7 +3,7 @@ import { createClient, ResultSet } from '@libsql/client';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import { SQL } from 'drizzle-orm';
 import * as schema from './schema';
-import * as path from 'path';
+import { resolveSqliteDbPath } from '../../common/blob-storage-path';
 
 export const DRIZZLE = 'DRIZZLE_INSTANCE';
 export type Database = LibSQLDatabase<typeof schema> & {
@@ -16,7 +16,7 @@ export type Database = LibSQLDatabase<typeof schema> & {
     {
       provide: DRIZZLE,
       useFactory: async () => {
-        const dbPath = path.resolve(process.cwd(), '../../data/app.sqlite');
+        const dbPath = resolveSqliteDbPath();
         const client = createClient({ url: `file:${dbPath}` });
 
         await client.execute('PRAGMA foreign_keys = ON;');
