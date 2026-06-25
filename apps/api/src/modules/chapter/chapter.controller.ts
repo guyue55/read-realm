@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { ChapterRepository } from './chapter.repository';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
@@ -39,9 +39,11 @@ export class ChapterController {
   async getChapter(
     @ShareToken() token: string,
     @Param('bookId') bookId: string,
-    @Param('index') index: string,
+    @Param('index', ParseIntPipe) chapterIndex: number,
   ) {
-    const chapterIndex = parseInt(index, 10);
+    if (chapterIndex < 0) {
+      throw new BadRequestException('章节序号必须为非负整数');
+    }
     const chapter = await this.chapterRepository.findByIndex(
       bookId,
       chapterIndex,
