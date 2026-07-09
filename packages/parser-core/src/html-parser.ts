@@ -81,7 +81,7 @@ export function parseWebPageWithReadability(
 
   // 4. 对提取的 HTML 内容进行 DOMPurify 过滤防 XSS 攻击
   // 仅允许段落、换行、基本排版和轻量级修饰标签
-  const sanitizedHtml = DOMPurify.sanitize(article.content, {
+  const sanitizedHtml = DOMPurify.sanitize(article.content ?? "", {
     ALLOWED_TAGS: [
       "p",
       "br",

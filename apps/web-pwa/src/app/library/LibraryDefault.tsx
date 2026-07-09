@@ -26,6 +26,8 @@ import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScan
 type LibraryViewMode = "cover" | "compact" | "list";
 
 const LIBRARY_VIEW_KEY = "library-view-mode";
+const ACTIVE_SYNC_TASKS_KEY = "reader-active-sync-tasks";
+type ActiveSyncTasks = Record<string, "upload" | "download">;
 
 const POETIC_KEYS = [
   "松风阅心", "煮字生涯", "寒夜客来", "静夜钟声", "西窗剪烛", 
@@ -41,6 +43,35 @@ function loadLibraryViewMode(): LibraryViewMode {
   if (typeof window === "undefined") return "cover";
   const value = window.localStorage.getItem(LIBRARY_VIEW_KEY);
   return value === "compact" || value === "list" ? value : "cover";
+}
+
+function readActiveSyncTasks(): ActiveSyncTasks {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ACTIVE_SYNC_TASKS_KEY) || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, value]) => value === "upload" || value === "download"),
+    ) as ActiveSyncTasks;
+  } catch {
+    localStorage.removeItem(ACTIVE_SYNC_TASKS_KEY);
+    return {};
+  }
+}
+
+function writeActiveSyncTasks(tasks: ActiveSyncTasks) {
+  localStorage.setItem(ACTIVE_SYNC_TASKS_KEY, JSON.stringify(tasks));
+}
+
+function markActiveSyncTask(bookId: string, action: ActiveSyncTasks[string]) {
+  const tasks = readActiveSyncTasks();
+  tasks[bookId] = action;
+  writeActiveSyncTasks(tasks);
+}
+
+function clearActiveSyncTask(bookId: string) {
+  const tasks = readActiveSyncTasks();
+  delete tasks[bookId];
+  writeActiveSyncTasks(tasks);
 }
 
 function getBookTimestamp(book: Book) {
@@ -1046,9 +1077,7 @@ export function LibraryDefault() {
             const bookWithProgress = { ...book, lastReadProgress };
 
             // 记入活跃持久化上传任务，防刷新和崩溃
-            const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-            activeTasks[book.id] = "upload";
-            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+            markActiveSyncTask(book.id, "upload");
 
             await uploadBookInChunks(bookWithProgress, chapters, (uploaded, total) => {
               updateProgress(completedSteps, Math.round((uploaded / Math.max(total, 1)) * 100));
@@ -1056,9 +1085,7 @@ export function LibraryDefault() {
             });
 
             // 任务完结，清除落盘记录
-            const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-            delete nextTasks[book.id];
-            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+            clearActiveSyncTask(book.id);
           } catch (singleBookErr) {
             console.error(`[Sync] 备份本地典籍「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
             hasSyncFailures = true;
@@ -1074,9 +1101,7 @@ export function LibraryDefault() {
             setSyncStepText(`正在从云阁拉取「${book.title}」...`);
             
             // 记入活跃持久化下载任务
-            const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-            activeTasks[book.id] = "download";
-            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+            markActiveSyncTask(book.id, "download");
 
             for (let p = 0; p <= 100; p += 25) {
               updateProgress(completedSteps, p);
@@ -1141,9 +1166,7 @@ export function LibraryDefault() {
               // 不阻断：章节缺失不触发整书同步失败
             }
             // 任务完结，清除落盘记录
-            const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-            delete nextTasks[book.id];
-            localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+            clearActiveSyncTask(book.id);
           } catch (singleBookErr) {
             console.error(`[Sync] 拉取云阁新书「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
             hasSyncFailures = true;
@@ -1389,9 +1412,7 @@ export function LibraryDefault() {
 
     try {
       // 记入活跃持久化上传任务，防刷新和崩溃
-      const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-      activeTasks[book.id] = "upload";
-      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+      markActiveSyncTask(book.id, "upload");
 
       const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
             
@@ -1427,9 +1448,7 @@ export function LibraryDefault() {
       setToastMsg("💡 备份失败，请检查网络或后端服务。");
     } finally {
       // 任务完结，清除落盘记录
-      const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-      delete nextTasks[book.id];
-      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+      clearActiveSyncTask(book.id);
 
       syncMutexRef.current = false;
       setTimeout(() => {
@@ -1468,9 +1487,7 @@ export function LibraryDefault() {
 
     try {
       // 记入活跃持久化下载任务
-      const activeTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-      activeTasks[book.id] = "download";
-      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
+      markActiveSyncTask(book.id, "download");
 
       for (let p = 0; p <= 40; p += 20) {
         setBookSyncStates((prev) => ({
@@ -1555,9 +1572,7 @@ export function LibraryDefault() {
       }
     } finally {
       // 任务完结，清除落盘记录
-      const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
-      delete nextTasks[book.id];
-      localStorage.setItem("reader-active-sync-tasks", JSON.stringify(nextTasks));
+      clearActiveSyncTask(book.id);
 
       syncMutexRef.current = false;
       setTimeout(() => {
@@ -1642,9 +1657,8 @@ export function LibraryDefault() {
 
       // 2. 持久化任务重连校验与自愈
       try {
-        const activeTasksVal = localStorage.getItem("reader-active-sync-tasks");
-        if (activeTasksVal) {
-          const activeTasks = JSON.parse(activeTasksVal) as Record<string, "upload" | "download">;
+        const activeTasks = readActiveSyncTasks();
+        if (Object.keys(activeTasks).length > 0) {
           const localBooks = await db.books.toArray();
           
           for (const [bookId, action] of Object.entries(activeTasks)) {
