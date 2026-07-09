@@ -322,8 +322,9 @@ export async function generateAiSigKeyAsync(
   sourceHash: string,
   model: string,
   promptVersion: string,
+  scope: string = "global",
 ): Promise<string> {
-  const payload = `${sourceHash}:${model}:${promptVersion}`;
+  const payload = `${scope}:${sourceHash}:${model}:${promptVersion}`;
   const encoder = new TextEncoder();
   const dataBytes = encoder.encode(payload);
   const secretKeyBytes = encoder.encode("read-realm-secret-salt-2026");
@@ -335,7 +336,7 @@ export async function generateAiSigKeyAsync(
 
   if (!cryptoObj || !cryptoObj.subtle) {
     // 降级兜底：在未支持 Subtle 极度特殊的旧原生套壳中拼接退避
-    return `fallback-${sourceHash}-${model}-${promptVersion}`;
+    return `fallback-${scope}-${sourceHash}-${model}-${promptVersion}`;
   }
 
   try {
@@ -357,7 +358,6 @@ export async function generateAiSigKeyAsync(
     return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   } catch (err) {
     console.warn("[Crypto] SubtleCrypto HMAC 运算失败，启动降级签名:", err);
-    return `fallback-${sourceHash}-${model}-${promptVersion}`;
+    return `fallback-${scope}-${sourceHash}-${model}-${promptVersion}`;
   }
 }
-

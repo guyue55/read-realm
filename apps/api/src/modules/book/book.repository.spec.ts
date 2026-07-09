@@ -142,4 +142,54 @@ describe('BookRepository', () => {
       'safe-content',
     );
   });
+
+  it('should upsert book metadata before appending chapter chunks', async () => {
+    const book: Book = {
+      id: 'book-1',
+      title: 'Chunked Book',
+      sourceType: 'upload',
+      format: 'txt',
+      status: 'reading',
+      tags: [],
+      chapterCount: 1,
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+    };
+    const onConflictDoUpdate = jest.fn().mockResolvedValue(undefined);
+
+    let capturedTx: any;
+    db.transaction.mockImplementationOnce(async (cb: any) => {
+      capturedTx = {
+        insert: jest.fn().mockReturnThis(),
+        values: jest.fn().mockReturnThis(),
+        onConflictDoUpdate,
+        delete: jest.fn().mockReturnThis(),
+        where: jest.fn().mockResolvedValue(undefined),
+      };
+      await cb(capturedTx);
+    });
+
+    await repository.importBook(
+      book,
+      [
+        {
+          id: 'ch-1',
+          title: 'Chapter 1',
+          index: 0,
+          content: 'hello',
+        },
+      ],
+      'default',
+      { replaceExisting: false },
+    );
+
+    expect(capturedTx.insert).toHaveBeenCalledWith(schema.books);
+    expect(onConflictDoUpdate).toHaveBeenCalledWith({
+      target: schema.books.id,
+      set: expect.objectContaining({
+        id: 'book-1',
+        title: 'Chunked Book',
+      }),
+    });
+  });
 });
