@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/require-await */
+
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { BookRepository } from './book.repository';
@@ -62,8 +61,7 @@ describe('BookRepository', () => {
         id: 'ch-1',
         title: 'Chapter 1',
         index: 0,
-        contentHash: 'hash-1',
-        // bookId is missing or wrong
+        content: 'hello',
       },
     ];
 
@@ -78,7 +76,7 @@ describe('BookRepository', () => {
       await cb(capturedTx);
     });
 
-    await repository.importBook(book, chapters as any);
+    await repository.importBook(book, chapters);
 
     // Verify book insertion (tags omitted)
     expect(capturedTx.insert).toHaveBeenCalledWith(schema.books);
@@ -101,46 +99,47 @@ describe('BookRepository', () => {
         expect.objectContaining({
           id: 'ch-1',
           bookId: 'book-1',
-          contentHash: 'hash-1',
+          contentHash:
+            '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
         }),
       ]),
     );
   });
 
-  it('should delete book and its chapters, and cleanup storage', async () => {
-    const bookId = 'book-1';
-    const chapters = [{ contentHash: 'hash-1' }, { contentHash: 'hash-2' }];
-
-    db.select = jest.fn().mockReturnValue({
-      from: jest.fn().mockReturnValue({
-        where: jest.fn().mockResolvedValue(chapters),
-      }),
-    });
-
+  it('should ignore imported contentHash and derive blob key from content', async () => {
+    const book: Book = {
+      id: 'book-1',
+      title: 'Test Book',
+      sourceType: 'upload',
+      format: 'txt',
+      status: 'reading',
+      tags: [],
+      chapterCount: 1,
+      createdAt: '2025-01-01T00:00:00Z',
+      updatedAt: '2025-01-01T00:00:00Z',
+    };
     const blobStorage = {
-      deleteObject: jest.fn().mockResolvedValue(undefined),
+      putObject: jest.fn().mockResolvedValue(undefined),
     };
     (repository as any).blobStorage = blobStorage;
 
-    let capturedTx: any;
-    db.transaction.mockImplementationOnce(async (cb: any) => {
-      capturedTx = {
-        delete: jest.fn().mockReturnThis(),
-        where: jest.fn().mockResolvedValue(undefined),
-      };
-      await cb(capturedTx);
-    });
+    await repository.importBook(
+      book,
+      [
+        {
+          id: 'ch-1',
+          title: 'Chapter 1',
+          index: 0,
+          content: 'safe-content',
+          contentHash: '../../outside',
+        } as any,
+      ],
+      'default',
+    );
 
-    // Mock second select for de-duplication check
-    db.select.mockReturnValueOnce({
-      from: jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          limit: jest.fn().mockResolvedValue(chapters), // First call for get hashes
-        }),
-      }),
-    });
-
-    // Actually the mock above is a bit messy because of how I chained it.
-    // Let's rewrite the mock for the whole test.
+    expect(blobStorage.putObject).toHaveBeenCalledWith(
+      '63a2f0f94f2efe262dee71613926b2bb5ceda47b0aa2950d9403dcfd5a089ec8',
+      'safe-content',
+    );
   });
 });

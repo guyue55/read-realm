@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, ParseIntPipe, Headers } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { AiService } from './ai.service';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
 
@@ -11,7 +19,6 @@ export class AiController {
     return this.aiService.checkAvailability();
   }
 
-
   @Post('chat')
   async chat(
     @ShareToken() token: string,
@@ -23,7 +30,7 @@ export class AiController {
     @Headers('x-ai-model') model?: string,
   ) {
     if (!question || question.trim().length === 0) {
-      return { error: '问题不能为空' };
+      throw new BadRequestException('问题不能为空');
     }
     return this.aiService.chat(bookId, chapterIndex, question.trim(), token, {
       apiKey,

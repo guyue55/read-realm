@@ -2,9 +2,14 @@
 
 import { useEffect, useState, memo, useCallback, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@reader/storage-core";
+import { db, type LocalChapter } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
-import { apiUrl, getShareHeaders } from "@/lib/api";
+import {
+  apiUrl,
+  getShareHeaders,
+  isValidShareToken,
+  normalizeShareToken,
+} from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -57,6 +62,94 @@ function getProgressPercent(book: Book, progress?: ReadingProgress) {
 function getChapterSummary(progress?: ReadingProgress) {
   if (!progress) return "未开始";
   return `第 ${progress.chapterIndex + 1} 章`;
+}
+
+type RemoteChapter = {
+  id?: string;
+  index?: number;
+  chapterIndex?: number;
+  title?: string;
+  name?: string;
+  content?: string;
+  body?: string;
+  text?: string;
+};
+
+const CHAPTER_SYNC_PAGE_SIZE = 80;
+
+function toLocalChapter(bookId: string, chapter: RemoteChapter) {
+  const index = chapter.index ?? chapter.chapterIndex ?? 0;
+  return {
+    id: chapter.id ? chapter.id.split("#")[0] : `${bookId}-${index}`,
+    bookId,
+    index,
+    title: chapter.title || chapter.name || `第 ${index + 1} 章`,
+    content: chapter.content || chapter.body || chapter.text || "",
+  };
+}
+
+async function fetchRemoteChaptersPaged(
+  bookId: string,
+  onPage?: (loaded: number, total?: number) => void,
+) {
+  const chapters: RemoteChapter[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await fetch(
+      apiUrl(
+        `/books/${bookId}/chapters?offset=${offset}&limit=${CHAPTER_SYNC_PAGE_SIZE}`,
+      ),
+      { headers: getShareHeaders() },
+    );
+    if (!response.ok) throw new Error(`章节下载失败：HTTP ${response.status}`);
+
+    const payload = await response.json();
+    if (Array.isArray(payload)) {
+      chapters.push(...payload);
+      onPage?.(chapters.length, chapters.length);
+      return chapters;
+    }
+
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    chapters.push(...items);
+    onPage?.(chapters.length, payload.total);
+    if (items.length === 0 || chapters.length >= Number(payload.total || 0)) {
+      return chapters;
+    }
+    offset += items.length;
+  }
+}
+
+async function uploadBookInChunks(
+  book: Book,
+  chapters: LocalChapter[],
+  onPage?: (uploaded: number, total: number) => void,
+) {
+  if (chapters.length === 0) {
+    const response = await fetch(apiUrl("/books/import"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getShareHeaders() },
+      body: JSON.stringify({ metadata: book, chapters: [], replaceExisting: true }),
+    });
+    if (!response.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
+    return;
+  }
+
+  for (let offset = 0; offset < chapters.length; offset += CHAPTER_SYNC_PAGE_SIZE) {
+    const chunk = chapters.slice(offset, offset + CHAPTER_SYNC_PAGE_SIZE);
+    const response = await fetch(apiUrl("/books/import"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getShareHeaders() },
+      body: JSON.stringify({
+        metadata: book,
+        chapters: chunk,
+        replaceExisting: offset === 0,
+      }),
+    });
+    if (!response.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
+    onPage?.(Math.min(offset + chunk.length, chapters.length), chapters.length);
+  }
 }
 
 function getFriendlyRelativeTime(dateInput?: string | Date) {
@@ -583,7 +676,7 @@ export function LibraryDefault() {
   const [shareTokenInput, setShareTokenInput] = useState("");
   const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    return window.localStorage.getItem("reader-share-token") || "";
+    return normalizeShareToken(window.localStorage.getItem("reader-share-token"));
   });
 
   useEffect(() => {
@@ -600,6 +693,10 @@ export function LibraryDefault() {
   const handleBindShareToken = async () => {
     const trimmed = shareTokenInput.trim();
     if (!trimmed) return;
+    if (!isValidShareToken(trimmed)) {
+      setToastMsg("分享口令仅支持中文、英文、数字、下划线和短横线，最长 64 位");
+      return;
+    }
     
     window.localStorage.setItem("reader-share-token", trimmed);
     setCurrentShareToken(trimmed);
@@ -953,20 +1050,10 @@ export function LibraryDefault() {
             activeTasks[book.id] = "upload";
             localStorage.setItem("reader-active-sync-tasks", JSON.stringify(activeTasks));
 
-            for (let p = 0; p <= 100; p += 25) {
-              updateProgress(completedSteps, p);
-              await new Promise((r) => setTimeout(r, 15));
-            }
-
-            const importRes = await fetch(apiUrl("/books/import"), {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...getShareHeaders(),
-              },
-              body: JSON.stringify({ metadata: bookWithProgress, chapters }),
+            await uploadBookInChunks(bookWithProgress, chapters, (uploaded, total) => {
+              updateProgress(completedSteps, Math.round((uploaded / Math.max(total, 1)) * 100));
+              setSyncStepText(`正在备份「${book.title}」章节 ${uploaded}/${total}`);
             });
-            if (!importRes.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
 
             // 任务完结，清除落盘记录
             const nextTasks = JSON.parse(localStorage.getItem("reader-active-sync-tasks") || "{}");
@@ -1024,34 +1111,27 @@ export function LibraryDefault() {
             // 同步拉取云阁章节内容，避免同步后「查看」出现 404 白屏
             try {
               setSyncStepText(`正在下载「${book.title}」章节内容...`);
-              const chaptersRes = await fetch(apiUrl(`/books/${book.id}/chapters`), {
-                headers: getShareHeaders(),
-              });
-              if (chaptersRes.ok) {
-                const remoteChapters = await chaptersRes.json();
-                if (remoteChapters.length > 0) {
-                  await db.transaction("rw", [db.chapters], async () => {
-                    for (const chap of remoteChapters) {
-                      const transformed = {
-                        id: chap.id ? chap.id.split("#")[0] : `${book.id}-${chap.index !== undefined ? chap.index : chap.chapterIndex}`,
-                        bookId: book.id,
-                        index: chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0),
-                        title: chap.title || chap.name || `第 ${(chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0)) + 1} 章`,
-                        content: chap.content || chap.body || chap.text || "",
-                      };
-                      await db.chapters.put(transformed);
-                    }
-                  });
-                  console.log(`[Sync] 已拉取「${book.title}」的 ${remoteChapters.length} 个章节。`);
-                } else {
-                  console.warn(`[Sync] 云阁中「${book.title}」暂无章节内容，该书可能仅同步了元数据。`);
+              const remoteChapters = await fetchRemoteChaptersPaged(
+                book.id,
+                (loaded, total) => {
+                  setSyncStepText(
+                    `正在下载「${book.title}」章节内容 ${loaded}/${total ?? "?"}`,
+                  );
+                },
+              );
+              if (remoteChapters.length > 0) {
+                await db.transaction("rw", [db.chapters], async () => {
+                  for (const chap of remoteChapters) {
+                    await db.chapters.put(toLocalChapter(book.id, chap));
+                  }
+                });
+                console.log(`[Sync] 已拉取「${book.title}」的 ${remoteChapters.length} 个章节。`);
+              } else {
+                console.warn(`[Sync] 云阁中「${book.title}」暂无章节内容，该书可能仅同步了元数据。`);
                 // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
                 if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
                   await db.books.update(book.id, { parseStatus: "not_parsed" });
                 }
-                }
-              } else {
-                console.warn(`[Sync] 无法从云阁拉取「${book.title}」的章节内容: HTTP ${chaptersRes.status}`);
               }
             } catch (chaptersErr) {
               console.warn(`[Sync] 拉取「${book.title}」章节时网络异常:`, chaptersErr);
@@ -1331,29 +1411,18 @@ export function LibraryDefault() {
       const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
       const bookWithProgress = { ...book, lastReadProgress };
 
-      for (let p = 0; p <= 100; p += 20) {
+      await uploadBookInChunks(bookWithProgress, chapters, (uploaded, total) => {
         setBookSyncStates((prev) => ({
           ...prev,
-          [book.id]: { progress: p, stepText: `备份中... ${p}%` },
+          [book.id]: {
+            progress: Math.round((uploaded / Math.max(total, 1)) * 100),
+            stepText: `备份章节 ${uploaded}/${total}`,
+          },
         }));
-        await new Promise((r) => setTimeout(r, 30));
-      }
-
-      const res = await fetch(apiUrl("/books/import"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getShareHeaders(),
-        },
-        body: JSON.stringify({ metadata: bookWithProgress, chapters }),
       });
 
-      if (res.ok) {
-        setToastMsg(`🍃 「${book.title}」云端备份成功！`);
-        await fetchCloudBooks();
-      } else {
-        throw new Error();
-      }
+      setToastMsg(`🍃 「${book.title}」云端备份成功！`);
+      await fetchCloudBooks();
     } catch {
       setToastMsg("💡 备份失败，请检查网络或后端服务。");
     } finally {
@@ -1411,11 +1480,18 @@ export function LibraryDefault() {
         await new Promise((r) => setTimeout(r, 40));
       }
 
-      const res = await fetch(apiUrl(`/books/${book.id}/chapters`), {
-        headers: getShareHeaders(),
+      const chapters = await fetchRemoteChaptersPaged(book.id, (loaded, total) => {
+        setBookSyncStates((prev) => ({
+          ...prev,
+          [book.id]: {
+            progress: Math.min(
+              85,
+              40 + Math.round((loaded / Math.max(total || loaded, 1)) * 45),
+            ),
+            stepText: `拉取章节 ${loaded}/${total ?? "?"}`,
+          },
+        }));
       });
-      if (res.ok) {
-        const chapters = await res.json();
 
         if (chapters.length === 0) {
           console.warn(`[Download] 云阁中「${book.title}」暂无章节内容，该书章节可能未完成初次上传。`);
@@ -1429,7 +1505,8 @@ export function LibraryDefault() {
           // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
           if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
             await db.books.update(book.id, { parseStatus: "not_parsed" });
-          }          await fetchCloudBooks();
+          }
+          await fetchCloudBooks();
           return;
         }
         for (let p = 40; p <= 100; p += 20) {
@@ -1456,14 +1533,7 @@ export function LibraryDefault() {
           await db.books.put(book);
             // 🏮 核心适配转换层：对准后端异构字段，抵抗变更，保障未来接口防腐性
           for (const chap of chapters) {
-            const transformed = {
-              id: chap.id ? chap.id.split("#")[0] : `${book.id}-${chap.index !== undefined ? chap.index : chap.chapterIndex}`,
-              bookId: book.id,
-              index: chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0),
-              title: chap.title || chap.name || `第 ${(chap.index !== undefined ? chap.index : (chap.chapterIndex !== undefined ? chap.chapterIndex : 0)) + 1} 章`,
-              content: chap.content || chap.body || chap.text || "",
-            };
-            await db.chapters.put(transformed);
+            await db.chapters.put(toLocalChapter(book.id, chap));
           }
           if (book.lastReadProgress) {
             try {
@@ -1477,9 +1547,6 @@ export function LibraryDefault() {
 
         setToastMsg(`🍃 「${book.title}」已成功拉取至本地书阁！`);
         await fetchCloudBooks();
-      } else {
-        throw new Error();
-      }
     } catch {
       if (!navigator.onLine) {
         setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");

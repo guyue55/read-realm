@@ -1,4 +1,12 @@
-import { Controller, Get, Param, NotFoundException, BadRequestException, ParseIntPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Query,
+} from '@nestjs/common';
 import { ChapterRepository } from './chapter.repository';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
@@ -14,10 +22,23 @@ export class ChapterController {
   async getAllChapters(
     @ShareToken() token: string,
     @Param('bookId') bookId: string,
+    @Query('offset') rawOffset?: string,
+    @Query('limit') rawLimit?: string,
   ) {
     const chapters = await this.chapterRepository.findByBookId(bookId, token);
+    const hasPaging = rawOffset !== undefined || rawLimit !== undefined;
+    const offset = Math.max(0, Number.parseInt(rawOffset || '0', 10) || 0);
+    const requestedLimit =
+      Number.parseInt(rawLimit || String(chapters.length), 10) ||
+      chapters.length;
+    const limit = hasPaging
+      ? Math.min(Math.max(requestedLimit, 1), 200)
+      : chapters.length;
+    const selectedChapters = hasPaging
+      ? chapters.slice(offset, offset + limit)
+      : chapters;
     const chaptersWithContent = await Promise.all(
-      chapters.map(async (chap) => {
+      selectedChapters.map(async (chap) => {
         try {
           const content = await this.blobStorage.getObject(chap.contentHash);
           return {
@@ -32,6 +53,14 @@ export class ChapterController {
         }
       }),
     );
+    if (hasPaging) {
+      return {
+        items: chaptersWithContent,
+        total: chapters.length,
+        offset,
+        limit,
+      };
+    }
     return chaptersWithContent;
   }
 

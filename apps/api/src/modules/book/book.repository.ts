@@ -3,9 +3,15 @@ import { DRIZZLE } from '../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
 import { Book, createId } from '@reader/shared-types';
-import { eq, like, or, not } from 'drizzle-orm';
+import { and, eq, inArray, like, not, or } from 'drizzle-orm';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import * as crypto from 'crypto';
+import {
+  DEFAULT_SHARE_TOKEN,
+  isScopedToShare,
+  stripScopedId,
+  toScopedId,
+} from '../../common/request-boundary';
 
 @Injectable()
 export class BookRepository {
@@ -16,11 +22,19 @@ export class BookRepository {
 
   async importBook(
     book: Book,
-    chapters: (typeof schema.chapters.$inferInsert & { content?: string })[],
-    shareToken: string = 'default',
+    chapters: Array<{
+      id?: string;
+      index: number;
+      title: string;
+      content: string;
+      createdAt?: string;
+    }>,
+    shareToken: string = DEFAULT_SHARE_TOKEN,
+    options: { replaceExisting?: boolean } = {},
   ) {
-    const isDefault = shareToken === 'default';
-    const dbBookId = isDefault ? book.id : `${book.id}#${shareToken}`;
+    const isDefault = shareToken === DEFAULT_SHARE_TOKEN;
+    const dbBookId = toScopedId(book.id, shareToken);
+    const replaceExisting = options.replaceExisting ?? true;
 
     await this.db.transaction(async (tx) => {
       // Omit tags and toc if they are not in the database schema
@@ -32,61 +46,67 @@ export class BookRepository {
         id: dbBookId,
       };
 
-      // 1. Clean delete existing chapters & book under same ID to guarantee idempotency and support overwrite update
-      if (isDefault) {
-        await tx
-          .delete(schema.chapters)
-          .where(
-            or(
-              eq(schema.chapters.bookId, dbBookId),
-              eq(schema.chapters.bookId, `${book.id}#default`),
-            ),
-          );
-        await tx
-          .delete(schema.books)
-          .where(
-            or(
-              eq(schema.books.id, dbBookId),
-              eq(schema.books.id, `${book.id}#default`),
-            ),
-          );
+      if (replaceExisting) {
+        // 1. Clean delete existing chapters & book under same ID to guarantee idempotency and support overwrite update
+        if (isDefault) {
+          await tx
+            .delete(schema.chapters)
+            .where(
+              or(
+                eq(schema.chapters.bookId, dbBookId),
+                eq(schema.chapters.bookId, `${book.id}#default`),
+              ),
+            );
+          await tx
+            .delete(schema.books)
+            .where(
+              or(
+                eq(schema.books.id, dbBookId),
+                eq(schema.books.id, `${book.id}#default`),
+              ),
+            );
+        } else {
+          await tx
+            .delete(schema.chapters)
+            .where(eq(schema.chapters.bookId, dbBookId));
+          await tx.delete(schema.books).where(eq(schema.books.id, dbBookId));
+        }
+
+        await tx.insert(schema.books).values(finalBookData);
       } else {
         await tx
-          .delete(schema.chapters)
-          .where(eq(schema.chapters.bookId, dbBookId));
-        await tx.delete(schema.books).where(eq(schema.books.id, dbBookId));
+          .update(schema.books)
+          .set(finalBookData)
+          .where(eq(schema.books.id, dbBookId));
       }
-
-      // 2. Perform insert of clean new books and chapter collection
-      await tx.insert(schema.books).values(finalBookData);
 
       if (chapters.length > 0) {
         const chaptersToInsert = [];
+        const indexes = chapters.map((chapter) => chapter.index);
+        await tx
+          .delete(schema.chapters)
+          .where(
+            and(
+              eq(schema.chapters.bookId, dbBookId),
+              inArray(schema.chapters.index, indexes),
+            ),
+          );
         for (const chapter of chapters) {
           const rawId = chapter.id || createId();
           const cleanId = rawId.split('#')[0];
 
-          let contentHash = chapter.contentHash;
-          const content = chapter.content;
+          const contentHash = crypto
+            .createHash('sha256')
+            .update(chapter.content)
+            .digest('hex');
 
-          if (!contentHash && content !== undefined) {
-            contentHash = crypto
-              .createHash('sha256')
-              .update(content)
-              .digest('hex');
-          } else if (!contentHash) {
-            contentHash = createId();
+          if (this.blobStorage) {
+            await this.blobStorage.putObject(contentHash, chapter.content);
           }
-
-          if (this.blobStorage && content !== undefined) {
-            await this.blobStorage.putObject(contentHash, content);
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { content: _, ...chapterDbData } = chapter;
 
           chaptersToInsert.push({
-            ...chapterDbData,
+            index: chapter.index,
+            title: chapter.title,
             contentHash,
             bookId: dbBookId,
             id: isDefault ? cleanId : `${cleanId}#${shareToken}`,
@@ -99,8 +119,8 @@ export class BookRepository {
   }
 
   async deleteBook(bookId: string, shareToken: string = 'default') {
-    const dbBookId = `${bookId}#${shareToken}`;
-    const isDefault = shareToken === 'default';
+    const dbBookId = toScopedId(bookId, shareToken);
+    const isDefault = shareToken === DEFAULT_SHARE_TOKEN;
 
     // 1. Get all chapters to find contentHashes
     let chapters;
@@ -175,7 +195,7 @@ export class BookRepository {
   }
 
   async getAllBooks(shareToken: string = 'default') {
-    const isDefault = shareToken === 'default';
+    const isDefault = shareToken === DEFAULT_SHARE_TOKEN;
 
     let dbBooks;
     if (isDefault) {
@@ -189,16 +209,13 @@ export class BookRepository {
           ),
         );
     } else {
-      dbBooks = await this.db
-        .select()
-        .from(schema.books)
-        .where(like(schema.books.id, `%#${shareToken}`));
+      const allBooks = await this.db.select().from(schema.books);
+      dbBooks = allBooks.filter((book) => isScopedToShare(book.id, shareToken));
     }
 
-    // 剥离后缀
     return dbBooks.map((book) => ({
       ...book,
-      id: book.id.split('#')[0],
+      id: stripScopedId(book.id),
     }));
   }
 
@@ -206,11 +223,11 @@ export class BookRepository {
     bookId: string,
     lastReadProgress: string,
     lastReadAt: string = new Date().toISOString(),
-    shareToken: string = 'default',
+    shareToken: string = DEFAULT_SHARE_TOKEN,
     sourceFolderId?: string | null,
   ) {
-    const isDefault = shareToken === 'default';
-    const dbBookId = isDefault ? bookId : `${bookId}#${shareToken}`;
+    const isDefault = shareToken === DEFAULT_SHARE_TOKEN;
+    const dbBookId = toScopedId(bookId, shareToken);
     const patch = {
       lastReadProgress,
       lastReadAt,
@@ -223,7 +240,10 @@ export class BookRepository {
         .update(schema.books)
         .set(patch)
         .where(
-          or(eq(schema.books.id, bookId), eq(schema.books.id, `${bookId}#default`)),
+          or(
+            eq(schema.books.id, bookId),
+            eq(schema.books.id, `${bookId}#default`),
+          ),
         );
     } else {
       await this.db
@@ -234,17 +254,16 @@ export class BookRepository {
   }
 
   async clearAllBooks(shareToken: string) {
-    if (shareToken === 'default' || !shareToken) {
+    if (shareToken === DEFAULT_SHARE_TOKEN || !shareToken) {
       // 绝对不清理 default 或空 token
       return;
     }
-    const dbBooks = await this.db
-      .select({ id: schema.books.id })
-      .from(schema.books)
-      .where(like(schema.books.id, `%#${shareToken}`));
+    const dbBooks = (
+      await this.db.select({ id: schema.books.id }).from(schema.books)
+    ).filter((book) => isScopedToShare(book.id, shareToken));
 
     for (const book of dbBooks) {
-      const cleanBookId = book.id.split('#')[0];
+      const cleanBookId = stripScopedId(book.id);
       await this.deleteBook(cleanBookId, shareToken);
     }
   }

@@ -62,7 +62,9 @@ describe('SearchRepository', () => {
       { id: '2#friend' },
       { id: '3#other' },
     ]);
-    db.query.books.findMany.mockResolvedValueOnce([{ id: '2#friend', title: 'Shared' }]);
+    db.query.books.findMany.mockResolvedValueOnce([
+      { id: '2#friend', title: 'Shared' },
+    ]);
 
     const result = await repository.searchBooks('Shared', 'friend');
 

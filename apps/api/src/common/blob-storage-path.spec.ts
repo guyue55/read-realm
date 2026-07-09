@@ -1,5 +1,8 @@
 import * as path from 'path';
-import { resolveBlobStoragePath, resolveSqliteDbPath } from './blob-storage-path';
+import {
+  resolveBlobStoragePath,
+  resolveSqliteDbPath,
+} from './blob-storage-path';
 
 describe('resolveBlobStoragePath', () => {
   const originalEnv = process.env.READER_BLOB_STORAGE_PATH;
@@ -20,7 +23,9 @@ describe('resolveBlobStoragePath', () => {
   it('环境变量缺省时回到仓库根的 data/storage/chapter_blobs', () => {
     delete process.env.READER_BLOB_STORAGE_PATH;
     const resolved = resolveBlobStoragePath();
-    expect(resolved.endsWith(path.join('data', 'storage', 'chapter_blobs'))).toBe(true);
+    expect(
+      resolved.endsWith(path.join('data', 'storage', 'chapter_blobs')),
+    ).toBe(true);
     expect(path.isAbsolute(resolved)).toBe(true);
   });
 });

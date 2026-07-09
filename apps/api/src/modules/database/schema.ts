@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import type { Book } from '@reader/shared-types';
 
 export const books = sqliteTable('books', {
@@ -33,16 +39,26 @@ export const libraryFolders = sqliteTable('library_folders', {
   updatedAt: text('updated_at').notNull(),
 });
 
-export const chapters = sqliteTable('chapters', {
-  id: text('id').primaryKey(),
-  bookId: text('book_id')
-    .notNull()
-    .references(() => books.id),
-  index: integer('index').notNull(),
-  title: text('title').notNull(),
-  contentHash: text('content_hash').notNull(), // Pointer to BlobStorage key
-  createdAt: text('created_at').notNull(),
-});
+export const chapters = sqliteTable(
+  'chapters',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id')
+      .notNull()
+      .references(() => books.id),
+    index: integer('index').notNull(),
+    title: text('title').notNull(),
+    contentHash: text('content_hash').notNull(), // Pointer to BlobStorage key
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    bookIndexUnique: uniqueIndex('chapters_book_id_index_uq').on(
+      table.bookId,
+      table.index,
+    ),
+    contentHashIndex: index('chapters_content_hash_idx').on(table.contentHash),
+  }),
+);
 
 export const storageObjects = sqliteTable('storage_objects', {
   hash: text('hash').primaryKey(),
@@ -51,15 +67,24 @@ export const storageObjects = sqliteTable('storage_objects', {
   mimeType: text('mime_type').notNull(),
 });
 
-export const aiViews = sqliteTable('ai_views', {
-  id: text('id').primaryKey(),
-  bookId: text('book_id')
-    .notNull()
-    .references(() => books.id),
-  chapterIndex: integer('chapter_index').notNull(),
-  sourceHash: text('source_hash').notNull(),
-  summary: text('summary').notNull(),
-  model: text('model').notNull(),
-  promptVersion: text('prompt_version').notNull(),
-  createdAt: text('created_at').notNull(),
-});
+export const aiViews = sqliteTable(
+  'ai_views',
+  {
+    id: text('id').primaryKey(),
+    bookId: text('book_id')
+      .notNull()
+      .references(() => books.id),
+    chapterIndex: integer('chapter_index').notNull(),
+    sourceHash: text('source_hash').notNull(),
+    summary: text('summary').notNull(),
+    model: text('model').notNull(),
+    promptVersion: text('prompt_version').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    bookChapterIndex: index('ai_views_book_chapter_idx').on(
+      table.bookId,
+      table.chapterIndex,
+    ),
+  }),
+);

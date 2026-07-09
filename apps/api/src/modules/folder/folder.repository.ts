@@ -4,15 +4,21 @@ import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
 import { LibraryFolder } from '@reader/shared-types';
 import { eq, like, or, not } from 'drizzle-orm';
+import {
+  DEFAULT_SHARE_TOKEN,
+  isScopedToShare,
+  stripScopedId,
+  toScopedId,
+} from '../../common/request-boundary';
 
 @Injectable()
 export class FolderRepository {
-  constructor(
-    @Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>,
-  ) {}
+  constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
-  async getAllFolders(shareToken: string = 'default'): Promise<LibraryFolder[]> {
-    const isDefault = shareToken === 'default';
+  async getAllFolders(
+    shareToken: string = DEFAULT_SHARE_TOKEN,
+  ): Promise<LibraryFolder[]> {
+    const isDefault = shareToken === DEFAULT_SHARE_TOKEN;
 
     let dbFolders;
     if (isDefault) {
@@ -26,31 +32,34 @@ export class FolderRepository {
           ),
         );
     } else {
-      dbFolders = await this.db
-        .select()
-        .from(schema.libraryFolders)
-        .where(like(schema.libraryFolders.id, `%#${shareToken}`));
+      const allFolders = await this.db.select().from(schema.libraryFolders);
+      dbFolders = allFolders.filter((folder) =>
+        isScopedToShare(folder.id, shareToken),
+      );
     }
 
     // Strip out shareToken suffix from IDs
-    return dbFolders.map((folder) => ({
-      ...folder,
-      id: folder.id.split('#')[0],
-      parentId: folder.parentId ? folder.parentId.split('#')[0] : undefined,
-    } as unknown as LibraryFolder));
+    return dbFolders.map(
+      (folder) =>
+        ({
+          ...folder,
+          id: stripScopedId(folder.id),
+          parentId: folder.parentId
+            ? stripScopedId(folder.parentId)
+            : undefined,
+        }) as unknown as LibraryFolder,
+    );
   }
 
   async syncFolders(
     folders: LibraryFolder[],
-    shareToken: string = 'default',
+    shareToken: string = DEFAULT_SHARE_TOKEN,
   ): Promise<void> {
-    const isDefault = shareToken === 'default';
-
     await this.db.transaction(async (tx) => {
       for (const folder of folders) {
-        const dbFolderId = isDefault ? folder.id : `${folder.id}#${shareToken}`;
+        const dbFolderId = toScopedId(folder.id, shareToken);
         const dbParentId = folder.parentId
-          ? (isDefault ? folder.parentId : `${folder.parentId}#${shareToken}`)
+          ? toScopedId(folder.parentId, shareToken)
           : null;
 
         // 1. Delete if already exists to overwrite and guarantee idempotency
@@ -75,9 +84,11 @@ export class FolderRepository {
     });
   }
 
-  async deleteFolder(folderId: string, shareToken: string = 'default'): Promise<void> {
-    const isDefault = shareToken === 'default';
-    const dbFolderId = isDefault ? folderId : `${folderId}#${shareToken}`;
+  async deleteFolder(
+    folderId: string,
+    shareToken: string = DEFAULT_SHARE_TOKEN,
+  ): Promise<void> {
+    const dbFolderId = toScopedId(folderId, shareToken);
 
     await this.db
       .delete(schema.libraryFolders)

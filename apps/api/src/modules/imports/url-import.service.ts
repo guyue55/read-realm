@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { parseWebPageWithReadability } from '@reader/parser-core/html';
+import { lookup } from 'dns/promises';
+import { isIP } from 'net';
 
 export interface ParsedChapter {
   index: number;
@@ -14,6 +16,7 @@ export interface ParsedBook {
 
 const MAX_CHAPTERS = 80;
 const MAX_PAGES_PER_CHAPTER = 8;
+const MAX_REDIRECTS = 5;
 const REQUEST_TIMEOUT_MS = 15000;
 
 const chapterTitlePattern =
@@ -118,23 +121,7 @@ function extractLinks(html: string, baseUrl: string) {
   return links;
 }
 
-function assertPublicUrl(rawUrl: string) {
-  if (!rawUrl || typeof rawUrl !== 'string') {
-    throw new BadRequestException('请提供需要解析的 URL');
-  }
-
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new BadRequestException('URL 格式不正确');
-  }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new BadRequestException('仅支持 HTTP/HTTPS 链接');
-  }
-
-  const host = url.hostname.toLowerCase();
-  // 🏮 SSRF 兜底名单：不让用户粘贴的 URL 探查本机/内网/链路本地/IPv6 回环与 ULA。
+function isPrivateHost(host: string) {
   const isIpv6Literal = host.startsWith('[') && host.endsWith(']');
   const bareHost = isIpv6Literal ? host.slice(1, -1) : host;
   const isPrivateIpv4 =
@@ -153,7 +140,8 @@ function assertPublicUrl(rawUrl: string) {
     bareHost.startsWith('::ffff:10.') ||
     bareHost.startsWith('::ffff:192.168.') ||
     bareHost.startsWith('::ffff:169.254.');
-  if (
+
+  return (
     host === 'localhost' ||
     host.endsWith('.local') ||
     host.endsWith('.internal') ||
@@ -161,8 +149,53 @@ function assertPublicUrl(rawUrl: string) {
     host === 'broadcasthost' ||
     isPrivateIpv4 ||
     isPrivateIpv6
-  ) {
+  );
+}
+
+function isPrivateAddress(address: string) {
+  if (isIP(address) === 4) return isPrivateHost(address);
+  const normalized = address.toLowerCase();
+  return (
+    normalized === '::1' ||
+    normalized === '::' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80:') ||
+    normalized.startsWith('::ffff:127.') ||
+    normalized.startsWith('::ffff:10.') ||
+    normalized.startsWith('::ffff:192.168.') ||
+    normalized.startsWith('::ffff:169.254.')
+  );
+}
+
+async function assertPublicUrl(rawUrl: string) {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    throw new BadRequestException('请提供需要解析的 URL');
+  }
+
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new BadRequestException('URL 格式不正确');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new BadRequestException('仅支持 HTTP/HTTPS 链接');
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (isPrivateHost(host)) {
     throw new BadRequestException('后端兜底解析不访问本机或内网地址');
+  }
+
+  try {
+    const records = await lookup(host, { all: true });
+    if (records.some((record) => isPrivateAddress(record.address))) {
+      throw new BadRequestException('后端兜底解析不访问解析到内网的地址');
+    }
+  } catch (error) {
+    if (error instanceof BadRequestException) throw error;
+    throw new BadRequestException('URL 域名解析失败');
   }
 
   return url.toString();
@@ -171,7 +204,7 @@ function assertPublicUrl(rawUrl: string) {
 @Injectable()
 export class UrlImportService {
   async parse(rawUrl: string): Promise<ParsedBook> {
-    const url = assertPublicUrl(rawUrl);
+    const url = await assertPublicUrl(rawUrl);
     const html = await this.fetchHtml(url);
     const title = getTitle(html, url);
     const chapterLinks = this.getChapterLinks(html, url);
@@ -191,22 +224,43 @@ export class UrlImportService {
   }
 
   private async fetchHtml(url: string) {
-    let response: Response;
+    let response: Response | null = null;
+    let currentUrl = await assertPublicUrl(url);
     try {
-      response = await fetch(url, {
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        headers: {
-          accept:
-            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'accept-language': 'zh-CN,zh;q=0.9,en;q=0.7',
-          'user-agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
-        },
-      });
-    } catch {
+      for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
+        response = await fetch(currentUrl, {
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+          redirect: 'manual',
+          headers: {
+            accept:
+              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.7',
+            'user-agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
+          },
+        });
+        if (
+          response.status < 300 ||
+          response.status >= 400 ||
+          !response.headers.get('location')
+        ) {
+          break;
+        }
+        const nextUrl = toAbsoluteUrl(
+          response.headers.get('location') || '',
+          currentUrl,
+        );
+        if (!nextUrl) throw new BadRequestException('页面跳转地址不支持');
+        currentUrl = await assertPublicUrl(nextUrl);
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('页面请求失败或超时，请稍后重试');
     }
 
+    if (!response) {
+      throw new BadRequestException('页面请求失败或超时，请稍后重试');
+    }
     if (!response.ok) {
       throw new BadRequestException(`页面请求失败：HTTP ${response.status}`);
     }

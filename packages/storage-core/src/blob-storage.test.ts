@@ -20,7 +20,7 @@ describe("LocalFileBlobStorage", () => {
 
   it("should store and retrieve data", async () => {
     const storage = new LocalFileBlobStorage(testDir);
-    const key = "test/file.txt";
+    const key = "a".repeat(64);
     const data = "hello world";
 
     await storage.putObject(key, data);
@@ -31,12 +31,23 @@ describe("LocalFileBlobStorage", () => {
 
   it("should handle Buffer data", async () => {
     const storage = new LocalFileBlobStorage(testDir);
-    const key = "test/binary.bin";
+    const key = "b".repeat(64);
     const data = Buffer.from([1, 2, 3]);
 
     await storage.putObject(key, data);
     const retrieved = await storage.getObject(key);
 
     expect(retrieved).toEqual(data);
+  });
+
+  it("should reject path traversal keys", async () => {
+    const storage = new LocalFileBlobStorage(testDir);
+
+    await expect(storage.putObject("../outside", "bad")).rejects.toThrow(
+      "INVALID_BLOB_KEY",
+    );
+    await expect(storage.getObject("test/file.txt")).rejects.toThrow(
+      "INVALID_BLOB_KEY",
+    );
   });
 });

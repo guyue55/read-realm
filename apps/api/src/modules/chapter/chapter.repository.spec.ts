@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChapterRepository } from './chapter.repository';
 import { DRIZZLE } from '../database/database.module';
@@ -6,15 +9,19 @@ import { DRIZZLE } from '../database/database.module';
  * Drizzle 的条件树是带循环引用的对象树，直接 JSON.stringify 会抛 TypeError。
  * 这里只关心条件里出现的「字符串字面量」，所以做一个浅遍历把字符串值收集起来即可。
  */
-function collectStringLiterals(node: unknown, sink: Set<string>, seen = new WeakSet()) {
+function collectStringLiterals(
+  node: unknown,
+  sink: Set<string>,
+  seen = new WeakSet(),
+) {
   if (node === null || node === undefined) return;
   if (typeof node === 'string') {
     sink.add(node);
     return;
   }
   if (typeof node !== 'object') return;
-  if (seen.has(node as object)) return;
-  seen.add(node as object);
+  if (seen.has(node)) return;
+  seen.add(node);
   for (const value of Object.values(node as Record<string, unknown>)) {
     collectStringLiterals(value, sink, seen);
   }
@@ -41,10 +48,7 @@ describe('ChapterRepository (shareToken 物理隔离)', () => {
     };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
-      providers: [
-        ChapterRepository,
-        { provide: DRIZZLE, useValue: db },
-      ],
+      providers: [ChapterRepository, { provide: DRIZZLE, useValue: db }],
     }).compile();
 
     repository = moduleRef.get(ChapterRepository);

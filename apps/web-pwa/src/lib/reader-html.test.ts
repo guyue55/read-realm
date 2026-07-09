@@ -16,4 +16,15 @@ describe("buildReaderHtml", () => {
     expect(html).toContain('<p data-idx="0">第一段</p>');
     expect(html).toContain('<p data-idx="1" class="note">第二段</p>');
   });
+
+  it("removes executable html before reader injection", () => {
+    const html = buildReaderHtml(
+      '<p onclick="alert(1)">正文</p><script>alert(2)</script><a href="javascript:alert(3)">链接</a>',
+    );
+
+    expect(html).toContain('<p data-idx="0">正文</p>');
+    expect(html).not.toContain("onclick");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("javascript:");
+  });
 });

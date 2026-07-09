@@ -1,8 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Controller, Post, Body, Delete, Param, Get } from '@nestjs/common';
 import { BookRepository } from './book.repository';
-import { Book } from '@reader/shared-types';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
+import {
+  ImportBookBodySchema,
+  UpdateProgressBodySchema,
+  parseBody,
+} from '../../common/request-boundary';
 
 @Controller('books')
 export class BookController {
@@ -14,11 +17,14 @@ export class BookController {
   }
 
   @Post('import')
-  async importBook(
-    @ShareToken() token: string,
-    @Body() body: { metadata: Book; chapters: any[] },
-  ) {
-    await this.bookRepository.importBook(body.metadata, body.chapters, token);
+  async importBook(@ShareToken() token: string, @Body() body: unknown) {
+    const payload = parseBody(ImportBookBodySchema, body);
+    await this.bookRepository.importBook(
+      payload.metadata,
+      payload.chapters,
+      token,
+      { replaceExisting: payload.replaceExisting },
+    );
     return { success: true };
   }
 
@@ -32,14 +38,15 @@ export class BookController {
   async updateProgress(
     @ShareToken() token: string,
     @Param('id') id: string,
-    @Body() body: { lastReadProgress: string; lastReadAt?: string; sourceFolderId?: string | null },
+    @Body() body: unknown,
   ) {
+    const payload = parseBody(UpdateProgressBodySchema, body);
     await this.bookRepository.updateProgress(
       id,
-      body.lastReadProgress,
-      body.lastReadAt,
+      payload.lastReadProgress,
+      payload.lastReadAt,
       token,
-      body.sourceFolderId,
+      payload.sourceFolderId,
     );
     return { success: true };
   }

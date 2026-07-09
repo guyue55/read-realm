@@ -1,2 +1,2 @@
-pnpm --filter web-pwa build
-pnpm dev
+corepack pnpm --filter web-pwa build
+corepack pnpm dev

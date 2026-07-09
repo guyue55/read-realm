@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { DRIZZLE } from '../database/database.module';
 import type { Database } from '../database/database.module';
 import * as schema from '../database/schema';
@@ -7,6 +12,7 @@ import { ChapterRepository } from '../chapter/chapter.repository';
 import { OpenAIProvider } from '@reader/ai-core';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import * as crypto from 'crypto';
+import { toScopedId } from '../../common/request-boundary';
 
 @Injectable()
 export class AiService {
@@ -26,8 +32,9 @@ export class AiService {
     sourceHash: string,
     model: string,
     promptVersion: string,
+    scope: string = 'global',
   ): string {
-    const payload = `${sourceHash}:${model}:${promptVersion}`;
+    const payload = `${scope}:${sourceHash}:${model}:${promptVersion}`;
     return crypto
       .createHmac('sha256', 'read-realm-secret-salt-2026')
       .update(payload)
@@ -49,10 +56,13 @@ export class AiService {
     const userBaseUrl = userHeaders?.baseUrl;
     const userModel = userHeaders?.model;
     const serverApiKey = process.env.OPENAI_API_KEY;
-    const serverBaseUrl = process.env.OPENAI_BASE_URL;
 
     // 优先使用用户配置
-    if (userApiKey && userApiKey.trim().length > 0 && userApiKey !== 'undefined') {
+    if (
+      userApiKey &&
+      userApiKey.trim().length > 0 &&
+      userApiKey !== 'undefined'
+    ) {
       console.log('[AI-Service] 🔑 使用用户个人 AI 配置');
       return {
         provider: new OpenAIProvider(userApiKey, userBaseUrl || undefined),
@@ -61,7 +71,11 @@ export class AiService {
     }
 
     // 回退到服务端环境变量
-    if (serverApiKey && serverApiKey.trim().length > 0 && serverApiKey !== 'dummy-key') {
+    if (
+      serverApiKey &&
+      serverApiKey.trim().length > 0 &&
+      serverApiKey !== 'dummy-key'
+    ) {
       console.log('[AI-Service] 🏭 使用服务端全局 AI 配置');
       return {
         provider: this.openAIProvider,
@@ -70,7 +84,7 @@ export class AiService {
     }
 
     // 无可用配置
-    throw new Error('AI_NOT_CONFIGURED');
+    throw new BadRequestException('请先在设置中配置 AI Key');
   }
 
   async summarize(
@@ -95,16 +109,16 @@ export class AiService {
     // 解析 AI 配置（用户优先，服务端回退）
     const { provider, model } = this.resolveAIProvider(userAIHeaders);
     const promptVersion = '2.0';
+    const dbBookId = toScopedId(bookId, shareToken);
 
     // 1. 计算唯一 AISigKey 签名主键
     const aiSigKey = this.generateAiSigKey(
       chapter.contentHash,
       model,
       promptVersion,
+      dbBookId,
     );
-    console.log(
-      `[AI-Service] 🛡️ L2 SQLite 缓存拦截. Key: ${aiSigKey}`,
-    );
+    console.log(`[AI-Service] 🛡️ L2 SQLite 缓存拦截. Key: ${aiSigKey}`);
 
     // 2. L2 缓存拦截
     const cached = await this.db.query.aiViews.findFirst({
@@ -127,8 +141,6 @@ export class AiService {
 
     // 4. 生成摘要
     const summary = await provider.generateSummary(content, model);
-
-    const dbBookId = `${bookId}#${shareToken}`;
 
     // 5. 原子落库
     const aiView = {
@@ -154,8 +166,6 @@ export class AiService {
   /**
    * 检查 AI 服务是否可用（用于前端判断）
    */
-
-
 
   /**
    * AI 问答：针对当前章节回答用户问题
@@ -192,9 +202,16 @@ export class AiService {
     return { answer, question };
   }
 
-  checkAvailability(): { available: boolean; source: 'user' | 'server' | 'none' } {
+  checkAvailability(): {
+    available: boolean;
+    source: 'user' | 'server' | 'none';
+  } {
     const serverApiKey = process.env.OPENAI_API_KEY;
-    if (serverApiKey && serverApiKey.trim().length > 0 && serverApiKey !== 'dummy-key') {
+    if (
+      serverApiKey &&
+      serverApiKey.trim().length > 0 &&
+      serverApiKey !== 'dummy-key'
+    ) {
       return { available: true, source: 'server' };
     }
     // 用户配置状态由前端自行判断

@@ -46,7 +46,7 @@ describe('BookController', () => {
         id: 'ch1',
         title: 'Chapter 1',
         index: 0,
-        contentHash: 'hash',
+        content: '正文',
         createdAt: new Date().toISOString(),
       },
     ];
@@ -54,6 +54,13 @@ describe('BookController', () => {
     // 默认书架场景：shareToken 取 'default'，控制器需把它原样透传给仓储。
     await controller.importBook('default', { metadata: book, chapters });
 
-    expect(repository.importBook).toHaveBeenCalledWith(book, chapters, 'default');
+    expect(repository.importBook).toHaveBeenCalledWith(
+      book,
+      chapters,
+      'default',
+      {
+        replaceExisting: true,
+      },
+    );
   });
 });
