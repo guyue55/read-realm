@@ -13,7 +13,9 @@ describe('UrlImportService (SSRF 守门)', () => {
   const service = new UrlImportService();
 
   const reject = async (url: string) => {
-    await expect(service.parse(url)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.parse(url)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   };
 
   it('拒绝 file:// 与裸文本协议', async () => {

@@ -97,7 +97,7 @@ export type Database = LibSQLDatabase<typeof schema> & {
           console.log(
             '[SQLite DB] 自动升级自愈：成功在 books 表中增加 last_read_progress 列。',
           );
-        } catch (e) {
+        } catch {
           // If column already exists, ignore SQLite error code
         }
 
@@ -108,9 +108,25 @@ export type Database = LibSQLDatabase<typeof schema> & {
           console.log(
             '[SQLite DB] 自动升级自愈：成功在 books 表中增加 source_folder_id 列。',
           );
-        } catch (e) {
+        } catch {
           // If column already exists, ignore SQLite error code
         }
+
+        try {
+          await client.execute(
+            'CREATE UNIQUE INDEX IF NOT EXISTS chapters_book_id_index_uq ON chapters(book_id, "index");',
+          );
+        } catch {
+          console.warn(
+            '[SQLite DB] 检测到历史重复章节，暂未创建 chapters(book_id,index) 唯一索引。',
+          );
+        }
+        await client.execute(
+          'CREATE INDEX IF NOT EXISTS chapters_content_hash_idx ON chapters(content_hash);',
+        );
+        await client.execute(
+          'CREATE INDEX IF NOT EXISTS ai_views_book_chapter_idx ON ai_views(book_id, chapter_index);',
+        );
 
         // Initialize FTS5 table
         await client.execute(`

@@ -31,7 +31,8 @@
     "@reader/shared-types": "workspace:*",
     "@reader/storage-core": "workspace:*",
     "@reader/ai-core": "workspace:*",
-    "@reader/parser-core": "workspace:*"
+    "@reader/parser-core": "workspace:*",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

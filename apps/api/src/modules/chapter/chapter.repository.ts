@@ -2,7 +2,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, asc } from 'drizzle-orm';
+import {
+  DEFAULT_SHARE_TOKEN,
+  stripScopedId,
+} from '../../common/request-boundary';
 
 @Injectable()
 export class ChapterRepository {
@@ -15,7 +19,7 @@ export class ChapterRepository {
    */
   private buildBookIdClause(bookId: string, shareToken: string) {
     const dbBookId = `${bookId}#${shareToken}`;
-    if (shareToken === 'default' || !shareToken) {
+    if (shareToken === DEFAULT_SHARE_TOKEN || !shareToken) {
       return or(
         eq(schema.chapters.bookId, dbBookId),
         eq(schema.chapters.bookId, `${bookId}#default`),
@@ -45,8 +49,8 @@ export class ChapterRepository {
 
     return {
       ...results[0],
-      bookId: results[0].bookId.split('#')[0],
-      id: results[0].id.split('#')[0],
+      bookId: stripScopedId(results[0].bookId),
+      id: stripScopedId(results[0].id),
     };
   }
 
@@ -56,12 +60,13 @@ export class ChapterRepository {
     const results = await this.db
       .select()
       .from(schema.chapters)
-      .where(whereClause);
+      .where(whereClause)
+      .orderBy(asc(schema.chapters.index));
 
     return results.map((chap) => ({
       ...chap,
-      bookId: chap.bookId.split('#')[0],
-      id: chap.id.split('#')[0],
+      bookId: stripScopedId(chap.bookId),
+      id: stripScopedId(chap.id),
     }));
   }
 }

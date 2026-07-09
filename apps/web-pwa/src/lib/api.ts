@@ -1,4 +1,5 @@
 const DEFAULT_API_PORT = "4000";
+const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_\-\u4E00-\u9FFF]{1,64}$/;
 
 export function getApiBaseUrl() {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -10,7 +11,8 @@ export function getApiBaseUrl() {
     return `http://127.0.0.1:${apiPort}`;
   }
 
-  return `${window.location.protocol}//${window.location.hostname}:${apiPort}`;
+  const protocol = window.location.protocol === "https:" ? "http:" : window.location.protocol;
+  return `${protocol}//${window.location.hostname}:${apiPort}`;
 }
 
 export function apiUrl(path: string) {
@@ -19,10 +21,19 @@ export function apiUrl(path: string) {
 
 export function getShareHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {};
-  const token = window.localStorage.getItem("reader-share-token");
+  const token = normalizeShareToken(window.localStorage.getItem("reader-share-token"));
   if (!token) return {};
   return {
-    "x-share-token": token.trim(),
+    "x-share-token": token,
   };
 }
 
+export function isValidShareToken(token: string) {
+  const trimmed = token.trim();
+  return trimmed.length > 0 && SHARE_TOKEN_PATTERN.test(trimmed);
+}
+
+export function normalizeShareToken(token: string | null | undefined) {
+  const trimmed = token?.trim() || "";
+  return isValidShareToken(trimmed) ? trimmed : "";
+}

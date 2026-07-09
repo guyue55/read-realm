@@ -185,6 +185,8 @@ export interface MetaShelfBackup {
   progress: ReadingProgress[];
   bookmarks: Bookmark[];
   backupTime: string;
+  isPartial?: boolean;
+  originalBookCount?: number;
 }
 
 /**
@@ -195,7 +197,8 @@ export interface MetaShelfBackup {
 export async function backupMetadataToStorage(): Promise<boolean> {
   if (typeof window === "undefined" || !window.localStorage) return false;
   try {
-    let books = await db.books.toArray();
+    const originalBooks = await db.books.toArray();
+    let books = originalBooks;
     let progress = await db.progress.toArray();
     let bookmarks = await db.bookmarks.toArray();
     
@@ -205,23 +208,25 @@ export async function backupMetadataToStorage(): Promise<boolean> {
       return false;
     }
 
-    // 🏮 核心安全自愈裁剪（容量限额防线）：
-    // 若 books.length > 20 或 bookmarks.length > 100，则自动 prune 并仅对最新前 20 本书、最新前 100 章节书签执行备份（强制限制快照 JSON 在 500KB 以下）
-    if (books.length > 20 || bookmarks.length > 100) {
+    const maxLocalBooks = 100;
+    const maxLocalBookmarks = 500;
+    const isPartial = books.length > maxLocalBooks || bookmarks.length > maxLocalBookmarks;
+
+    // localStorage 只保留轻量元数据快照，原生宿主会继续写全量备份。
+    if (isPartial) {
       console.log(`[Storage Backup] ⚠️ 检测到数据量规模较大，启动 LocalStorage 熔断剪裁机制...`);
-      // 仅备份最新活跃的 20 本藏书与最新前 100 条书签
       books = books
         .sort((a, b) => {
           const tA = a.lastReadAt ? new Date(a.lastReadAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
           const tB = b.lastReadAt ? new Date(b.lastReadAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
           return tB - tA;
         })
-        .slice(0, 20);
+        .slice(0, maxLocalBooks);
       const allowedBookIds = new Set(books.map(b => b.id));
       progress = progress.filter(p => allowedBookIds.has(p.bookId));
       bookmarks = bookmarks
         .filter(b => allowedBookIds.has(b.bookId))
-        .slice(-100);
+        .slice(-maxLocalBookmarks);
     }
 
     const backupData: MetaShelfBackup = {
@@ -229,6 +234,8 @@ export async function backupMetadataToStorage(): Promise<boolean> {
       progress,
       bookmarks,
       backupTime: new Date().toISOString(),
+      isPartial,
+      originalBookCount: originalBooks.length,
     };
 
     const serialized = JSON.stringify(backupData);
@@ -256,7 +263,14 @@ export async function backupMetadataToStorage(): Promise<boolean> {
         const fullBooks = await db.books.toArray();
         const fullProgress = await db.progress.toArray();
         const fullBookmarks = await db.bookmarks.toArray();
-        const fullBackup: MetaShelfBackup = { books: fullBooks, progress: fullProgress, bookmarks: fullBookmarks, backupTime: new Date().toISOString() };
+        const fullBackup: MetaShelfBackup = {
+          books: fullBooks,
+          progress: fullProgress,
+          bookmarks: fullBookmarks,
+          backupTime: new Date().toISOString(),
+          isPartial: false,
+          originalBookCount: fullBooks.length,
+        };
         const fullSerialized = JSON.stringify(fullBackup);
         await Filesystem.writeFile({
           path: "read_realm_backup/meta_shelf.json",
@@ -277,7 +291,14 @@ export async function backupMetadataToStorage(): Promise<boolean> {
         const fullBooks = await db.books.toArray();
         const fullProgress = await db.progress.toArray();
         const fullBookmarks = await db.bookmarks.toArray();
-        const fullBackup: MetaShelfBackup = { books: fullBooks, progress: fullProgress, bookmarks: fullBookmarks, backupTime: new Date().toISOString() };
+        const fullBackup: MetaShelfBackup = {
+          books: fullBooks,
+          progress: fullProgress,
+          bookmarks: fullBookmarks,
+          backupTime: new Date().toISOString(),
+          isPartial: false,
+          originalBookCount: fullBooks.length,
+        };
         const fullSerialized = JSON.stringify(fullBackup);
         await writeTextFile("read_realm_backup/meta_shelf.json", fullSerialized, {
           dir: BaseDirectory.AppLocalData,
@@ -358,7 +379,8 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
       return false;
     }
 
-    console.log(`[Storage] 发现归档于 ${backup.backupTime} 的镜像，开始复苏重建事务...`);
+    const restoreMode = backup.isPartial ? "轻量" : "全量";
+    console.log(`[Storage] 发现归档于 ${backup.backupTime} 的${restoreMode}镜像，开始复苏重建事务...`);
 
     // 使用事务保证原子级恢复
     await db.transaction("rw", [db.books, db.progress, db.bookmarks], async () => {

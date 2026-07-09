@@ -2,7 +2,7 @@
 
 import { AppShell } from "@/components/AppShell";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getShareHeaders } from "@/lib/api";
 import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
@@ -718,7 +718,7 @@ export default function ImportPage() {
       setStatus("前端直接解析受限，切换后端兜底...");
       const response = await fetch(apiUrl("/imports/url/parse"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getShareHeaders() },
         body: JSON.stringify({ url }),
       });
       if (!response.ok) {

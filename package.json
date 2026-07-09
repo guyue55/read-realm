@@ -4,12 +4,12 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "turbo dev --ui=stream",
-    "build": "turbo build",
-    "start": "pnpm --filter web-pwa start",
-    "test": "turbo test",
-    "lint": "turbo lint",
-    "format": "prettier --write ."
+    "dev": "corepack pnpm --parallel --filter web-pwa --filter api dev",
+    "build": "corepack pnpm -r --workspace-concurrency=1 --if-present build",
+    "start": "corepack pnpm --filter web-pwa start",
+    "test": "corepack pnpm -r --workspace-concurrency=1 --if-present test",
+    "lint": "corepack pnpm -r --workspace-concurrency=1 --if-present lint",
+    "format": "corepack pnpm exec prettier --write ."
   },
   "devDependencies": {
     "prettier": "latest",
