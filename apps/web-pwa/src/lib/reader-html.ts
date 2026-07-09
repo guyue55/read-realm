@@ -1,4 +1,4 @@
-function escapeHtml(value: string) {
+export function escapeReaderHtmlText(value: string) {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -106,7 +106,7 @@ export function buildReaderHtml(content: string): string {
       .map((line) => {
         const trimmed = line.trim();
         if (trimmed.length === 0) return "";
-        return `<p data-idx="${idx++}">${escapeHtml(trimmed)}</p>`;
+        return `<p data-idx="${idx++}">${escapeReaderHtmlText(trimmed)}</p>`;
       })
       .filter(Boolean)
       .join("");

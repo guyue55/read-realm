@@ -6,13 +6,13 @@ import { virtualRouter } from "@/lib/route-store";
 
 // 同步静态导入所有视图，彻底打消动态 chunk 请求，确保离线 100% 物理高可用、物理 0.0ms 切换！
 import LibraryPage from "./library/page";
-import ReaderPageSwitch from "./reader/[bookId]/page";
-import BookDetailPage from "./book/[bookId]/page";
+import ReaderPageSwitch from "./reader/[bookId]/ReaderClient";
+import BookDetailPage from "./book/[bookId]/BookDetailClient";
 import SearchPage from "./search/page";
 import NotesPage from "./notes/page";
 import SettingsPage from "./settings/page";
 import ImportPage from "./import/page";
-import ImportPreviewPage from "./import/preview/[taskId]/page";
+import ImportPreviewPage from "./import/preview/[taskId]/PreviewClient";
 
 // 精美的宣纸中式骨架加载组件
 function PageLoadingSkeleton({ text }: { text: string }) {

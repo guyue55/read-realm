@@ -20,19 +20,19 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@reader/shared-types": "workspace:*",
+    "@mozilla/readability": "^0.6.0",
     "@reader/content-utils": "workspace:*",
-    "jszip": "^3.10.1",
-    "isomorphic-dompurify": "^2.0.0",
+    "@reader/shared-types": "workspace:*",
     "@xmldom/xmldom": "^0.8.10",
+    "isomorphic-dompurify": "^3.18.0",
     "jsdom": "^24.0.0",
-    "@mozilla/readability": "^0.5.0"
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@reader/tsconfig": "workspace:*",
-    "typescript": "latest",
     "@types/jsdom": "^21.1.6",
     "@types/mozilla-readability": "^0.2.1",
+    "typescript": "latest",
     "vitest": "^1.0.0"
   }
 }

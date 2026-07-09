@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildReaderHtml } from "./reader-html";
+import { buildReaderHtml, escapeReaderHtmlText } from "./reader-html";
 
 describe("buildReaderHtml", () => {
+  it("escapes reader title text before html injection", () => {
+    expect(escapeReaderHtmlText('标题 <img src=x onerror="alert(1)"> & 结束')).toBe(
+      "标题 &lt;img src=x onerror=&quot;alert(1)&quot;&gt; &amp; 结束",
+    );
+  });
+
   it("escapes raw TXT content before injecting paragraph html", () => {
     const html = buildReaderHtml("第一行 <script>alert(1)</script> & 正文");
 

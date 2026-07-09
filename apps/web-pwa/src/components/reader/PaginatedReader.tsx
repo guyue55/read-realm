@@ -11,7 +11,7 @@ import {
   PAGE_GAP,
 } from '@reader/reader-core';
 import { readerTokens } from '@reader/shared-types';
-import { buildReaderHtml } from '@/lib/reader-html';
+import { buildReaderHtml, escapeReaderHtmlText } from '@/lib/reader-html';
 
 export interface PaginatedReaderProps {
   title: string;
@@ -70,26 +70,28 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       maxWidth: readerTokens.layout.desktopContentMaxWidth,
     }), [fontSize, lineHeight, fontFamily, paragraphSpacing, letterSpacing]);
 
+    const safeBody = useMemo(() => buildReaderHtml(content), [content]);
+    const safeTitle = useMemo(() => escapeReaderHtmlText(title), [title]);
+    const titleHtml = useMemo(
+      () => `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;color:inherit;">${safeTitle}</h1>`,
+      [fontSize, safeTitle],
+    );
+
     const { pages, totalPages } = useMemo(() => {
       if (containerWidth <= 0 || containerHeight <= 0 || !content) {
         return { pages: [] as PaginationPage[], totalPages: 0 };
       }
       // 🏮 先把 TXT/HTML 段落归一化为带 data-idx 的安全 HTML，避免 TXT 中的 <>& 字符被当作真实标签注入分栏视图。
-      const safeBody = buildReaderHtml(content);
-      const safeTitle = title
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const fullHtml = `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;">${safeTitle}</h1>${safeBody}`;
+      const fullHtml = `${titleHtml}${safeBody}`;
       return paginateContentAdaptive(fullHtml, containerWidth, containerHeight, style);
-    }, [content, title, containerWidth, containerHeight, style, fontSize]);
+    }, [content, containerWidth, containerHeight, style, titleHtml, safeBody]);
 
     const pageContent = useMemo(() => {
       if (pages.length === 0 || !content) return [];
 
       // 与 paginateContentAdaptive 内部 extractParagraphs 保持一致的段落提取逻辑，
       // 支持 raw text（无 <p> 标签）和 HTML 段落两种格式。
-      const fullHtml = `<h1>${title}</h1>${content}`;
+      const fullHtml = `${titleHtml}${safeBody}`;
       let allParagraphs: string[] = [];
       const paraRegex = /<p\b[^>]*>(.*?)<\/p>/gi;
       let match;
@@ -111,14 +113,14 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
         // HTML 内容：标题通过 <h1> 单独渲染（标题不在 allParagraphs 中）
         // raw text：标题已包含在 allParagraphs[0] 中，不重复渲染 <h1>
         if (page.startParaIndex === 0 && !isRawText) {
-          html += `<h1 style="font-size:${fontSize * 1.67}px;font-weight:bold;margin-bottom:40px;text-align:center;color:inherit;">${title}</h1>`;
+          html += titleHtml;
         }
         for (let i = page.startParaIndex; i < page.endParaIndex && i < allParagraphs.length; i++) {
           html += allParagraphs[i];
         }
         return html;
       });
-    }, [pages, content, title, fontSize]);
+    }, [pages, content, titleHtml, safeBody]);
 
     // 🏮 暴露翻页操作给父组件
     useImperativeHandle(ref, () => ({

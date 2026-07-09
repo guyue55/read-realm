@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { strings } from "@/lib/i18n";
-import { buildReaderHtml } from "@/lib/reader-html";
+import { buildReaderHtml, escapeReaderHtmlText } from "@/lib/reader-html";
 
 export interface ReaderContentProps {
   title: string;
@@ -50,7 +50,7 @@ export const ReaderContent = memo(
           .join(";");
       }
       const titleStyleAttr = titleStyleStr ? `style="${titleStyleStr}"` : "";
-      const titleHtml = title ? `<h1 ${titleClassAttr} ${titleStyleAttr}>${title}</h1>` : "";
+      const titleHtml = title ? `<h1 ${titleClassAttr} ${titleStyleAttr}>${escapeReaderHtmlText(title)}</h1>` : "";
       const combinedHtml = `${titleHtml}\n${processedContent}`;
 
       return (
