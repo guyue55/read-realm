@@ -2134,7 +2134,7 @@ export function useReader(bookId: string) {
       const promptVersion = "2.0";
 
       // 2. 跨端计算与后端 100% 物理对称的 HMAC 强哈希主键 (AISigKey)
-      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion);
+      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion, bookId);
       console.log(`[AI-Reader] 🛡️ 正在进行 PWA 侧 L1 级本地 IndexedDB 缓存检索. Key: ${aiSigKey}`);
 
       // 3. 拦截器 L1：优先在前端离线 aiViews 数据库中寻找
@@ -2268,7 +2268,7 @@ ${data.answer || "未能生成回答。"}`;
       const sourceHash = await computeSha256Async(chapter.content);
       const model = "gpt-3.5-turbo";
       const promptVersion = "2.0";
-      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion);
+      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion, bookId);
 
       // 物理删除 L1 离线数据库
       await db.aiViews.delete(aiSigKey);
@@ -2280,7 +2280,7 @@ ${data.answer || "未能生成回答。"}`;
       console.error("[AI-Reader] 清空伴读会话发生故障:", error);
       showToast("💡 存储繁忙，清空伴读失败。");
     }
-  }, [chapter, showToast]);
+  }, [chapter, bookId, showToast]);
 
 
   const updateFontSize = useCallback(

@@ -74,10 +74,10 @@ export class BookRepository {
 
         await tx.insert(schema.books).values(finalBookData);
       } else {
-        await tx
-          .update(schema.books)
-          .set(finalBookData)
-          .where(eq(schema.books.id, dbBookId));
+        await tx.insert(schema.books).values(finalBookData).onConflictDoUpdate({
+          target: schema.books.id,
+          set: finalBookData,
+        });
       }
 
       if (chapters.length > 0) {
