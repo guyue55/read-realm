@@ -11,6 +11,8 @@
 ## Global Constraints
 
 - 中文优先，技术错误必须转成用户可执行的中文说明。
+- 采用强国风沉浸叙事；诗意术语集中在单一产品词典，白话含义用于辅助说明、Tooltip 与可访问名称。
+- 危险操作、权限、错误、隐私和恢复路径必须使用明确中文，不得只用诗意隐喻。
 - 后端控制权限、分享作用域和数据范围；前端只控制显隐、禁用和引导。
 - 不新增 Redux、Zustand、微前端、图表或动画运行时。
 - 唯一允许新增的生产依赖是 `lucide-react`；新增依赖后必须执行生产依赖审计。
@@ -204,6 +206,8 @@ Commit: `fix(database): 修复重复章节并恢复唯一约束`
 - Create: `apps/web-pwa/src/styles/ui-tokens.ts`
 - Create: `apps/web-pwa/src/styles/ui-tokens.test.ts`
 - Create: `apps/web-pwa/src/styles/tokens.css`
+- Create: `apps/web-pwa/src/lib/product-language.ts`
+- Create: `apps/web-pwa/src/lib/product-language.test.ts`
 - Modify: `apps/web-pwa/src/app/globals.css`
 - Modify: `apps/web-pwa/src/app/layout.tsx`
 - Create: `apps/web-pwa/src/components/ui/IconButton.tsx`
@@ -216,6 +220,7 @@ Commit: `fix(database): 修复重复章节并恢复唯一约束`
 
 **Interfaces:**
 - Produces: `UI_TOKENS`
+- Produces: `PRODUCT_LANGUAGE`
 - Produces: `APP_NAV_ITEMS`
 - Produces: `IconButton`, `SegmentedControl`, `StatusNotice`
 - Produces: 单一 `AppShell`
@@ -245,6 +250,14 @@ it("主导航包含五个真实页面", () => {
     "/settings",
   ]);
 });
+
+it("诗意操作同时提供白话含义", () => {
+  expect(PRODUCT_LANGUAGE.actions.importBook).toEqual({
+    label: "纳书入阁",
+    plain: "导入书籍",
+  });
+  expect(PRODUCT_LANGUAGE.actions.deleteBook.label).toBe("删除书籍");
+});
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -255,7 +268,7 @@ Expected: FAIL，模块尚不存在。
 
 - [ ] **Step 3: 实现基础设计系统**
 
-`tokens.css` 定义暖白、炭黑、松柏绿、冷青蓝、朱砂、4/8px 间距、最大 8px 卡片圆角、焦点环和层级。`globals.css` 删除三个远程字体入口和全局 `user-select: none`，使用：
+`tokens.css` 定义暖白、炭黑、松柏绿、天青、朱砂、4/8px 间距、最大 8px 卡片圆角、焦点环和层级。`product-language.ts` 统一维护纳书入阁/导入书籍、继续展卷/继续阅读、落墨/写笔记、寻书/搜索书籍、笺注/笔记与书签、云阁同步/同步数据；删除、权限、错误和恢复操作的 `label` 直接使用明确白话。`globals.css` 删除三个远程字体入口和全局 `user-select: none`，使用：
 
 ```css
 body {
@@ -283,7 +296,7 @@ nav,
 
 - [ ] **Step 4: 统一 Shell 与图标**
 
-添加 `lucide-react`，导航使用 `Library`, `Search`, `Import`, `NotebookPen`, `Settings`。`PageLayout` 成为 `AppShell` 的薄适配器；移除重复 `Sidebar`。删除侧栏硬编码用户、连续天数、阅读分钟和藏书数量。
+添加 `lucide-react`，导航使用 `Library`, `Search`, `Import`, `NotebookPen`, `Settings`，可见标签从 `PRODUCT_LANGUAGE` 读取诗意名称，`aria-label` 与 Tooltip 使用 `plain`。`PageLayout` 成为 `AppShell` 的薄适配器；移除重复 `Sidebar`。删除侧栏硬编码用户、连续天数、阅读分钟和藏书数量。
 
 - [ ] **Step 5: 验证并提交**
 
@@ -421,7 +434,11 @@ Run: `corepack pnpm --filter web-pwa test -- library-state.test.ts sync-tasks.te
 <EmptyState
   title="书架还是空的"
   description="导入 TXT 或 EPUB，阅读进度会保存在这台设备。"
-  primaryAction={{ label: "导入一本书", onClick: openImport }}
+  primaryAction={{
+    label: PRODUCT_LANGUAGE.actions.importBook.label,
+    accessibleLabel: PRODUCT_LANGUAGE.actions.importBook.plain,
+    onClick: openImport,
+  }}
   secondaryAction={{ label: "添加示例书", onClick: addSampleBook }}
 />
 ```
