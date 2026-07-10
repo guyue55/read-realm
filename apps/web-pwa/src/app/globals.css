@@ -1,58 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;900&display=swap');
-@import url('https://npm.elemecdn.com/lxgw-wenkai-screen-webfont@1.7.0/style.css');
-@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css');
+@import "../styles/tokens.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --ui-bg: #f8f6f0;
-  --ui-surface: #fffdf8;
-  --ui-raised: #ffffff;
-  --ui-panel: rgba(255, 252, 245, 0.94);
-  --ui-border: rgba(80, 65, 45, 0.12);
-  --ui-soft-border: rgba(80, 65, 45, 0.08);
-  --ui-text: #2f2a24;
-  --ui-muted: #6f665b;
-  --ui-quiet: #9c9388;
-  --ui-accent: #5f7d52;
-  --ui-accent-soft: #eef2e9;
-  --ui-warm: #9a6a3a;
-  --ui-danger: #b86b5c;
-  --ui-shadow: 0 18px 50px rgba(80, 65, 45, 0.08);
-
-  /* 三大风雅国风/屏显中文字体变量 */
-  --font-kaiti: "LXGW WenKai Screen", "Kaiti SC", "STKaiti", "FZKai-Z03S", "FZKai-Z03", "FandolKai", "KaiTi", "SimKai", "Noto Serif SC", serif;
-  --font-songti: "Songti SC", "STSong", "Noto Serif SC", "SimSun", Georgia, serif;
-  --font-heiti: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html, body {
-  /* 阻断全页面的橡皮筋和下拉刷新冲突 */
+html,
+body {
   overscroll-behavior-y: none;
-  /* 屏蔽双击 zoom，优化 0ms 点击响应 */
   touch-action: manipulation;
-  /* 物理屏蔽移动端整个界面的长按文本弹出行为，防止干扰拟物按钮与滑动手势 */
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+nav,
+[data-drag-handle] {
   -webkit-user-select: none;
   user-select: none;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family:
-    Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial,
-    Helvetica, sans-serif;
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 @layer utilities {
@@ -61,17 +38,27 @@ body {
   }
 
   .font-reading-title {
-    font-family: Georgia, "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+    font-family: var(--font-display);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-accent {
+    font-family: var(--font-accent);
   }
 
   .ui-card {
     border: 1px solid var(--ui-border);
+    border-radius: var(--radius-card);
     background: var(--ui-surface);
     box-shadow: 0 10px 30px rgba(80, 65, 45, 0.045);
   }
 
   .ui-soft-card {
     border: 1px solid var(--ui-soft-border);
+    border-radius: var(--radius-card);
     background: rgba(255, 255, 255, 0.56);
   }
 
@@ -80,8 +67,9 @@ body {
   }
 
   .ui-focus-ring:focus-visible {
-    box-shadow: 0 0 0 3px rgba(95, 125, 82, 0.18);
     border-color: var(--ui-accent);
+    outline: 2px solid var(--ui-accent);
+    outline-offset: 2px;
   }
 
   .reader-scrollbar {
@@ -109,12 +97,10 @@ body {
     text-justify: inter-character;
     line-break: strict;
     word-break: break-all;
-    letter-spacing: var(--letter-spacing, 0.03em);
-    font-family: var(--reader-font-family, var(--font-kaiti)); /* 默认应用优雅楷体 */
+    letter-spacing: var(--letter-spacing, 0);
+    font-family: var(--reader-font-family, var(--font-kaiti));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-shadow: 0 0 1px rgba(80, 65, 45, 0.015); /* 模拟微弱油墨在宣纸上匀称晕开的高档质感 */
-    /* 仅允许阅读器正文区进行文本选择、长按复制与高亮标记，保障核心笔记书签功能 */
     -webkit-user-select: text;
     user-select: text;
   }
@@ -213,9 +199,7 @@ body {
     margin-right: -6px;
   }
 
-  /* 强力 3D 合成器硬件加速，隔离重绘 */
   .reader-gpu-accelerated {
-    will-change: transform, opacity;
     transform: translate3d(0, 0, 0);
   }
 
@@ -239,7 +223,6 @@ body {
 
   .ink-breathe-layer {
     animation: inkBreathe 10s ease-in-out infinite;
-    will-change: transform, opacity;
   }
 
   /* AI 智能摘要淡入动画 */
@@ -261,3 +244,13 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
