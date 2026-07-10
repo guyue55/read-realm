@@ -1,137 +1,25 @@
 "use client";
 
-export type AppView =
-  | "library"
-  | "reader"
-  | "search"
-  | "notes"
-  | "settings"
-  | "book-detail"
-  | "import"
-  | "import-preview";
+import {
+  DEFAULT_ROUTE_STATE,
+  normalizeRouteState,
+  parseAppLocation,
+  serializeAppLocation,
+  type AppView,
+  type RouteState,
+} from "./navigation-state";
 
-export interface RouteState {
-  currentView: AppView;
-  activeBookId: string | null;
-  activeChapterIndex: number | null;
-  activePanel: string | null; // e.g. "settings", "toc", "ai", "progress"
-  activeTaskId: string | null;
-}
-
-const DEFAULT_STATE: RouteState = {
-  currentView: "library",
-  activeBookId: null,
-  activeChapterIndex: null,
-  activePanel: null,
-  activeTaskId: null,
-};
+export type { AppView, RouteState } from "./navigation-state";
+export const parseHash = parseAppLocation;
+export const serializeState = serializeAppLocation;
 
 // 内存单例缓存
-let currentState: RouteState = { ...DEFAULT_STATE };
+let currentState: RouteState = { ...DEFAULT_ROUTE_STATE };
 const listeners = new Set<() => void>();
 
 // 内存中常驻的滚动位置记忆字典，key 为 view 标识符，value 为滚动高度
 export const viewScrollMemory: Record<string, number> = {};
 
-
-// 浏览器 Hash 解析器
-export function parseHash(hashString: string): RouteState {
-  const cleanHash = hashString.startsWith("#") ? hashString.slice(1) : hashString;
-  if (!cleanHash || cleanHash === "/" || cleanHash === "/library") {
-    return { ...DEFAULT_STATE, currentView: "library" };
-  }
-
-  // 匹配 #/reader/[bookId] 或 #/reader/[bookId]?chapter=x
-  const readerRegex = /^\/reader\/([^?#]+)/;
-  const bookDetailRegex = /^\/book\/([^?#]+)/;
-  const importPreviewRegex = /^\/import\/preview\/([^?#]+)/;
-
-  if (readerRegex.test(cleanHash)) {
-    const match = cleanHash.match(readerRegex);
-    const bookId = match ? match[1] : null;
-
-    // 解析 query parameters
-    let activeChapterIndex: number | null = null;
-    let activePanel: string | null = null;
-
-    const queryIndex = cleanHash.indexOf("?");
-    if (queryIndex !== -1) {
-      const searchParams = new URLSearchParams(cleanHash.slice(queryIndex));
-      const ch = searchParams.get("chapter");
-      if (ch !== null) {
-        activeChapterIndex = parseInt(ch, 10);
-      }
-      activePanel = searchParams.get("panel");
-    }
-
-    return {
-      currentView: "reader",
-      activeBookId: bookId,
-      activeChapterIndex: (activeChapterIndex === null || isNaN(activeChapterIndex)) ? null : activeChapterIndex,
-      activePanel,
-      activeTaskId: null,
-    };
-  }
-
-  if (bookDetailRegex.test(cleanHash)) {
-    const match = cleanHash.match(bookDetailRegex);
-    const bookId = match ? match[1] : null;
-    return {
-      ...DEFAULT_STATE,
-      currentView: "book-detail",
-      activeBookId: bookId,
-    };
-  }
-
-  if (importPreviewRegex.test(cleanHash)) {
-    const match = cleanHash.match(importPreviewRegex);
-    const taskId = match ? match[1] : null;
-    return {
-      ...DEFAULT_STATE,
-      currentView: "import-preview",
-      activeTaskId: taskId,
-    };
-  }
-
-  // 匹配简单视图
-  const simpleViews: AppView[] = ["search", "notes", "settings", "import"];
-  const matchedView = simpleViews.find((v) => cleanHash.startsWith(`/${v}`));
-
-  if (matchedView) {
-    return {
-      ...DEFAULT_STATE,
-      currentView: matchedView,
-    };
-  }
-
-  return { ...DEFAULT_STATE, currentView: "library" };
-}
-
-// 状态序列化并生成目标 Hash 字符串
-export function serializeState(state: RouteState): string {
-  if (state.currentView === "library") {
-    return "/library";
-  }
-  if (state.currentView === "reader" && state.activeBookId) {
-    const hash = `/reader/${state.activeBookId}`;
-    const params = new URLSearchParams();
-    if (state.activeChapterIndex !== null) {
-      params.set("chapter", state.activeChapterIndex.toString());
-    }
-    if (state.activePanel !== null) {
-      params.set("panel", state.activePanel);
-    }
-    const paramStr = params.toString();
-    return paramStr ? `${hash}?${paramStr}` : hash;
-  }
-  if (state.currentView === "book-detail" && state.activeBookId) {
-    return `/book/${state.activeBookId}`;
-  }
-  if (state.currentView === "import-preview" && state.activeTaskId) {
-    return `/import/preview/${state.activeTaskId}`;
-  }
-  return `/${state.currentView}`;
-}
 
 // 保存快照至 LocalStorage 确保刷新零丢失自愈
 const STORAGE_KEY = "read_realm_virtual_route_snapshot";
@@ -139,7 +27,7 @@ const STORAGE_KEY = "read_realm_virtual_route_snapshot";
 export function saveRouteSnapshot(state: RouteState) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeRouteState(state)));
   } catch (e) {
     console.error("Failed to save route snapshot:", e);
   }
@@ -149,7 +37,7 @@ export function loadRouteSnapshot(): RouteState | null {
   if (typeof window === "undefined") return null;
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : null;
+    return data ? normalizeRouteState(JSON.parse(data)) : null;
   } catch {
     return null;
   }
@@ -168,7 +56,7 @@ export const virtualRouter = {
 
   // 强制同步最新状态并广播
   emitChange(newState: Partial<RouteState>) {
-    currentState = { ...currentState, ...newState };
+    currentState = normalizeRouteState({ ...currentState, ...newState });
     saveRouteSnapshot(currentState);
     listeners.forEach((listener) => listener());
   },
@@ -180,13 +68,13 @@ export const virtualRouter = {
   ) {
     if (typeof window === "undefined") return;
 
-    const nextState: RouteState = {
+    const nextState = normalizeRouteState({
       currentView: view,
       activeBookId: params?.bookId ?? null,
       activeChapterIndex: params?.chapterIndex ?? null,
       activePanel: params?.panel ?? null,
       activeTaskId: params?.taskId ?? null,
-    };
+    });
 
     const targetHash = serializeState(nextState);
     
@@ -204,13 +92,13 @@ export const virtualRouter = {
   ) {
     if (typeof window === "undefined") return;
 
-    const nextState: RouteState = {
+    const nextState = normalizeRouteState({
       currentView: view,
       activeBookId: params?.bookId ?? null,
       activeChapterIndex: params?.chapterIndex ?? null,
       activePanel: params?.panel ?? null,
       activeTaskId: params?.taskId ?? null,
-    };
+    });
 
     const targetHash = serializeState(nextState);
     window.history.replaceState(nextState, "", `#${targetHash}`);
@@ -232,7 +120,7 @@ export const virtualRouter = {
 
     // 双通道结合自愈
     if (hash) {
-      currentState = urlState;
+      currentState = normalizeRouteState(urlState);
     } else {
       const snapshot = loadRouteSnapshot();
       if (snapshot && snapshot.currentView !== "library") {
@@ -241,7 +129,7 @@ export const virtualRouter = {
         const targetHash = serializeState(currentState);
         window.history.replaceState(currentState, "", `#${targetHash}`);
       } else {
-        currentState = { ...DEFAULT_STATE, currentView: "library" };
+        currentState = { ...DEFAULT_ROUTE_STATE, currentView: "library" };
         window.history.replaceState(currentState, "", "#/library");
       }
     }
@@ -257,58 +145,25 @@ export function useVirtualRouter() {
     push(url: string) {
       if (typeof window === "undefined") return;
 
-      // 1. 处理阅读器页面跳转 /reader/[bookId] 或 /reader/[bookId]?chapter=x
-      if (url.startsWith("/reader/")) {
-        const bookIdAndQuery = url.split("/reader/")[1];
-        const queryIndex = bookIdAndQuery.indexOf("?");
-        if (queryIndex !== -1) {
-          const bookId = bookIdAndQuery.slice(0, queryIndex);
-          const searchParams = new URLSearchParams(bookIdAndQuery.slice(queryIndex));
-          const chapter = searchParams.get("chapter");
-          virtualRouter.navigateTo("reader", {
-            bookId,
-            chapterIndex: chapter ? parseInt(chapter, 10) : undefined,
-          });
-        } else {
-          virtualRouter.navigateTo("reader", { bookId: bookIdAndQuery });
-        }
-      } 
-      // 2. 处理书籍详情页面跳转 /book/[bookId]
-      else if (url.startsWith("/book/")) {
-        const bookId = url.split("/book/")[1];
-        virtualRouter.navigateTo("book-detail", { bookId });
-      } 
-      // 3. 处理导入预览跳转 /import/preview/[taskId]
-      else if (url.startsWith("/import/preview/")) {
-        const taskId = url.split("/import/preview/")[1];
-        virtualRouter.navigateTo("import-preview", { taskId });
+      const nextState = parseAppLocation(url);
+      const location = url.startsWith("#") ? url.slice(1) : url;
+      const [path, query = ""] = location.split("?", 2);
+      const folderId =
+        path === "/library" ? new URLSearchParams(query).get("folderId") : null;
+
+      if (nextState.currentView === "library" && folderId) {
+        const params = new URLSearchParams({ folderId });
+        window.history.pushState(nextState, "", `#/library?${params}`);
+        virtualRouter.emitChange(nextState);
+        return;
       }
-      // 4. 处理其他基础页面跳转 /library, /search, /settings, /notes, /import 等
-      else {
-        const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
-        const queryIndex = cleanUrl.indexOf("?");
-        
-        let view = cleanUrl;
-        if (queryIndex !== -1) {
-          view = cleanUrl.slice(0, queryIndex);
-        }
-        
-        if (view === "library") {
-          if (typeof window !== "undefined") {
-            const nextState: RouteState = {
-              currentView: "library",
-              activeBookId: null,
-              activeChapterIndex: null,
-              activePanel: null,
-              activeTaskId: null,
-            };
-            window.history.pushState(nextState, "", `#/${cleanUrl}`);
-            virtualRouter.emitChange(nextState);
-          }
-        } else {
-          virtualRouter.navigateTo(view as AppView);
-        }
-      }
+
+      virtualRouter.navigateTo(nextState.currentView, {
+        bookId: nextState.activeBookId ?? undefined,
+        chapterIndex: nextState.activeChapterIndex ?? undefined,
+        panel: nextState.activePanel,
+        taskId: nextState.activeTaskId ?? undefined,
+      });
     },
     replace(url: string) {
       this.push(url);
@@ -322,4 +177,3 @@ export function useVirtualRouter() {
     },
   };
 }
-
