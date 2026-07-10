@@ -1,0 +1,53 @@
+:root {
+  --color-background: #f6f4ee;
+  --color-surface: #fffefa;
+  --color-surface-muted: #eeeee7;
+  --color-text: #262824;
+  --color-muted: #686e68;
+  --color-quiet: #92958e;
+  --color-primary: #315e4e;
+  --color-primary-strong: #24483c;
+  --color-primary-soft: #e4ede7;
+  --color-info: #3e6c78;
+  --color-info-soft: #e5eef0;
+  --color-danger: #a04439;
+  --color-danger-soft: #f6e8e4;
+  --color-stamp: #a04439;
+  --color-border: #d8d5ca;
+  --color-border-soft: #e8e5db;
+  --shadow-raised: 0 12px 32px rgba(38, 40, 36, 0.08);
+
+  --font-ui: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-display: "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun",
+    Georgia, serif;
+  --font-accent: "Kaiti SC", "STKaiti", "KaiTi", "SimKai",
+    var(--font-display);
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --shell-sidebar-width: 148px;
+  --content-max-width: 1240px;
+
+  /* 兼容现有页面，逐页迁移到语义令牌。 */
+  --background: var(--color-background);
+  --foreground: var(--color-text);
+  --ui-bg: var(--color-background);
+  --ui-surface: var(--color-surface);
+  --ui-raised: #ffffff;
+  --ui-panel: rgba(255, 254, 250, 0.96);
+  --ui-border: var(--color-border);
+  --ui-soft-border: var(--color-border-soft);
+  --ui-text: var(--color-text);
+  --ui-muted: var(--color-muted);
+  --ui-quiet: var(--color-quiet);
+  --ui-accent: var(--color-primary);
+  --ui-accent-soft: var(--color-primary-soft);
+  --ui-warm: #8a5b3d;
+  --ui-danger: var(--color-danger);
+  --ui-shadow: var(--shadow-raised);
+  --font-kaiti: var(--font-accent);
+  --font-songti: var(--font-display);
+  --font-heiti: var(--font-ui);
+}

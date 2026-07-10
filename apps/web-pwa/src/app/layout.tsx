@@ -15,13 +15,13 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "我的阅读世界",
-  description: "个人小说聚合阅读平台",
+  title: "墨问｜我的阅读世界",
+  description: "本地优先的中文阅读、笔记与书架管理工具",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "我的阅读世界",
+    title: "墨问",
   },
   formatDetection: {
     telephone: false,
@@ -35,13 +35,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://npm.elemecdn.com/lxgw-wenkai-screen-webfont@1.7.0/style.css"
-          crossOrigin="anonymous"
-        />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
