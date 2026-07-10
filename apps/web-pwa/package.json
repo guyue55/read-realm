@@ -6,7 +6,8 @@
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "test": "vitest run",
+    "lint": "eslint src --ext .js,.ts,.tsx --max-warnings=0"
   },
   "dependencies": {
     "@reader/ai-core": "workspace:*",
