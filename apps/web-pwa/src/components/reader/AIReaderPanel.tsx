@@ -213,71 +213,50 @@ interface SummaryContentProps {
 
 function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
   const [isTyping, setIsTyping] = React.useState(false);
-  const prevLoadingRef = React.useRef(false);
-  const textContainerRef = React.useRef<HTMLSpanElement | null>(null);
+  const [displayedText, setDisplayedText] = React.useState("");
 
   React.useEffect(() => {
-    const wasLoading = prevLoadingRef.current;
-    prevLoadingRef.current = isAiLoading;
-
     if (isAiLoading) {
       setIsTyping(false);
-      if (textContainerRef.current) {
-        textContainerRef.current.textContent = "";
-      }
+      setDisplayedText("");
       return;
     }
 
     if (!text) {
       setIsTyping(false);
-      if (textContainerRef.current) {
-        textContainerRef.current.textContent = "";
-      }
+      setDisplayedText("");
       return;
     }
 
-    // 智能识别：若是刚刚结束 Loading，说明是初次 LLM 生成，启动 20ms 紧凑逐字打字打印
-    if (wasLoading) {
-      setIsTyping(true);
-      let currentIndex = 0;
-      if (textContainerRef.current) {
-        textContainerRef.current.textContent = "";
-      }
-
-      const interval = setInterval(() => {
-        if (currentIndex < text.length) {
-          const nextChar = text.charAt(currentIndex);
-          currentIndex++;
-          if (textContainerRef.current) {
-            textContainerRef.current.textContent += nextChar;
-          }
-        } else {
-          clearInterval(interval);
-          setIsTyping(false);
-        }
-      }, 20);
-
-      return () => clearInterval(interval);
-    } else {
-      // 缓存瞬间直出，跳过打字动效，100% 纯净高亮
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setIsTyping(false);
-      if (textContainerRef.current) {
-        textContainerRef.current.textContent = text;
-      }
+      setDisplayedText(text);
+      return;
     }
+
+    setIsTyping(true);
+    setDisplayedText("");
+    let currentIndex = 0;
+    const interval = window.setInterval(() => {
+      currentIndex = Math.min(text.length, currentIndex + 4);
+      setDisplayedText(text.slice(0, currentIndex));
+      if (currentIndex >= text.length) {
+        window.clearInterval(interval);
+        setIsTyping(false);
+      }
+    }, 20);
+
+    return () => window.clearInterval(interval);
   }, [text, isAiLoading]);
 
   return (
     <div
       className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
     >
-      {/* 采用空子树 JSX 结构：React Diff 协调时，由于其在虚拟 DOM 中无子级，
-          即使父级/暗黑模式高频重绘，React 也绝不会覆写和擦除原生 textContent，彻底消除打字中途文字斩断闪烁 */}
-      <span ref={textContainerRef} />
+      <span>{displayedText}</span>
       {isTyping && (
         <span className="inline-block ml-1 w-1.5 h-3.5 bg-[#9A6A3A] animate-pulse align-middle" />
       )}
     </div>
   );
 }
-
