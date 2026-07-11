@@ -5,6 +5,8 @@ import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 import { resolveSqliteDbPath } from '../../common/blob-storage-path';
 import { prepareDatabase } from './database-bootstrap';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export const DRIZZLE = 'DRIZZLE_INSTANCE';
 export type Database = LibSQLDatabase<typeof schema> & {
@@ -18,6 +20,7 @@ export type Database = LibSQLDatabase<typeof schema> & {
       provide: DRIZZLE,
       useFactory: async () => {
         const dbPath = resolveSqliteDbPath();
+        mkdirSync(dirname(dbPath), { recursive: true });
         const client = createClient({ url: `file:${dbPath}` });
 
         try {

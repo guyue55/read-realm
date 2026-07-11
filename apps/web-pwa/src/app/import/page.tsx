@@ -186,6 +186,7 @@ export default function ImportPage() {
 
       setStatus("启动解析引擎...");
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
+      const fallbackBuffer = buffer.slice(0);
 
       const worker = new Worker(
         new URL("./parser.worker.ts", import.meta.url)
@@ -298,11 +299,24 @@ export default function ImportPage() {
         }
       };
 
-      worker.onerror = (e) => {
+      worker.onerror = async (e) => {
         worker.terminate();
         workerRef.current = null;
-        setStatus(`解析异常: ${describeAppError(e.message)}`);
-        setIsProcessing(false);
+        try {
+          if (activeTaskIdRef.current) {
+            await db.importTasks.delete(activeTaskIdRef.current);
+            activeTaskIdRef.current = null;
+          }
+          setStatus("后台解析不可用，正在使用兼容模式...");
+          if (type === "epub") throw new Error(e.message);
+          const { parseTxtBook } = await import("@reader/parser-core/txt-parser");
+          const parsed = parseTxtBook(file.name, fallbackBuffer);
+          await createImportTask(parsed, "upload", { format: type });
+          setIsProcessing(false);
+        } catch (fallbackError) {
+          setStatus(`解析异常: ${describeAppError(fallbackError || e.message)}`);
+          setIsProcessing(false);
+        }
       };
     } catch (e) {
       setStatus(`解析失败: ${describeAppError(e)}`);
@@ -882,14 +896,15 @@ export default function ImportPage() {
                 <div className="mt-6 inline-flex rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm">
                   选择单本文卷
                 </div>
-                {isProcessing && (
+                {status !== "等待导入" && (
                   <div className="mt-4 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
+                    {isProcessing && <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />}
                     {status}
                   </div>
                 )}
               </div>
               <input
+                aria-label="选择 TXT 或 EPUB 文件"
                 type="file"
                 accept=".txt,.epub"
                 onChange={handleFileUpload}
