@@ -124,9 +124,9 @@ export default function SettingsPage() {
         <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold">UI 模式</h2>
+              <h2 className="text-lg font-bold">界面密度</h2>
               <p className="mt-1 text-sm text-[var(--ui-muted)]">
-                默认模式贴近原型套图，简洁模式保留无干扰布局。
+                调整书架的信息密度，阅读功能保持一致。
               </p>
             </div>
             {saved && (
@@ -146,10 +146,10 @@ export default function SettingsPage() {
               }`}
             >
               <span className="block text-base font-bold text-[var(--ui-text)]">
-                默认模式
+                舒展
               </span>
               <span className="mt-1 block text-sm text-[var(--ui-muted)]">
-                更完整的原型视觉、侧边导航和信息卡片。
+                留白更充足，适合大屏浏览。
               </span>
             </button>
             <button
@@ -161,10 +161,10 @@ export default function SettingsPage() {
               }`}
             >
               <span className="block text-base font-bold text-[var(--ui-text)]">
-                简洁模式
+                紧凑
               </span>
               <span className="mt-1 block text-sm text-[var(--ui-muted)]">
-                保留轻量书架与极简阅读布局。
+                缩短书卡间距，适合小屏和大量藏书。
               </span>
             </button>
           </div>

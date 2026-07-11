@@ -99,6 +99,18 @@ export default function BookDetailPage({
         )
       )
     : 0;
+  const sourceLabels: Record<Book["sourceType"], string> = {
+    upload: "本地导入",
+    url: "网页导入",
+    search: "云端同步",
+    bookSource: "书源导入",
+    manual: "手动创建",
+    folder_index: "关联目录",
+    folder_multi_file_book: "多文件目录",
+    local_backend_directory: "服务端目录",
+    cloud_cache: "云端缓存",
+  };
+  const canClearCache = ["folder_index", "folder_multi_file_book", "cloud_cache"].includes(book.sourceType);
 
   // 清除本地缓存核心处理
   const handleClearCache = () => {
@@ -149,7 +161,7 @@ export default function BookDetailPage({
             {book.title}
           </h1>
           <p className="mb-8 text-sm" style={{ color: colors.muted }}>
-            {book.author ? `作者：${book.author} · ` : ""}本地上传 ·{" "}
+            {book.author ? `作者：${book.author} · ` : ""}{sourceLabels[book.sourceType]} ·{" "}
             {book.format.toUpperCase()}
           </p>
 
@@ -164,16 +176,15 @@ export default function BookDetailPage({
             >
               继续阅读
             </button>
-            <button
-              onClick={() => setShowCacheSheet(true)}
-              className="px-6 py-3 border rounded-[12px] font-bold hover:bg-white/20 active:scale-95 transition-all"
-              style={{
-                borderColor: colors.border,
-                color: colors.text,
-              }}
-            >
-              缓存管理
-            </button>
+            {canClearCache && (
+              <button
+                onClick={() => setShowCacheSheet(true)}
+                className="px-6 py-3 border rounded-[8px] font-bold hover:bg-white/20 active:scale-95 transition-all"
+                style={{ borderColor: colors.border, color: colors.text }}
+              >
+                缓存管理
+              </button>
+            )}
           </div>
 
           <div

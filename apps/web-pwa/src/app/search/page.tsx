@@ -25,6 +25,7 @@ export default function SearchPage() {
   }, []);
   const [localResults, setLocalResults] = useState<Book[]>([]);
   const [globalResults, setGlobalResults] = useState<Book[]>([]);
+  const [remoteStatus, setRemoteStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [isSearching, setIsSearching] = useState(false);
   const [status, setStatus] = useState("");
   const [toastMsg, setToastMsg] = useState("");
@@ -131,6 +132,7 @@ export default function SearchPage() {
     }
 
     setIsSearching(true);
+    setRemoteStatus("loading");
     setStatus(strings.shelf.searchingGlobal);
     try {
       const response = await fetch(
@@ -146,6 +148,7 @@ export default function SearchPage() {
       }
       const results = await response.json();
       setGlobalResults(results);
+      setRemoteStatus("ready");
       setStatus(
         strings.shelf.foundResults.replace(
           "{count}",
@@ -154,6 +157,8 @@ export default function SearchPage() {
       );
     } catch (e) {
       console.error("Global search failed", e);
+      setGlobalResults([]);
+      setRemoteStatus("failed");
       setStatus(
         `搜索失败：请确认 API 已启动在 ${getApiBaseUrl()}（本地默认端口 4000）。`,
       );
@@ -191,6 +196,7 @@ export default function SearchPage() {
       // 2. 高并发拉取下载所有章节
       const totalChapters = book.chapterCount;
       let completed = 0;
+      const failedIndices: number[] = [];
 
       if (totalChapters > 0) {
         // Concurrency 并发限制器，最大并发数为 5，确保秒级飞速载入同时保护网络队列
@@ -216,6 +222,7 @@ export default function SearchPage() {
             });
           } catch (e) {
             console.error(`下载章节 ${index} 失败:`, e);
+            failedIndices.push(index);
           } finally {
             completed++;
             const pct = Math.round((completed / totalChapters) * 100);
@@ -230,8 +237,14 @@ export default function SearchPage() {
         }
       }
 
-      setImportProgress((prev) => ({ ...prev, [book.id]: 100 }));
-      setToastMsg(`🍃 「${book.title}」全本 ${totalChapters} 章节已拉取到本地，请净心阅享。`);
+      if (failedIndices.length > 0) {
+        await db.books.update(book.id, { cacheStatus: "chapters_partial" });
+        setToastMsg(`「${book.title}」已下载 ${totalChapters - failedIndices.length}/${totalChapters} 章，可稍后重试缺失章节。`);
+      } else {
+        setImportProgress((prev) => ({ ...prev, [book.id]: 100 }));
+        await db.books.update(book.id, { cacheStatus: "chapters_full" });
+        setToastMsg(`「${book.title}」共 ${totalChapters} 章已下载到本地。`);
+      }
     } catch (err) {
       console.error("同步云端书籍章节失败:", err);
       setToastMsg("💡 本地存储或云端通道繁忙，请稍后再试。");
@@ -396,9 +409,7 @@ export default function SearchPage() {
                             {book.author || "佚名"} · {book.format.toUpperCase()}
                           </p>
                         </div>
-                        <span className="text-sm font-bold text-[var(--ui-accent)] font-reading-title">
-                          8.{(book.title.length % 7) + 2} 分
-                        </span>
+                        <span className="text-xs font-semibold text-[var(--ui-muted)]">云端结果</span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-md bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
@@ -442,7 +453,7 @@ export default function SearchPage() {
             </div>
           </div>
         ) : (
-          !isSearching &&
+          !isSearching && remoteStatus !== "failed" &&
           searchQuery.trim() &&
           localResults.length === 0 && (
             <div className="ui-card mt-8 rounded-[16px] py-20 text-center text-[var(--ui-muted)] shadow-sm">
