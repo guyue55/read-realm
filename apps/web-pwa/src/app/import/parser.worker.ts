@@ -1,4 +1,5 @@
-import { parseTxtBook, parseEpubBook } from "@reader/parser-core";
+import { parseTxtBook } from "@reader/parser-core/txt-parser";
+import { parseEpubBook } from "@reader/parser-core/epub-parser";
 
 self.onmessage = async (e: MessageEvent) => {
   const { filename, buffer, type } = e.data;

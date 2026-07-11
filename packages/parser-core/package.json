@@ -13,6 +13,14 @@
     "./html": {
       "types": "./dist/html-parser.d.ts",
       "default": "./dist/html-parser.js"
+    },
+    "./txt-parser": {
+      "types": "./dist/txt-parser.d.ts",
+      "default": "./dist/txt-parser.js"
+    },
+    "./epub-parser": {
+      "types": "./dist/epub-parser.d.ts",
+      "default": "./dist/epub-parser.js"
     }
   },
   "scripts": {
