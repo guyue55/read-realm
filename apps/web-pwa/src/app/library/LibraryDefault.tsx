@@ -1815,10 +1815,7 @@ export function LibraryDefault({
         </>
       }
     >
-      <section className="relative overflow-hidden rounded-[24px] border border-[#E3D5BE] bg-[linear-gradient(135deg,#FFFDFB_0%,#FAF5EB_50%,#F1E7D7_100%)] py-10 px-8 md:py-16 md:px-14 shadow-[0_20px_50px_rgba(80,65,45,0.06)] transition-all duration-300">
-        {/* 宣纸淡墨/天青水墨自然晕开慢呼吸效果 */}
-        <div className="absolute -right-10 -top-10 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(95,125,82,0.08)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
-        <div className="absolute right-12 -bottom-20 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(154,106,58,0.06)_0%,transparent_70%)] ink-breathe-layer reader-gpu-accelerated pointer-events-none select-none" />
+      <section className="relative overflow-hidden rounded-lg border border-[#E3D5BE] bg-[linear-gradient(135deg,#FFFDFB_0%,#FAF5EB_50%,#F1E7D7_100%)] px-5 py-7 shadow-[0_20px_50px_rgba(80,65,45,0.06)] transition-all duration-300 md:px-14 md:py-16">
         {/* 拟物洒金微茫点缀 */}
         <div className="absolute inset-0 bg-[radial-gradient(#F3D39E_1px,transparent_1px)] bg-[size:24px_24px] opacity-10 pointer-events-none" />
         
@@ -1829,7 +1826,7 @@ export function LibraryDefault({
           <div className="absolute bottom-20 right-28 h-32 w-48 rounded-t-full border-t-2 border-double border-[rgba(95,125,82,0.18)]" />
         </div>
         <div className="relative z-10 max-w-xl">
-          <h2 className="font-reading-title text-3xl font-semibold leading-tight text-[var(--ui-text)] md:text-4xl">
+          <h2 className="font-reading-title text-2xl font-semibold leading-tight text-[var(--ui-text)] md:text-4xl">
             大道无形，清天可期
           </h2>
           <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ui-muted)]">

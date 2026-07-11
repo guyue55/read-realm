@@ -30,7 +30,11 @@ describe('request-boundary', () => {
 
   it('should reject unknown AI reading intents', () => {
     expect(() =>
-      AIAnalyzeBodySchema.parse({ bookId: 'book-1', chapterIndex: 0, intent: 'rewrite' }),
+      AIAnalyzeBodySchema.parse({
+        bookId: 'book-1',
+        chapterIndex: 0,
+        intent: 'rewrite',
+      }),
     ).toThrow();
   });
 });

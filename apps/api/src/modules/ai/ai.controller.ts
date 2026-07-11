@@ -9,17 +9,7 @@ import {
 } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
-import {
-  AIAnalyzeBodySchema,
-  parseBody,
-} from '../../common/request-boundary';
-import type { AIReadingIntent } from '@reader/shared-types';
-
-type AIAnalyzeBody = {
-  bookId: string;
-  chapterIndex: number;
-  intent: AIReadingIntent;
-};
+import { AIAnalyzeBodySchema, parseBody } from '../../common/request-boundary';
 
 @Controller('ai')
 export class AiController {
@@ -74,7 +64,7 @@ export class AiController {
     @Headers('x-ai-base-url') baseUrl?: string,
     @Headers('x-ai-model') model?: string,
   ) {
-    const body = parseBody(AIAnalyzeBodySchema, rawBody) as AIAnalyzeBody;
+    const body = parseBody(AIAnalyzeBodySchema, rawBody);
     return this.aiService.analyze(
       body.bookId,
       body.chapterIndex,
