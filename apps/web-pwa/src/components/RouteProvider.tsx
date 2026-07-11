@@ -89,16 +89,6 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
         console.warn("[Storage] 冷启动存储垃圾回收未完全成功:", err);
       }
 
-      // E. [NEW] 动态加载并挂载全局 window.db 便于体验测试与底层 debug 物理通道 (防 500 SSR 污染)
-      if (typeof window !== "undefined") {
-        try {
-          const { db } = await import("@reader/storage-core");
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (window as any).db = db;
-        } catch (e) {
-          console.warn("[Storage] 动态挂载全局 window.db 失败:", e);
-        }
-      }
     }
 
     initPlatformAndHeal();

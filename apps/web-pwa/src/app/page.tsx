@@ -1,339 +1,212 @@
 "use client";
 
-import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
+import dynamic from "next/dynamic";
+import type { ErrorInfo, ReactNode } from "react";
+import { Component } from "react";
+import { AlertTriangle, Library, RotateCcw } from "lucide-react";
 import { RouteProvider, useRouteStore } from "@/components/RouteProvider";
+import { ViewLoading } from "@/components/ViewLoading";
 import { virtualRouter } from "@/lib/route-store";
 
-// 同步静态导入所有视图，彻底打消动态 chunk 请求，确保离线 100% 物理高可用、物理 0.0ms 切换！
-import LibraryPage from "./library/page";
-import ReaderPageSwitch from "./reader/[bookId]/ReaderClient";
-import BookDetailPage from "./book/[bookId]/BookDetailClient";
-import SearchPage from "./search/page";
-import NotesPage from "./notes/page";
-import SettingsPage from "./settings/page";
-import ImportPage from "./import/page";
-import ImportPreviewPage from "./import/preview/[taskId]/PreviewClient";
+const LibraryPage = dynamic(
+  () => import("./library/page"),
+  {
+    loading: () => <ViewLoading label="正在打开书架" />,
+    ssr: false,
+  },
+);
+const ReaderPage = dynamic(
+  () => import("./reader/[bookId]/ReaderClient"),
+  {
+    loading: () => <ViewLoading label="正在打开阅读器" />,
+    ssr: false,
+  },
+);
+const BookDetailPage = dynamic(
+  () => import("./book/[bookId]/BookDetailClient"),
+  {
+    loading: () => <ViewLoading label="正在读取书籍详情" />,
+    ssr: false,
+  },
+);
+const SearchPage = dynamic(
+  () => import("./search/page"),
+  {
+    loading: () => <ViewLoading label="正在打开寻书" />,
+    ssr: false,
+  },
+);
+const NotesPage = dynamic(
+  () => import("./notes/page"),
+  {
+    loading: () => <ViewLoading label="正在打开笺注" />,
+    ssr: false,
+  },
+);
+const SettingsPage = dynamic(
+  () => import("./settings/page"),
+  {
+    loading: () => <ViewLoading label="正在打开设置" />,
+    ssr: false,
+  },
+);
+const ImportPage = dynamic(
+  () => import("./import/page"),
+  {
+    loading: () => <ViewLoading label="正在打开导入" />,
+    ssr: false,
+  },
+);
+const ImportPreviewPage = dynamic(
+  () => import("./import/preview/[taskId]/PreviewClient"),
+  {
+    loading: () => <ViewLoading label="正在读取导入预览" />,
+    ssr: false,
+  },
+);
 
-// 精美的宣纸中式骨架加载组件
-function PageLoadingSkeleton({ text }: { text: string }) {
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#F4EFE6] text-[#2C2621] dark:bg-[#151516] dark:text-[#A3A3AC]">
-      <div className="flex flex-col items-center gap-5 scale-95">
-        <div className="animate-spin text-[#678055] text-3xl font-light">↻</div>
-        <div className="text-xs font-medium tracking-widest text-[#6F665B] dark:text-[#8F8F8F] animate-pulse">
-          {text}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 奢华 3D 阻尼高斯模糊转场动画容器
-function TransitionView({
-  active,
-  children,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  const [shouldRender, setShouldRender] = useState(active);
-
-  useEffect(() => {
-    if (active) {
-      setShouldRender(true);
-    } else {
-      // 延迟 500ms 等卸载动效完成，防惰性白屏
-      const timer = setTimeout(() => setShouldRender(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [active]);
-
-  return (
-    <div
-      className={`absolute inset-0 w-full h-full transition-all duration-500 ease-out reader-gpu-accelerated ${
-        active
-          ? "opacity-100 scale-100 blur-0 pointer-events-auto z-10"
-          : "opacity-0 scale-[0.985] blur-md pointer-events-none z-0"
-      }`}
-      style={{
-        transform: !active ? "scale(0.985) translateY(8px)" : "scale(1) translateY(0)",
-      }}
-    >
-      {shouldRender && children}
-    </div>
-  );
-}
-
-// ==========================================
-// 🏮 「自愈阁」全局防爆与离线自愈边界 (Global Error Boundary)
-// ==========================================
 interface ErrorBoundaryProps {
   children: ReactNode;
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
   error: Error | null;
-  showDetails: boolean;
 }
 
-class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null,
-    showDetails: false,
-  };
+class GlobalErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  public state: ErrorBoundaryState = { error: null };
 
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error, showDetails: false };
+    return { error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("「自愈阁」深度捕获客户端 React 树崩溃:", error, errorInfo);
+    console.error("页面渲染失败:", error, errorInfo);
   }
 
-  private handleGlobalError = (event: ErrorEvent) => {
-    console.error("「自愈阁」全局捕获未处理 JS 运行时报错:", event.error);
-    this.setState({
-      hasError: true,
-      error: event.error || new Error(event.message || "未知 JS 运行时错误"),
-    });
+  private returnToLibrary = () => {
+    window.localStorage.removeItem("read_realm_virtual_route_snapshot");
+    virtualRouter.replaceTo("library");
+    this.setState({ error: null });
   };
 
-  private handlePromiseRejection = (event: PromiseRejectionEvent) => {
-    console.error("「自愈阁」全局捕获未处理 Promise 异步拒绝:", event.reason);
-    const rawReason = event.reason;
-    const error = rawReason instanceof Error ? rawReason : new Error(String(rawReason));
-    this.setState({
-      hasError: true,
-      error,
-    });
-  };
-
-  public componentDidMount() {
-    if (typeof window !== "undefined") {
-      window.addEventListener("error", this.handleGlobalError);
-      window.addEventListener("unhandledrejection", this.handlePromiseRejection);
-    }
-  }
-
-  public componentWillUnmount() {
-    if (typeof window !== "undefined") {
-      window.removeEventListener("error", this.handleGlobalError);
-      window.removeEventListener("unhandledrejection", this.handlePromiseRejection);
-    }
-  }
-
-  private handleResetAndBackToLibrary = () => {
-    try {
-      localStorage.removeItem("read_realm_virtual_route_snapshot");
-      
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-      if (isOffline) {
-        // 🏮 离线抗灾力：在完全断网或 Next 停机下，杜绝物理刷新，采用虚拟路由内存级原位救赎
-        virtualRouter.emitChange({
-          currentView: "library",
-          activeBookId: null,
-          activeChapterIndex: null,
-          activePanel: null,
-          activeTaskId: null,
-        });
-        window.location.hash = "/library";
-        
-        setTimeout(() => {
-          this.setState({
-            hasError: false,
-            error: null,
-            showDetails: false,
-          });
-        }, 120);
-      } else {
-        window.location.hash = "/library";
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
-      }
-    } catch (e) {
-      console.error("重置快照失败:", e);
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-      if (isOffline) {
-        this.setState({
-          hasError: false,
-          error: null,
-          showDetails: false,
-        });
-      } else {
-        window.location.reload();
-      }
-    }
-  };
-
-  private handleReload = () => {
-    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-    if (isOffline) {
-      // 🏮 离线静默复位：直接原地抹去错误，在宿主页面保持完好的情况下重试渲染
-      this.setState({
-        hasError: false,
-        error: null,
-        showDetails: false,
-      });
-    } else {
-      window.location.reload();
-    }
-  };
-
-  private toggleDetails = () => {
-    this.setState((prev) => ({ showDetails: !prev }));
+  private reloadPage = () => {
+    window.location.reload();
   };
 
   public render() {
-    if (this.state.hasError) {
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (!this.state.error) return this.props.children;
 
-      return (
-        <div className="w-full h-full min-h-screen flex flex-col items-center justify-center p-6 bg-[#F4EFE6] text-[#2C2621] dark:bg-[#151516] dark:text-[#A3A3AC] overflow-y-auto">
-          <div className="max-w-md w-full flex flex-col items-center text-center gap-6 p-8 rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-[#678055]/10 shadow-lg scale-95 transition-all duration-300">
-            {/* 顶部的中式印章标志 */}
-            <div className="w-16 h-16 rounded-full border border-[#678055]/30 flex items-center justify-center bg-[#678055]/10 animate-pulse">
-              <span className="text-[#678055] text-2xl font-serif">愈</span>
-            </div>
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--color-background)] p-5 text-[var(--color-text)]">
+        <section
+          aria-labelledby="app-error-title"
+          className="w-full max-w-lg rounded-[var(--radius-card)] border border-[var(--color-danger)]/30 bg-[var(--color-surface)] p-6 shadow-[var(--shadow-raised)] sm:p-8"
+          role="alert"
+        >
+          <AlertTriangle
+            aria-hidden="true"
+            className="mb-4 h-8 w-8 text-[var(--color-danger)]"
+          />
+          <h1
+            className="[font-family:var(--font-display)] text-2xl font-semibold"
+            id="app-error-title"
+          >
+            页面暂时无法打开
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+            当前页面发生运行错误。你可以返回书架继续使用，或重新加载页面后再试。
+          </p>
 
-            {/* 标题 */}
-            <h1 className="text-xl font-medium tracking-widest text-[#2C2621] dark:text-[#E3E3E3] font-serif">
-              自 愈 阁
-            </h1>
-
-            {/* 优雅释义 */}
-            <p className="text-sm leading-relaxed text-[#6F665B] dark:text-[#8F8F8F] font-serif max-w-sm">
-              书卷微染尘埃，秩序发生紊乱。
-              <br />
-              {isOffline ? (
-                <span className="text-[#9A6A3A] dark:text-[#C5A376] font-semibold mt-1 inline-block">
-                  🌿 此时断联尘封，无法连接云端。自愈阁将为您原位抚平画卷。
-                </span>
-              ) : (
-                "或因古籍残缺、墨迹斑驳，致使当下展卷失败。"
-              )}
-            </p>
-
-            {/* 功能按钮群 */}
-            <div className="w-full flex flex-col gap-3 mt-4">
-              <button
-                onClick={this.handleResetAndBackToLibrary}
-                className="w-full py-3 px-4 rounded-xl text-sm font-medium tracking-wide bg-[#678055] hover:bg-[#566c46] text-white active:scale-95 transition-all duration-200 shadow-md shadow-[#678055]/20"
-              >
-                {isOffline ? "【离线软复位】直接归于书架" : "重置快照并回书架"}
-              </button>
-
-              <button
-                onClick={this.handleReload}
-                className="w-full py-3 px-4 rounded-xl text-sm font-medium tracking-wide bg-white/60 hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15 text-[#2C2621] dark:text-[#E3E3E3] border border-[#678055]/20 active:scale-95 transition-all duration-200"
-              >
-                {isOffline ? "【离线静默复位】原地抚平画卷" : "静默尝试重新展卷"}
-              </button>
-
-              <button
-                onClick={this.toggleDetails}
-                className="w-full py-2 px-4 rounded-lg text-xs tracking-wider text-[#6F665B] dark:text-[#8F8F8F] hover:text-[#2C2621] dark:hover:text-[#E3E3E3] transition-colors"
-              >
-                {this.state.showDetails ? "▲ 收起诊断案卷" : "▼ 查阅诊断案卷"}
-              </button>
-            </div>
-
-            {/* 诊断案卷（朱砂色详细错误堆栈） */}
-            {this.state.showDetails && (
-              <div className="w-full mt-2 p-4 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 text-left overflow-hidden transition-all duration-300">
-                <div className="text-xs font-bold text-[#B22222] dark:text-red-400 mb-2 tracking-widest border-b border-red-200/50 dark:border-red-900/30 pb-1">
-                  【 诊断案卷 · 故障明细 】
-                </div>
-                <div className="text-xs font-semibold text-[#B22222] dark:text-red-400 font-mono break-all mb-2">
-                  {this.state.error?.name || "Exception"}: {this.state.error?.message || "未捕获的运行时异常"}
-                </div>
-                {this.state.error?.stack && (
-                  <pre className="text-[10px] font-mono leading-relaxed text-[#8B0000] dark:text-red-300/80 overflow-y-auto max-h-40 whitespace-pre-wrap break-all pr-1">
-                    {this.state.error.stack}
-                  </pre>
-                )}
-              </div>
-            )}
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            <button
+              className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-primary-strong)]"
+              onClick={this.returnToLibrary}
+              type="button"
+            >
+              <Library aria-hidden="true" className="h-4 w-4" />
+              返回书架
+            </button>
+            <button
+              className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] px-4 text-sm font-semibold hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              onClick={this.reloadPage}
+              type="button"
+            >
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              重新加载页面
+            </button>
           </div>
-        </div>
-      );
-    }
 
-    return this.props.children;
+          <details className="mt-5 border-t border-[var(--color-border-soft)] pt-4 text-xs text-[var(--color-muted)]">
+            <summary className="cursor-pointer font-medium">查看错误信息</summary>
+            <p className="mt-2 break-words font-mono leading-5">
+              {this.state.error.message || "未知运行错误"}
+            </p>
+          </details>
+        </section>
+      </div>
+    );
   }
 }
 
-// 全站虚拟路由主控制台
-function SpaDashboard() {
+function ActiveView() {
   const { currentView, activeBookId, activeTaskId } = useRouteStore();
+  let view: ReactNode;
 
-  // 🧪 【极客诊断插桩】：当 URL 或 Hash 中含有 poison-test 时，强行注入运行时崩溃，
-  // 旨在实测与展示「自愈阁」在发生灾难性 JS 崩溃时的 100% 防爆拦截与救赎能力！
-  if (typeof window !== "undefined" && window.location.href.includes("poison-test")) {
-    throw new Error("极客级白盒测试：模拟 React 客户端组件树运行时崩溃。来自「自愈阁」深度体检大厅。");
+  switch (currentView) {
+    case "reader":
+      view = activeBookId ? (
+        <ReaderPage params={{ bookId: activeBookId }} />
+      ) : (
+        <LibraryPage />
+      );
+      break;
+    case "book-detail":
+      view = activeBookId ? (
+        <BookDetailPage params={{ bookId: activeBookId }} />
+      ) : (
+        <LibraryPage />
+      );
+      break;
+    case "search":
+      view = <SearchPage />;
+      break;
+    case "notes":
+      view = <NotesPage />;
+      break;
+    case "settings":
+      view = <SettingsPage />;
+      break;
+    case "import":
+      view = <ImportPage />;
+      break;
+    case "import-preview":
+      view = activeTaskId ? (
+        <ImportPreviewPage params={{ taskId: activeTaskId }} />
+      ) : (
+        <ImportPage />
+      );
+      break;
+    default:
+      view = <LibraryPage />;
   }
 
+  const viewKey = `${currentView}:${activeBookId ?? activeTaskId ?? "root"}`;
   return (
-    <main className="relative w-full h-screen overflow-hidden bg-inherit">
-      <TransitionView active={currentView === "library"}>
-        <LibraryPage />
-      </TransitionView>
-
-      <TransitionView active={currentView === "reader" && activeBookId !== null}>
-        {activeBookId ? (
-          <ReaderPageSwitch params={{ bookId: activeBookId }} />
-        ) : null}
-      </TransitionView>
-
-      <TransitionView active={currentView === "book-detail" && activeBookId !== null}>
-        {activeBookId ? (
-          <BookDetailPage params={{ bookId: activeBookId }} />
-        ) : null}
-      </TransitionView>
-
-      <TransitionView active={currentView === "search"}>
-        <SearchPage />
-      </TransitionView>
-
-      <TransitionView active={currentView === "notes"}>
-        <NotesPage />
-      </TransitionView>
-
-      <TransitionView active={currentView === "settings"}>
-        <SettingsPage />
-      </TransitionView>
-
-      <TransitionView active={currentView === "import"}>
-        <ImportPage />
-      </TransitionView>
-
-      <TransitionView active={currentView === "import-preview" && activeTaskId !== null}>
-        {activeTaskId ? (
-          <ImportPreviewPage params={{ taskId: activeTaskId }} />
-        ) : null}
-      </TransitionView>
-    </main>
+    <div className="view-enter h-[100dvh] overflow-hidden" key={viewKey}>
+      {view}
+    </div>
   );
 }
 
-// SPA物理唯一入口，挂载客户端延迟空降自愈锁，彻底绝杀一切服务端/客户端水合属性与时差冲突
 export default function Page() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return <PageLoadingSkeleton text="正在启封书册..." />;
-  }
-
   return (
     <GlobalErrorBoundary>
       <RouteProvider>
-        <SpaDashboard />
+        <ActiveView />
       </RouteProvider>
     </GlobalErrorBoundary>
   );
