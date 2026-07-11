@@ -12,6 +12,9 @@ self.onmessage = async (e: MessageEvent) => {
 
     const { title, chapters } = parsedBook;
     const totalChapters = chapters.length;
+    if (totalChapters === 0) {
+      throw new Error("未解析到章节内容，请检查文件格式或编码");
+    }
 
     // 1. 发送初步元数据，让主线程能够闪电空降初始化任务骨架
     self.postMessage({
@@ -40,4 +43,3 @@ self.onmessage = async (e: MessageEvent) => {
     self.postMessage({ success: false, error: (err as Error).message });
   }
 };
-

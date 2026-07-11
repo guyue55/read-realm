@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { db, type ImportTask } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
@@ -18,6 +18,7 @@ export default function PreviewPage({
   const [error, setError] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [visibleCount, setVisibleCount] = useState(60);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -81,7 +82,7 @@ export default function PreviewPage({
   }, [draft, visibleCount]);
 
   const handleConfirm = async () => {
-    if (!task || !draft) return;
+    if (!task || !draft || savingRef.current) return;
     if (!draft.bookMetadata.title.trim()) {
       setValidationMessage("书名不能为空");
       return;
@@ -91,6 +92,7 @@ export default function PreviewPage({
       return;
     }
     setValidationMessage("");
+    savingRef.current = true;
     setSaving(true);
     try {
       await db.transaction(
@@ -116,6 +118,7 @@ export default function PreviewPage({
       router.push("/library");
     } catch (e) {
       setError(`保存失败: ${(e as Error).message}`);
+      savingRef.current = false;
       setSaving(false);
     }
   };
