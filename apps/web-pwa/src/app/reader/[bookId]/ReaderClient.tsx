@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadReaderSettings } from "@/lib/reader-settings";
-import { ReaderSimple } from "./ReaderSimple";
 import { ReaderDefault } from "./ReaderDefault";
 
 export default function ReaderPageSwitch({
@@ -10,7 +8,6 @@ export default function ReaderPageSwitch({
 }: {
   params: { bookId: string };
 }) {
-  const [uiMode, setUiMode] = useState<"default" | "simple">("default");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -18,7 +15,6 @@ export default function ReaderPageSwitch({
       window.location.replace(`/#${window.location.pathname}${window.location.search}`);
       return;
     }
-    setUiMode(loadReaderSettings().uiMode || "default");
     setMounted(true);
   }, []);
 
@@ -34,10 +30,6 @@ export default function ReaderPageSwitch({
         </div>
       </div>
     );
-  }
-
-  if (uiMode === "simple") {
-    return <ReaderSimple bookId={params.bookId} />;
   }
 
   return <ReaderDefault bookId={params.bookId} />;
