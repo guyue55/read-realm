@@ -1,6 +1,8 @@
 import React from "react";
 import { strings } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BookOpenText, ListTree, Network, Tags } from "lucide-react";
+import type { AIReadingIntent } from "@reader/shared-types";
 
 export interface AIReaderPanelProps {
   isAiLoading: boolean;
@@ -13,6 +15,7 @@ export interface AIReaderPanelProps {
   onClearSession?: () => void | Promise<void>;
   /** AI 问答回调：用户输入问题后触发 */
   onAsk?: (question: string) => void;
+  onIntent?: (intent: AIReadingIntent) => void;
 }
 
 export function AIReaderPanel({
@@ -25,6 +28,7 @@ export function AIReaderPanel({
   setAiInput,
   onClearSession,
   onAsk,
+  onIntent,
 }: AIReaderPanelProps) {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -120,7 +124,25 @@ export function AIReaderPanel({
           <h3 className="text-xs font-bold text-[#6F665B] uppercase tracking-wider mb-4">
             {strings.reader.quickQuestions}
           </h3>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ["summary", strings.reader.summaryTitle, BookOpenText],
+              ["characters", "人物关系", Network],
+              ["clues", "线索伏笔", ListTree],
+              ["terms", "术语设定", Tags],
+            ] as const).map(([intent, label, Icon]) => (
+              <button
+                key={intent}
+                onClick={() => onIntent?.(intent)}
+                disabled={isAiLoading}
+                className={`${bubbleBg} flex min-h-11 items-center gap-2 rounded-md border border-[rgba(80,65,45,0.12)] p-3 text-left text-sm text-inherit transition-colors hover:border-[#9A6A3A] disabled:opacity-50`}
+              >
+                <Icon aria-hidden="true" size={16} />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2">
             <button
               onClick={() => onAsk?.(strings.reader.questionCharacters)}
               className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}

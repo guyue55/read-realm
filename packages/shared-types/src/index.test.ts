@@ -7,6 +7,7 @@ import {
   BookmarkSchema,
   createId,
   generateAiSigKeyAsync,
+  parseAIReadingIntent,
 } from "./index";
 
 afterEach(() => {
@@ -90,6 +91,18 @@ describe("generateAiSigKeyAsync", () => {
     );
 
     expect(firstBookKey).not.toBe(secondBookKey);
+  });
+
+  it("isolates different reading intents", async () => {
+    const summary = await generateAiSigKeyAsync("hash", "model", "reader-ai-v3:summary", "book");
+    const terms = await generateAiSigKeyAsync("hash", "model", "reader-ai-v3:terms", "book");
+    expect(summary).not.toBe(terms);
+  });
+});
+
+describe("parseAIReadingIntent", () => {
+  it("rejects unknown intents", () => {
+    expect(() => parseAIReadingIntent("rewrite")).toThrow("AI 阅读意图不支持");
   });
 });
 

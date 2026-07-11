@@ -16,7 +16,16 @@ import {
   type ChapterData,
 } from "@reader/reader-core";
 import { Dexie, db } from "@reader/storage-core";
-import { generateAiSigKeyAsync, createId, type ReadingProgress, type Bookmark, type Book, type LibraryFolder } from "@reader/shared-types";
+import {
+  AI_READING_INTENTS,
+  generateAiSigKeyAsync,
+  createId,
+  type AIReadingIntent,
+  type ReadingProgress,
+  type Bookmark,
+  type Book,
+  type LibraryFolder,
+} from "@reader/shared-types";
 import { GestureRecognizer } from "@reader/gesture-core";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { apiUrl, getShareHeaders } from "@/lib/api";
@@ -2106,7 +2115,7 @@ export function useReader(bookId: string) {
     [bookId, engine, settings.pageMode, toc.length, clearAutoFlipTimer, showToast, setIsPositionRestored],
   );
 
-  const handleSummarize = useCallback(async () => {
+  const handleSummarize = useCallback(async (intent: AIReadingIntent = "summary") => {
     if (!chapter) return;
     setIsAiLoading(true);
     setActivePanel("ai");
@@ -2131,7 +2140,7 @@ export function useReader(bookId: string) {
 
       const sourceHash = await computeSha256Async(chapter.content);
       const model = "gpt-3.5-turbo";
-      const promptVersion = "2.0";
+      const promptVersion = `reader-ai-v3:${intent}`;
 
       // 2. 跨端计算与后端 100% 物理对称的 HMAC 强哈希主键 (AISigKey)
       const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion, bookId);
@@ -2149,7 +2158,7 @@ export function useReader(bookId: string) {
       console.log(`[AI-Reader] 🚨 L1 缓存未命中，开始唤醒 L2/L3 后端服务穿透...`);
 
       // 4. 穿透：调用 NestJS 后端 L2 SQLite (及大模型 L3)
-      const response = await fetch(apiUrl("/ai/summarize"), {
+      const response = await fetch(apiUrl("/ai/analyze"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2160,6 +2169,7 @@ export function useReader(bookId: string) {
           text: chapter.content,
           bookId,
           chapterIndex: chapter.index,
+          intent,
         }),
       });
 
@@ -2267,12 +2277,18 @@ ${data.answer || "未能生成回答。"}`;
 
       const sourceHash = await computeSha256Async(chapter.content);
       const model = "gpt-3.5-turbo";
-      const promptVersion = "2.0";
-      const aiSigKey = await generateAiSigKeyAsync(sourceHash, model, promptVersion, bookId);
+      const aiSigKeys = await Promise.all(
+        AI_READING_INTENTS.map((intent) =>
+          generateAiSigKeyAsync(
+            sourceHash,
+            model,
+            `reader-ai-v3:${intent}`,
+            bookId,
+          ),
+        ),
+      );
 
-      // 物理删除 L1 离线数据库
-      await db.aiViews.delete(aiSigKey);
-      console.log(`[AI-Reader] 🧹 拂尘扫尘：已成功物理清理本地 L1 AI 伴读缓存。Key: ${aiSigKey}`);
+      await db.aiViews.bulkDelete(aiSigKeys);
 
       setAiSummary("");
       showToast("🧹 伴读拂尘，已清空本章会话缓存。");
