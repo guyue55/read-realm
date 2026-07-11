@@ -114,7 +114,7 @@ export default function ImportPage() {
 
   // 1. 批量上传相关 State
   const [batchTasks, setBatchTasks] = useState<BatchTask[]>([]);
-  const batchQueueRef = useRef<File[]>([]);
+  const batchQueueRef = useRef<Array<{ id: string; file: File }>>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   // 2. 文件夹扫描相关 State
@@ -284,9 +284,15 @@ export default function ImportPage() {
             });
           } catch (err) {
             console.error("章节整批入库异常:", err);
+            await db.importTasks.delete(taskId);
+            activeTaskIdRef.current = null;
+            setStatus(`保存解析任务失败: ${describeAppError(err)}`);
+            setIsProcessing(false);
+            return;
           }
 
           setStatus("完美解析完成！");
+          setIsProcessing(false);
           activeTaskIdRef.current = null;
           router.push(`/import/preview/${taskId}`);
         }
@@ -335,7 +341,9 @@ export default function ImportPage() {
 
     if (newTasks.length > 0) {
       setBatchTasks((prev) => [...prev, ...newTasks]);
-      batchQueueRef.current.push(...addedFiles);
+      batchQueueRef.current.push(
+        ...addedFiles.map((file, index) => ({ id: newTasks[index].id, file })),
+      );
       triggerBatchQueue();
     }
   };
@@ -347,15 +355,16 @@ export default function ImportPage() {
   };
 
   const processNextBatchItem = async () => {
-    const file = batchQueueRef.current.shift();
-    if (!file) {
+    const queued = batchQueueRef.current.shift();
+    if (!queued) {
       setIsBatchProcessing(false);
       return;
     }
+    const { id: batchTaskId, file } = queued;
 
     // 匹配 task
     setBatchTasks((prev) =>
-      prev.map((t) => (t.name === file.name ? { ...t, status: "parsing", progressText: "正在分析章节..." } : t))
+      prev.map((t) => (t.id === batchTaskId ? { ...t, status: "parsing", progressText: "正在分析章节..." } : t))
     );
 
     try {
@@ -384,7 +393,7 @@ export default function ImportPage() {
         if (!success) {
           worker.terminate();
           setBatchTasks((prev) =>
-            prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `解析失败: ${error}` } : t))
+            prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `解析失败: ${error}` } : t))
           );
           void processNextBatchItem();
           return;
@@ -406,13 +415,25 @@ export default function ImportPage() {
 
           setBatchTasks((prev) =>
             prev.map((t) =>
-              t.name === file.name
+              t.id === batchTaskId
                 ? { ...t, progressText: `流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...` }
                 : t
             )
           );
         } else if (msgType === "FINISHED") {
           worker.terminate();
+
+          if (collectedChapters.length === 0) {
+            setBatchTasks((prev) =>
+              prev.map((t) =>
+                t.id === batchTaskId
+                  ? { ...t, status: "failed", progressText: "未解析到章节内容" }
+                  : t,
+              ),
+            );
+            void processNextBatchItem();
+            return;
+          }
 
           // 批量模式：直接归档加入书架！不弹出预览中断流，极致顺滑
           const bookMetadata = {
@@ -434,7 +455,7 @@ export default function ImportPage() {
           });
 
           setBatchTasks((prev) =>
-            prev.map((t) => (t.name === file.name ? { ...t, status: "success", progressText: "已成功加入书架！" } : t))
+            prev.map((t) => (t.id === batchTaskId ? { ...t, status: "success", progressText: "已成功加入书架！" } : t))
           );
           void processNextBatchItem();
         }
@@ -443,14 +464,14 @@ export default function ImportPage() {
       worker.onerror = (e) => {
         worker.terminate();
         setBatchTasks((prev) =>
-          prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `异常: ${describeAppError(e.message)}` } : t))
+          prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `异常: ${describeAppError(e.message)}` } : t))
         );
         void processNextBatchItem();
       };
 
     } catch (err) {
       setBatchTasks((prev) =>
-        prev.map((t) => (t.name === file.name ? { ...t, status: "failed", progressText: `读取失败: ${describeAppError(err)}` } : t))
+        prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `读取失败: ${describeAppError(err)}` } : t))
       );
       void processNextBatchItem();
     }
@@ -528,7 +549,11 @@ export default function ImportPage() {
     };
 
     try {
-      await db.librarySources.put(sourceRecord);
+      await db.transaction(
+        "rw",
+        [db.librarySources, db.libraryFolders, db.books, db.indexedNovelFiles],
+        async () => {
+          await db.librarySources.put(sourceRecord);
 
       // 递归处理树并快速索引
       const importNodeRecursive = async (
@@ -696,6 +721,8 @@ export default function ImportPage() {
       for (const node of optimizedTopNodes) {
         await importNodeRecursive(node, undefined, 0);
       }
+        },
+      );
 
       setScanStatus("🎉 一键入阁大功告成！已成功将整书库及逻辑结构导入书架！");
       setTimeout(() => {
