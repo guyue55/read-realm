@@ -1,27 +1,24 @@
-import * as jschardet from "jschardet";
-import { AppErrorCodeSchema } from "@reader/shared-types";
+function detectBom(bytes: Uint8Array): string | null {
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return "utf-8";
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return "utf-16le";
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return "utf-16be";
+  return null;
+}
 
 export function detectAndDecode(buffer: ArrayBuffer): string {
   try {
-    const uint8Array = new Uint8Array(buffer);
-    // Sample first 8KB to avoid freezing on huge files
-    const sampleSize = Math.min(uint8Array.length, 8192);
-    const sampleString = String.fromCharCode.apply(
-      null,
-      Array.from(uint8Array.slice(0, sampleSize)),
-    );
-
-    const detected = jschardet.detect(sampleString);
-    let encoding = detected.encoding || "utf-8";
-
-    // Normalize encoding names for TextDecoder
-    if (encoding.toLowerCase().replace(/[^a-z0-9]/g, "") === "gb2312") {
-      encoding = "gbk"; // Use gbk to cover more characters
+    const bytes = new Uint8Array(buffer);
+    const bomEncoding = detectBom(bytes);
+    if (bomEncoding) {
+      return new TextDecoder(bomEncoding).decode(buffer);
     }
 
-    const decoder = new TextDecoder(encoding);
-    return decoder.decode(buffer);
-  } catch (error) {
-    throw new Error(AppErrorCodeSchema.parse("ENCODING_DETECT_FAILED"));
+    try {
+      return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+    } catch {
+      return new TextDecoder("gb18030").decode(buffer);
+    }
+  } catch {
+    throw new Error("ENCODING_DETECT_FAILED");
   }
 }

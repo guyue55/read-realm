@@ -6,6 +6,9 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  additionalManifestEntries: [{ url: "/", revision: null }],
+  navigateFallback: "/",
+  navigateFallbackDenylist: [/^\/api\//],
   runtimeCaching,
   buildExcludes: [/app-build-manifest\.json$/, /middleware-manifest\.json$/],
 });

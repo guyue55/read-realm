@@ -8,10 +8,7 @@
   "scripts": {
     "build": "tsc"
   },
-  "dependencies": {
-    "jschardet": "^3.0.0",
-    "@reader/shared-types": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@reader/tsconfig": "workspace:*",
     "typescript": "latest",

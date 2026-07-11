@@ -188,8 +188,22 @@ export default function ImportPage() {
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
       const fallbackBuffer = buffer.slice(0);
 
+      if (process.env.NODE_ENV === "production") {
+        const parsed = type === "epub"
+          ? await import("@reader/parser-core/epub-parser").then(({ parseEpubBook }) =>
+              parseEpubBook(file.name, buffer),
+            )
+          : await import("@reader/parser-core/txt-parser").then(({ parseTxtBook }) =>
+              parseTxtBook(file.name, buffer),
+            );
+        await createImportTask(parsed, "upload", { format: type });
+        setIsProcessing(false);
+        return;
+      }
+
       const worker = new Worker(
-        new URL("./parser.worker.ts", import.meta.url)
+        new URL("./parser.worker.ts", import.meta.url),
+        { type: "module" },
       );
       workerRef.current = worker;
 
@@ -385,7 +399,54 @@ export default function ImportPage() {
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
       const buffer = await file.arrayBuffer();
 
-      const worker = new Worker(new URL("./parser.worker.ts", import.meta.url));
+      if (process.env.NODE_ENV === "production") {
+        const parsed = type === "epub"
+          ? await import("@reader/parser-core/epub-parser").then(({ parseEpubBook }) =>
+              parseEpubBook(file.name, buffer),
+            )
+          : await import("@reader/parser-core/txt-parser").then(({ parseTxtBook }) =>
+              parseTxtBook(file.name, buffer),
+            );
+        const bookId = createId();
+        const now = new Date().toISOString();
+        const chapters = parsed.chapters.map((chapter, index) => ({
+          id: createId(),
+          bookId,
+          index,
+          title: chapter.title || `第 ${index + 1} 章`,
+          content: chapter.content,
+          wordCount: chapter.content.length,
+          createdAt: now,
+          updatedAt: now,
+        }));
+        if (chapters.length === 0) throw new Error("未解析到章节内容");
+        await db.transaction("rw", [db.books, db.chapters], async () => {
+          await db.books.add({
+            id: bookId,
+            title: parsed.title,
+            sourceType: "upload",
+            format: type,
+            status: "to_read",
+            tags: [],
+            chapterCount: chapters.length,
+            wordCount: chapters.reduce((sum, chapter) => sum + chapter.wordCount, 0),
+            createdAt: now,
+            updatedAt: now,
+          });
+          await db.chapters.bulkPut(chapters);
+        });
+        setBatchTasks((prev) =>
+          prev.map((task) => task.id === batchTaskId
+            ? { ...task, status: "success", progressText: "已成功加入书架！" }
+            : task),
+        );
+        void processNextBatchItem();
+        return;
+      }
+
+      const worker = new Worker(new URL("./parser.worker.ts", import.meta.url), {
+        type: "module",
+      });
       worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
 
       const bookId = createId();
