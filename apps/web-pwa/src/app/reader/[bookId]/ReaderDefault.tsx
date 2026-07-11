@@ -468,6 +468,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   aiInput={aiInput}
                   setAiInput={setAiInput}
                   onAsk={handleAsk}
+                  onIntent={handleSummarize}
                   onClearSession={async () => {
                     await clearAiSession();
                     setAiInput("");
@@ -820,6 +821,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           aiInput={aiInput}
           setAiInput={setAiInput}
           onAsk={handleAsk}
+          onIntent={handleSummarize}
           onClearSession={async () => {
             await clearAiSession();
             setAiInput("");

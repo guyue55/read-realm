@@ -192,6 +192,22 @@ export const ReadingProgressSchema = z.object({
 
 export type ReadingProgress = z.infer<typeof ReadingProgressSchema>;
 
+export const AI_READING_INTENTS = [
+  "summary",
+  "characters",
+  "clues",
+  "terms",
+] as const;
+
+export const AIReadingIntentSchema = z.enum(AI_READING_INTENTS);
+export type AIReadingIntent = z.infer<typeof AIReadingIntentSchema>;
+
+export function parseAIReadingIntent(value: unknown): AIReadingIntent {
+  const parsed = AIReadingIntentSchema.safeParse(value);
+  if (!parsed.success) throw new Error("AI 阅读意图不支持");
+  return parsed.data;
+}
+
 export const ReaderSettingsSchema = z.object({
   fontFamily: z.string(),
   fontSize: z.number(),

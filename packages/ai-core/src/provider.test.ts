@@ -22,6 +22,15 @@ describe("OpenAIProvider", () => {
     expect(summary).toBe("This is a summary.");
   });
 
+  it("should analyze a controlled reading intent", async () => {
+    const provider = new OpenAIProvider("fake-key");
+    await expect(provider.analyze("chapter", "terms", "model")).resolves.toBe("This is a summary.");
+    const client = vi.mocked(OpenAI).mock.results.at(-1)?.value;
+    expect(client.chat.completions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "model" }),
+    );
+  });
+
   it("trimChapterText 短文不裁剪，按原文返回", () => {
     const provider = new OpenAIProvider("fake-key");
     const text = "短章节正文，远低于预算。";

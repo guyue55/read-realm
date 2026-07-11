@@ -1,5 +1,14 @@
 import OpenAI from "openai";
 
+export type AIReadingIntent = "summary" | "characters" | "clues" | "terms";
+
+const INTENT_SYSTEM_PROMPTS: Record<AIReadingIntent, string> = {
+  summary: "概括本章人物、事件、转折和结尾悬念，不添加原文没有的事实。",
+  characters: "列出本章出现的主要人物、关系和行为依据；信息不足时明确说明。",
+  clues: "提取本章关键线索、伏笔与可能影响，区分原文明示和合理推断。",
+  terms: "解释本章可能影响理解的术语、设定和专有名词，使用简洁中文。",
+};
+
 export class OpenAIProvider {
   private client: OpenAI;
 
@@ -123,7 +132,14 @@ ${trimmedText}
     text: string,
     model: string = "gpt-3.5-turbo",
   ): Promise<string> {
-    // 首先应用智能滑动窗口裁剪
+    return this.analyze(text, "summary", model);
+  }
+
+  async analyze(
+    text: string,
+    intent: AIReadingIntent,
+    model: string = "gpt-3.5-turbo",
+  ): Promise<string> {
     const trimmedText = this.trimChapterText(text);
 
     const response = await this.client.chat.completions.create({
@@ -131,13 +147,12 @@ ${trimmedText}
       messages: [
         {
           role: "system",
-          content:
-            "你是一位资深的中文小说阅读伴读。请用中文为下文章节生成一段简明扼要的内容总结，依次涵盖：主要人物、关键剧情走向、本章结尾的悬念与情绪铺垫。语言务求自然、易读，避免堆砌套话与英文术语。",
+          content: `你是一位严谨的中文阅读助手。${INTENT_SYSTEM_PROMPTS[intent]}语言自然、简洁，不能把推断写成事实。`,
         },
         { role: "user", content: trimmedText },
       ],
     });
 
-    return response.choices[0]?.message?.content || "未能生成本章总结。";
+    return response.choices[0]?.message?.content || "未能生成分析结果。";
   }
 }

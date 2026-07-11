@@ -13,6 +13,7 @@ import { OpenAIProvider } from '@reader/ai-core';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import * as crypto from 'crypto';
 import { toScopedId } from '../../common/request-boundary';
+import type { AIReadingIntent } from '@reader/shared-types';
 
 @Injectable()
 export class AiService {
@@ -97,6 +98,26 @@ export class AiService {
       model?: string;
     },
   ) {
+    return this.analyze(
+      bookId,
+      chapterIndex,
+      'summary',
+      shareToken,
+      userAIHeaders,
+    );
+  }
+
+  async analyze(
+    bookId: string,
+    chapterIndex: number,
+    intent: AIReadingIntent,
+    shareToken: string,
+    userAIHeaders?: {
+      apiKey?: string;
+      baseUrl?: string;
+      model?: string;
+    },
+  ) {
     const chapter = await this.chapterRepository.findByIndex(
       bookId,
       chapterIndex,
@@ -108,7 +129,7 @@ export class AiService {
 
     // 解析 AI 配置（用户优先，服务端回退）
     const { provider, model } = this.resolveAIProvider(userAIHeaders);
-    const promptVersion = '2.0';
+    const promptVersion = `reader-ai-v3:${intent}`;
     const dbBookId = toScopedId(bookId, shareToken);
 
     // 1. 计算唯一 AISigKey 签名主键
@@ -140,7 +161,7 @@ export class AiService {
     const content = contentBuffer.toString('utf-8');
 
     // 4. 生成摘要
-    const summary = await provider.generateSummary(content, model);
+    const summary = await provider.analyze(content, intent, model);
 
     // 5. 原子落库
     const aiView = {

@@ -4,6 +4,7 @@ import {
   BookSchema,
   LibraryFolderSchema,
   ReadingProgressSchema,
+  AIReadingIntentSchema,
 } from '@reader/shared-types';
 
 export const DEFAULT_SHARE_TOKEN = 'default';
@@ -109,6 +110,12 @@ export const SyncFoldersBodySchema = z.object({
       }),
     )
     .max(5000, '文件夹数量过多'),
+});
+
+export const AIAnalyzeBodySchema = z.object({
+  bookId: RawIdSchema,
+  chapterIndex: z.number().int().nonnegative('章节序号必须为非负整数'),
+  intent: AIReadingIntentSchema,
 });
 
 export type ImportBookBody = z.infer<typeof ImportBookBodySchema>;

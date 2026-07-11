@@ -3,6 +3,7 @@ import {
   isScopedToShare,
   normalizeShareToken,
   stripScopedId,
+  AIAnalyzeBodySchema,
 } from './request-boundary';
 
 describe('request-boundary', () => {
@@ -25,5 +26,11 @@ describe('request-boundary', () => {
     expect(isScopedToShare('book-1#friend', 'friend')).toBe(true);
     expect(isScopedToShare('book-1#friendship', 'friend')).toBe(false);
     expect(stripScopedId('book-1#friend')).toBe('book-1');
+  });
+
+  it('should reject unknown AI reading intents', () => {
+    expect(() =>
+      AIAnalyzeBodySchema.parse({ bookId: 'book-1', chapterIndex: 0, intent: 'rewrite' }),
+    ).toThrow();
   });
 });
