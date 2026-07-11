@@ -14,6 +14,7 @@ import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
+import { EmptyState } from "@/components/EmptyState";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Book, ReadingProgress, LibraryFolder } from "@reader/shared-types";
@@ -22,12 +23,17 @@ import { cacheEntireBook } from "@/hooks/useReader";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScanService";
+import { selectContinueBook } from "@/features/library/library-state";
+import {
+  clearSyncTask,
+  markSyncTask,
+  readSyncTasks,
+  type ActiveSyncTasks,
+} from "@/features/library/sync-tasks";
 
 type LibraryViewMode = "cover" | "compact" | "list";
 
 const LIBRARY_VIEW_KEY = "library-view-mode";
-const ACTIVE_SYNC_TASKS_KEY = "reader-active-sync-tasks";
-type ActiveSyncTasks = Record<string, "upload" | "download">;
 
 const POETIC_KEYS = [
   "松风阅心", "煮字生涯", "寒夜客来", "静夜钟声", "西窗剪烛", 
@@ -45,33 +51,12 @@ function loadLibraryViewMode(): LibraryViewMode {
   return value === "compact" || value === "list" ? value : "cover";
 }
 
-function readActiveSyncTasks(): ActiveSyncTasks {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(ACTIVE_SYNC_TASKS_KEY) || "{}");
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    return Object.fromEntries(
-      Object.entries(parsed).filter(([, value]) => value === "upload" || value === "download"),
-    ) as ActiveSyncTasks;
-  } catch {
-    localStorage.removeItem(ACTIVE_SYNC_TASKS_KEY);
-    return {};
-  }
-}
-
-function writeActiveSyncTasks(tasks: ActiveSyncTasks) {
-  localStorage.setItem(ACTIVE_SYNC_TASKS_KEY, JSON.stringify(tasks));
-}
-
 function markActiveSyncTask(bookId: string, action: ActiveSyncTasks[string]) {
-  const tasks = readActiveSyncTasks();
-  tasks[bookId] = action;
-  writeActiveSyncTasks(tasks);
+  markSyncTask(window.localStorage, bookId, action);
 }
 
 function clearActiveSyncTask(bookId: string) {
-  const tasks = readActiveSyncTasks();
-  delete tasks[bookId];
-  writeActiveSyncTasks(tasks);
+  clearSyncTask(window.localStorage, bookId);
 }
 
 function getBookTimestamp(book: Book) {
@@ -198,12 +183,18 @@ function getFriendlyRelativeTime(dateInput?: string | Date) {
   return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" }) + "读过";
 }
 
-export function LibraryDefault() {
+export function LibraryDefault({
+  initialDensity = "comfortable",
+}: {
+  initialDensity?: "compact" | "comfortable";
+}) {
   const router = useVirtualRouter();
   const isOnline = useOnlineStatus();
   const [sortBy, setSortBy] = useState<"title" | "createdAt">("createdAt");
-  const [viewMode, setViewModeState] =
-    useState<LibraryViewMode>(loadLibraryViewMode);
+  const [viewMode, setViewModeState] = useState<LibraryViewMode>(() => {
+    const stored = loadLibraryViewMode();
+    return stored === "cover" && initialDensity === "compact" ? "compact" : stored;
+  });
   const [toastMsg, setToastMsg] = useState("");
   const [showDrawer, setShowDrawer] = useState(false);
   const [confirmState, setConfirmState] = useState<{
@@ -801,6 +792,10 @@ export function LibraryDefault() {
 
   // 拉取云端书籍列表
   const fetchCloudBooks = useCallback(async () => {
+    if (!currentShareToken) {
+      setCloudBooks([]);
+      return;
+    }
     const online = typeof navigator !== "undefined" ? navigator.onLine : isOnline;
     if (!online) {
       setCloudBooks([]);
@@ -818,7 +813,7 @@ export function LibraryDefault() {
     } catch (e) {
       console.error("拉取云端书籍元数据失败:", e);
     }
-  }, [isOnline]);
+  }, [currentShareToken, isOnline]);
 
   useEffect(() => {
     fetchCloudBooks();
@@ -1640,7 +1635,7 @@ export function LibraryDefault() {
   const hasAutoSyncedRef = useRef(false);
 
   useEffect(() => {
-    if (!isOnline) return;
+    if (!isOnline || !currentShareToken) return;
 
     const runAutoStartupSyncAndRecovery = async () => {
       // 避免重复运行
@@ -1657,7 +1652,7 @@ export function LibraryDefault() {
 
       // 2. 持久化任务重连校验与自愈
       try {
-        const activeTasks = readActiveSyncTasks();
+        const activeTasks = readSyncTasks(window.localStorage);
         if (Object.keys(activeTasks).length > 0) {
           const localBooks = await db.books.toArray();
           
@@ -1687,7 +1682,7 @@ export function LibraryDefault() {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline, books, autoSyncOnStartup]);
+  }, [isOnline, books, autoSyncOnStartup, currentShareToken]);
 
   // 所有融合后的书籍（本地 + 仅云端存在）
   const mergedBooks = (() => {
@@ -1780,7 +1775,8 @@ export function LibraryDefault() {
 
   const bookCount = books?.length || 0;
   const totalNotesCount = useLiveQuery(() => db.bookmarks.count(), []);
-  const continueBook = books?.[0];
+  const progressMap = new Map(Object.entries(progressByBookId || {}));
+  const continueBook = selectContinueBook(books || [], progressMap);
   const continueProgress = continueBook
     ? progressByBookId?.[continueBook.id]
     : undefined;
@@ -1797,38 +1793,6 @@ export function LibraryDefault() {
     router.prefetch("/settings");
     books?.slice(0, 8).forEach((book) => router.prefetch(`/reader/${book.id}`));
   }, [books, router]);
-
-  useEffect(() => {
-    const autoInitializePreset = async () => {
-      if (books !== undefined && books.length === 0) {
-        const hasInitialized = window.localStorage.getItem("library-auto-initialized");
-        if (!hasInitialized) {
-          try {
-            const list = PRESET_BOOKLISTS["心灵幽谷与禅修静夜"];
-            if (list) {
-              await db.transaction(
-                "rw",
-                [db.books, db.chapters],
-                async () => {
-                  for (const item of list) {
-                    await db.books.put(item.book);
-                    for (const chap of item.chapters) {
-                      await db.chapters.put(chap);
-                    }
-                  }
-                }
-              );
-              window.localStorage.setItem("library-auto-initialized", "true");
-              setToastMsg("🍃 已为您在书阁首案静心置备「心灵幽谷与禅修静夜」精选传世经典。");
-            }
-          } catch (e) {
-            console.error("Auto initialization failed", e);
-          }
-        }
-      }
-    };
-    autoInitializePreset();
-  }, [books]);
 
   return (
     <AppShell
@@ -1875,12 +1839,11 @@ export function LibraryDefault() {
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               onClick={() =>
-                continueBook && router.push(`/reader/${continueBook.id}`)
+                router.push(continueBook ? `/reader/${continueBook.id}` : "/import")
               }
-              disabled={!continueBook}
-              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.18)]"
+              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#527047]"
             >
-              继续阅读
+              {continueBook ? "继续阅读" : "导入第一本书"}
             </button>
             <button
               onClick={() => router.push("/search")}
@@ -2044,9 +2007,9 @@ export function LibraryDefault() {
                   </div>
                   {/* 动态天数汇总 */}
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[10px] text-[var(--ui-quiet)] font-serif leading-none">连续展卷</p>
+                    <p className="text-[10px] text-[var(--ui-quiet)] font-serif leading-none">当前进度</p>
                     <p className="text-base font-bold font-serif text-[var(--ui-text)] mt-1">
-                      <span className="text-xl text-[#B86B5C] dark:text-[#E29B8C] font-black font-mono">18</span> 天
+                      <span className="text-xl text-[#B86B5C] dark:text-[#E29B8C] font-black font-mono">{continuePercent}</span>%
                     </p>
                   </div>
                 </div>
@@ -2069,7 +2032,8 @@ export function LibraryDefault() {
         </section>
       )}
 
-      {/* 🔮 极奢国风磨砂「云同步管理中心」 */}
+      {/* 云同步只在已绑定或执行中展示。 */}
+      {(currentShareToken || isSyncing) && (
       <section className="relative overflow-hidden rounded-[18px] border border-[#E4D7C2]/70 bg-gradient-to-br from-white/70 to-[#FAF5EB]/50 backdrop-blur-md p-5 shadow-[0_8px_32px_rgba(80,65,45,0.03)] mt-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
           <div className="flex items-center gap-3">
@@ -2093,7 +2057,7 @@ export function LibraryDefault() {
                 {isSyncing && !syncingBookId
                   ? syncStepText
                   : isOnline
-                  ? "发现本地与云端存在数据微澜，建议立即双向同步"
+                  ? "已连接多端同步，可按需同步本地与云端数据"
                   : strings.sync.offlineDesc}
               </p>
             </div>
@@ -2279,6 +2243,7 @@ export function LibraryDefault() {
           </div>
         )}
       </section>
+      )}
 
       <section className="mt-7">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -2379,22 +2344,20 @@ export function LibraryDefault() {
         {books === undefined ? (
           <SkeletonLoader type={viewMode === "list" ? "list" : "grid"} count={4} />
         ) : books.length === 0 ? (
-          <div className="ui-card flex flex-col items-center justify-center rounded-[16px] p-10 text-center text-[var(--ui-text)]">
-            <div className="mb-6 flex h-24 w-32 items-end justify-center rounded-[40px] bg-[rgba(95,125,82,0.07)]">
-              <div className="mb-5 h-8 w-14 rounded-t-[14px] border border-[rgba(95,125,82,0.28)] bg-white/70" />
-              <div className="-ml-3 mb-5 h-12 w-4 rounded-full border border-[rgba(95,125,82,0.22)] bg-[var(--ui-accent-soft)]" />
-            </div>
-            <h2 className="mb-2 text-xl font-bold">书架还是空的</h2>
-            <p className="mb-6 max-w-sm text-sm leading-6 text-[var(--ui-muted)]">
-              拖入一本 TXT / EPUB，或先去发现页找找想读的作品。
-            </p>
-            <button
-              onClick={() => router.push("/import")}
-              className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-6 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047]"
-            >
-              导入本地书籍
-            </button>
-          </div>
+          <EmptyState
+            title="书架还是空的"
+            description="导入一本 TXT 或 EPUB 开始阅读；示例内容只会在你明确选择后添加。"
+            primaryAction={{
+              label: "导入本地书籍",
+              accessibleLabel: "前往导入本地书籍",
+              onClick: () => router.push("/import"),
+            }}
+            secondaryAction={{
+              label: "浏览发现",
+              accessibleLabel: "前往发现页浏览书籍",
+              onClick: () => router.push("/search"),
+            }}
+          />
         ) : viewMode === "list" ? (
           <div className="overflow-hidden rounded-[20px] border border-[#E9DCC8]/60 bg-[#FFFDFB]/60 backdrop-blur-md shadow-[0_12px_36px_rgba(80,65,45,0.03)] divide-y divide-[#E9DCC8]/50">
             <button

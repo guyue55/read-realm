@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { loadReaderSettings } from "@/lib/reader-settings";
-import LibrarySimple from "./LibrarySimple";
 import { LibraryDefault } from "./LibraryDefault";
 
 export default function LibraryPageSwitch() {
@@ -21,9 +20,5 @@ export default function LibraryPageSwitch() {
   // Prevent hydration mismatch
   if (!mounted) return null;
 
-  if (uiMode === "simple") {
-    return <LibrarySimple />;
-  }
-
-  return <LibraryDefault />;
+  return <LibraryDefault initialDensity={uiMode === "simple" ? "compact" : "comfortable"} />;
 }

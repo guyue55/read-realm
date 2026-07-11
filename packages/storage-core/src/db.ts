@@ -144,10 +144,6 @@ export class ReaderDatabase extends Dexie {
 
 export const db = new ReaderDatabase();
 
-if (typeof window !== "undefined") {
-  (window as any).db = db;
-}
-
 // 🏮 1. 新增全局写事务隔离状态阀与状态设置函数
 let isTransactionWriting = false;
 
@@ -330,8 +326,6 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
       return false;
     }
 
-    console.warn("[Storage] 🚨 警告：检测到 IndexedDB 书架已空！极可能由于系统空间告急被 WebView 强行静默抹除。正在启动双轨熔断自愈...");
-
     let backupStr: string | null = null;
 
     // 1. 尝试从 Capacitor 物理沙盒读取
@@ -369,15 +363,15 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
     }
 
     if (!backupStr) {
-      console.log("[Storage] 本地与原生沙盒备份尽失，无可自愈。");
       return false;
     }
 
     const backup: MetaShelfBackup = JSON.parse(backupStr);
     if (!backup.books || backup.books.length === 0) {
-      console.log("[Storage] 备份文档为空，放弃自愈。");
       return false;
     }
+
+    console.warn("[Storage] 检测到书架为空且存在有效备份，开始恢复书架元数据。");
 
     const restoreMode = backup.isPartial ? "轻量" : "全量";
     console.log(`[Storage] 发现归档于 ${backup.backupTime} 的${restoreMode}镜像，开始复苏重建事务...`);

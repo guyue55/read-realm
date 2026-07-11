@@ -116,7 +116,7 @@ export const strings = {
   sync: {
     title: "云同步中心",
     syncedDesc: "您的本地藏书与云端处于同步最新状态",
-    diffDesc: "发现本地与云端存在数据微澜，建议立即双向同步",
+    diffDesc: "已连接多端同步，可按需同步本地与云端数据",
     offlineDesc: "🌧️ 当前处于离线状态，同步中心已静默暂缓工作",
     syncBtn: "立即双向同步",
     syncing: "正在双向同步中...",
