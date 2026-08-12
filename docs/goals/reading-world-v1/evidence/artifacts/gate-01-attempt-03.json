@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0001",
+  "phase": "02",
+  "experiment": "EXP-03",
+  "startedAt": "2026-08-12T23:03:09.560Z",
+  "endedAt": "2026-08-12T23:03:44.440Z",
+  "archivedPreviousReport": null,
+  "repository": {
+    "root": ".",
+    "head": "bae4d0fedbe7d61df9badc8248edc3d7f09de65c",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/gate_01_vertical_slice.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/reader_test.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/storage_test.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/web_lint.txt"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-12T23:03:09.586Z",
+      "endedAt": "2026-08-12T23:03:09.595Z",
+      "durationMs": 9,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/patch_whitespace.txt",
+      "logSha256": "019af3d4c6ed16b90dd63060cfa6a6428f92ae76bf52465a73cd5b118db059f5"
+    },
+    {
+      "id": "STORAGE_TEST",
+      "command": "corepack pnpm --filter @reader/storage-core test",
+      "startedAt": "2026-08-12T23:03:09.738Z",
+      "endedAt": "2026-08-12T23:03:10.611Z",
+      "durationMs": 873,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/storage_test.txt",
+      "logSha256": "954b5c80129b20641f35a27f885e94629ad0ceb492aa46cfe5842261dc2e1e1e"
+    },
+    {
+      "id": "READER_TEST",
+      "command": "corepack pnpm --filter @reader/reader-core test",
+      "startedAt": "2026-08-12T23:03:10.747Z",
+      "endedAt": "2026-08-12T23:03:11.538Z",
+      "durationMs": 791,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/reader_test.txt",
+      "logSha256": "3897f46f51393409bc53c72141ee6b1f1ee9e2ec41ee7c15e2d233c905ab11e8"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-12T23:03:11.599Z",
+      "endedAt": "2026-08-12T23:03:13.893Z",
+      "durationMs": 2294,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/web_lint.txt",
+      "logSha256": "fdaf27cf9942d01e4b8a392d0eb95ae6610b324eb8a8aad733f594f0edfba849"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "command": "corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts",
+      "startedAt": "2026-08-12T23:03:13.945Z",
+      "endedAt": "2026-08-12T23:03:17.354Z",
+      "durationMs": 3409,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/api_lint_non_fixing.txt",
+      "logSha256": "aa40372094a222e393b45847191154100e4f15556fe975dfeb3802640ea62fba"
+    },
+    {
+      "id": "GATE_01_VERTICAL_SLICE",
+      "command": "corepack pnpm --filter web-pwa exec playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-03",
+      "startedAt": "2026-08-12T23:03:17.408Z",
+      "endedAt": "2026-08-12T23:03:44.278Z",
+      "durationMs": 26870,
+      "exitCode": 1,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": true,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [
+        " M apps/web-pwa/public/sw.js"
+      ],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.records/gate_01_vertical_slice.txt",
+      "logSha256": "830f2cfa110ffb4ebe70b3844d06aed8a5b9c3c29e9dc6f527efdd26909178af"
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "passedCount": 5,
+    "failedCount": 1,
+    "trackedMutationCount": 0
+  }
+}

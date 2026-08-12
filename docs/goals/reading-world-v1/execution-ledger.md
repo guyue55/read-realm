@@ -4,13 +4,13 @@
 - 控制包版本：4
 - 当前控制修订：REV-0001
 - Goal ID：GOAL-READING-WORLD-V1
-- 当前状态：执行中
+- 当前状态：BLOCKED_DESIGN_REVIEW_REQUIRED
 - 当前阶段 ID：PHASE-02
-- 当前入口：读取 phase-02-local-data-slice.md、EVID-27/28 和 EXP-03 预登记，为固定 EPUB 实现兼容存储适配器差异机制；不得覆盖 ATTEMPT-01/02，第三次失败必须自动熔断。
-- 最近有效提交：a52004ca51c534c8a4365079979227460b6d8b43
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-02.json，SHA-256 `ae4b9f28ce27f774229bc4f8190a77a7ae7ac4a820f555ee539ff11b2752c022`，2026-08-13T06:44:44+08:00
-- 当前阻塞：无；EXP-01/02 均已失败且副作用已补偿，设计门失败计数 2/3，尚未达到 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01 仍未过门。
-- 停止原因：EXP-02 的 Worker 流式导入在生产浏览器停留于解析中，trace 记录打包运行时 bind 异常；正式 ATTEMPT-02 已封存，按总控转入最后一次 EXP-03 差异机制，不代表 PHASE-02 或 Goal 完成。
+- 当前入口：停止实现并等待用户批准新控制修订；新 REV 必须绑定触发门 GATE-01，明确验证基础设施资格门、历史 ATTEMPT 继承和后续差异实验，未经批准不得重跑或开始 PHASE-03。
+- 最近有效提交：bae4d0fedbe7d61df9badc8248edc3d7f09de65c
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.json，SHA-256 `c8ddadfe46cbebc894b954eb58be742a41ca6958fd19012bd1234280332d188b`，2026-08-13T07:03:44+08:00
+- 当前阻塞：GATE-01 在 REV-0001 下的 EXP-01/02/03 均失败，设计门失败计数 3/3；已进入 `BLOCKED_DESIGN_REVIEW_REQUIRED`。只有用户批准新 REV 后才能恢复执行。
+- 停止原因：ATTEMPT-03 在恢复后书架因同名书严格定位器歧义 exit 1；尽管此前纵切结果均已走完，总控要求完整结果通过且第三次失败自动熔断，因此停止实现并保留全部证据。
 - 完成判定：未完成
 
 ## 状态转换
@@ -20,12 +20,14 @@
 - RUN-0004：就绪待执行 -> 执行中；依据：开始执行 PHASE-01 并形成架构、矩阵、机器基线与审查产物；后续状态仍以最终独立复审为准，GATE-01 明确保留为未过门。
 - RUN-0005：保持执行中并撤回 PHASE-01 提前完成口径；依据：最后一次非写入基线重跑新增 attempt-04 后，独立复审发现遗留 attempt-03 的 6 条日志路径仍指向当前 records，5 份 JSON / 30 条记录中有 6 项 SHA 失配；修复并复算前不得进入 PHASE-02。
 - RUN-0006：保持执行中；PHASE-01 执行中 -> 完成，PHASE-02 就绪待执行 -> 执行中。依据：attempt-03 遗留路径已修复，5/5 JSON、30/30 records 独立复算匹配，安全预检 22/22 Green，执行期 `--mode resume` exit 0，独立结论 READY；GATE-01 仍未过门。
+- RUN-0011：执行中 -> BLOCKED_DESIGN_REVIEW_REQUIRED；依据：REV-0001 下 GATE-01 的 EXP-01/02/03 三次差异化实验均有独立失败证据 EVID-27/28/29，达到 3/3 自动熔断条件；未经用户批准新 REV 不得恢复。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
 |---|---|---|---|---|---|---|---|
 | TRY-01 | REV-0001 | GATE-01 | HYP-01 | EXP-01 | ATTEMPT-01：现有导入 UI/阅读器 + 统一进度 + 生产 PWA runner + 最小备份/空库恢复；runner 超时孤儿化并改写受控 SW，补偿完成后转 EXP-02 | EVID-27 | 失败 |
 | TRY-02 | REV-0001 | GATE-01 | HYP-01 | EXP-02 | ATTEMPT-02：同一 TXT 改走 Worker 流式导入与新会话适配器；生产浏览器停在解析中并记录打包运行时 bind 异常，受控 SW 改写已补偿，转 EXP-03 | EVID-28 | 失败 |
+| TRY-03 | REV-0001 | GATE-01 | HYP-01 | EXP-03 | ATTEMPT-03：固定 EPUB 改走主线程解析与兼容存储读回适配器；纵切完成至隔离恢复后的书架，最终因同名书严格定位器歧义 exit 1，PWA 生成写入已由检查器补偿，触发 3/3 熔断 | EVID-29 | 失败 |
 
 ## 阶段记录
 
@@ -105,3 +107,12 @@
 - 活体证据：EVID-28 JSON SHA-256 为 `ae4b9f28ce27f774229bc4f8190a77a7ae7ac4a820f555ee539ff11b2752c022`；6/6 日志存在且 SHA 独立复算匹配。
 - 状态结论：TRY-02 失败，GATE-01 未通过，失败计数 2/3；尚未熔断，也不得进入 PHASE-03。
 - 下一入口：PHASE-02 / TASK-0204 / EXP-03；固定 EPUB 改走兼容存储适配器并复用相同用户结果与失败判据。若 ATTEMPT-03 失败，立即进入 `BLOCKED_DESIGN_REVIEW_REQUIRED` 并请求新 REV。
+
+### RUN-0011 · 2026-08-13T07:03:44+08:00 · PHASE-02 / TASK-0204 / EXP-03 熔断
+- 本轮输入：EVID-27/28、clean@`bae4d0fedbe7d61df9badc8248edc3d7f09de65c`、字节 SHA-256 `6e673b1dce98a8236a3668c66bce18cca906f4ed39862b08d296409f8ebc67e9` 的固定两章 EPUB、预登记 EXP-03 兼容存储差异。
+- 本轮范围：最后一次 GATE-01 差异实验；固定 EPUB 主线程解析、原子任务生成、写后读回校验与失败删除，再走相同阅读/离线/备份恢复结果链。不修改或重跑 EXP-01/02。
+- 候选实现与验证：新增 6 个兼容存储合同测试、EPUB 恶意标记净化回归、固定可复算 fixture 和 EXP-03 旅程；全仓 204 tests、Web/API lint、类型检查、无 PWA 写入 build 均通过。EPUB 测试安全预检的唯一 Yellow 是离线 XML namespace，人工复核无网络副作用。
+- 正式失败：ATTEMPT-03 前五项检查全部 exit 0；浏览器纵切完成 EPUB 导入预览、加入书架、阅读、书签、1 秒内进度落盘、刷新、真离线、备份下载和隔离恢复，最终在恢复后书架因“固定 EPUB”同时出现在最近阅读与私人藏书而触发 strict locator 歧义，整项 exit 1。
+- 副作用处理：正式报告保留 `trackedMutationObservedBeforeCompensation=true` 和补偿前 `public/sw.js` 变更；检查器恢复后 `trackedWorktreeMutated=false`，当前 blob 与 clean 候选一致，3102 无监听。EVID-29 六份日志 SHA 独立复算 6/6。
+- 状态结论：TRY-03 失败；REV-0001 下同一 GATE-01 的三次差异化实验均失败，按总控自动进入 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01、PHASE-02 与 Goal 均未完成，PHASE-03~06 继续冻结。
+- 下一入口：等待用户批准新控制修订。建议新 REV 先增加验证基础设施资格门，区分产品结果失败与检查器不可判定，并只在资格门通过后注册新的差异实验；不得改写 EVID-27/28/29。

@@ -2,7 +2,7 @@
 
 - Goal ID：GOAL-READING-WORLD-V1
 - 阶段 ID：PHASE-02
-- 状态：执行中
+- 状态：BLOCKED_DESIGN_REVIEW_REQUIRED
 - 阶段目标：建立本地数据权威契约、1 秒进度落盘、迁移前备份与失败回滚，放行 GATE-01 的数据骨架。
 - 稳定输入：PHASE-01 当前事实源图、固定真实 TXT、隔离 IndexedDB/OPFS/SQLite 样本、REV-0001。
 - 依赖：PHASE-01 完成。
@@ -15,7 +15,7 @@
 - 回滚方式：版本化 schema、迁移事务、旧数据只读副本与备份恢复；代码按独立切片反向提交。
 - 人工检查点：确认备份、迁移失败和保存失败文案让非技术用户知道下一步。
 - 阶段完成条件：`reports/phase-02-data-contract.md`、`reports/phase-02-local-data.json`、首个实际执行的 `evidence/artifacts/gate-01-attempt-0X.json` 与 `reviews/phase-02-gate-01.md` 可复算；GATE-01 通过后 EVID-17 才放行 PHASE-03，失败则按 EXP-01→02→03 顺序且第三次自动熔断。
-- 下一入口：PHASE-03 / TASK-0301 统一导入任务状态机和容量策略。
+- 下一入口：暂停实现并请求用户批准新控制修订；只有新 REV 明确 GATE-01 的验证基础设施资格门、后续实验与历史 ATTEMPT 继承规则后才能恢复 PHASE-02，PHASE-03 仍不得开始。
 
 ## 工作项
 - TASK-0201：冻结 Book/Chapter/Progress/Bookmark/Settings/FileRef 与版本元数据的单一契约和适配器边界，写入 `reports/phase-02-data-contract.md`。
