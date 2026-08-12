@@ -20,6 +20,15 @@ export {
   createDefaultLocalDataMigrations,
   runRecoverableLocalDataMigration,
 } from "./local-data-migration.js";
+export {
+  createLocalDataBackup,
+  restoreLocalDataBackupToEmptyTarget,
+} from "./local-backup-service.js";
+export type {
+  CreateLocalDataBackupOptions,
+  LocalDataSnapshotRestoreTarget,
+  RestoreLocalDataBackupOptions,
+} from "./local-backup-service.js";
 export type {
   LocalDataMigrationResult,
   LocalDataMigrationStep,

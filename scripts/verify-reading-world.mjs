@@ -188,12 +188,75 @@ function phaseOneChecks() {
   ];
 }
 
+function phaseTwoExperimentChecks(experiment) {
+  if (experiment !== "EXP-01") {
+    throw new Error(
+      `PHASE-02 当前只放行 EXP-01；${experiment ?? "缺少实验 ID"} 不可执行`,
+    );
+  }
+  return [
+    { id: "PATCH_WHITESPACE", command: "git", args: ["diff", "--check"] },
+    {
+      id: "STORAGE_TEST",
+      command: "corepack",
+      args: ["pnpm", "--filter", "@reader/storage-core", "test"],
+    },
+    {
+      id: "READER_TEST",
+      command: "corepack",
+      args: ["pnpm", "--filter", "@reader/reader-core", "test"],
+    },
+    {
+      id: "WEB_LINT",
+      command: "corepack",
+      args: ["pnpm", "--filter", "web-pwa", "lint"],
+    },
+    {
+      id: "API_LINT_NON_FIXING",
+      command: "corepack",
+      args: [
+        "pnpm",
+        "--filter",
+        "api",
+        "exec",
+        "eslint",
+        "{src,apps,libs,test}/**/*.ts",
+      ],
+    },
+    {
+      id: "GATE_01_VERTICAL_SLICE",
+      command: "corepack",
+      args: [
+        "pnpm",
+        "--filter",
+        "web-pwa",
+        "exec",
+        "playwright",
+        "test",
+        "e2e/gate-01.spec.ts",
+        "--config",
+        "playwright.gate-01.config.ts",
+        "--grep",
+        "EXP-01",
+      ],
+      env: {
+        CI: "1",
+        PLAYWRIGHT_BROWSER_CHANNEL:
+          process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome",
+      },
+    },
+  ];
+}
+
 function checksFor(phase, experiment) {
   if (phase === "01") {
     if (experiment) {
       throw new Error("PHASE-01 不接受 --experiment；实验入口从 PHASE-02 开始实现");
     }
     return phaseOneChecks();
+  }
+  if (phase === "02") {
+    return phaseTwoExperimentChecks(experiment);
   }
   throw new Error(
     `PHASE-${phase} 的检查合同尚未随对应实现阶段落盘；拒绝生成伪证据`,
@@ -204,7 +267,7 @@ function main() {
   const args = parseArguments(process.argv.slice(2));
   if (!args.phase || !args.output) {
     throw new Error(
-      "用法：node scripts/verify-reading-world.mjs --phase 01 --output <path>",
+      "用法：node scripts/verify-reading-world.mjs --phase <phase> [--experiment <EXP-ID>] --output <path>",
     );
   }
 
