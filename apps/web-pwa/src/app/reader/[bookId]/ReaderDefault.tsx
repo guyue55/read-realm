@@ -72,6 +72,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     currentThemeColors,
     isPagination,
     toast,
+    progressSaveStatus,
+    retryProgressSave,
     isFlipCooldown,
     updateAutoFlipAtBottom,
     autoFlipCountdown,
@@ -371,6 +373,36 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           }}
         >
           {toast}
+        </div>
+      )}
+
+      <span className="sr-only" role="status" aria-live="polite">
+        {progressSaveStatus.state === "pending"
+          ? "正在保存阅读进度"
+          : progressSaveStatus.state === "saved"
+            ? "阅读进度已保存"
+            : ""}
+      </span>
+
+      {progressSaveStatus.state === "failed" && (
+        <div
+          role="alert"
+          className="fixed top-4 left-1/2 z-[100] flex min-h-11 -translate-x-1/2 items-center gap-3 rounded-xl border px-4 py-2 text-xs font-semibold shadow-lg"
+          style={{
+            backgroundColor: isDark ? "rgba(54, 35, 32, 0.96)" : "rgba(255, 247, 242, 0.96)",
+            color: isDark ? "#FFD8CC" : "#8B2E20",
+            borderColor: isDark ? "rgba(255, 155, 130, 0.35)" : "rgba(178, 62, 45, 0.24)",
+          }}
+        >
+          <span>阅读进度尚未保存，请保持页面开启</span>
+          <button
+            type="button"
+            onClick={() => void retryProgressSave()}
+            className="min-h-11 rounded-lg border px-3 font-bold"
+            style={{ borderColor: "currentColor" }}
+          >
+            重试
+          </button>
         </div>
       )}
 
