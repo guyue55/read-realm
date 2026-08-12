@@ -13,6 +13,11 @@ import { AppShell } from "@/components/AppShell";
 import { useVirtualRouter } from "@/lib/route-store";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
+import {
+  createBrowserLocalDataBackup,
+  describeLocalDataBackupError,
+  restoreBrowserLocalDataBackup,
+} from "@/lib/local-data-backup";
 
 export default function SettingsPage() {
   const router = useVirtualRouter();
@@ -27,6 +32,10 @@ export default function SettingsPage() {
     DEFAULT_READER_SETTINGS,
   );
   const [saved, setSaved] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<{
+    state: "idle" | "working" | "success" | "failed";
+    message: string;
+  }>({ state: "idle", message: "" });
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -94,6 +103,52 @@ export default function SettingsPage() {
         saveNextSettings(DEFAULT_READER_SETTINGS);
       }
     });
+  };
+
+  const handleCreateBackup = async () => {
+    setBackupStatus({ state: "working", message: "正在核对完整本地数据…" });
+    try {
+      const serialized = await createBrowserLocalDataBackup();
+      const blob = new Blob([serialized], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `read-realm-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setBackupStatus({
+        state: "success",
+        message: "备份已下载；文件包含已完整缓存的正文与阅读位置。",
+      });
+    } catch (error) {
+      setBackupStatus({
+        state: "failed",
+        message: describeLocalDataBackupError(error),
+      });
+    }
+  };
+
+  const handleRestoreBackup = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBackupStatus({ state: "working", message: "正在校验备份并恢复到空书架…" });
+    try {
+      const result = await restoreBrowserLocalDataBackup(await file.text());
+      setSettings(loadReaderSettings());
+      setBackupStatus({
+        state: "success",
+        message: `恢复完成：${result.bookCount} 本书、${result.chapterCount} 章、${result.progressCount} 条进度。`,
+      });
+    } catch (error) {
+      setBackupStatus({
+        state: "failed",
+        message: describeLocalDataBackupError(error),
+      });
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const currentTheme = THEMES[settings.theme];
@@ -168,6 +223,47 @@ export default function SettingsPage() {
               </span>
             </button>
           </div>
+        </section>
+
+        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)]">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold">本地备份与空库恢复</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--ui-muted)]">
+              导出已完整缓存的书籍、正文、进度、书签与阅读设置。恢复只允许空书架，不会覆盖现有数据。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCreateBackup()}
+              disabled={backupStatus.state === "working"}
+              className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+            >
+              下载最小完整备份
+            </button>
+            <label className="ui-focus-ring flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold">
+              选择备份恢复
+              <input
+                type="file"
+                accept="application/json,.json"
+                aria-label="选择阅读备份文件"
+                onChange={(event) => void handleRestoreBackup(event)}
+                className="sr-only"
+              />
+            </label>
+          </div>
+          {backupStatus.message && (
+            <p
+              role={backupStatus.state === "failed" ? "alert" : "status"}
+              className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+                backupStatus.state === "failed"
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-[var(--ui-border)] bg-white/64 text-[var(--ui-text)]"
+              }`}
+            >
+              {backupStatus.message}
+            </p>
+          )}
         </section>
 
         <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">

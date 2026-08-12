@@ -1,0 +1,153 @@
+import { expect, test, type Page } from "@playwright/test";
+import path from "node:path";
+
+type StoredProgress = {
+  bookId: string;
+  chapterId: string;
+  chapterIndex: number;
+  offset: number;
+  percentage: number;
+  updatedAt: string;
+};
+
+async function readStore<T>(page: Page, storeName: string): Promise<T[]> {
+  return page.evaluate(async (name) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB["open"]("ReaderDatabase");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      return await new Promise<T[]>((resolve, reject) => {
+        const transaction = database.transaction(name, "readonly");
+        const request = transaction.objectStore(name).getAll();
+        request.onsuccess = () => resolve(request.result as T[]);
+        request.onerror = () => reject(request.error);
+      });
+    } finally {
+      database.close();
+    }
+  }, storeName);
+}
+
+test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isolated restore", async ({
+  browser,
+  context,
+  page,
+}) => {
+  await page.goto("/#/library");
+  await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
+
+  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles(
+    path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
+  );
+  await expect(page.getByRole("heading", { name: "解析预览" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page.getByRole("button", { name: "加入书架" }).click();
+  await expect(page.getByText("short-novel", { exact: true })).toBeVisible();
+
+  await page.getByText("short-novel", { exact: true }).click();
+  await expect(page.locator(".reader-content:visible")).toContainText("清晨，林舟");
+  await page.locator('button[aria-label="添加书签"]:visible').click();
+
+  const slider = page.locator('input[aria-label="拖动阅读进度"]:visible');
+  const saveStartedAt = Date.now();
+  await slider.fill("60");
+  await slider.dispatchEvent("mouseup");
+
+  let savedProgress: StoredProgress | undefined;
+  await expect
+    .poll(
+      async () => {
+        savedProgress = (await readStore<StoredProgress>(page, "progress"))[0];
+        return savedProgress?.chapterIndex;
+      },
+      { timeout: 1_000, intervals: [25, 50, 100] },
+    )
+    .toBe(1);
+  const saveDurationMs = Date.now() - saveStartedAt;
+  expect(saveDurationMs).toBeLessThanOrEqual(1_000);
+
+  await page.reload();
+  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    timeout: 15_000,
+  });
+
+  const isControlled = await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    return Boolean(navigator.serviceWorker.controller);
+  });
+  if (!isControlled) await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)), {
+      timeout: 15_000,
+    })
+    .toBe(true);
+  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟");
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    timeout: 15_000,
+  });
+  await expect(page.getByText("离线", { exact: true }).first()).toBeVisible();
+  await context.setOffline(false);
+
+  await page.goto("/#/settings");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载最小完整备份" }).click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const backupBuffer = Buffer.concat(chunks);
+  const backup = JSON.parse(backupBuffer.toString("utf8"));
+  expect(backup).toMatchObject({
+    kind: "read-realm-local-snapshot",
+    schemaVersion: 1,
+    source: { databaseVersion: 9 },
+  });
+  expect(backup.data.books).toHaveLength(1);
+  expect(backup.data.chapters).toHaveLength(2);
+  expect(backup.data.progress[0].chapterIndex).toBe(1);
+  expect(backup.data.bookmarks).toHaveLength(1);
+
+  const restoreContext = await browser.newContext();
+  const restorePage = await restoreContext.newPage();
+  try {
+    await restorePage.goto("/#/settings");
+    await restorePage.getByLabel("选择阅读备份文件").setInputFiles({
+      name: download.suggestedFilename(),
+      mimeType: "application/json",
+      buffer: backupBuffer,
+    });
+    await expect(restorePage.getByRole("status")).toContainText("恢复完成：1 本书、2 章、1 条进度");
+
+    const [books, chapters, progress, bookmarks] = await Promise.all([
+      readStore<{ id: string; title: string }>(restorePage, "books"),
+      readStore<{ id: string; content: string }>(restorePage, "chapters"),
+      readStore<StoredProgress>(restorePage, "progress"),
+      readStore<{ id: string }>(restorePage, "bookmarks"),
+    ]);
+    expect(books.map((book) => book.title)).toEqual(["short-novel"]);
+    expect(chapters).toHaveLength(2);
+    expect(chapters.map((chapter) => chapter.content).join("\n")).toContain("清晨，林舟");
+    expect(progress[0]?.chapterIndex).toBe(1);
+    expect(bookmarks).toHaveLength(1);
+    expect(
+      await restorePage.evaluate(() =>
+        JSON.parse(localStorage.getItem("reader-settings") ?? "null"),
+      ),
+    ).toEqual(backup.data.settings);
+
+    await restorePage.goto("/#/library");
+    await restorePage.getByText("short-novel", { exact: true }).click();
+    await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+      timeout: 15_000,
+    });
+  } finally {
+    await restoreContext.close();
+  }
+});
