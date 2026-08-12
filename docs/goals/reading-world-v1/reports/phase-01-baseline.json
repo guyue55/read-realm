@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0001",
+  "phase": "01",
+  "experiment": null,
+  "startedAt": "2026-08-12T19:21:20.344Z",
+  "endedAt": "2026-08-12T19:22:21.415Z",
+  "archivedPreviousReport": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04",
+  "repository": {
+    "root": ".",
+    "head": "c900af34e81d5b09319498f57953bf2c0205c02c",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "M apps/web-pwa/next.config.mjs",
+      " M apps/web-pwa/playwright.config.ts",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/direction-approval-v1.md",
+      "?? docs/goals/reading-world-v1/evidence/index.md",
+      "?? docs/goals/reading-world-v1/execution-ledger.md",
+      "?? docs/goals/reading-world-v1/goal-master.md",
+      "?? docs/goals/reading-world-v1/phases/phase-01-truth-audit.md",
+      "?? docs/goals/reading-world-v1/phases/phase-02-local-data-slice.md",
+      "?? docs/goals/reading-world-v1/phases/phase-03-import-and-portability.md",
+      "?? docs/goals/reading-world-v1/phases/phase-04-reader-experience.md",
+      "?? docs/goals/reading-world-v1/phases/phase-05-library-notes-ui.md",
+      "?? docs/goals/reading-world-v1/phases/phase-06-offline-pwa.md",
+      "?? docs/goals/reading-world-v1/phases/phase-07-encrypted-sync.md",
+      "?? docs/goals/reading-world-v1/phases/phase-08-cross-environment-hardening.md",
+      "?? docs/goals/reading-world-v1/phases/phase-09-release-candidate.md",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.json",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/web_e2e.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/workspace_build.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/workspace_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.json",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/web_e2e.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/workspace_build.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/workspace_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.json",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/web_e2e.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/workspace_build.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-03/phase-01-baseline.records/workspace_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.json",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/web_e2e.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/workspace_build.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-04/phase-01-baseline.records/workspace_test.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-architecture.md",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/web_e2e.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/workspace_build.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-baseline.records/workspace_test.txt",
+      "?? docs/goals/reading-world-v1/reports/phase-01-capability-matrix.md",
+      "?? docs/goals/reading-world-v1/reports/task-0104-review-brief.md",
+      "?? docs/goals/reading-world-v1/reviews/phase-01-readiness.md",
+      "?? scripts/verify-reading-world.mjs"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-12T19:21:20.397Z",
+      "endedAt": "2026-08-12T19:21:20.405Z",
+      "durationMs": 8,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/patch_whitespace.txt",
+      "logSha256": "83d7d668a37b42d8e9c8b64e76d9272f1db34bef3139c42fdce29b4b1e1ecc4d"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-12T19:21:20.557Z",
+      "endedAt": "2026-08-12T19:21:22.943Z",
+      "durationMs": 2386,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/web_lint.txt",
+      "logSha256": "e646ca473d60980324faf04cece33407e853e311a8d4505f2ee3f641a2af920c"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "command": "corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts",
+      "startedAt": "2026-08-12T19:21:22.991Z",
+      "endedAt": "2026-08-12T19:21:26.763Z",
+      "durationMs": 3772,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "logSha256": "690d1599d67a606f3b4cc691046aa19389d3f37aafa138e74f2488db4938b20d"
+    },
+    {
+      "id": "WORKSPACE_TEST",
+      "command": "corepack pnpm test",
+      "startedAt": "2026-08-12T19:21:26.805Z",
+      "endedAt": "2026-08-12T19:21:33.154Z",
+      "durationMs": 6349,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/workspace_test.txt",
+      "logSha256": "192545da6d116a6205676a8a25cac1d55ccfce863312e06787ec4314a0e14790"
+    },
+    {
+      "id": "WORKSPACE_BUILD",
+      "command": "corepack pnpm build",
+      "startedAt": "2026-08-12T19:21:33.194Z",
+      "endedAt": "2026-08-12T19:21:53.395Z",
+      "durationMs": 20201,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "READING_WORLD_VERIFY_NO_PWA_WRITE": "1"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/workspace_build.txt",
+      "logSha256": "55091faa7230a464cf4a92c7299507d911d9a304dacac764cb558faafe591709"
+    },
+    {
+      "id": "WEB_E2E",
+      "command": "corepack pnpm --filter web-pwa test:e2e",
+      "startedAt": "2026-08-12T19:21:53.498Z",
+      "endedAt": "2026-08-12T19:22:21.205Z",
+      "durationMs": 27707,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/next.config.mjs",
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/phase-01-baseline.records/web_e2e.txt",
+      "logSha256": "6ed4bc57691e83f57a839ca5a91aecd6c67906572b75a47295809760cfa009df"
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "passedCount": 6,
+    "failedCount": 0,
+    "trackedMutationCount": 0
+  }
+}

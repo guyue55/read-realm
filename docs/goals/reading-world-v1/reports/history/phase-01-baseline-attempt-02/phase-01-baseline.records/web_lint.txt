@@ -1,0 +1,15 @@
+$ corepack pnpm --filter web-pwa lint
+started_at=2026-08-12T18:33:52.632Z
+ended_at=2026-08-12T18:33:54.850Z
+duration_ms=2218
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[" M apps/web-pwa/playwright.config.ts"]
+tracked_status_after=[" M apps/web-pwa/playwright.config.ts"]
+[stdout]
+
+> web-pwa@0.1.0 lint ./apps/web-pwa
+> eslint src --ext .js,.ts,.tsx --max-warnings=0
+
+
+[stderr]

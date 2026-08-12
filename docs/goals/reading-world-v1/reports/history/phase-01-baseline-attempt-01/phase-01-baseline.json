@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0001",
+  "phase": "01",
+  "experiment": null,
+  "startedAt": "2026-08-12T18:01:30.853Z",
+  "endedAt": "2026-08-12T18:03:58.517Z",
+  "repository": {
+    "root": ".",
+    "head": "c900af34e81d5b09319498f57953bf2c0205c02c",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "M apps/web-pwa/public/sw.js",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/direction-approval-v1.md",
+      "?? docs/goals/reading-world-v1/evidence/index.md",
+      "?? docs/goals/reading-world-v1/execution-ledger.md",
+      "?? docs/goals/reading-world-v1/goal-master.md",
+      "?? docs/goals/reading-world-v1/phases/phase-01-truth-audit.md",
+      "?? docs/goals/reading-world-v1/phases/phase-02-local-data-slice.md",
+      "?? docs/goals/reading-world-v1/phases/phase-03-import-and-portability.md",
+      "?? docs/goals/reading-world-v1/phases/phase-04-reader-experience.md",
+      "?? docs/goals/reading-world-v1/phases/phase-05-library-notes-ui.md",
+      "?? docs/goals/reading-world-v1/phases/phase-06-offline-pwa.md",
+      "?? docs/goals/reading-world-v1/phases/phase-07-encrypted-sync.md",
+      "?? docs/goals/reading-world-v1/phases/phase-08-cross-environment-hardening.md",
+      "?? docs/goals/reading-world-v1/phases/phase-09-release-candidate.md",
+      "?? scripts/verify-reading-world.mjs"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-12T18:01:30.860Z",
+      "endedAt": "2026-08-12T18:01:30.876Z",
+      "durationMs": 16,
+      "exitCode": 0,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/patch_whitespace.txt",
+      "logSha256": "9a90068274384f35378908cfa84810a37fad383da690b5150bb1d517db0d6b7b"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-12T18:01:30.878Z",
+      "endedAt": "2026-08-12T18:02:24.285Z",
+      "durationMs": 53407,
+      "exitCode": 0,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/web_lint.txt",
+      "logSha256": "c903a68e3b910c4efc1af5002f7f6457bf964ff20a182a83946348998665b18f"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "command": "corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts",
+      "startedAt": "2026-08-12T18:02:24.286Z",
+      "endedAt": "2026-08-12T18:02:29.416Z",
+      "durationMs": 5130,
+      "exitCode": 0,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "logSha256": "1077e64af92aca74d7e6c86602ad84c7eb82b8c0a9542f5f6ff8293189fbafff"
+    },
+    {
+      "id": "WORKSPACE_TEST",
+      "command": "corepack pnpm test",
+      "startedAt": "2026-08-12T18:02:29.416Z",
+      "endedAt": "2026-08-12T18:02:38.556Z",
+      "durationMs": 9140,
+      "exitCode": 0,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/workspace_test.txt",
+      "logSha256": "0cad229272f29239c7c8bcf72e5868e5c3639ea08919aa96e915cc280beffd38"
+    },
+    {
+      "id": "WORKSPACE_BUILD",
+      "command": "corepack pnpm build",
+      "startedAt": "2026-08-12T18:02:38.556Z",
+      "endedAt": "2026-08-12T18:03:29.236Z",
+      "durationMs": 50680,
+      "exitCode": 0,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/workspace_build.txt",
+      "logSha256": "65a0d067eb4d0f37b0056fe98e9d759484e061b40cdcc4f3b8769e3399903f82"
+    },
+    {
+      "id": "WEB_E2E",
+      "command": "corepack pnpm --filter web-pwa test:e2e",
+      "startedAt": "2026-08-12T18:03:29.238Z",
+      "endedAt": "2026-08-12T18:03:58.374Z",
+      "durationMs": 29136,
+      "exitCode": 1,
+      "signal": null,
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.records/web_e2e.txt",
+      "logSha256": "6c2052e2f380516a83afed1265ed01a87f88d27cb4ebbd539387385075cd7d36"
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "passedCount": 5,
+    "failedCount": 1
+  }
+}

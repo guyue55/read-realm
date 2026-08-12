@@ -1,0 +1,32 @@
+# PHASE-05 书架、搜索、笔记与状态 UI
+
+- Goal ID：GOAL-READING-WORLD-V1
+- 阶段 ID：PHASE-05
+- 状态：就绪待执行
+- 阶段目标：以统一领域入口和共享反馈组件，让 500 本书架及辅助功能井然、流畅、单手可用。
+- 稳定输入：通过 GATE-01 的数据/阅读服务、现有 AppShell/UI tokens 和用户批准的视觉尺度。
+- 依赖：PHASE-04 完成且 GATE-01 通过。
+- 本阶段改动边界：library/search/notes/settings 领域与页面、AppShell、共享 UI、同步状态占位和 a11y。
+- 本阶段不做：不建立第二套导航/设计系统，不照搬竞品外观，不新增运营统计、勋章或假数据。
+- 定向检查：`node scripts/verify-reading-world.mjs --phase 05 --output docs/goals/reading-world-v1/reports/phase-05-library-ui.json`，内部运行 500 本固定种子基准、组件/领域单测、`e2e/library-ui.spec.ts` 和 axe/视口检查。
+- 主线门禁：页面只组合领域服务；没有硬编码用户统计或权限；同步状态只在相关时出现且能解释下一步。
+- 活体验收：340/390/768/1024/1440/1920 视口完成找书、继续阅读、笔记筛选、设置和返回路径。
+- 失败处理：优先删减信息密度与重复状态；不得用装饰掩盖无数据或失败。
+- 回滚方式：组件和领域入口分切片切换；旧页面适配同一服务直到新页面通过，不复制事实源。
+- 人工检查点：品牌气质保持，书架层级、状态清晰、单手操作和低干扰各至少 4/5。
+- 阶段完成条件：`reports/phase-05-library-ui.json`、`reports/phase-05-ui-score.md`、`reviews/phase-05-ui.md` 与 EVID-06/14/23 候选产物可复算；NREQ-01 范围门仍通过。
+- 下一入口：PHASE-06 / TASK-0601 审计并重建 PWA 缓存升级契约。
+
+## 工作项
+- TASK-0501：抽离书架查询/操作/同步状态领域服务，消除 LibraryDefault 与页面直接全库扫描。
+- TASK-0502：统一搜索、笔记和设置的真实数据、空态、错误与危险操作反馈。
+- TASK-0503：重排书架和移动导航信息层级，统一共享 UI、焦点、触控和状态组件。
+- TASK-0504：运行 500 本压力、视口/a11y 回放与独立视觉体验审查，写入 `reports/phase-05-ui-score.md` 和 `reviews/phase-05-ui.md`。
+
+## 副作用与重放
+| 任务 ID | 副作用 | 重放类别 | 核验或补偿 |
+|---|---|---|---|
+| TASK-0501 | 源码与本地视图状态 | replay_safe | 对账领域查询结果和排序稳定性，禁止迁移用户数据 |
+| TASK-0502 | 笔记、设置和危险操作 UI | verify_before_repeat | 危险操作仅在隔离样本执行，先预览影响 |
+| TASK-0503 | 导航和 UI 状态 | replay_safe | 运行所有目标视口与返回路径，保留主题/设置兼容 |
+| TASK-0504 | 性能样本和截图 | verify_before_repeat | fresh build 与固定 500 本样本，删除旧截图后重采 |

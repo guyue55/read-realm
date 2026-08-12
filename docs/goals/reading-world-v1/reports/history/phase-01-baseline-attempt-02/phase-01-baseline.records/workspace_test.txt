@@ -1,0 +1,125 @@
+$ corepack pnpm test
+started_at=2026-08-12T18:33:58.273Z
+ended_at=2026-08-12T18:34:04.915Z
+duration_ms=6642
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[" M apps/web-pwa/playwright.config.ts"]
+tracked_status_after=[" M apps/web-pwa/playwright.config.ts"]
+[stdout]
+
+> read-realm@0.1.0 test .
+> corepack pnpm -r --workspace-concurrency=1 --if-present test
+
+Scope: 10 of 11 workspace projects
+
+> @reader/ai-core@0.1.0 test ./packages/ai-core
+> vitest run
+
+
+ RUN  v1.6.1 ./packages/ai-core
+
+ ✓ src/provider.test.ts  (4 tests) 3ms
+stdout | src/provider.test.ts > OpenAIProvider > trimChapterText 超长章节按预算切片且覆盖结尾段
+[AI-Core] 💡 检测到超长章节 (21089 字)，启动智能滑动窗口裁剪 (目标限制: 2000 字)...
+[AI-Core] ✨ 智能裁剪滑动窗完成！原文 21089 字 ➔ 黄金拼装片 2137 字。
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  02:33:58
+   Duration  237ms (transform 53ms, setup 0ms, collect 54ms, tests 3ms, environment 0ms, prepare 55ms)
+
+
+> @reader/gesture-core@0.1.0 test ./packages/gesture-core
+> vitest run
+
+
+ RUN  v1.6.1 ./packages/gesture-core
+
+ ✓ src/index.test.ts  (10 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  02:33:59
+   Duration  200ms (transform 27ms, setup 0ms, collect 27ms, tests 2ms, environment 0ms, prepare 43ms)
+
+
+> @reader/shared-types@0.1.0 test ./packages/shared-types
+> vitest run
+
+
+ RUN  v4.1.7 ./packages/shared-types
+
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  02:33:59
+   Duration  162ms (transform 88ms, setup 0ms, import 126ms, tests 18ms, environment 0ms)
+
+
+> @reader/parser-core@0.1.0 test ./packages/parser-core
+> vitest run
+
+
+ RUN  v1.6.1 ./packages/parser-core
+
+ ✓ src/txt-parser.test.ts  (7 tests) 3ms
+ ✓ src/html-parser.test.ts  (2 tests) 48ms
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  02:34:00
+   Duration  1.05s (transform 42ms, setup 0ms, collect 847ms, tests 51ms, environment 0ms, prepare 98ms)
+
+
+> @reader/reader-core@0.1.0 test ./packages/reader-core
+> vitest run
+
+
+ RUN  v4.1.7 ./packages/reader-core
+
+
+ Test Files  8 passed (8)
+      Tests  52 passed (52)
+   Start at  02:34:01
+   Duration  256ms (transform 198ms, setup 0ms, import 300ms, tests 28ms, environment 1ms)
+
+
+> @reader/storage-core@0.1.0 test ./packages/storage-core
+> vitest run
+
+
+ RUN  v4.1.7 ./packages/storage-core
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  02:34:02
+   Duration  116ms (transform 34ms, setup 0ms, import 51ms, tests 13ms, environment 0ms)
+
+
+> api@0.0.1 test ./apps/api
+> jest
+
+
+> web-pwa@0.1.0 test ./apps/web-pwa
+> vitest run
+
+
+ RUN  v4.1.7 ./apps/web-pwa
+
+
+ Test Files  16 passed (16)
+      Tests  42 passed (42)
+   Start at  02:34:04
+   Duration  771ms (transform 525ms, setup 0ms, import 971ms, tests 259ms, environment 2ms)
+
+
+[stderr]
+
+Test Suites: 9 passed, 9 total
+Tests:       31 passed, 31 total
+Snapshots:   0 total
+Time:        1.337 s, estimated 2 s
+Ran all test suites.

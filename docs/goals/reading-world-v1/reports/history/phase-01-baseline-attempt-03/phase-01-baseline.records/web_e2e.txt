@@ -1,0 +1,36 @@
+$ corepack pnpm --filter web-pwa test:e2e
+started_at=2026-08-12T18:41:36.301Z
+ended_at=2026-08-12T18:42:04.974Z
+duration_ms=28673
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[" M apps/web-pwa/next.config.mjs"," M apps/web-pwa/playwright.config.ts"]
+tracked_status_after=[" M apps/web-pwa/next.config.mjs"," M apps/web-pwa/playwright.config.ts"]
+[stdout]
+
+> web-pwa@0.1.0 test:e2e ./apps/web-pwa
+> playwright test
+
+
+Running 7 tests using 1 worker
+·······
+::notice title=🎭 Playwright Run Summary::  7 passed (28.2s)
+  7 passed (28.2s)
+
+[stderr]
+[WebServer] (node:18346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:18436) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:18598) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:18689) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:18709) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:18786) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:19894) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]  ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[WebServer] Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins

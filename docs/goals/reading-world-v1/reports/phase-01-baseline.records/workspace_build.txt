@@ -1,0 +1,91 @@
+$ corepack pnpm build
+started_at=2026-08-12T19:21:33.194Z
+ended_at=2026-08-12T19:21:53.395Z
+duration_ms=20201
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[" M apps/web-pwa/next.config.mjs"," M apps/web-pwa/playwright.config.ts"]
+tracked_status_after=[" M apps/web-pwa/next.config.mjs"," M apps/web-pwa/playwright.config.ts"]
+[stdout]
+
+> read-realm@0.1.0 build .
+> corepack pnpm -r --workspace-concurrency=1 --if-present build
+
+Scope: 10 of 11 workspace projects
+
+> @reader/ai-core@0.1.0 build ./packages/ai-core
+> tsc
+
+
+> @reader/content-utils@0.1.0 build ./packages/content-utils
+> tsc
+
+
+> @reader/gesture-core@0.1.0 build ./packages/gesture-core
+> tsc
+
+
+> @reader/shared-types@0.1.0 build ./packages/shared-types
+> tsc
+
+
+> @reader/parser-core@0.1.0 build ./packages/parser-core
+> tsc
+
+
+> @reader/reader-core@0.1.0 build ./packages/reader-core
+> tsc
+
+
+> @reader/storage-core@0.1.0 build ./packages/storage-core
+> tsc
+
+
+> api@0.0.1 build ./apps/api
+> nest build
+
+
+> web-pwa@0.1.0 build ./apps/web-pwa
+> next build
+
+   ▲ Next.js 15.5.20
+
+   Creating an optimized production build ...
+> [PWA] PWA support is disabled
+> [PWA] PWA support is disabled
+ ✓ Compiled successfully in 2.9s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/13) ...
+   Generating static pages (3/13)
+   Generating static pages (6/13)
+   Generating static pages (9/13)
+ ✓ Generating static pages (13/13)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    4.36 kB         137 kB
+├ ○ /_not-found                            995 B         104 kB
+├ ● /book/[bookId]                       5.51 kB         148 kB
+├   └ /book/placeholder
+├ ○ /import                              18.5 kB         171 kB
+├ ● /import/preview/[taskId]             6.18 kB         146 kB
+├   └ /import/preview/placeholder
+├ ○ /library                             35.1 kB         214 kB
+├ ○ /notes                               5.16 kB         145 kB
+├ ● /reader/[bookId]                     16.7 kB         186 kB
+├   └ /reader/placeholder
+├ ○ /search                              12.3 kB         152 kB
+└ ○ /settings                            6.17 kB         154 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
+  ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
+  └ other shared chunks (total)          2.39 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+
+[stderr]

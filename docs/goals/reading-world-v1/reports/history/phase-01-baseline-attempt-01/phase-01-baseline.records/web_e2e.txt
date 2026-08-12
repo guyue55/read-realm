@@ -1,0 +1,490 @@
+$ corepack pnpm --filter web-pwa test:e2e
+started_at=2026-08-12T18:03:29.238Z
+ended_at=2026-08-12T18:03:58.374Z
+duration_ms=29136
+exit_code=1
+[stdout]
+
+> web-pwa@0.1.0 test:e2e ./apps/web-pwa
+> playwright test
+
+
+Running 7 tests using 1 worker
+××F::error file=e2e/reader.spec.ts,title=[chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读::  1) [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ──────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/reader.spec.ts,title=[chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读::  1) [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ──────────────────────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/reader.spec.ts,title=[chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读::  1) [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ──────────────────────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+·××F::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误::  2) [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误::  2) [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误::  2) [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+××F::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误::  3) [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误::  3) [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误::  3) [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+××F::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误::  4) [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误::  4) [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误::  4) [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ────────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+××F::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误::  5) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ──────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误::  5) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ──────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误::  5) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ──────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+××F::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误::  6) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ──────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误::  6) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ──────────────────────────────%0A%0A    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+::error file=e2e/visual.spec.ts,title=[chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误::  6) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ──────────────────────────────%0A%0A    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────%0A    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell%0A    ╔════════════════════════════════════════════════════════════╗%0A    ║ Looks like Playwright was just installed or updated.       ║%0A    ║ Please run the following command to download new browsers: ║%0A    ║                                                            ║%0A    ║     pnpm exec playwright install                           ║%0A    ║                                                            ║%0A    ║ <3 Playwright Team                                         ║%0A    ╚════════════════════════════════════════════════════════════╝
+
+::notice title=🎭 Playwright Run Summary::  6 failed%0A    [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ───────────────────────────────────────────────%0A    [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ─────────────────────────────────%0A    [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ─────────────────────────────────%0A    [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ─────────────────────────────────%0A    [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ───────────────────────────────%0A    [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ───────────────────────────────%0A  1 passed (28.4s)
+
+  1) [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ──────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/reader-首次导入、书签与续读-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/reader-首次导入、书签与续读-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/reader-首次导入、书签与续读-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/reader-首次导入、书签与续读-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/reader-首次导入、书签与续读-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/reader-首次导入、书签与续读-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/reader-首次导入、书签与续读-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/reader-首次导入、书签与续读-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/reader-首次导入、书签与续读-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-340-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-mobile-390-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-tablet-768-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ──────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1440-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ──────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry1/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: browserType.launch: Executable doesn't exist at $HOME/Library/Caches/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     pnpm exec playwright install                           ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry2/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/visual-desktop-1920-主界面无溢出和控制台错误-chromium-retry2/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [chromium] › e2e/reader.spec.ts:4:5 › 首次导入、书签与续读 ───────────────────────────────────────────────
+    [chromium] › e2e/visual.spec.ts:12:7 › mobile-340 主界面无溢出和控制台错误 ─────────────────────────────────
+    [chromium] › e2e/visual.spec.ts:12:7 › mobile-390 主界面无溢出和控制台错误 ─────────────────────────────────
+    [chromium] › e2e/visual.spec.ts:12:7 › tablet-768 主界面无溢出和控制台错误 ─────────────────────────────────
+    [chromium] › e2e/visual.spec.ts:12:7 › desktop-1440 主界面无溢出和控制台错误 ───────────────────────────────
+    [chromium] › e2e/visual.spec.ts:12:7 › desktop-1920 主界面无溢出和控制台错误 ───────────────────────────────
+  1 passed (28.4s)
+./apps/web-pwa:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web-pwa@0.1.0 test:e2e: `playwright test`
+Exit status 1
+
+[stderr]
+[WebServer] (node:48519) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:48555) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:48781) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:49010) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:49049) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:49108) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:50076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50092) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50237) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50302) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50325) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50395) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50416) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50429) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50505) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50547) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50562) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50581) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50622) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

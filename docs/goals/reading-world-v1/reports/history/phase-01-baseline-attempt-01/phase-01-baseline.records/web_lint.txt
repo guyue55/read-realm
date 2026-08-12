@@ -1,0 +1,12 @@
+$ corepack pnpm --filter web-pwa lint
+started_at=2026-08-12T18:01:30.878Z
+ended_at=2026-08-12T18:02:24.285Z
+duration_ms=53407
+exit_code=0
+[stdout]
+
+> web-pwa@0.1.0 lint ./apps/web-pwa
+> eslint src --ext .js,.ts,.tsx --max-warnings=0
+
+
+[stderr]

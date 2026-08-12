@@ -1,0 +1,59 @@
+# 阅读世界 v1 执行账本
+
+## 当前指针
+- 控制包版本：4
+- 当前控制修订：REV-0001
+- Goal ID：GOAL-READING-WORLD-V1
+- 当前状态：执行中
+- 当前阶段 ID：PHASE-02
+- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0201 冻结最小版本化本地数据契约；只实现 EXP-01 所需纵向薄切片。
+- 最近有效提交：c900af34e81d5b09319498f57953bf2c0205c02c
+- 最近新鲜证据：docs/goals/reading-world-v1/reviews/phase-01-readiness.md，SHA-256 `a5e615efab9745409d2422138b5a545fec4eebcb6ee6d7cc83a8dbf0159f7ccb`，2026-08-13T03:16:03+08:00
+- 当前阻塞：无；PHASE-01 最终独立复审 READY，GATE-01 仍未过门。
+- 停止原因：PHASE-01 已收束并交接 PHASE-02；不代表 GATE-01、产品或 Goal 完成。
+- 完成判定：未完成
+
+## 状态转换
+- RUN-0001：保持铸造中；依据：用户批准 ACT-01，但 2026-08-13 独立就绪审查判定 NOT READY，撤销提前写入的就绪口径。
+- RUN-0002：保持铸造中；依据：首次五项缺口整改后，第二次独立复审仍发现三项可执行性缺口，未提前晋级。
+- RUN-0003：铸造中 -> 就绪待执行；依据：三项二审缺口整改后，快速独立终审判定 READY；最终状态以随后的 ready 与安全扫描通过为准。
+- RUN-0004：就绪待执行 -> 执行中；依据：开始执行 PHASE-01 并形成架构、矩阵、机器基线与审查产物；后续状态仍以最终独立复审为准，GATE-01 明确保留为未过门。
+- RUN-0005：保持执行中并撤回 PHASE-01 提前完成口径；依据：最后一次非写入基线重跑新增 attempt-04 后，独立复审发现遗留 attempt-03 的 6 条日志路径仍指向当前 records，5 份 JSON / 30 条记录中有 6 项 SHA 失配；修复并复算前不得进入 PHASE-02。
+- RUN-0006：保持执行中；PHASE-01 执行中 -> 完成，PHASE-02 就绪待执行 -> 执行中。依据：attempt-03 遗留路径已修复，5/5 JSON、30/30 records 独立复算匹配，安全预检 22/22 Green，执行期 `--mode resume` exit 0，独立结论 READY；GATE-01 仍未过门。
+
+## 设计门失败记录
+| 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
+|---|---|---|---|---|---|---|---|
+
+## 阶段记录
+
+### RUN-0001 · 2026-08-13T01:30:00+08:00 · Long Goal Forge
+- 本轮输入：用户愿景、仓库 clean@c900af34、现有 README/规格/旧验收和逐项方向决定。
+- 本轮范围：只铸造 v4 控制包，不实现产品功能，不部署、不删除数据。
+- 实际改动：创建 goal-master、execution-ledger、9 个阶段计划、证据索引和方向授权证据。
+- 失败命令：`create_goal` 因线程已有 Goal 失败，退出由工具返回；不影响现有 Goal。项目内查找协议路径失败后改从 guyue 安装目录读取。
+- 修复动作：沿用现有线程 Goal；按技能真实路径读取协议和模板。
+- 定向检查：`check_long_goal_pack.py --mode ready` 通过；`run_security_scan.py docs/goals/reading-world-v1` 扫描 13/13 文件并为 Green。
+- 主线门禁：本轮不运行产品 build/test；旧报告不继承完成权。
+- 活体证据：方向授权摘要 SHA-256 为 `3296525f366ebb43b0df89b2bf0b44de2a48d90bd908bafc5d0bc08f52ca7b4a`；控制包 ready 检查通过；新控制包安全预检 13/13 Green。
+- 证据新鲜度：方向授权来自本会话当前决定；产品证据全部视为待重新生成。
+- 人工判断：用户逐项批准产品、同步、加密、部署、内容、AI、迁移、功能取舍、数据主权、性能、UI、重构和最终实施授权。
+- 提交记录：未提交。
+- 残余风险：实际运行基线、数据样本、浏览器覆盖和同步机制仍未审计；全仓安全扫描被既有 `.DS_Store`、`.vscode`、PR 模板本机路径、生成物二进制和环境变量规则命中阻断，PHASE-01 必须分类修复或校正规则后才能进入提交门。
+- 状态结论：控制包就绪待执行；只说明治理入口可用，不等于任何产品功能或 Goal 完成。
+- 下一入口：PHASE-01 / TASK-0101，先生成当前真实性基线，不跳过风险门。
+
+### RUN-0004 · 2026-08-13T03:16:03+08:00 · PHASE-01 当前真实性审计
+- 本轮输入：clean@`c900af34e81d5b09319498f57953bf2c0205c02c`、REV-0001、旧规格/旧验收、现有 Web/PWA、Nest/SQLite/Blob、共享包和隔离 E2E。
+- 本轮范围：TASK-0101~0104；只做代码事实审计、隔离验证、最小验证基础设施修复和独立只读复审，不改数据契约、不实现同步、不扩张功能。
+- 实际改动：创建非写入 `scripts/verify-reading-world.mjs`；为 Playwright 增加显式系统浏览器通道；为审计 build 增加禁用 PWA 写入的专用开关；落盘架构图、37/37 能力矩阵、当前与四份历史机器记录、复审包和独立 review。
+- 失败与因果链：首次 baseline 的 E2E exit 1，根因是缺少 Playwright v1228 浏览器；锁定 Chromium 下载在 40% 后上游超时并手动终止为 exit 130，随后仅切换系统 Chrome 151，同一测试 7/7 通过。第二次 baseline 六条命令 exit 0，但检查器捕获 `next build` 改写受控 `public/sw.js`，总结果 FAIL；补偿恢复 BASE 文件，并用 `READING_WORLD_VERIFY_NO_PWA_WRITE=1` 建立无写入审计构建。临时 `node -e` 覆盖脚本因换行转义失败、一次 Git 反向补丁格式不兼容、一次检查器上下文补丁不匹配，均未产生产品改动并已改用稳定命令。控制包安全扫描曾因 JSON 记录个人绝对路径变 Red，去标识化后恢复 Green。早期 `.logs` 证据目录命中 Git ignore，最终迁移为可跟踪 `.records/*.txt` 并重算全部 SHA。
+- 定向检查：最终 `node scripts/verify-reading-world.mjs --phase 01 --output docs/goals/reading-world-v1/reports/phase-01-baseline.json` exit 0；补丁空白、Web lint、API 非写入 lint、174 个单测、工作区 build、Chrome E2E 7/7 全部通过且 `trackedMutationCount=0`。
+- 主线门禁：旧 lint/test/E2E 结论只按本轮实际覆盖部分复现；旧“真实离线”和“无发布阻断”不继承。37 个 DEC/REQ/RISK/NREQ 均有当前状态和后续阶段落点。`apps/mobile-capacitor`、`apps/desktop-tauri` 判定为历史静态副本，不计原生 App 交付。
+- 活体证据：当前 baseline + 4 份历史 JSON 共 30 个 `.records/*.txt` 均存在、SHA 匹配且未被 Git 忽略；attempt-01/02 保留失败因果链，attempt-03/04 与当前报告保留验证基础设施收敛后的通过谱系；系统 Chrome 151 下小型 TXT 导入、书架、阅读、书签、刷新、分享隔离与五视口共 7/7 通过。
+- 证据新鲜度：架构、能力矩阵、baseline、检查器四项 SHA 由独立审查者复算匹配；控制包安全预检 21/21 Green；ready checker exit 0。
+- 独立判断：`reviews/phase-01-readiness.md` 最终结论 READY；允许 PHASE-01 收束，但明确不证明 GATE-01、任何终局 REQ/RISK 或 Goal 完成。
+- 提交记录：待按 ACT-05 创建本地切片提交；不 push。
+- 残余风险：Dexie v9 与 SQLite 契约分裂；现备份是可裁剪元数据快照；进度写入集中在巨型 Hook；普通生产 PWA build 仍生成受控 SW；E2EE、Docker compose、压力与跨浏览器未实现或未证明。全仓安全扫描仍被既有系统文件、编辑器配置、生成物、绝对路径和环境变量规则命中，不能宣称全仓安全门通过。
+- 状态结论：PHASE-01 完成，Goal 进入执行中；设计门失败表保持空白，因为本轮三次 baseline 是环境/验证基础设施因果链，不是 EXP-01/02/03。
+- 下一入口：PHASE-02 / TASK-0201；先冻结最小版本化数据契约，随后只按 EXP-01 完成 GATE-01 纵向薄切片。GATE-01 通过前不得开始 PHASE-03 或批量扩张。
