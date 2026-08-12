@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0204 先实现 PHASE-02/EXP-01 真实检查合同，再严格运行完整 GATE-01 纵向薄切片。
-- 最近有效提交：3ef46eb2f3daef4990a9a52c9b6fbd103399c5f8
-- 最近新鲜证据：docs/goals/reading-world-v1/reports/phase-02-migration-safety.md，SHA-256 `09252e2be25fc354b3a50dedb13252f1908069b43ebe3358a7681213d51e8a08`，2026-08-13T05:29:43+08:00
-- 当前阻塞：无；TASK-0203 已收束，GATE-01 仍未过门。全仓 Zero-Leakage 仍命中 PHASE-01 已登记的卫生债，本切片 storage-core 和控制包预检 Green；不声称全仓安全门通过。
-- 停止原因：TASK-0203 已形成可回放切片并交接 TASK-0204；不代表迁移内核已接入 Dexie 启动、GATE-01、PHASE-02 或 Goal 完成。
+- 当前入口：读取 phase-02-local-data-slice.md 和 EVID-27，为 EXP-02 实现 Worker 流式导入 + 新会话适配器的差异机制；不得覆盖 ATTEMPT-01。
+- 最近有效提交：3f2a43740b68e20aed461cc7404c11d66a6d02b3
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.json，SHA-256 `7f6f34cee01c53e7bf8c81708a0c08207bcbae122d67d91bebe8b9167129b662`，2026-08-13T06:15:31+08:00
+- 当前阻塞：无；EXP-01 / ATTEMPT-01 已失败并完成副作用补偿，设计门失败计数 1/3，尚未达到 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01 仍未过门。
+- 停止原因：EXP-01 因验证基础设施超时、孤儿进程和受控 Service Worker 改写而无法证明产品纵切；已按总控转入 EXP-02 差异机制，不代表 PHASE-02 或 Goal 完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -24,6 +24,7 @@
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
 |---|---|---|---|---|---|---|---|
+| TRY-01 | REV-0001 | GATE-01 | HYP-01 | EXP-01 | ATTEMPT-01：现有导入 UI/阅读器 + 统一进度 + 生产 PWA runner + 最小备份/空库恢复；runner 超时孤儿化并改写受控 SW，补偿完成后转 EXP-02 | EVID-27 | 失败 |
 
 ## 阶段记录
 

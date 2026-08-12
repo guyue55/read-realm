@@ -1,0 +1,10 @@
+$ corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts
+started_at=2026-08-12T21:54:43.670Z
+ended_at=2026-08-12T21:54:47.712Z
+duration_ms=4042
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+[stdout]
+[stderr]
