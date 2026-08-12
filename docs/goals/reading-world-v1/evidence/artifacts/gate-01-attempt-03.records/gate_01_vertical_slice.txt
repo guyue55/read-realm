@@ -1,0 +1,103 @@
+$ corepack pnpm --filter web-pwa exec playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-03
+started_at=2026-08-12T23:03:17.408Z
+ended_at=2026-08-12T23:03:44.278Z
+duration_ms=26870
+exit_code=1
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=true
+tracked_status_before=[]
+tracked_status_before_compensation=[" M apps/web-pwa/public/sw.js"]
+tracked_status_after=[]
+[stdout]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 1 test using 1 worker
+
+
+
+[1/1] [chromium-chrome] › e2e/gate-01.spec.ts:255:5 › EXP-03 fixed EPUB through compatible storage survives the same user outcomes
+  1) [chromium-chrome] › e2e/gate-01.spec.ts:255:5 › EXP-03 fixed EPUB through compatible storage survives the same user outcomes
+
+    Error: locator.click: Error: strict mode violation: getByText('固定 EPUB', { exact: true }) resolved to 2 elements:
+        1) <h3 class="truncate text-xl font-bold font-reading-title">固定 EPUB</h3> aka locator('section').filter({ hasText: '🍃 最近阅读 · Current Flow' }).locator('h3')
+        2) <h3 class="line-clamp-2 text-[15px] font-bold leading-snug font-reading-title text-[var(--ui-text)] group-hover:text-[var(--ui-accent)] transition-colors">固定 EPUB</h3> aka locator('section').filter({ hasText: '📖 私人藏书(1' }).getByRole('heading')
+
+    Call log:
+      - waiting for getByText('固定 EPUB', { exact: true })
+
+
+      348 |
+      349 |     await restorePage.goto("/#/library");
+    > 350 |     await restorePage.getByText("固定 EPUB", { exact: true }).click();
+          |                                                             ^
+      351 |     await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+      352 |       timeout: 15_000,
+      353 |     });
+        at ./apps/web-pwa/e2e/gate-01.spec.ts:350:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gate-01-EXP-03-fixed-EPUB--294fa-ives-the-same-user-outcomes-chromium-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gate-01-EXP-03-fixed-EPUB--294fa-ives-the-same-user-outcomes-chromium-chrome/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gate-01-EXP-03-fixed-EPUB--294fa-ives-the-same-user-outcomes-chromium-chrome/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/gate-01-EXP-03-fixed-EPUB--294fa-ives-the-same-user-outcomes-chromium-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/gate-01-EXP-03-fixed-EPUB--294fa-ives-the-same-user-outcomes-chromium-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-chrome] › e2e/gate-01.spec.ts:255:5 › EXP-03 fixed EPUB through compatible storage survives the same user outcomes
+undefined
+./apps/web-pwa:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-03
+
+[stderr]
+[WebServer] (node:73323) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:73342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:73873) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74173) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74174) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74177) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74175) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74172) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74176) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74171) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74253) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74621) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:74621) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(node:74697) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+

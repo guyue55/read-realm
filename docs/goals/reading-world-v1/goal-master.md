@@ -4,13 +4,13 @@
 - 控制包版本：4
 - 当前控制修订：REV-0001
 - Goal ID：GOAL-READING-WORLD-V1
-- 状态：执行中
+- 状态：BLOCKED_DESIGN_REVIEW_REQUIRED
 - 唯一总控：本文件
 - 执行账本：docs/goals/reading-world-v1/execution-ledger.md
 - 阶段计划目录：docs/goals/reading-world-v1/phases
 - 活体证据索引：docs/goals/reading-world-v1/evidence/index.md
 - 基线提交或版本：c900af34e81d5b09319498f57953bf2c0205c02c
-- 最后审查时间：2026-08-13T03:16:03+08:00
+- 最后审查时间：2026-08-13T07:03:44+08:00
 
 ## 状态机
 - 正向：铸造中 -> 就绪待执行 -> 执行中 -> 终局候选 -> 完成
