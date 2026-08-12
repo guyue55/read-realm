@@ -14,6 +14,10 @@ import { useEffect, useRef, useState } from "react";
 import { FolderPreviewTree } from "@/components/FolderPreviewTree";
 import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/services/FolderScanService";
 import { createStreamingImportSession } from "@/features/import/streaming-import-session";
+import {
+  buildCompatibleImportTask,
+  persistCompatibleImportTask,
+} from "@/features/import/compatible-import-storage";
 
 interface BatchTask {
   id: string;
@@ -189,6 +193,33 @@ export default function ImportPage() {
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
       const fallbackBuffer = buffer.slice(0);
 
+      if (type === "epub") {
+        setStatus("正在兼容模式解析 EPUB...");
+        const { parseEpubBook } = await import("@reader/parser-core/epub-parser");
+        const parsedBook = await parseEpubBook(file.name, buffer);
+        const task = buildCompatibleImportTask({
+          parsedBook,
+          format: "epub",
+          createId,
+        });
+        const taskId = await persistCompatibleImportTask(
+          {
+            put: async (value) => {
+              await db.importTasks.put(value);
+            },
+            get: async (id) => db.importTasks.get(id),
+            remove: async (id) => {
+              await db.importTasks.delete(id);
+            },
+          },
+          task,
+        );
+        setStatus("EPUB 解析并校验完成！");
+        setIsProcessing(false);
+        router.push(`/import/preview/${taskId}`);
+        return;
+      }
+
       const worker = new Worker(
         new URL("./parser.worker.ts", import.meta.url),
         { type: "module" },
@@ -241,7 +272,6 @@ export default function ImportPage() {
             activeTaskIdRef.current = null;
           }
           setStatus("后台解析不可用，正在使用兼容模式...");
-          if (type === "epub") throw new Error(e.message);
           const { parseTxtBook } = await import("@reader/parser-core/txt-parser");
           const parsed = parseTxtBook(file.name, fallbackBuffer);
           await createImportTask(parsed, "upload", { format: type });
