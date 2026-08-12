@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { FolderPreviewTree } from "@/components/FolderPreviewTree";
 import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/services/FolderScanService";
+import { createStreamingImportSession } from "@/features/import/streaming-import-session";
 
 interface BatchTask {
   id: string;
@@ -188,19 +189,6 @@ export default function ImportPage() {
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
       const fallbackBuffer = buffer.slice(0);
 
-      if (process.env.NODE_ENV === "production") {
-        const parsed = type === "epub"
-          ? await import("@reader/parser-core/epub-parser").then(({ parseEpubBook }) =>
-              parseEpubBook(file.name, buffer),
-            )
-          : await import("@reader/parser-core/txt-parser").then(({ parseTxtBook }) =>
-              parseTxtBook(file.name, buffer),
-            );
-        await createImportTask(parsed, "upload", { format: type });
-        setIsProcessing(false);
-        return;
-      }
-
       const worker = new Worker(
         new URL("./parser.worker.ts", import.meta.url),
         { type: "module" },
@@ -209,107 +197,38 @@ export default function ImportPage() {
 
       worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
       setStatus("引擎解析章节中...");
-
-      let taskId = "";
-      let bookId = "";
-      const now = new Date().toISOString();
-      // 内存累积所有章节分片，FINISHED 时整批落库，消除 requestIdleCallback 竞态
-      const accumulatedChapters: { id: string; bookId: string; index: number; title: string; content: string; wordCount: number; createdAt: string; updatedAt: string }[] = [];
-      let accumulatedWordCount = 0;
+      const session = createStreamingImportSession({
+        filename: file.name,
+        format: type,
+        createId,
+        saveTask: async (task) => {
+          await db.importTasks.add(task);
+        },
+      });
       
       worker.onmessage = async (e) => {
         const { type: msgType, success, error } = e.data;
 
-        if (!success) {
-          worker.terminate();
-          workerRef.current = null;
-          setStatus(`解析失败: ${error}`);
-          setIsProcessing(false);
-          return;
-        }
-
-        if (msgType === "METADATA") {
-          const { title, chapterCount } = e.data;
-          taskId = createId();
-          bookId = createId();
-          activeTaskIdRef.current = taskId;
-
-          setStatus("引擎识别成功，正在空降初始化书册骨架...");
-
-          const bookMetadata = {
-            id: bookId,
-            title,
-            sourceType: "upload" as const,
-            format: type as "epub" | "txt",
-            status: "to_read" as const,
-            tags: [],
-            chapterCount,
-            wordCount: 0,
-            createdAt: now,
-            updatedAt: now,
-          };
-
-          await db.importTasks.add({
-            id: taskId,
-            bookMetadata,
-            chapters: [],
-            createdAt: now,
-          });
-
-        } else if (msgType === "CHUNK") {
-          const { startIndex, chapters: chunkChapters, isFinished } = e.data;
-          setStatus(`正在流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...`);
-
-          const formattedChapters = chunkChapters.map((ch: { title: string; content: string }, idx: number) => {
-            const globalIndex = startIndex + idx;
-            return {
-              id: createId(),
-              bookId,
-              index: globalIndex,
-              title: ch.title || `第 ${globalIndex + 1} 章`,
-              content: ch.content,
-              wordCount: ch.content.length,
-              createdAt: now,
-              updatedAt: now,
-            };
-          });
-
-          // 内存累积章节分片，FINISHED 时整批落库，消除 requestIdleCallback 竞态
-          accumulatedChapters.push(...formattedChapters);
-          if (isFinished) {
-            accumulatedWordCount = accumulatedChapters.reduce(
-              (sum, ch) => sum + (ch.content ? ch.content.length : 0),
-              0,
-            );
+        try {
+          const result = await session.accept(e.data);
+          if (msgType === "METADATA") {
+            setStatus("引擎识别成功，正在流式接收章节...");
+          } else if (msgType === "CHUNK") {
+            const { startIndex, chapters: chunkChapters } = e.data;
+            setStatus(`正在流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...`);
           }
-
-        } else if (msgType === "FINISHED") {
-          worker.terminate();
-          workerRef.current = null;
-
-          // 一次性将所有章节写入 DB，确保导航前数据已完整落库
-          try {
-            await db.transaction("rw", db.importTasks, async () => {
-              const task = await db.importTasks.get(taskId);
-              if (task) {
-                task.chapters = accumulatedChapters;
-                task.bookMetadata.wordCount = accumulatedWordCount;
-                await db.importTasks.put(task);
-              }
-            });
-          } catch (err) {
-            console.error("章节整批入库异常:", err);
-            await db.importTasks.delete(taskId);
-            activeTaskIdRef.current = null;
-            setStatus(`保存解析任务失败: ${describeAppError(err)}`);
+          if (result.state === "completed") {
+            worker.terminate();
+            workerRef.current = null;
+            setStatus("完美解析完成！");
             setIsProcessing(false);
-            return;
+            router.push(`/import/preview/${result.taskId}`);
           }
-
-          setStatus("完美解析完成！");
+        } catch (sessionError) {
+          worker.terminate();
+          workerRef.current = null;
+          setStatus(`解析失败: ${success ? describeAppError(sessionError) : error}`);
           setIsProcessing(false);
-          activeTaskIdRef.current = null;
-          router.push(`/import/preview/${taskId}`);
         }
       };
 
