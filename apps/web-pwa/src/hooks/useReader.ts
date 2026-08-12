@@ -15,7 +15,13 @@ import {
   PAGE_GAP,
   type ChapterData,
 } from "@reader/reader-core";
-import { Dexie, db } from "@reader/storage-core";
+import {
+  Dexie,
+  createProgressSaveCoordinator,
+  db,
+  type ProgressSaveCoordinator,
+  type ProgressSaveStatus,
+} from "@reader/storage-core";
 import {
   AI_READING_INTENTS,
   generateAiSigKeyAsync,
@@ -36,24 +42,6 @@ import {
   saveReaderSettings,
   type ReaderSettingsState,
 } from "@/lib/reader-settings";
-
-function debounce<Args extends unknown[]>(
-  func: (...args: Args) => void,
-  wait: number,
-) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  const debounced = (...args: Args) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-  debounced.cancel = () => {
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
-  };
-  return debounced;
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformChapterData(data: any, bookId: string): any {
@@ -677,14 +665,13 @@ export function useReader(bookId: string) {
 
   const [toast, setToast] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingProgressRef = useRef<{
-    bookId: string;
-    chapterId: string;
-    chapterIndex: number;
-    offset: number;
-    paragraphIndex?: number;
-    characterOffset?: number;
-  } | null>(null);
+  const [activePanel, setActivePanel] = useState<
+    "toc" | "progress" | "ai" | "settings" | null
+  >(null);
+  const [toc, setToc] = useState<{ index: number; title: string }[]>([]);
+  const [progressSaveStatus, setProgressSaveStatus] =
+    useState<ProgressSaveStatus>({ state: "idle" });
+  const progressSaveCoordinatorRef = useRef<ProgressSaveCoordinator | null>(null);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -693,6 +680,56 @@ export function useReader(bookId: string) {
       setToast(null);
     }, 2500);
   }, []);
+
+  if (!progressSaveCoordinatorRef.current) {
+    progressSaveCoordinatorRef.current = createProgressSaveCoordinator({
+      persist: async (progress) => {
+        await db.transaction("rw", [db.progress, db.books], async () => {
+          await db.progress.put(progress);
+          const updatedBooks = await db.books.update(progress.bookId, {
+            lastReadAt: progress.updatedAt,
+          });
+          if (updatedBooks === 0) {
+            throw new Error("READING_PROGRESS_BOOK_NOT_FOUND");
+          }
+        });
+      },
+      onStatusChange: (status) => {
+        setProgressSaveStatus(status);
+        if (status.state === "failed") {
+          console.error("Failed to persist reading progress:", status.error);
+        }
+      },
+    });
+  }
+  const progressSaveCoordinator = progressSaveCoordinatorRef.current;
+
+  const buildReadingProgress = useCallback(
+    (
+      chapterData: ChapterData,
+      offset: number,
+      paragraphIndex?: number,
+      characterOffset?: number,
+    ): ReadingProgress => ({
+      bookId,
+      chapterId: chapterData.id,
+      chapterIndex: chapterData.index,
+      offset,
+      paragraphIndex,
+      characterOffset,
+      percentage:
+        toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
+      updatedAt: new Date().toISOString(),
+    }),
+    [bookId, toc.length],
+  );
+  const retryProgressSave = useCallback(async () => {
+    try {
+      await progressSaveCoordinator.retry();
+    } catch {
+      // 失败状态由协调器保留，界面继续提供重试入口。
+    }
+  }, [progressSaveCoordinator]);
 
   useEffect(() => {
     return () => {
@@ -809,10 +846,6 @@ export function useReader(bookId: string) {
     settings.lineHeight,
   ]);
 
-  const [activePanel, setActivePanel] = useState<
-    "toc" | "progress" | "ai" | "settings" | null
-  >(null);
-  const [toc, setToc] = useState<{ index: number; title: string }[]>([]);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [activeTab, setActiveTab] = useState<"toc" | "bookmarks">("toc");
   const [aiSummary, setAiSummary] = useState<string>("");
@@ -939,33 +972,6 @@ export function useReader(bookId: string) {
   useEffect(() => {
     if (!chapter || !bookId) return;
 
-    const saveScrollProgress = debounce((chapterData: ChapterData, offset: number, paragraphIndex?: number, characterOffset?: number) => {
-      const nowIso = new Date().toISOString();
-      db.progress.put({
-        bookId,
-        chapterId: chapterData.id,
-        chapterIndex: chapterData.index,
-        offset,
-        paragraphIndex,
-        characterOffset,
-        percentage: toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
-        updatedAt: nowIso,
-      }).then(() => {
-        void db.books.update(bookId, { lastReadAt: nowIso }).catch((err) => {
-          console.error("Failed to update lastReadAt on scroll progress save:", err);
-        });
-        if (
-          pendingProgressRef.current &&
-          pendingProgressRef.current.offset === offset &&
-          pendingProgressRef.current.chapterId === chapterData.id
-        ) {
-          pendingProgressRef.current = null;
-        }
-      }).catch((err) => {
-        console.error("Failed to auto-save scroll progress:", err);
-      });
-    }, 1000);
-
     const handleScroll = () => {
       if (!isPositionRestoredRef.current) return;
       const { offset, maxOffset } = getOffsetState();
@@ -1052,15 +1058,14 @@ export function useReader(bookId: string) {
 
       if (offset > 0 && currentActiveChapter) {
         const { paragraphIndex, characterOffset } = getPrecisePosition();
-        pendingProgressRef.current = {
-          bookId,
-          chapterId: currentActiveChapter.id,
-          chapterIndex: currentActiveChapter.index,
-          offset: activeChapterOffset,
-          paragraphIndex,
-          characterOffset,
-        };
-        saveScrollProgress(currentActiveChapter, activeChapterOffset, paragraphIndex, characterOffset);
+        progressSaveCoordinator.schedule(
+          buildReadingProgress(
+            currentActiveChapter,
+            activeChapterOffset,
+            paragraphIndex,
+            characterOffset,
+          ),
+        );
       }
     };
 
@@ -1073,7 +1078,6 @@ export function useReader(bookId: string) {
 
     return () => {
       clearAutoFlipTimer();
-      saveScrollProgress.cancel(); // 物理阻断
       if (container) container.removeEventListener("scroll", handleScroll);
       window.removeEventListener("scroll", handleScroll);
     };
@@ -1089,68 +1093,37 @@ export function useReader(bookId: string) {
     startAutoFlipTimer,
     clearAutoFlipTimer,
     isPositionRestored,
+    progressSaveCoordinator,
+    buildReadingProgress,
   ]);
 
-  // 强落盘保障机制 (一)：处理 Hook/组件 卸载时的进度刷盘
+  // 组件退出时立即发起剩余进度的持久化，不会提前清除失败值。
   useEffect(() => {
     return () => {
-      if (pendingProgressRef.current) {
-        const { bookId: pid, chapterId, chapterIndex, offset, paragraphIndex, characterOffset } = pendingProgressRef.current;
-        pendingProgressRef.current = null;
-        const nowIso = new Date().toISOString();
-        void db.progress.put({
-          bookId: pid,
-          chapterId,
-          chapterIndex,
-          offset,
-          paragraphIndex,
-          characterOffset,
-          percentage: toc.length > 0 ? (chapterIndex / toc.length) * 100 : 0,
-          updatedAt: nowIso,
-        }).then(() => {
-          void db.books.update(pid, { lastReadAt: nowIso }).catch((err) => {
-            console.error("Failed to update lastReadAt on Hook unmount:", err);
-          });
-        }).catch((err) => {
-          console.error("Failed to force save reader progress on Hook unmount:", err);
-        });
-      }
+      void progressSaveCoordinator.flush().catch(() => undefined);
     };
-  }, [toc.length]);
+  }, [progressSaveCoordinator]);
 
-  // 强落盘保障机制 (二)：处理页面隐藏 (pagehide)、即将卸载 (beforeunload) 时的进度刷盘
+  // 页面隐藏或卸载时同样立即发起刷盘。
   useEffect(() => {
     const forceFlushProgress = () => {
-      if (pendingProgressRef.current) {
-        const { bookId: pid, chapterId, chapterIndex, offset, paragraphIndex, characterOffset } = pendingProgressRef.current;
-        pendingProgressRef.current = null;
-        const nowIso = new Date().toISOString();
-        void db.progress.put({
-          bookId: pid,
-          chapterId,
-          chapterIndex,
-          offset,
-          paragraphIndex,
-          characterOffset,
-          percentage: toc.length > 0 ? (chapterIndex / toc.length) * 100 : 0,
-          updatedAt: nowIso,
-        }).then(() => {
-          void db.books.update(pid, { lastReadAt: nowIso }).catch((err) => {
-            console.error("Failed to update lastReadAt on page exit:", err);
-          });
-        }).catch((err) => {
-          console.error("Failed to force save reader progress on page exit:", err);
-        });
+      void progressSaveCoordinator.flush().catch(() => undefined);
+    };
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") {
+        forceFlushProgress();
       }
     };
 
     window.addEventListener("pagehide", forceFlushProgress);
     window.addEventListener("beforeunload", forceFlushProgress);
+    document.addEventListener("visibilitychange", flushWhenHidden);
     return () => {
       window.removeEventListener("pagehide", forceFlushProgress);
       window.removeEventListener("beforeunload", forceFlushProgress);
+      document.removeEventListener("visibilitychange", flushWhenHidden);
     };
-  }, [toc.length]);
+  }, [progressSaveCoordinator]);
 
   useEffect(() => {
     if (settings.pageMode !== "pagination") return;
@@ -1307,7 +1280,7 @@ export function useReader(bookId: string) {
     const progressRepo = {
       getProgress: async (id: string) => (await db.progress.get(id)) || null,
       saveProgress: async (progress: ReadingProgress) => {
-        await db.progress.put(progress);
+        await progressSaveCoordinator.saveNow(progress);
       },
     };
 
@@ -1522,27 +1495,21 @@ export function useReader(bookId: string) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(errMsg || "加载藏书与章节失败，请重新展卷或检查网络");
     });
-  }, [bookId, setIsPositionRestored]);
+  }, [bookId, progressSaveCoordinator, setIsPositionRestored]);
 
   const saveCurrentProgress = useCallback(
     async (chapterData: ChapterData, offset: number, paragraphIndex?: number, characterOffset?: number) => {
       if (!bookId) return;
-      const nowIso = new Date().toISOString();
-      await db.progress.put({
-        bookId,
-        chapterId: chapterData.id,
-        chapterIndex: chapterData.index,
-        offset,
-        paragraphIndex,
-        characterOffset,
-        percentage: toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
-        updatedAt: nowIso,
-      });
-      await db.books.update(bookId, { lastReadAt: nowIso }).catch((err) => {
-        console.error("Failed to update lastReadAt on saveCurrentProgress:", err);
-      });
+      await progressSaveCoordinator.saveNow(
+        buildReadingProgress(
+          chapterData,
+          offset,
+          paragraphIndex,
+          characterOffset,
+        ),
+      );
     },
-    [bookId, toc.length],
+    [bookId, buildReadingProgress, progressSaveCoordinator],
   );
 
   const jumpToChapter = useCallback(
@@ -2049,7 +2016,7 @@ export function useReader(bookId: string) {
 
       const rollbackItem = list[list.length - 1];
 
-      await db.progress.put({
+      await progressSaveCoordinator.saveNow({
         bookId,
         chapterId: rollbackItem.chapterId,
         chapterIndex: rollbackItem.chapterIndex,
@@ -2112,7 +2079,7 @@ export function useReader(bookId: string) {
       }
       showToast(successMsg);
     },
-    [bookId, engine, settings.pageMode, toc.length, clearAutoFlipTimer, showToast, setIsPositionRestored],
+    [bookId, engine, settings.pageMode, toc.length, clearAutoFlipTimer, showToast, setIsPositionRestored, progressSaveCoordinator],
   );
 
   const handleSummarize = useCallback(async (intent: AIReadingIntent = "summary") => {
@@ -2525,6 +2492,8 @@ ${data.answer || "未能生成回答。"}`;
     currentThemeColors,
     isPagination,
     toast,
+    progressSaveStatus,
+    retryProgressSave,
     isFlipCooldown,
     updateAutoFlipAtBottom,
     autoFlipCountdown,

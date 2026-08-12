@@ -10,3 +10,9 @@ export type {
   LocalDataSnapshotReader,
   LocalDataSnapshotWriter,
 } from "./local-snapshot.js";
+export { createProgressSaveCoordinator } from "./progress-save-coordinator.js";
+export type {
+  ProgressSaveCoordinator,
+  ProgressSaveCoordinatorOptions,
+  ProgressSaveStatus,
+} from "./progress-save-coordinator.js";
