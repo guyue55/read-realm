@@ -1,0 +1,101 @@
+$ corepack pnpm --filter web-pwa exec playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-02
+started_at=2026-08-12T22:43:58.224Z
+ended_at=2026-08-12T22:44:44.438Z
+duration_ms=46214
+exit_code=1
+tracked_worktree_mutated=true
+tracked_status_before=[]
+tracked_status_after=[" M apps/web-pwa/public/sw.js"]
+[stdout]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 1 test using 1 worker
+
+
+
+[1/1] [chromium-chrome] › e2e/gate-01.spec.ts:155:5 › EXP-02 worker stream and session adapter survive the same user outcomes
+  1) [chromium-chrome] › e2e/gate-01.spec.ts:155:5 › EXP-02 worker stream and session adapter survive the same user outcomes
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '解析预览' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 15000ms
+      - waiting for getByRole('heading', { name: '解析预览' })
+
+
+      165 |     path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
+      166 |   );
+    > 167 |   await expect(page.getByRole("heading", { name: "解析预览" })).toBeVisible({
+          |                                                             ^
+      168 |     timeout: 15_000,
+      169 |   });
+      170 |   await page.getByRole("button", { name: "加入书架" }).click();
+        at ./apps/web-pwa/e2e/gate-01.spec.ts:167:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gate-01-EXP-02-worker-stre-d985a-vive-the-same-user-outcomes-chromium-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gate-01-EXP-02-worker-stre-d985a-vive-the-same-user-outcomes-chromium-chrome/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/gate-01-EXP-02-worker-stre-d985a-vive-the-same-user-outcomes-chromium-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/gate-01-EXP-02-worker-stre-d985a-vive-the-same-user-outcomes-chromium-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-chrome] › e2e/gate-01.spec.ts:155:5 › EXP-02 worker stream and session adapter survive the same user outcomes
+undefined
+./apps/web-pwa:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-02
+
+[stderr]
+[WebServer] (node:88300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:88358) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89324) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89673) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89678) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89675) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89677) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89672) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89674) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:89773) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90217) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:90217) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(node:90287) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
