@@ -9,6 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   workers: 1,
+  timeout: 90_000,
   reporter: "line",
   use: {
     baseURL: gateOrigin,

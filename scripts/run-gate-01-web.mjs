@@ -35,12 +35,8 @@ function restorePublicDirectory() {
 }
 
 function stop(signal = "SIGTERM") {
-  if (server?.pid && server.exitCode === null) {
-    try {
-      process.kill(-server.pid, signal);
-    } catch (error) {
-      if (error?.code !== "ESRCH") throw error;
-    }
+  if (server && server.exitCode === null) {
+    server.kill(signal);
   }
   restorePublicDirectory();
 }
@@ -71,13 +67,9 @@ if (build.status !== 0) {
 }
 
 server = spawn(
-  "corepack",
+  process.execPath,
   [
-    "pnpm",
-    "--dir",
-    "apps/web-pwa",
-    "exec",
-    "next",
+    resolve(repoRoot, "apps/web-pwa/node_modules/next/dist/bin/next"),
     "start",
     "--hostname",
     "127.0.0.1",
@@ -85,8 +77,7 @@ server = spawn(
     "3102",
   ],
   {
-    cwd: repoRoot,
-    detached: true,
+    cwd: resolve(repoRoot, "apps/web-pwa"),
     env: process.env,
     stdio: "inherit",
   },

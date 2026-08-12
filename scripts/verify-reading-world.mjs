@@ -189,9 +189,9 @@ function phaseOneChecks() {
 }
 
 function phaseTwoExperimentChecks(experiment) {
-  if (experiment !== "EXP-01") {
+  if (experiment !== "EXP-01" && experiment !== "EXP-02") {
     throw new Error(
-      `PHASE-02 当前只放行 EXP-01；${experiment ?? "缺少实验 ID"} 不可执行`,
+      `PHASE-02 当前只放行 EXP-01/EXP-02；${experiment ?? "缺少实验 ID"} 不可执行`,
     );
   }
   return [
@@ -237,7 +237,7 @@ function phaseTwoExperimentChecks(experiment) {
         "--config",
         "playwright.gate-01.config.ts",
         "--grep",
-        "EXP-01",
+        experiment,
       ],
       env: {
         CI: "1",
