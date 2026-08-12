@@ -1,0 +1,22 @@
+$ corepack pnpm --filter web-pwa exec playwright test e2e/gate-01.spec.ts --config playwright.gate-01.config.ts --grep EXP-01
+started_at=2026-08-12T21:54:47.755Z
+ended_at=2026-08-12T22:15:31.000Z
+duration_ms=1243245
+exit_code=130
+signal=SIGINT
+tracked_worktree_mutated=true
+tracked_status_before=[]
+tracked_status_at_failure=[" M apps/web-pwa/public/sw.js"]
+
+[failure]
+ATTEMPT-01 exceeded the declared 180000ms Playwright webServer startup boundary and remained alive for about 20 minutes without returning test output.
+Read-only process inspection showed the Playwright process still alive, a detached `next start` runner re-parented to PID 1, and TCP 127.0.0.1:3102 listening.
+The production PWA build had rewritten tracked `apps/web-pwa/public/sw.js`; therefore this attempt cannot satisfy the non-mutating evidence contract or prove the vertical slice.
+
+[compensation]
+The experiment was interrupted once with SIGINT after the configured timeout failed to terminate it.
+The orphan process group was terminated, TCP 3102 was verified free, and `apps/web-pwa/public/sw.js` was restored byte-for-byte from clean candidate HEAD 3f2a43740b68e20aed461cc7404c11d66a6d02b3.
+No product implementation or experiment assertion was changed during ATTEMPT-01.
+
+[result]
+FAIL_VALIDATION_INFRASTRUCTURE_TIMEOUT_AND_MUTATION

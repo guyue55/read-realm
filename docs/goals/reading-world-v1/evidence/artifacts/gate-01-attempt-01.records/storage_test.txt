@@ -1,0 +1,23 @@
+$ corepack pnpm --filter @reader/storage-core test
+started_at=2026-08-12T21:54:38.448Z
+ended_at=2026-08-12T21:54:39.428Z
+duration_ms=980
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+[stdout]
+
+> @reader/storage-core@0.1.0 test ./packages/storage-core
+> vitest run src
+
+
+ RUN  v4.1.7 ./packages/storage-core
+
+
+ Test Files  5 passed (5)
+      Tests  27 passed (27)
+   Start at  05:54:38
+   Duration  442ms (transform 712ms, setup 0ms, import 1.01s, tests 121ms, environment 0ms)
+
+[stderr]

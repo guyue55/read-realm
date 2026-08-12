@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0001",
+  "riskGate": "GATE-01",
+  "hypothesis": "HYP-01",
+  "experiment": "EXP-01",
+  "attemptId": "ATTEMPT-01",
+  "evidenceId": "EVID-27",
+  "startedAt": "2026-08-12T21:54:38.400Z",
+  "endedAt": "2026-08-12T22:15:31.000Z",
+  "repository": {
+    "head": "3f2a43740b68e20aed461cc7404c11d66a6d02b3",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusAtStart": "clean"
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0",
+    "browserChannel": "chrome"
+  },
+  "command": "node scripts/verify-reading-world.mjs --phase 02 --experiment EXP-01 --output docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.json",
+  "mechanism": "固定 UTF-8 TXT 走现有导入 UI、现有阅读器、统一进度服务、生产 PWA 真断网和最小完整备份/空库恢复",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "exitCode": 0,
+      "trackedWorktreeMutated": false,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/patch_whitespace.txt",
+      "logSha256": "44a56b9c85ce0e3845079e47023bbba52903f15f3b668643ac13caf79fc6bd37"
+    },
+    {
+      "id": "STORAGE_TEST",
+      "exitCode": 0,
+      "trackedWorktreeMutated": false,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/storage_test.txt",
+      "logSha256": "a3782d3a4d9e234636035e99681aecd854fe9688d5587c3f4dfee16a5c588c02"
+    },
+    {
+      "id": "READER_TEST",
+      "exitCode": 0,
+      "trackedWorktreeMutated": false,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/reader_test.txt",
+      "logSha256": "94546c3fdda39c3664a013b23c7e14442b317456194b5cbd144720e9940d2632"
+    },
+    {
+      "id": "WEB_LINT",
+      "exitCode": 0,
+      "trackedWorktreeMutated": false,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/web_lint.txt",
+      "logSha256": "56cb44d6067367bd6c6ef49166656e1c962bb8993a2488bcfa62bbce83c88471"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "exitCode": 0,
+      "trackedWorktreeMutated": false,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/api_lint_non_fixing.txt",
+      "logSha256": "f773eccab089ffd216d32a8e182b2aa207e79e11cb6d1d6809393324859b19cd"
+    },
+    {
+      "id": "GATE_01_VERTICAL_SLICE",
+      "exitCode": 130,
+      "signal": "SIGINT",
+      "trackedWorktreeMutated": true,
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.records/gate_01_vertical_slice.txt",
+      "logSha256": "81d49490aaed811bd55d1c4788e4fc1b9ad04e3ed080cfbbbe8cac745d4ab6bb"
+    }
+  ],
+  "failure": {
+    "code": "FAIL_VALIDATION_INFRASTRUCTURE_TIMEOUT_AND_MUTATION",
+    "summary": "Playwright 超过声明的 180 秒 webServer 边界后仍存活约 20 分钟；生产 runner 脱离为孤儿进程，3102 仍监听，受控 sw.js 被改写。",
+    "productGateConclusion": "NOT_PROVEN"
+  },
+  "compensation": {
+    "completed": true,
+    "processesTerminated": true,
+    "port3102Released": true,
+    "trackedServiceWorkerRestored": true,
+    "restoredBlob": "94df47777cded246a6787c4816daaed6cffdd055",
+    "productImplementationChangedDuringAttempt": false
+  },
+  "summary": {
+    "passed": false,
+    "passedCount": 5,
+    "failedCount": 1,
+    "trackedMutationCount": 1,
+    "designGateFailureCountAfterAttempt": 1
+  }
+}
