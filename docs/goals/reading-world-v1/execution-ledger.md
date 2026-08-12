@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0201 冻结最小版本化本地数据契约；只实现 EXP-01 所需纵向薄切片。
-- 最近有效提交：232fb57e6a3e3c32c6e6ac8fd374a444135f5099
-- 最近新鲜证据：docs/goals/reading-world-v1/reviews/phase-01-readiness.md，SHA-256 `a5e615efab9745409d2422138b5a545fec4eebcb6ee6d7cc83a8dbf0159f7ccb`，2026-08-13T03:16:03+08:00
-- 当前阻塞：无；PHASE-01 最终独立复审 READY，GATE-01 仍未过门。
-- 停止原因：PHASE-01 已收束并交接 PHASE-02；不代表 GATE-01、产品或 Goal 完成。
+- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0203 建立迁移前备份、幂等迁移、故障注入回滚和上一稳定版兼容测试。
+- 最近有效提交：3df02e098c6e8c07858b2b5cdc912b8a9cb68e4e
+- 最近新鲜证据：docs/goals/reading-world-v1/reports/phase-02-progress-save.md，SHA-256 `8962da697ccd5237168535d8adb83f343ee2f450e5c3f309d3e9db4ef6d06f28`，2026-08-13T05:10:16+08:00
+- 当前阻塞：无；TASK-0202 已收束，GATE-01 仍未过门。全仓 Zero-Leakage 仍命中 PHASE-01 已登记的卫生债，本切片改动文件定向预检均 Green；不声称全仓安全门通过。
+- 停止原因：TASK-0202 已形成可回放切片并交接 TASK-0203；不代表真实浏览器 1 秒落盘、GATE-01、PHASE-02 或 Goal 完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -68,3 +68,15 @@
 - 提交记录：TASK-0201 本地切片提交 `232fb57e6a3e3c32c6e6ac8fd374a444135f5099`；未 push。
 - 状态结论：TASK-0201 完成；只证明最小版本化契约内核与 codec，不证明迁移、完整备份恢复、1 秒落盘或 GATE-01。
 - 下一入口：PHASE-02 / TASK-0202；统一进度保存协调器与 `pending/saved/failed` 状态，保证最迟 1 秒发起持久化。
+
+### RUN-0008 · 2026-08-13T05:10:16+08:00 · PHASE-02 / TASK-0202
+- 本轮输入：TASK-0201 checkpoint `596d4dd`、Dexie v9、`useReader.ts` 的 5 类分散进度写入、REV-0001 的 1 秒落盘和失败可见承诺。
+- 本轮范围：只统一阅读进度保存协调器、Dexie 原子持久化端口、生命周期刷盘和最小失败重试 UI；不改 schema，不连接恢复/同步，不运行 EXP-01。
+- 实际改动：新增 `ProgressSaveCoordinator`，默认 250ms 合并窗口、串行写入、最新值保留、幂等指纹、`idle/pending/saved/failed`、失败重试和生命周期 flush；进度与 `lastReadAt` 同一 Dexie 事务；阅读页失败持久告警与 44px 重试入口。
+- TDD 证据：依次观察模块缺失、相同值重复写、新即时保存复用旧失败 Promise、被新值替代的旧失败制造虚假告警、flush 不重试失败值、flush 不等待最新排队值的 RED，分别修复后 9 个协调器场景 GREEN。
+- 失败与因果链：一次把 storage-core 测试名错路由到 web-pwa，因无匹配测试 exit 1；改跑所属包后通过。最后一个生命周期探针曾因在释放第二个受控 Promise 前等待同一 drain 而超时；更正观测顺序后证明产品实现未挂死。这些是 TDD/命令因果链，不是 GATE-01 设计实验。
+- 定向检查：storage-core 3 文件/14 测试通过；工作区共 179 测试通过；Web lint、API 非写入 lint、无 PWA 写入工作区 build、`git diff --check`、`--mode resume` 全部 exit 0。
+- 安全边界：控制包 24/24、storage-core 9/9、两个 Web 改动文件各1/1 预检 Green。全仓 `security_scanner.py` exit 1 仍来自 PHASE-01 已登记的 `.DS_Store`、`.vscode`、PR 模板绝对路径、规则误报、历史原生壳生成物和正式二进制资源；不声称全仓安全门通过。
+- 提交记录：TASK-0202 本地实现/证据切片 `3df02e098c6e8c07858b2b5cdc912b8a9cb68e4e`；未 push。
+- 状态结论：TASK-0202 完成；只证明可控时钟与统一端口合同，不证明真实浏览器 1 秒落盘、强制关闭绝不丢失、GATE-01 或 EVID-17。
+- 下一入口：PHASE-02 / TASK-0203；建立迁移前备份、幂等迁移、故障注入回滚和上一稳定版兼容测试。
