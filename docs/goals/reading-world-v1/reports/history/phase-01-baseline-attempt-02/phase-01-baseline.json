@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0001",
+  "phase": "01",
+  "experiment": null,
+  "startedAt": "2026-08-12T18:33:52.540Z",
+  "endedAt": "2026-08-12T18:34:59.367Z",
+  "archivedPreviousReport": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01",
+  "repository": {
+    "root": ".",
+    "head": "c900af34e81d5b09319498f57953bf2c0205c02c",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "M apps/web-pwa/playwright.config.ts",
+      " M apps/web-pwa/public/sw.js",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/direction-approval-v1.md",
+      "?? docs/goals/reading-world-v1/evidence/index.md",
+      "?? docs/goals/reading-world-v1/execution-ledger.md",
+      "?? docs/goals/reading-world-v1/goal-master.md",
+      "?? docs/goals/reading-world-v1/phases/phase-01-truth-audit.md",
+      "?? docs/goals/reading-world-v1/phases/phase-02-local-data-slice.md",
+      "?? docs/goals/reading-world-v1/phases/phase-03-import-and-portability.md",
+      "?? docs/goals/reading-world-v1/phases/phase-04-reader-experience.md",
+      "?? docs/goals/reading-world-v1/phases/phase-05-library-notes-ui.md",
+      "?? docs/goals/reading-world-v1/phases/phase-06-offline-pwa.md",
+      "?? docs/goals/reading-world-v1/phases/phase-07-encrypted-sync.md",
+      "?? docs/goals/reading-world-v1/phases/phase-08-cross-environment-hardening.md",
+      "?? docs/goals/reading-world-v1/phases/phase-09-release-candidate.md",
+      "?? docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-01/phase-01-baseline.json",
+      "?? scripts/verify-reading-world.mjs"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-12T18:33:52.564Z",
+      "endedAt": "2026-08-12T18:33:52.569Z",
+      "durationMs": 5,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/patch_whitespace.txt",
+      "logSha256": "ee8c9426f11821c801a2f0707dd46311bda02ea810af672c99f986999bff29ee"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-12T18:33:52.632Z",
+      "endedAt": "2026-08-12T18:33:54.850Z",
+      "durationMs": 2218,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/web_lint.txt",
+      "logSha256": "7a00aca698c258f06a4c89ea7a2777c95b789643a49c9be62fb607c3062248e9"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "command": "corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts",
+      "startedAt": "2026-08-12T18:33:54.887Z",
+      "endedAt": "2026-08-12T18:33:58.237Z",
+      "durationMs": 3350,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/api_lint_non_fixing.txt",
+      "logSha256": "cc2d3f9251f63f35f2b95d61f0d57008bcb9dd32d2c236f91c12d8c959a87d1e"
+    },
+    {
+      "id": "WORKSPACE_TEST",
+      "command": "corepack pnpm test",
+      "startedAt": "2026-08-12T18:33:58.273Z",
+      "endedAt": "2026-08-12T18:34:04.915Z",
+      "durationMs": 6642,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/workspace_test.txt",
+      "logSha256": "908aedc4cb00aef4700a5c90377dde5a00f709d1d5e28771034357ba146bd763"
+    },
+    {
+      "id": "WORKSPACE_BUILD",
+      "command": "corepack pnpm build",
+      "startedAt": "2026-08-12T18:34:05.002Z",
+      "endedAt": "2026-08-12T18:34:28.958Z",
+      "durationMs": 23956,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": true,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts",
+        " M apps/web-pwa/public/sw.js"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/workspace_build.txt",
+      "logSha256": "72af9d4a4e854a177d6ce497288e889607a6ebf2ea35fde42e0232ec8760301a"
+    },
+    {
+      "id": "WEB_E2E",
+      "command": "corepack pnpm --filter web-pwa test:e2e",
+      "startedAt": "2026-08-12T18:34:29.045Z",
+      "endedAt": "2026-08-12T18:34:59.212Z",
+      "durationMs": 30167,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedStatusBefore": [
+        " M apps/web-pwa/playwright.config.ts",
+        " M apps/web-pwa/public/sw.js"
+      ],
+      "trackedStatusAfter": [
+        " M apps/web-pwa/playwright.config.ts",
+        " M apps/web-pwa/public/sw.js"
+      ],
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-01-baseline-attempt-02/phase-01-baseline.records/web_e2e.txt",
+      "logSha256": "ccb15ea4841987f703954ac6278a5e296b4e2576db7ae5c2a2143abbd455c3d7"
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "passedCount": 5,
+    "failedCount": 1,
+    "trackedMutationCount": 1
+  }
+}

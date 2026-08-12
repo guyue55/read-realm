@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const browserChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -11,7 +13,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: browserChannel ? `chromium-${browserChannel}` : "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(browserChannel ? { channel: browserChannel } : {}),
+      },
+    },
+  ],
   webServer: [
     {
       command: "corepack pnpm --dir ../.. --filter api dev",

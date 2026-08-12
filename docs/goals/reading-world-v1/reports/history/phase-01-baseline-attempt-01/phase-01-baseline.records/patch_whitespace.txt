@@ -1,0 +1,7 @@
+$ git diff --check
+started_at=2026-08-12T18:01:30.860Z
+ended_at=2026-08-12T18:01:30.876Z
+duration_ms=16
+exit_code=0
+[stdout]
+[stderr]

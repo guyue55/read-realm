@@ -3,7 +3,9 @@ import runtimeCaching from "next-pwa/cache.js";
 
 const withPWA = withPWAInit({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  disable:
+    process.env.NODE_ENV === "development" ||
+    process.env.READING_WORLD_VERIFY_NO_PWA_WRITE === "1",
   register: true,
   skipWaiting: true,
   additionalManifestEntries: [{ url: "/", revision: null }],

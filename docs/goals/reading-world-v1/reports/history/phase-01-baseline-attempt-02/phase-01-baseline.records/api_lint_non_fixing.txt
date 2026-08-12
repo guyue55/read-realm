@@ -1,0 +1,10 @@
+$ corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts
+started_at=2026-08-12T18:33:54.887Z
+ended_at=2026-08-12T18:33:58.237Z
+duration_ms=3350
+exit_code=0
+tracked_worktree_mutated=false
+tracked_status_before=[" M apps/web-pwa/playwright.config.ts"]
+tracked_status_after=[" M apps/web-pwa/playwright.config.ts"]
+[stdout]
+[stderr]
