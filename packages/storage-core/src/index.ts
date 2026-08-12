@@ -16,3 +16,13 @@ export type {
   ProgressSaveCoordinatorOptions,
   ProgressSaveStatus,
 } from "./progress-save-coordinator.js";
+export {
+  createDefaultLocalDataMigrations,
+  runRecoverableLocalDataMigration,
+} from "./local-data-migration.js";
+export type {
+  LocalDataMigrationResult,
+  LocalDataMigrationStep,
+  LocalDataMigrationStore,
+  RecoverableLocalDataMigrationOptions,
+} from "./local-data-migration.js";
