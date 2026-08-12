@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0203 建立迁移前备份、幂等迁移、故障注入回滚和上一稳定版兼容测试。
-- 最近有效提交：3df02e098c6e8c07858b2b5cdc912b8a9cb68e4e
-- 最近新鲜证据：docs/goals/reading-world-v1/reports/phase-02-progress-save.md，SHA-256 `8962da697ccd5237168535d8adb83f343ee2f450e5c3f309d3e9db4ef6d06f28`，2026-08-13T05:10:16+08:00
-- 当前阻塞：无；TASK-0202 已收束，GATE-01 仍未过门。全仓 Zero-Leakage 仍命中 PHASE-01 已登记的卫生债，本切片改动文件定向预检均 Green；不声称全仓安全门通过。
-- 停止原因：TASK-0202 已形成可回放切片并交接 TASK-0203；不代表真实浏览器 1 秒落盘、GATE-01、PHASE-02 或 Goal 完成。
+- 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0204 先实现 PHASE-02/EXP-01 真实检查合同，再严格运行完整 GATE-01 纵向薄切片。
+- 最近有效提交：3ef46eb2f3daef4990a9a52c9b6fbd103399c5f8
+- 最近新鲜证据：docs/goals/reading-world-v1/reports/phase-02-migration-safety.md，SHA-256 `09252e2be25fc354b3a50dedb13252f1908069b43ebe3358a7681213d51e8a08`，2026-08-13T05:29:43+08:00
+- 当前阻塞：无；TASK-0203 已收束，GATE-01 仍未过门。全仓 Zero-Leakage 仍命中 PHASE-01 已登记的卫生债，本切片 storage-core 和控制包预检 Green；不声称全仓安全门通过。
+- 停止原因：TASK-0203 已形成可回放切片并交接 TASK-0204；不代表迁移内核已接入 Dexie 启动、GATE-01、PHASE-02 或 Goal 完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -80,3 +80,15 @@
 - 提交记录：TASK-0202 本地实现/证据切片 `3df02e098c6e8c07858b2b5cdc912b8a9cb68e4e`；未 push。
 - 状态结论：TASK-0202 完成；只证明可控时钟与统一端口合同，不证明真实浏览器 1 秒落盘、强制关闭绝不丢失、GATE-01 或 EVID-17。
 - 下一入口：PHASE-02 / TASK-0203；建立迁移前备份、幂等迁移、故障注入回滚和上一稳定版兼容测试。
+
+### RUN-0009 · 2026-08-13T05:29:43+08:00 · PHASE-02 / TASK-0203
+- 本轮输入：TASK-0202 checkpoint `01293c0`、Dexie v6–v9 schema 声明、可裁剪的旧元数据备份、TASK-0201 完整快照契约与 REV-0001 的迁移前备份/幂等/回滚/上版兼容承诺。
+- 本轮范围：只建立纯端口化可恢复迁移编排内核、v8→v9 数据保持步骤和故障注入测试；不打开或升级真实 IndexedDB，不在数据库连接后伪装“迁移前备份”。
+- 实际改动：新增 `LocalDataMigrationStore/Step/Result`、完整路径解析、稳定备份字节回读验证、步骤版本校验、替换后复核、备份未变校验、回滚后再对账与双错误保留；v8→v9 仅改 `source.databaseVersion`。
+- TDD 证据：首先观察模块缺失 RED；备份不一致夹具首先因自身破坏引用完整性失败，更正为合法但正文被篡改的快照后验证成功；TypeScript 又捕获测试数组首项可空推断，增加夹具断言后通过。评审新增“写前步骤失败零补偿”探针先 RED，加入替换尝试边界后 GREEN。
+- 故障注入：已覆盖备份写失败、备份回读篡改、写前步骤失败、替换后验证失败并成功回滚、回滚自身失败、缺完整路径和已到目标版本幂等。
+- 定向检查：storage-core 4 文件/22 测试通过；工作区 187 测试通过；Web lint、API 非写入 lint、无 PWA 写入工作区 build、`git diff --check`、`--mode resume` 全部 exit 0。
+- 安全边界：storage-core 11/11 预检 Green；控制包首次因报告中函数形式的数据库连接词面量触发 Yellow，等义改写为“连接初始化”后 25/25 Green。全仓既有 Zero-Leakage 红灯仍按 RUN-0008 保留，不声称全仓通过。
+- 提交记录：TASK-0203 本地实现/证据切片 `3ef46eb2f3daef4990a9a52c9b6fbd103399c5f8`；未 push。
+- 状态结论：TASK-0203 完成；只证明可连接的迁移安全内核和 v8 完整快照保持，不证明 Dexie 启动迁移已接线、EVID-20/EVID-25、GATE-01 或 PHASE-02 完成。
+- 下一入口：PHASE-02 / TASK-0204；先实现 PHASE-02/EXP-01 真实检查器合同，再严格运行完整早期纵向薄切片。
