@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：读取 phase-02-local-data-slice.md 和 EVID-27，为 EXP-02 实现 Worker 流式导入 + 新会话适配器的差异机制；不得覆盖 ATTEMPT-01。
-- 最近有效提交：3f2a43740b68e20aed461cc7404c11d66a6d02b3
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-01.json，SHA-256 `7f6f34cee01c53e7bf8c81708a0c08207bcbae122d67d91bebe8b9167129b662`，2026-08-13T06:15:31+08:00
-- 当前阻塞：无；EXP-01 / ATTEMPT-01 已失败并完成副作用补偿，设计门失败计数 1/3，尚未达到 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01 仍未过门。
-- 停止原因：EXP-01 因验证基础设施超时、孤儿进程和受控 Service Worker 改写而无法证明产品纵切；已按总控转入 EXP-02 差异机制，不代表 PHASE-02 或 Goal 完成。
+- 当前入口：读取 phase-02-local-data-slice.md、EVID-27/28 和 EXP-03 预登记，为固定 EPUB 实现兼容存储适配器差异机制；不得覆盖 ATTEMPT-01/02，第三次失败必须自动熔断。
+- 最近有效提交：a52004ca51c534c8a4365079979227460b6d8b43
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-02.json，SHA-256 `ae4b9f28ce27f774229bc4f8190a77a7ae7ac4a820f555ee539ff11b2752c022`，2026-08-13T06:44:44+08:00
+- 当前阻塞：无；EXP-01/02 均已失败且副作用已补偿，设计门失败计数 2/3，尚未达到 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01 仍未过门。
+- 停止原因：EXP-02 的 Worker 流式导入在生产浏览器停留于解析中，trace 记录打包运行时 bind 异常；正式 ATTEMPT-02 已封存，按总控转入最后一次 EXP-03 差异机制，不代表 PHASE-02 或 Goal 完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -25,6 +25,7 @@
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
 |---|---|---|---|---|---|---|---|
 | TRY-01 | REV-0001 | GATE-01 | HYP-01 | EXP-01 | ATTEMPT-01：现有导入 UI/阅读器 + 统一进度 + 生产 PWA runner + 最小备份/空库恢复；runner 超时孤儿化并改写受控 SW，补偿完成后转 EXP-02 | EVID-27 | 失败 |
+| TRY-02 | REV-0001 | GATE-01 | HYP-01 | EXP-02 | ATTEMPT-02：同一 TXT 改走 Worker 流式导入与新会话适配器；生产浏览器停在解析中并记录打包运行时 bind 异常，受控 SW 改写已补偿，转 EXP-03 | EVID-28 | 失败 |
 
 ## 阶段记录
 
@@ -93,3 +94,14 @@
 - 提交记录：TASK-0203 本地实现/证据切片 `3ef46eb2f3daef4990a9a52c9b6fbd103399c5f8`；未 push。
 - 状态结论：TASK-0203 完成；只证明可连接的迁移安全内核和 v8 完整快照保持，不证明 Dexie 启动迁移已接线、EVID-20/EVID-25、GATE-01 或 PHASE-02 完成。
 - 下一入口：PHASE-02 / TASK-0204；先实现 PHASE-02/EXP-01 真实检查器合同，再严格运行完整早期纵向薄切片。
+
+### RUN-0010 · 2026-08-13T06:44:44+08:00 · PHASE-02 / TASK-0204 / EXP-02
+- 本轮输入：EXP-01 失败证据 EVID-27、clean@`a52004ca51c534c8a4365079979227460b6d8b43`、固定 short-novel TXT、预登记 EXP-02 的 Worker 流式导入与新会话适配器差异。
+- 本轮范围：只实现并执行第二种导入机制，沿用相同导入预览、书架、阅读、1 秒落盘、刷新、真离线、备份与隔离恢复结果判据；不扩张 PHASE-03~06，不覆盖 ATTEMPT-01。
+- 实际改动：单本导入统一走 Worker；新增原子流式会话适配器与 5 个单测；新增 EXP-02 浏览器旅程；生产 PWA runner 改为直接管理 Next 子进程；检查器精确放行 EXP-02。
+- 候选验证：流式会话 5/5、全工作区 197 tests、Web/API 非写入 lint、类型检查、无 PWA 写入 build 和精确 Playwright 列表均通过；候选提交为 `a52004ca51c534c8a4365079979227460b6d8b43`。
+- 正式失败：`node scripts/verify-reading-world.mjs --phase 02 --experiment EXP-02 --output docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-02.json` exit 1。前五项检查通过，浏览器纵切片在导入预览前超时；页面停在“引擎解析章节中”，trace 记录 `Cannot read properties of undefined (reading 'bind')` 的生产打包运行时异常。
+- 副作用处理：Playwright/Next 均已退出且 3102 无监听；构建改写的受控 `public/sw.js` 已反向应用单一生成差异，补偿后 blob `94df47777cded246a6787c4816daaed6cffdd055` 与候选提交一致。正式报告仍保留 `trackedWorktreeMutated=true`，不洗白实验过程。
+- 活体证据：EVID-28 JSON SHA-256 为 `ae4b9f28ce27f774229bc4f8190a77a7ae7ac4a820f555ee539ff11b2752c022`；6/6 日志存在且 SHA 独立复算匹配。
+- 状态结论：TRY-02 失败，GATE-01 未通过，失败计数 2/3；尚未熔断，也不得进入 PHASE-03。
+- 下一入口：PHASE-02 / TASK-0204 / EXP-03；固定 EPUB 改走兼容存储适配器并复用相同用户结果与失败判据。若 ATTEMPT-03 失败，立即进入 `BLOCKED_DESIGN_REVIEW_REQUIRED` 并请求新 REV。
