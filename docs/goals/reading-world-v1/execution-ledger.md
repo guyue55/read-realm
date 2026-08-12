@@ -7,7 +7,7 @@
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
 - 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0201 冻结最小版本化本地数据契约；只实现 EXP-01 所需纵向薄切片。
-- 最近有效提交：c900af34e81d5b09319498f57953bf2c0205c02c
+- 最近有效提交：112ed73f1e45a625596f44e4b3d1fb4f1cc5a999
 - 最近新鲜证据：docs/goals/reading-world-v1/reviews/phase-01-readiness.md，SHA-256 `a5e615efab9745409d2422138b5a545fec4eebcb6ee6d7cc83a8dbf0159f7ccb`，2026-08-13T03:16:03+08:00
 - 当前阻塞：无；PHASE-01 最终独立复审 READY，GATE-01 仍未过门。
 - 停止原因：PHASE-01 已收束并交接 PHASE-02；不代表 GATE-01、产品或 Goal 完成。
@@ -53,7 +53,7 @@
 - 活体证据：当前 baseline + 4 份历史 JSON 共 30 个 `.records/*.txt` 均存在、SHA 匹配且未被 Git 忽略；attempt-01/02 保留失败因果链，attempt-03/04 与当前报告保留验证基础设施收敛后的通过谱系；系统 Chrome 151 下小型 TXT 导入、书架、阅读、书签、刷新、分享隔离与五视口共 7/7 通过。
 - 证据新鲜度：架构、能力矩阵、baseline、检查器四项 SHA 由独立审查者复算匹配；控制包安全预检 21/21 Green；ready checker exit 0。
 - 独立判断：`reviews/phase-01-readiness.md` 最终结论 READY；允许 PHASE-01 收束，但明确不证明 GATE-01、任何终局 REQ/RISK 或 Goal 完成。
-- 提交记录：待按 ACT-05 创建本地切片提交；不 push。
+- 提交记录：PHASE-01 实现/证据切片提交 `112ed73f1e45a625596f44e4b3d1fb4f1cc5a999`；本记录由后续控制提交固化；未 push。
 - 残余风险：Dexie v9 与 SQLite 契约分裂；现备份是可裁剪元数据快照；进度写入集中在巨型 Hook；普通生产 PWA build 仍生成受控 SW；E2EE、Docker compose、压力与跨浏览器未实现或未证明。全仓安全扫描仍被既有系统文件、编辑器配置、生成物、绝对路径和环境变量规则命中，不能宣称全仓安全门通过。
 - 状态结论：PHASE-01 完成，Goal 进入执行中；设计门失败表保持空白，因为本轮三次 baseline 是环境/验证基础设施因果链，不是 EXP-01/02/03。
 - 下一入口：PHASE-02 / TASK-0201；先冻结最小版本化数据契约，随后只按 EXP-01 完成 GATE-01 纵向薄切片。GATE-01 通过前不得开始 PHASE-03 或批量扩张。
