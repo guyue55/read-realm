@@ -7,7 +7,7 @@
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
 - 当前入口：读取 phase-02-local-data-slice.md，从 TASK-0201 冻结最小版本化本地数据契约；只实现 EXP-01 所需纵向薄切片。
-- 最近有效提交：112ed73f1e45a625596f44e4b3d1fb4f1cc5a999
+- 最近有效提交：232fb57e6a3e3c32c6e6ac8fd374a444135f5099
 - 最近新鲜证据：docs/goals/reading-world-v1/reviews/phase-01-readiness.md，SHA-256 `a5e615efab9745409d2422138b5a545fec4eebcb6ee6d7cc83a8dbf0159f7ccb`，2026-08-13T03:16:03+08:00
 - 当前阻塞：无；PHASE-01 最终独立复审 READY，GATE-01 仍未过门。
 - 停止原因：PHASE-01 已收束并交接 PHASE-02；不代表 GATE-01、产品或 Goal 完成。
@@ -57,3 +57,14 @@
 - 残余风险：Dexie v9 与 SQLite 契约分裂；现备份是可裁剪元数据快照；进度写入集中在巨型 Hook；普通生产 PWA build 仍生成受控 SW；E2EE、Docker compose、压力与跨浏览器未实现或未证明。全仓安全扫描仍被既有系统文件、编辑器配置、生成物、绝对路径和环境变量规则命中，不能宣称全仓安全门通过。
 - 状态结论：PHASE-01 完成，Goal 进入执行中；设计门失败表保持空白，因为本轮三次 baseline 是环境/验证基础设施因果链，不是 EXP-01/02/03。
 - 下一入口：PHASE-02 / TASK-0201；先冻结最小版本化数据契约，随后只按 EXP-01 完成 GATE-01 纵向薄切片。GATE-01 通过前不得开始 PHASE-03 或批量扩张。
+
+### RUN-0007 · 2026-08-13T04:20:00+08:00 · PHASE-02 / TASK-0201
+- 本轮输入：PHASE-01 checkpoint `8d36005`、Dexie v9、shared-types、storage-core、reader-core 和真实 reader-settings 九字段。
+- 本轮范围：只冻结 Book/Chapter/Progress/Bookmark/Settings/FileRef 与 v1 信封、codec 和适配器端口；不接恢复 UI、不改 Dexie schema、不运行 EXP-01。
+- 实际改动：新增 `LocalDataSnapshotEnvelopeSchema`、`LocalChapter/LocalFileRef` 单一共享类型、完整性校验、稳定 JSON codec、未来版本错误码和数据契约报告；storage-core 改为兼容重导出共享 LocalChapter；补齐 reader-core 九字段默认设置；包测试只扫描 `src`，避免 build 后重复执行 dist 测试。
+- TDD 证据：依次观察并修复 v1 schema/API 缺失、章节/进度/书签/文件引用孤儿数据、缺失文件格式、悬空章节锚点、三项阅读设置被静默剥离、codec 缺失和未来版本错误不稳定；每项先 RED 后 GREEN。
+- 失败与根因：首次全回归 build 因 reader-core 默认值缺三字段失败；补真实默认值后旧六字段测试变 RED，更新手写九字段期望后通过。build 后 storage-core 测试曾误扫描 dist 旧副本，根因是包测试入口过宽，收紧为 `vitest run src` 后按原 build→test 顺序通过。报告中的尖括号版本示例被控制检查器识别为模板占位，改为具体版本 2 示例。
+- 定向检查：Web lint、API 非写入 lint、全工作区 test、`READING_WORLD_VERIFY_NO_PWA_WRITE=1 corepack pnpm build`、`--mode resume`、控制包安全预检 23/23 Green、`git diff --check` 全部 exit 0。
+- 提交记录：TASK-0201 本地切片提交 `232fb57e6a3e3c32c6e6ac8fd374a444135f5099`；未 push。
+- 状态结论：TASK-0201 完成；只证明最小版本化契约内核与 codec，不证明迁移、完整备份恢复、1 秒落盘或 GATE-01。
+- 下一入口：PHASE-02 / TASK-0202；统一进度保存协调器与 `pending/saved/failed` 状态，保证最迟 1 秒发起持久化。
