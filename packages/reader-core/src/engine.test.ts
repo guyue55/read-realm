@@ -29,6 +29,9 @@ describe("ReaderEngine Settings", () => {
       theme: "paper",
       pageMode: "scroll",
       uiMode: "default",
+      paragraphSpacing: 16,
+      letterSpacing: 0.03,
+      autoFlipAtBottom: false,
     });
   });
 
