@@ -5,13 +5,14 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -102,6 +103,24 @@ function trackedWorktreeFingerprint() {
   };
 }
 
+function createDirectoryCompensation(directory) {
+  const temporaryRoot = mkdtempSync(resolve(tmpdir(), "reading-world-compensation-"));
+  const backup = resolve(temporaryRoot, "backup");
+  const existed = existsSync(directory);
+  if (existed) cpSync(directory, backup, { recursive: true });
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
+    rmSync(directory, { recursive: true, force: true });
+    if (existed) {
+      mkdirSync(dirname(directory), { recursive: true });
+      cpSync(backup, directory, { recursive: true });
+    }
+    rmSync(temporaryRoot, { recursive: true, force: true });
+  };
+}
+
 function archivePreviousReport(outputPath, logDirectory) {
   if (!existsSync(outputPath) && !existsSync(logDirectory)) return null;
   const archiveRoot = resolve(dirname(outputPath), "history");
@@ -189,9 +208,9 @@ function phaseOneChecks() {
 }
 
 function phaseTwoExperimentChecks(experiment) {
-  if (experiment !== "EXP-01" && experiment !== "EXP-02") {
+  if (!["EXP-01", "EXP-02", "EXP-03"].includes(experiment)) {
     throw new Error(
-      `PHASE-02 当前只放行 EXP-01/EXP-02；${experiment ?? "缺少实验 ID"} 不可执行`,
+      `PHASE-02 当前只放行 EXP-01/EXP-02/EXP-03；${experiment ?? "缺少实验 ID"} 不可执行`,
     );
   }
   return [
@@ -244,6 +263,7 @@ function phaseTwoExperimentChecks(experiment) {
         PLAYWRIGHT_BROWSER_CHANNEL:
           process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome",
       },
+      compensateDirectory: "apps/web-pwa/public",
     },
   ];
 }
@@ -289,8 +309,20 @@ function main() {
   for (const check of checks) {
     process.stdout.write(`[${check.id}] ${commandText(check.command, check.args)}\n`);
     const trackedBefore = trackedWorktreeFingerprint();
-    const result = runCapture(check.command, check.args, { env: check.env });
+    const restoreDirectory = check.compensateDirectory
+      ? createDirectoryCompensation(resolve(repoRoot, check.compensateDirectory))
+      : null;
+    let result;
+    let trackedBeforeCompensation;
+    try {
+      result = runCapture(check.command, check.args, { env: check.env });
+      trackedBeforeCompensation = trackedWorktreeFingerprint();
+    } finally {
+      restoreDirectory?.();
+    }
     const trackedAfter = trackedWorktreeFingerprint();
+    const observedTrackedMutation =
+      trackedBefore.sha256 !== trackedBeforeCompensation.sha256;
     const mutatedTrackedFiles = trackedBefore.sha256 !== trackedAfter.sha256;
     const logPath = resolve(logDirectory, `${check.id.toLowerCase()}.txt`);
     const log = [
@@ -300,7 +332,9 @@ function main() {
       `duration_ms=${result.durationMs}`,
       `exit_code=${result.exitCode}`,
       `tracked_worktree_mutated=${mutatedTrackedFiles}`,
+      `tracked_mutation_observed_before_compensation=${observedTrackedMutation}`,
       `tracked_status_before=${JSON.stringify(trackedBefore.status)}`,
+      `tracked_status_before_compensation=${JSON.stringify(trackedBeforeCompensation.status)}`,
       `tracked_status_after=${JSON.stringify(trackedAfter.status)}`,
       result.signal ? `signal=${result.signal}` : "",
       "",
@@ -323,7 +357,9 @@ function main() {
       signal: result.signal,
       environment: check.env ?? {},
       trackedWorktreeMutated: mutatedTrackedFiles,
+      trackedMutationObservedBeforeCompensation: observedTrackedMutation,
       trackedStatusBefore: trackedBefore.status,
+      trackedStatusBeforeCompensation: trackedBeforeCompensation.status,
       trackedStatusAfter: trackedAfter.status,
       logPath: relative(repoRoot, logPath),
       logSha256: sha256(logPath),
