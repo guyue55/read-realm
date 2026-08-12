@@ -7,15 +7,8 @@ import type {
   LibraryFolder,
   IndexedNovelFile,
   TxtChapterIndex,
+  LocalChapter,
 } from "@reader/shared-types";
-
-export interface LocalChapter {
-  id: string;
-  bookId: string;
-  index: number;
-  title: string;
-  content: string;
-}
 
 export interface ImportTask {
   id: string;

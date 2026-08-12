@@ -60,6 +60,18 @@ export const LibraryFolderSchema = z.object({
 
 export type LibraryFolder = z.infer<typeof LibraryFolderSchema>;
 
+export const FileFormatSchema = z.enum([
+  "txt",
+  "epub",
+  "html",
+  "md",
+  "pdf",
+  "docx",
+  "mobi",
+  "azw3",
+  "unknown",
+]);
+
 export const IndexedNovelFileSchema = z.object({
   id: z.string(),
   sourceId: z.string(),
@@ -67,7 +79,7 @@ export const IndexedNovelFileSchema = z.object({
   name: z.string(),
   relativePath: z.string(),
   kind: z.enum(["file", "directory"]),
-  format: z.enum(["txt", "epub", "html", "md", "pdf", "docx", "mobi", "azw3", "unknown"]).optional(),
+  format: FileFormatSchema.optional(),
   size: z.number().optional(),
   lastModified: z.number().optional(),
   quickFingerprint: z.string().optional(),
@@ -215,6 +227,9 @@ export const ReaderSettingsSchema = z.object({
   theme: z.enum(["paper", "sepia", "green", "warmGray", "dark"]),
   pageMode: z.enum(["scroll", "pagination"]), // NEW
   uiMode: z.enum(["default", "simple"]).optional().default("default"),
+  paragraphSpacing: z.number().min(0).max(40).default(16),
+  letterSpacing: z.number().min(-0.05).max(0.25).default(0.03),
+  autoFlipAtBottom: z.boolean().default(false),
 });
 
 export type ReaderSettings = z.infer<typeof ReaderSettingsSchema>;
@@ -232,6 +247,102 @@ export const BookmarkSchema = z.object({
 });
 
 export type Bookmark = z.infer<typeof BookmarkSchema>;
+
+export const LocalChapterSchema = z.object({
+  id: z.string(),
+  bookId: z.string(),
+  index: z.number().int().nonnegative(),
+  title: z.string(),
+  content: z.string(),
+});
+
+export type LocalChapter = z.infer<typeof LocalChapterSchema>;
+
+export const LocalFileRefSchema = z.object({
+  id: z.string(),
+  bookId: z.string(),
+  sourceType: LibrarySourceTypeSchema,
+  relativePath: z.string(),
+  format: FileFormatSchema,
+  size: z.number().int().nonnegative().optional(),
+  lastModified: z.number().nonnegative().optional(),
+  quickFingerprint: z.string().optional(),
+  contentHash: z.string().optional(),
+});
+
+export type LocalFileRef = z.infer<typeof LocalFileRefSchema>;
+
+export const LocalDataSnapshotEnvelopeSchema = z.object({
+  kind: z.literal("read-realm-local-snapshot"),
+  schemaVersion: z.literal(1),
+  createdAt: z.string(),
+  source: z.object({
+    appVersion: z.string(),
+    databaseVersion: z.number().int().nonnegative(),
+  }),
+  data: z.object({
+    books: z.array(BookSchema),
+    chapters: z.array(LocalChapterSchema),
+    progress: z.array(ReadingProgressSchema),
+    bookmarks: z.array(BookmarkSchema),
+    settings: ReaderSettingsSchema,
+    fileRefs: z.array(LocalFileRefSchema),
+  }),
+}).superRefine((snapshot, context) => {
+  const bookIds = new Set(snapshot.data.books.map((book) => book.id));
+  const chapterIds = new Set(
+    snapshot.data.chapters.map((chapter) => chapter.id),
+  );
+  snapshot.data.chapters.forEach((chapter, index) => {
+    if (!bookIds.has(chapter.bookId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "章节引用了不存在的书籍",
+        path: ["data", "chapters", index, "bookId"],
+      });
+    }
+  });
+  snapshot.data.progress.forEach((progress, index) => {
+    if (!bookIds.has(progress.bookId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "阅读进度引用了不存在的书籍",
+        path: ["data", "progress", index, "bookId"],
+      });
+    }
+    if (!chapterIds.has(progress.chapterId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "阅读进度引用了不存在的章节",
+        path: ["data", "progress", index, "chapterId"],
+      });
+    }
+  });
+  snapshot.data.bookmarks.forEach((bookmark, index) => {
+    if (!bookIds.has(bookmark.bookId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "书签引用了不存在的书籍",
+        path: ["data", "bookmarks", index, "bookId"],
+      });
+    }
+  });
+  snapshot.data.fileRefs.forEach((fileRef, index) => {
+    if (!bookIds.has(fileRef.bookId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "文件引用了不存在的书籍",
+        path: ["data", "fileRefs", index, "bookId"],
+      });
+    }
+  });
+});
+
+export type LocalDataSnapshotEnvelope = z.infer<
+  typeof LocalDataSnapshotEnvelopeSchema
+>;
+
+export type LocalDataSnapshotData = LocalDataSnapshotEnvelope["data"];
 
 export const readerTokens = {
   color: {

@@ -28,6 +28,9 @@ export class ReaderEngine {
     theme: "paper",
     pageMode: "scroll",
     uiMode: "default",
+    paragraphSpacing: 16,
+    letterSpacing: 0.03,
+    autoFlipAtBottom: false,
   };
 
   // Cache for instant navigation (LRU-like approach)
