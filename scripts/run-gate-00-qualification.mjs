@@ -12,6 +12,8 @@ import {
   classifyGateRun,
   countListedExperimentTests,
   directoryFingerprint,
+  pwaDestinationFor,
+  qualificationStrategy,
 } from "./gate-qualification.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -19,11 +21,9 @@ const webRoot = resolve(repoRoot, "apps/web-pwa");
 const publicDirectory = resolve(webRoot, "public");
 const backupRoot = mkdtempSync(resolve(tmpdir(), "reading-world-gate-00-"));
 const publicBackup = resolve(backupRoot, "public");
+const isolatedPwaDirectory = resolve(backupRoot, "generated-public");
 const experiment = process.argv[2];
-
-if (experiment !== "EXP-08") {
-  throw new Error(`GATE-00 当前只放行 EXP-08；${experiment ?? "缺少实验 ID"} 不可执行`);
-}
+const strategy = qualificationStrategy(experiment);
 
 if (existsSync(publicDirectory)) cpSync(publicDirectory, publicBackup, { recursive: true });
 const publicFingerprintBefore = directoryFingerprint(publicDirectory);
@@ -79,7 +79,12 @@ const list = command([
 ]);
 const listedTestCount = countListedExperimentTests(list.stdout, experiment);
 const build = command(["corepack", "pnpm", "--filter", "web-pwa", "build"], {
-  env: { READING_WORLD_GATE_01_BUILD: "1" },
+  env: {
+    READING_WORLD_GATE_01_BUILD: "1",
+    ...(strategy.isolatedPwaDestination
+      ? { READING_WORLD_PWA_DEST: pwaDestinationFor(webRoot, isolatedPwaDirectory) }
+      : {}),
+  },
 });
 
 let server = null;
@@ -163,6 +168,7 @@ process.stdout.write(`QUALIFICATION_OBSERVATION=${JSON.stringify({
   publicRestored,
   publicFingerprintBefore,
   publicFingerprintAfter,
+  strategy,
 })}\n`);
 if (list.stdout) process.stdout.write(`\n[list]\n${list.stdout}`);
 if (list.stderr) process.stderr.write(`[list]\n${list.stderr}`);

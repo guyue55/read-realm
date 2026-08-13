@@ -9,7 +9,10 @@ import {
   classifyGateRun,
   countListedExperimentTests,
   directoryFingerprint,
+  normalizeMachinePaths,
+  pwaDestinationFor,
   parseQualificationObservation,
+  qualificationStrategy,
   verifyEvidenceRecords,
 } from "./gate-qualification.mjs";
 
@@ -146,4 +149,37 @@ test("资格观察只接受单一带标记 JSON 行", () => {
     () => parseQualificationObservation(`${output}\n${output}`),
     /QUALIFICATION_OBSERVATION_COUNT_2/,
   );
+});
+
+test("证据命令从源头归一化个人目录", () => {
+  assert.equal(
+    normalizeMachinePaths(
+      "/workspace-home/.nvm/versions/node/v24/bin/node --test scripts/check.mjs",
+      "/workspace-home",
+    ),
+    "$HOME/.nvm/versions/node/v24/bin/node --test scripts/check.mjs",
+  );
+});
+
+test("EXP-12 明确使用稳定渲染、临时 PWA 目录与显式进程组", () => {
+  assert.deepEqual(qualificationStrategy("EXP-12"), {
+    stableRender: true,
+    isolatedPwaDestination: true,
+    explicitProcessGroup: true,
+  });
+  assert.deepEqual(qualificationStrategy("EXP-08"), {
+    stableRender: false,
+    isolatedPwaDestination: false,
+    explicitProcessGroup: true,
+  });
+  assert.throws(() => qualificationStrategy("EXP-13"), /QUALIFICATION_STRATEGY_NOT_IMPLEMENTED/);
+});
+
+test("next-pwa 临时目标使用从 Web 根可逆解析的相对路径", () => {
+  const webRoot = "/workspace/apps/web-pwa";
+  const temporary = "/private/tmp/reading-world/generated-public";
+  const destination = pwaDestinationFor(webRoot, temporary);
+
+  assert.equal(destination, "../../../private/tmp/reading-world/generated-public");
+  assert.equal(join(webRoot, destination), temporary);
 });

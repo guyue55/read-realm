@@ -2,7 +2,7 @@ import withPWAInit from "next-pwa";
 import runtimeCaching from "next-pwa/cache.js";
 
 const withPWA = withPWAInit({
-  dest: "public",
+  dest: process.env.READING_WORLD_PWA_DEST || "public",
   disable:
     process.env.NODE_ENV === "development" ||
     process.env.READING_WORLD_VERIFY_NO_PWA_WRITE === "1",

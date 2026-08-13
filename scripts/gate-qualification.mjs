@@ -50,6 +50,38 @@ export function parseQualificationObservation(output) {
   return JSON.parse(lines[0].slice(prefix.length));
 }
 
+export function normalizeMachinePaths(value, homeDirectory) {
+  return String(value).split(homeDirectory).join("$HOME");
+}
+
+export function qualificationStrategy(experiment) {
+  if (experiment === "EXP-08") {
+    return {
+      stableRender: false,
+      isolatedPwaDestination: false,
+      explicitProcessGroup: true,
+    };
+  }
+  if (experiment === "EXP-12") {
+    return {
+      stableRender: true,
+      isolatedPwaDestination: true,
+      explicitProcessGroup: true,
+    };
+  }
+  throw new Error(`QUALIFICATION_STRATEGY_NOT_IMPLEMENTED:${experiment}`);
+}
+
+export function pwaDestinationFor(webRoot, temporaryDirectory) {
+  const destination = relative(resolve(webRoot), resolve(temporaryDirectory))
+    .split("\\")
+    .join("/");
+  if (!destination || destination.startsWith("/") || resolve(webRoot, destination) !== resolve(temporaryDirectory)) {
+    throw new Error("QUALIFICATION_PWA_DESTINATION_INVALID");
+  }
+  return destination;
+}
+
 export function classifyGateRun(run) {
   const reasons = [];
   if (run.listExitCode !== 0) reasons.push(`LIST_EXIT_${run.listExitCode}`);
