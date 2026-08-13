@@ -1,0 +1,81 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-migration-gate.mjs RISK-03
+started_at=2026-08-13T02:38:36.589Z
+ended_at=2026-08-13T02:39:10.296Z
+duration_ms=33707
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+MIGRATION_GATE_OBSERVATION={"riskId":"RISK-03","classification":"PASS","reasons":[],"prerequisiteValid":true,"listExitCode":0,"listedTestCount":1,"buildExitCode":0,"serviceReady":true,"testExitCode":0,"portFreeBefore":true,"portFreeAfter":true,"orphanProcessCount":0,"publicRestored":true,"evidenceRecordsValid":true,"strategy":{"realDexieUpgrade":true,"preUpgradeCompleteSnapshot":true,"idempotentReopen":true,"failedVersionchangeRollback":true,"previousStableReadable":true,"isolatedPwaDestination":true,"explicitProcessGroup":true}}
+
+[list]
+Listing tests:
+  [chromium-chrome] › migration-gate.spec.ts:130:5 › RISK-03 real Dexie upgrade backs up, is idempotent and rolls back on failure
+Total: 1 test in 1 file
+
+[build]
+
+> web-pwa@0.1.0 build ./apps/web-pwa
+> next build
+
+   ▲ Next.js 15.5.20
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: ./node_modules/.pnpm/next-pwa@5.6.0_@babel+core@7.29.6_@types+babel__core@7.20.5_esbuild@0.28.1_next@15.5.20_@babe_lzs65335gp4vegkq27nfq7k5n4/node_modules/next-pwa/register.js
+> [PWA] Service worker: /var/folders/cc/8jdrkxy94bv41s18tckttd0w0000gn/T/reading-world-migration-gate-TyfXoG/generated-public/sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+ ✓ Compiled successfully in 8.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/13) ...
+   Generating static pages (3/13)
+   Generating static pages (6/13)
+   Generating static pages (9/13)
+ ✓ Generating static pages (13/13)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    4.35 kB         154 kB
+├ ○ /_not-found                            995 B         104 kB
+├ ● /book/[bookId]                       5.51 kB         165 kB
+├   └ /book/placeholder
+├ ○ /import                              17.9 kB         175 kB
+├ ● /import/preview/[taskId]             6.18 kB         163 kB
+├   └ /import/preview/placeholder
+├ ○ /library                             35.1 kB         216 kB
+├ ○ /notes                               5.16 kB         162 kB
+├ ● /reader/[bookId]                       17 kB         188 kB
+├   └ /reader/placeholder
+├ ○ /search                              12.3 kB         169 kB
+└ ○ /settings                            8.56 kB         173 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
+  ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
+  └ other shared chunks (total)          2.36 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+
+[test]
+
+Running 1 test using 1 worker
+
+
+
+[1/1] [chromium-chrome] › e2e/migration-gate.spec.ts:130:5 › RISK-03 real Dexie upgrade backs up, is idempotent and rolls back on failure
+  1 passed (4.8s)
+
+[stderr]
+[test]
+(node:59314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

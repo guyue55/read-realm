@@ -1,0 +1,25 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-migration-run.test.mjs
+started_at=2026-08-13T02:38:36.384Z
+ended_at=2026-08-13T02:38:36.525Z
+duration_ms=141
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+✔ 迁移门只接受单一观察行 (2.1665ms)
+✔ 设施可靠且真实迁移门通过时为 PASS (0.140875ms)
+✔ 只有设施可靠时的浏览器失败才是 MIGRATION_FAILURE (0.085292ms)
+✔ 端口、进程、补偿或 records 失效时不可下迁移结论 (0.092792ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 102.34
+
+[stderr]
