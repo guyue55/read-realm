@@ -6,7 +6,7 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-03
-- 当前入口：PHASE-03 / TASK-0301；冻结 TXT/EPUB/文件夹/合法 URL 导入任务状态机、容量 fixtures、取消/重试与草稿恢复合同，先实现阶段检查器真实命令再扩张 UI。
+- 当前入口：PHASE-03 / TASK-0301 真实 OS 目录权限人工检查；自动化与阶段检查器已闭合导入子域，检查器总体 FAIL 仅因 TASK-0302~0304 的备份恢复/导出产物尚未实现。人工检查后转 TASK-0302。
 - 最近有效提交：a249d5139bee1f0382d7b974387a404f0ab07628
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
 - 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
@@ -242,3 +242,12 @@
 - 控制与安全：resume 复算通过，3100/4100 无监听；实现/单测 3 Green，导入页 `https://`、E2E IndexedDB `open()` 与引用该二字面量的控制报告为人工复核 Yellow，无凭证、下载执行或新增外传。
 - 证据边界：配额与 Worker 为真实页面/原生浏览器边界故障；权限为原生 NotAllowedError 等价注入，不替代真实 OS 选择器撤权人工检查。TASK-0301 与 PHASE-03 仍执行中，不生成 EVID-03 FINAL。
 - 下一入口：PHASE-03 / TASK-0301；将容量、耐久目录与三类故障命令固化到 `verify-reading-world.mjs --phase 03`，明确 fixture 生成/验证/清理、端口与进程补偿；再执行真实 OS 目录权限人工检查。
+
+### RUN-0025 · 2026-08-13T15:00:00+08:00 · PHASE-03 检查器正式首跑
+- 本轮输入：故障恢复 checkpoint `a32ff596a7a150655183440891313ef084eedf55`、检查器 checkpoint `000adfea7ea74c0316eba729ea187afdf5578fef`、PHASE-03 阶段合同和安全容量 runner。
+- 实现与候选：`verify-reading-world.mjs --phase 03` 新增 12 项真实检查；容量 runner 在独立候选中完成预清理、full fixture 生成、2/2 SHA/size 校验、精确 2 条枚举、真实 Chrome 压力回放和 finally 安全清理，最终 `IMPORT_CAPACITY_OBSERVATION.classification=PASS`。
+- 正式命令：`node scripts/verify-reading-world.mjs --phase 03 --output docs/goals/reading-world-v1/reports/phase-03-import-portability.json`。结果 11 通过 / 1 失败 / tracked mutation 0，总体 FAIL。导入 fixture/runner 合同、parser、content-utils、240 项工作区测试、Web/API lint、无 PWA 写入生产构建、完整容量、目录 2/2 和故障 3/3 全部通过。
+- 唯一失败：`PORTABILITY_CONTRACT` exit 1，精确缺少 `apps/web-pwa/e2e/backup-restore.spec.ts`、`reports/backup-format-v1.md`和 `reviews/phase-03-data-portability.md`。这是 TASK-0302~0304 尚未实现的真实下一入口，不是 TASK-0301 导入回退，不得将 11 项绿灯冒充 PHASE-03 通过。
+- 独立复算：报告绑定 clean@`000adfea7ea74c0316eba729ea187afdf5578fef`；12/12 records 存在且 SHA-256 与外层 JSON 匹配；full fixture 已清理，3100/4100 无监听，所有检查 `trackedWorktreeMutated=false`。
+- 状态结论：TASK-0301 的自动化/检查器范围闭合，但真实 OS 目录选择、撤权和重新授权仍是人工检查点；TASK-0301、PHASE-03 和 Goal 均不标记完成，不生成 EVID-03 FINAL。
+- 下一入口：先完成 TASK-0301 真实 OS 权限人工检查；通过后从 TASK-0302 建立带 manifest、版本、逐项校验和恢复预览的完整备份包。

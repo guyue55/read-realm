@@ -1,0 +1,67 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-import-capacity.mjs
+started_at=2026-08-13T06:48:56.351Z
+ended_at=2026-08-13T06:50:11.793Z
+duration_ms=75442
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+[preclean] exit=0
+fixture_absent=true
+
+[generate] exit=0
+manifest=./.tmp/import-capacity/full/manifest.json
+
+[verify] exit=0
+verified=2
+
+[list] exit=0
+Listing tests:
+::notice title=🎭 Playwright Run Summary::  2 did not run
+  [chromium-chrome] › import-stress.spec.ts:82:7 › txt-capacity-and-chapters stays responsive and reaches durable preview
+  [chromium-chrome] › import-stress.spec.ts:82:7 › epub-capacity stays responsive and reaches durable preview
+Total: 2 tests in 1 file
+
+[test] exit=0
+
+
+
+
+
+
+
+Running 2 tests using 1 worker
+
+
+
+[1/2] [chromium-chrome] › e2e/import-stress.spec.ts:82:7 › txt-capacity-and-chapters stays responsive and reaches durable preview
+
+[2/2] [chromium-chrome] › e2e/import-stress.spec.ts:82:7 › epub-capacity stays responsive and reaches durable preview
+  2 passed (1.1m)
+
+[cleanup] exit=0
+verified=2
+cleaned=./.tmp/import-capacity/full
+IMPORT_CAPACITY_OBSERVATION={"classification":"PASS","reasons":[],"portFreeBefore":true,"generateExitCode":0,"verifyExitCode":0,"listExitCode":0,"listedTestCount":2,"testExitCode":0,"cleaned":true,"portFreeAfter":true}
+
+[stderr]
+[WebServer] (node:79225) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:79245) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:79579) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:79738) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:79771) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:79841) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:80842) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]  ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[WebServer] Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
