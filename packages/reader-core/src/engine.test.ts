@@ -66,4 +66,45 @@ describe("ReaderEngine Settings", () => {
     expect(engine.getCurrentChapter()).toEqual(chapter);
     expect(chapterRepo.getChapter).not.toHaveBeenCalledWith("book-1", 3);
   });
+
+  it("reads a chapter for a render window without changing the active chapter", async () => {
+    const chapterRepo: ChapterRepository = {
+      getChapter: vi.fn(async (_bookId, index) => ({
+        id: `chapter-${index}`,
+        index,
+        title: `第 ${index + 1} 章`,
+        content: `正文 ${index}`,
+      })),
+      getChapterCount: vi.fn(async () => 3),
+    };
+    const engine = new ReaderEngine("book-1", chapterRepo, mockProgressRepo);
+    await engine.loadChapter(1);
+    const before = engine.getCurrentChapter();
+
+    const prefetched = await engine.getChapter(2);
+
+    expect(prefetched?.index).toBe(2);
+    expect(engine.getCurrentChapter()).toEqual(before);
+  });
+
+  it("keeps the chapter cache within its hard limit", async () => {
+    const getChapter = vi.fn(async (_bookId: string, index: number) => ({
+      id: `chapter-${index}`,
+      index,
+      title: `第 ${index + 1} 章`,
+      content: `正文 ${index}`,
+    }));
+    const chapterRepo: ChapterRepository = {
+      getChapter,
+      getChapterCount: vi.fn(async () => 10),
+    };
+    const engine = new ReaderEngine("book-1", chapterRepo, mockProgressRepo);
+
+    for (let index = 0; index < 7; index += 1) {
+      await engine.getChapter(index);
+    }
+    await engine.getChapter(0);
+
+    expect(getChapter.mock.calls.filter(([, index]) => index === 0)).toHaveLength(2);
+  });
 });

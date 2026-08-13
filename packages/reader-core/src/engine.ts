@@ -62,20 +62,23 @@ export class ReaderEngine {
     await this.loadChapter(targetIndex);
   }
 
+  private putCachedChapter(chapter: ChapterData): void {
+    this.cache.delete(chapter.index);
+    this.cache.set(chapter.index, chapter);
+    while (this.cache.size > this.MAX_CACHE_SIZE) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey === undefined) break;
+      this.cache.delete(oldestKey);
+    }
+  }
+
   private async fetchChapter(index: number): Promise<ChapterData | null> {
     if (this.cache.has(index)) {
       return this.cache.get(index) || null;
     }
     const data = await this.chapterRepo.getChapter(this.bookId, index);
     if (data) {
-      if (this.cache.size >= this.MAX_CACHE_SIZE) {
-        // Remove the oldest entry (Map iterates in insertion order)
-        const firstKey = this.cache.keys().next().value;
-        if (firstKey !== undefined) {
-          this.cache.delete(firstKey);
-        }
-      }
-      this.cache.set(index, data);
+      this.putCachedChapter(data);
     }
     return data;
   }
@@ -88,6 +91,10 @@ export class ReaderEngine {
     ]).catch((err) => {
       console.warn("Preload failed", err);
     });
+  }
+
+  async getChapter(index: number): Promise<ChapterData | null> {
+    return this.fetchChapter(index);
   }
 
   async loadChapter(index: number): Promise<void> {
@@ -107,7 +114,7 @@ export class ReaderEngine {
    */
   hydrateChapter(chapter: ChapterData): void {
     this.currentChapter = { ...chapter };
-    this.cache.set(chapter.index, this.currentChapter);
+    this.putCachedChapter(this.currentChapter);
     this.preloadAdjacent(chapter.index);
   }
 

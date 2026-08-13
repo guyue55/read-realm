@@ -525,7 +525,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 ? "opacity-100 blur-0 scale-100"
                 : "opacity-0 blur-md scale-[0.995] pointer-events-none"
             }`}
-            style={{ scrollBehavior: isPagination ? "auto" : "smooth" }}
+            style={{
+              scrollBehavior: isPagination ? "auto" : "smooth",
+              overflowAnchor: isPagination ? "auto" : "none",
+            }}
           >
             {/* 🏮 高级常驻侧栏展示时，点击 Canvas 内容区域自动优雅折叠收起遮罩 */}
             {activePanel && (activePanel === "toc" || activePanel === "ai") && (
@@ -602,7 +605,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   onBoundaryPrev={handlePrev}
                 />
               ) : null
-            ) : (
+            ) : isDesktopViewport === true ? (
               renderedChapters.map((ch) => (
                 <div
                   key={ch.id}
@@ -635,7 +638,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   />
                 </div>
               ))
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -680,7 +683,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               ? "opacity-100 blur-0"
               : "opacity-0 blur-md pointer-events-none"
           }`}
-          style={{ scrollBehavior: "smooth" }}
+          style={{
+            scrollBehavior: "smooth",
+            overflowAnchor: isPagination ? "auto" : "none",
+          }}
         >
           {isPagination ? (
             isDesktopViewport === false ? (
@@ -701,7 +707,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 onBoundaryPrev={handlePrev}
               />
             ) : null
-          ) : (
+          ) : isDesktopViewport === false ? (
             renderedChapters.map((ch) => (
               <div
                 key={ch.id}
@@ -733,7 +739,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 />
               </div>
             ))
-          )}
+          ) : null}
         </div>
 
         {/* Mobile Bottom Bar Overlay */}
