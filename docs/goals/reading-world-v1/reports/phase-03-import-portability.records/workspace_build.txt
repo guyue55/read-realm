@@ -1,13 +1,13 @@
 $ corepack pnpm build
-started_at=2026-08-13T06:48:34.224Z
-ended_at=2026-08-13T06:48:56.287Z
-duration_ms=22063
+started_at=2026-08-13T16:09:51.962Z
+ended_at=2026-08-13T16:10:17.889Z
+duration_ms=25927
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
 [stdout]
 
 > read-realm@0.1.0 build .
@@ -55,7 +55,7 @@ Scope: 10 of 11 workspace projects
    Creating an optimized production build ...
 > [PWA] PWA support is disabled
 > [PWA] PWA support is disabled
- ✓ Compiled successfully in 2.6s
+ ✓ Compiled successfully in 3.8s
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/13) ...
@@ -67,23 +67,23 @@ Scope: 10 of 11 workspace projects
    Collecting build traces ...
 
 Route (app)                                 Size  First Load JS
-┌ ○ /                                    4.68 kB         156 kB
+┌ ○ /                                    4.68 kB         158 kB
 ├ ○ /_not-found                            995 B         104 kB
-├ ● /book/[bookId]                       5.92 kB         167 kB
+├ ● /book/[bookId]                       7.22 kB         178 kB
 ├   └ /book/placeholder
-├ ○ /import                              21.5 kB         179 kB
-├ ● /import/preview/[taskId]             11.5 kB         169 kB
+├ ○ /import                              15.8 kB         184 kB
+├ ● /import/preview/[taskId]             11.5 kB         172 kB
 ├   └ /import/preview/placeholder
-├ ○ /library                             35.7 kB         218 kB
-├ ○ /notes                                5.5 kB         163 kB
-├ ● /reader/[bookId]                       17 kB         189 kB
+├ ○ /library                             35.7 kB         221 kB
+├ ○ /notes                                5.8 kB         167 kB
+├ ● /reader/[bookId]                       17 kB         192 kB
 ├   └ /reader/placeholder
-├ ○ /search                                13 kB         171 kB
-└ ○ /settings                            9.07 kB         175 kB
+├ ○ /search                                13 kB         174 kB
+└ ○ /settings                            10.8 kB         179 kB
 + First Load JS shared by all             103 kB
   ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
   ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
-  └ other shared chunks (total)          2.35 kB
+  └ other shared chunks (total)          2.37 kB
 
 
 ○  (Static)  prerendered as static content

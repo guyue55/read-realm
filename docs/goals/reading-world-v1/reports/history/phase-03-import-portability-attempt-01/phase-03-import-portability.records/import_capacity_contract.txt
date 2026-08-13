@@ -1,0 +1,27 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/import-capacity-fixtures.test.mjs scripts/import-capacity-run.test.mjs
+started_at=2026-08-13T06:48:13.331Z
+ended_at=2026-08-13T06:48:13.964Z
+duration_ms=633
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+✔ quick profile creates verifiable TXT and EPUB fixtures (101.801125ms)
+✔ refuses unknown profiles before creating output (42.809125ms)
+✔ replace only accepts a directory owned by this generator (174.116291ms)
+✔ clean removes only a verified generator-owned fixture directory (235.250375ms)
+✔ capacity runner passes only with exact enumeration and complete compensation (0.798666ms)
+✔ capacity runner exposes test, cleanup and port failures (0.095458ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 599.735625
+
+[stderr]
