@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildProductGateFinal,
   classifyProductGateRun,
   parseProductGateObservation,
   productExperimentStrategy,
@@ -103,4 +104,62 @@ test("EVID-45 前置门绑定 REV-0002、GATE-00、PASS 与历史提交", () => 
     expectedSha256: "c".repeat(64),
     commitIsAncestor: true,
   }), false);
+});
+
+test("GATE-01 FINAL 只从 EXP-09 完整通过且 7 条 records 闭合的 ATTEMPT 构造", () => {
+  const attempt = {
+    goalId: "GOAL-READING-WORLD-V1",
+    controlRevision: "REV-0002",
+    experiment: "EXP-09",
+    repository: { head: "a".repeat(40) },
+    summary: { passed: true, failedCount: 0, trackedMutationCount: 0 },
+    productGate: {
+      classification: "PASS",
+      reasons: [],
+      recordVerification: { valid: true, checkedCount: 7, failures: [] },
+      observation: {
+        prerequisiteValid: true,
+        listExitCode: 0,
+        listedTestCount: 1,
+        buildExitCode: 0,
+        serviceReady: true,
+        testExitCode: 0,
+        portFreeBefore: true,
+        portFreeAfter: true,
+        orphanProcessCount: 0,
+        publicRestored: true,
+        strategy: {
+          fixture: "fixed-two-chapter.epub.base64",
+          importMechanism: "compatible-storage",
+          locator: "book-id",
+          isolatedPwaDestination: true,
+          serveGeneratedPwaDuringRun: true,
+          explicitProcessGroup: true,
+        },
+      },
+    },
+  };
+  const final = buildProductGateFinal({
+    attempt,
+    attemptPath: "evidence/gate-01-attempt.json",
+    attemptSha256: "b".repeat(64),
+    evidenceCommit: "c".repeat(40),
+    gate00FinalSha256: "d".repeat(64),
+    generatedAt: "2026-08-13T10:00:00+08:00",
+  });
+  assert.equal(final.gateId, "GATE-01");
+  assert.equal(final.result, "PASS");
+  assert.equal(final.sourceAttempt.experiment, "EXP-09");
+  assert.equal(final.verifiedOutcomes.trueOffline, true);
+  assert.throws(
+    () => buildProductGateFinal({
+      attempt: { ...attempt, experiment: "EXP-10" },
+      attemptPath: "evidence/gate-01-attempt.json",
+      attemptSha256: "b".repeat(64),
+      evidenceCommit: "c".repeat(40),
+      gate00FinalSha256: "d".repeat(64),
+      generatedAt: "2026-08-13T10:00:00+08:00",
+    }),
+    /PRODUCT_GATE_FINAL_SOURCE_NOT_PASSING/,
+  );
 });
