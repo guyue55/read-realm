@@ -12,6 +12,7 @@ import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { commitDurableImportResult } from "@/features/import/durable-import-commit";
 
 export default function PreviewPage({
   params,
@@ -100,57 +101,43 @@ export default function PreviewPage({
     savingRef.current = true;
     setSaving(true);
     try {
-      await db.transaction(
-        "rw",
-        [db.books, db.chapters, db.importTasks],
-        async () => {
-          const storedTask = await db.importTasks.get(task.id);
-          if (!storedTask) throw new Error("导入草稿已不存在，请返回导入页重新选择文件");
-          let durableTask = storedTask.lifecycle && storedTask.updatedAt
-            ? storedTask as DurableImportTask
-            : null;
-          if (durableTask?.lifecycle.state === "failed") {
-            durableTask = transitionImportTask(durableTask, {
-              type: "retry",
-              at: new Date().toISOString(),
-            });
-          }
-          if (durableTask && durableTask.lifecycle.state !== "preview") {
-            throw new Error(`导入草稿状态不允许保存：${durableTask.lifecycle.state}`);
-          }
-          const savingTask = durableTask
-            ? transitionImportTask(durableTask, {
-                type: "saving",
-                at: new Date().toISOString(),
-              })
-            : null;
-          if (savingTask) await db.importTasks.put(savingTask);
-
-          // 提取轻量级 ToC 目录元数据，冗余保存到 books 表，以便进入阅读器时一帧内 2ms 极速拉取
-          const toc = draft.chapters.map((ch) => ({
-            index: ch.index,
-            title: ch.title,
-          }));
-          const bookWithToc = {
-            ...draft.bookMetadata,
-            title: draft.bookMetadata.title.trim(),
-            author: draft.bookMetadata.author?.trim() || undefined,
-            toc,
-          };
-          await db.books.add(bookWithToc);
-          await db.chapters.bulkAdd(draft.chapters);
-          if (savingTask) {
-            await db.importTasks.put(
-              transitionImportTask(savingTask, {
-                type: "completed",
-                at: new Date().toISOString(),
+      if (!task.lifecycle || !task.updatedAt) {
+        throw new Error("旧版导入草稿无法安全确认，请返回导入页重新选择原文件");
+      }
+      await commitDurableImportResult({
+        taskId: task.id,
+        port: {
+          transaction: async (operation) => {
+            await db.transaction(
+              "rw",
+              [db.books, db.chapters, db.importTasks],
+              () => operation({
+                getTask: async (taskId) => {
+                  const current = await db.importTasks.get(taskId);
+                  return current?.lifecycle && current.updatedAt
+                    ? current as DurableImportTask
+                    : undefined;
+                },
+                putTask: async (value) => { await db.importTasks.put(value); },
+                addBook: async (value) => { await db.books.add(value); },
+                putChapters: async (values) => { await db.chapters.bulkPut(values); },
               }),
             );
-          } else {
-            await db.importTasks.delete(task.id);
-          }
+          },
         },
-      );
+        editBook: (book) => ({
+          ...book,
+          title: draft.bookMetadata.title.trim(),
+          ...(draft.bookMetadata.author?.trim()
+            ? { author: draft.bookMetadata.author.trim() }
+            : {}),
+          toc: draft.chapters.map((chapter) => ({
+            index: chapter.index,
+            title: chapter.title,
+          })),
+        }),
+        editChapters: () => draft.chapters,
+      });
       router.push("/library");
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

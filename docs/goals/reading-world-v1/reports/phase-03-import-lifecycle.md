@@ -29,3 +29,11 @@
 - 尚未生成 TXT 200MB、EPUB 500MB、1 万章的可复算容量 fixtures，也未证明主线程响应与中断恢复。
 - 尚未验证存储配额不足、文件权限丢失、Worker 强制终止后的真实 UI 恢复。
 - 下一入口：继续 TASK-0301，把文件夹/URL 适配到统一任务端口，并建立容量 fixture 生成器、故障注入与 PHASE-03 检查器合同。
+
+## 追加：批量与合法 URL 子切片
+
+- 批量 TXT/EPUB 与合法 URL 已复用同一耐久任务控制器和原子书架提交端口；批量仍保持无需逐本预览的产品行为，URL 仍先进入解析预览。
+- 生产与开发均取消“生产主线程整本解析、开发 Worker”的语义分裂。TXT/EPUB Worker 按格式拆分依赖，TXT 不再初始化 EPUB/XML 运行时。
+- 首次 Chrome 回放中，合法 URL 通过，批量两本均以 `Cannot read properties of undefined (reading 'bind')` 安全进入 `failed` 并保留任务；trace 未改写。拆分 Worker 依赖后，第二次开发 Chrome 2/2 通过，生产构建 `next start` 下再次 2/2 通过。
+- 新增的事务端口测试证明配额失败全回滚、完整草稿无需重解析即可重新保存、完成态只留轻量历史；URL 适配器保持原 URL、task ID 与 book ID。
+- 生产 Web 回放发现旁路缺口：API 的 `start:prod` 因 `dist/main.js` 找不到直接依赖 `express` 而退出。本次两条旅程不调用 API，使用只响应 `/ai/status` 的本机健康桩满足 Playwright 既有启动合同；因此只证明生产 Web/Worker，不证明 API 生产启动。该缺口留待生产硬化范围处理。

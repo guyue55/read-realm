@@ -16,6 +16,11 @@ import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/serv
 import { createStreamingImportSession } from "@/features/import/streaming-import-session";
 import { buildCompatibleImportTask } from "@/features/import/compatible-import-storage";
 import { createDurableImportTaskController } from "@/features/import/durable-import-task";
+import {
+  commitDurableImportResult,
+  type DurableImportCommitPort,
+} from "@/features/import/durable-import-commit";
+import { buildParsedImportResult } from "@/features/import/parsed-import-result";
 
 interface BatchTask {
   id: string;
@@ -38,8 +43,34 @@ const durableImportController = createDurableImportTaskController({
   },
 });
 
+const durableImportCommitPort: DurableImportCommitPort = {
+  transaction: async (operation) => {
+    await db.transaction(
+      "rw",
+      [db.books, db.chapters, db.importTasks],
+      () => operation({
+        getTask: async (taskId) => {
+          const current = await db.importTasks.get(taskId);
+          return current?.lifecycle && current.updatedAt
+            ? current as DurableImportTask
+            : undefined;
+        },
+        putTask: async (task) => { await db.importTasks.put(task); },
+        addBook: async (book) => { await db.books.add(book); },
+        putChapters: async (chapters) => { await db.chapters.bulkPut(chapters); },
+      }),
+    );
+  },
+};
+
 function importErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function createParserWorker(format: "txt" | "epub") {
+  return format === "epub"
+    ? new Worker(new URL("./epub-parser.worker.ts", import.meta.url), { type: "module" })
+    : new Worker(new URL("./txt-parser.worker.ts", import.meta.url), { type: "module" });
 }
 
 
@@ -184,55 +215,6 @@ export default function ImportPage() {
   const [customTypes, setCustomTypes] = useState<Map<string, ImportPreviewNode["detectedType"] | "ignore" | "category_folder">>(new Map());
   const [scanningSourceHandle, setScanningSourceHandle] = useState<FileSystemDirectoryHandle | null>(null);
 
-  const createImportTask = async (
-    parsedBook: ParsedBook,
-    sourceType: "upload" | "url",
-    options: { format: "txt" | "epub" | "html"; sourceUrl?: string },
-  ) => {
-    if (parsedBook.chapters.length === 0) {
-      throw new Error("未解析到章节内容");
-    }
-
-    const taskId = createId();
-    const now = new Date().toISOString();
-    const bookMetadata = {
-      id: createId(),
-      title: parsedBook.title,
-      sourceType,
-      sourceUrl: options.sourceUrl,
-      format: options.format,
-      status: "to_read" as const,
-      tags: [],
-      chapterCount: parsedBook.chapters.length,
-      wordCount: parsedBook.chapters.reduce(
-        (total, chapter) => total + chapter.content.length,
-        0,
-      ),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const chaptersToSave = parsedBook.chapters.map((ch, index) => ({
-      id: createId(),
-      bookId: bookMetadata.id,
-      index,
-      title: ch.title || `第 ${index + 1} 章`,
-      content: ch.content,
-      wordCount: ch.content.length,
-      createdAt: now,
-      updatedAt: now,
-    }));
-
-    await db.importTasks.add({
-      id: taskId,
-      bookMetadata,
-      chapters: chaptersToSave,
-      createdAt: now,
-    });
-
-    router.push(`/import/preview/${taskId}`);
-  };
-
   // ==========================================
   // 【场景 A】：上传单本小说流程
   // ==========================================
@@ -301,10 +283,7 @@ export default function ImportPage() {
         return;
       }
 
-      const worker = new Worker(
-        new URL("./parser.worker.ts", import.meta.url),
-        { type: "module" },
-      );
+      const worker = createParserWorker(type);
       workerRef.current = worker;
 
       const session = createStreamingImportSession({
@@ -544,158 +523,113 @@ export default function ImportPage() {
       prev.map((t) => (t.id === batchTaskId ? { ...t, status: "parsing", progressText: "正在分析章节..." } : t))
     );
 
+    let durableTaskId: string | null = null;
     try {
       const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
+      const draft = await durableImportController.create({
+        id: batchTaskId,
+        filename: file.name,
+        format: type,
+        sourceKind: "file",
+        size: file.size,
+      });
+      durableTaskId = draft.id;
+      const activeBatchTaskId = draft.id;
+      await durableImportController.transition(activeBatchTaskId, { type: "reading" });
       const buffer = await file.arrayBuffer();
 
-      if (process.env.NODE_ENV === "production") {
-        const parsed = type === "epub"
-          ? await import("@reader/parser-core/epub-parser").then(({ parseEpubBook }) =>
-              parseEpubBook(file.name, buffer),
-            )
-          : await import("@reader/parser-core/txt-parser").then(({ parseTxtBook }) =>
-              parseTxtBook(file.name, buffer),
-            );
-        const bookId = createId();
-        const now = new Date().toISOString();
-        const chapters = parsed.chapters.map((chapter, index) => ({
-          id: createId(),
-          bookId,
-          index,
-          title: chapter.title || `第 ${index + 1} 章`,
-          content: chapter.content,
-          wordCount: chapter.content.length,
-          createdAt: now,
-          updatedAt: now,
-        }));
-        if (chapters.length === 0) throw new Error("未解析到章节内容");
-        await db.transaction("rw", [db.books, db.chapters], async () => {
-          await db.books.add({
-            id: bookId,
-            title: parsed.title,
-            sourceType: "upload",
-            format: type,
-            status: "to_read",
-            tags: [],
-            chapterCount: chapters.length,
-            wordCount: chapters.reduce((sum, chapter) => sum + chapter.wordCount, 0),
-            createdAt: now,
-            updatedAt: now,
-          });
-          await db.chapters.bulkPut(chapters);
-        });
-        setBatchTasks((prev) =>
-          prev.map((task) => task.id === batchTaskId
-            ? { ...task, status: "success", progressText: "已成功加入书架！" }
-            : task),
-        );
-        void processNextBatchItem();
-        return;
-      }
-
-      const worker = new Worker(new URL("./parser.worker.ts", import.meta.url), {
-        type: "module",
+      const worker = createParserWorker(type);
+      const session = createStreamingImportSession({
+        filename: file.name,
+        format: type,
+        taskId: activeBatchTaskId,
+        bookId: draft.bookMetadata.id,
+        createId,
+        saveTask: async (task) => {
+          await durableImportController.attachParsedResult(activeBatchTaskId, task);
+        },
       });
-      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
-
-      const bookId = createId();
-      const now = new Date().toISOString();
-      const collectedChapters: {
-        id: string;
-        bookId: string;
-        index: number;
-        title: string;
-        content: string;
-        wordCount: number;
-        createdAt: string;
-        updatedAt: string;
-      }[] = [];
-
-      worker.onmessage = async (e) => {
-        const { type: msgType, success, error } = e.data;
-
-        if (!success) {
-          worker.terminate();
-          setBatchTasks((prev) =>
-            prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `解析失败: ${error}` } : t))
-          );
-          void processNextBatchItem();
-          return;
-        }
-
-        if (msgType === "CHUNK") {
-          const { startIndex, chapters: chunkChapters } = e.data;
-          const formatted = (chunkChapters as { title?: string; content: string }[]).map((ch, idx: number) => ({
-            id: createId(),
-            bookId,
-            index: startIndex + idx,
-            title: ch.title || `第 ${startIndex + idx + 1} 章`,
-            content: ch.content,
-            wordCount: ch.content.length,
-            createdAt: now,
-            updatedAt: now,
-          }));
-          collectedChapters.push(...formatted);
-
-          setBatchTasks((prev) =>
-            prev.map((t) =>
-              t.id === batchTaskId
-                ? { ...t, progressText: `流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...` }
-                : t
-            )
-          );
-        } else if (msgType === "FINISHED") {
-          worker.terminate();
-
-          if (collectedChapters.length === 0) {
-            setBatchTasks((prev) =>
-              prev.map((t) =>
-                t.id === batchTaskId
-                  ? { ...t, status: "failed", progressText: "未解析到章节内容" }
-                  : t,
-              ),
-            );
-            void processNextBatchItem();
-            return;
-          }
-
-          // 批量模式：直接归档加入书架！不弹出预览中断流，极致顺滑
-          const bookMetadata = {
-            id: bookId,
-            title: file.name.replace(/\.[^/.]+$/, ""),
-            sourceType: "upload" as const,
-            format: type as "epub" | "txt",
-            status: "to_read" as const,
-            tags: [],
-            chapterCount: collectedChapters.length,
-            wordCount: collectedChapters.reduce((sum, ch) => sum + ch.content.length, 0),
-            createdAt: now,
-            updatedAt: now,
-          };
-
-          await db.transaction("rw", [db.books, db.chapters], async () => {
-            await db.books.add(bookMetadata);
-            await db.chapters.bulkPut(collectedChapters);
+      let messageQueue = Promise.resolve();
+      const failBatchTask = async (error: unknown, errorCode: string) => {
+        const current = await durableImportController.recover(activeBatchTaskId);
+        if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+          await durableImportController.transition(activeBatchTaskId, {
+            type: "failed",
+            errorCode,
+            errorMessage: importErrorMessage(error),
           });
-
-          setBatchTasks((prev) =>
-            prev.map((t) => (t.id === batchTaskId ? { ...t, status: "success", progressText: "已成功加入书架！" } : t))
-          );
-          void processNextBatchItem();
         }
+        setBatchTasks((previous) => previous.map((task) => task.id === batchTaskId
+          ? { ...task, status: "failed", progressText: `失败，任务已保留：${describeAppError(error)}` }
+          : task));
       };
-
-      worker.onerror = (e) => {
+      const acceptBatchMessage = async (message: Parameters<typeof session.accept>[0]) => {
+        const result = await session.accept(message);
+        if (message.success && message.type === "METADATA") {
+          await durableImportController.transition(activeBatchTaskId, {
+            type: "parsing",
+            totalChapters: message.chapterCount,
+          });
+        } else if (message.success && message.type === "CHUNK") {
+          await durableImportController.transition(activeBatchTaskId, {
+            type: "progress",
+            receivedChapters: result.state === "collecting" ? result.receivedChapterCount : 0,
+          });
+          setBatchTasks((previous) => previous.map((task) => task.id === batchTaskId
+            ? {
+                ...task,
+                progressText: `流式载入第 ${message.startIndex + 1} - ${message.startIndex + message.chapters.length} 章...`,
+              }
+            : task));
+        }
+        if (result.state !== "completed") return;
         worker.terminate();
-        setBatchTasks((prev) =>
-          prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `异常: ${describeAppError(e.message)}` } : t))
-        );
+        await commitDurableImportResult({
+          port: durableImportCommitPort,
+          taskId: activeBatchTaskId,
+        });
+        setBatchTasks((previous) => previous.map((task) => task.id === batchTaskId
+          ? { ...task, status: "success", progressText: "已校验并加入书架" }
+          : task));
         void processNextBatchItem();
       };
 
+      worker.onmessage = (event) => {
+        messageQueue = messageQueue
+          .then(() => acceptBatchMessage(event.data))
+          .catch(async (error) => {
+            worker.terminate();
+            await failBatchTask(error, "BATCH_IMPORT_FAILED");
+            void processNextBatchItem();
+          });
+      };
+
+      worker.onerror = (event) => {
+        worker.terminate();
+        messageQueue = messageQueue.then(async () => {
+          await failBatchTask(event.message, "BATCH_WORKER_CRASHED");
+          void processNextBatchItem();
+        });
+      };
+
+      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
     } catch (err) {
+      if (durableTaskId) {
+        try {
+          const current = await durableImportController.recover(durableTaskId);
+          if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+            await durableImportController.transition(durableTaskId, {
+              type: "failed",
+              errorCode: "BATCH_READ_FAILED",
+              errorMessage: importErrorMessage(err),
+            });
+          }
+        } catch (persistenceError) {
+          console.error("[Import] 批量任务失败状态无法落盘:", persistenceError);
+        }
+      }
       setBatchTasks((prev) =>
-        prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `读取失败: ${describeAppError(err)}` } : t))
+        prev.map((t) => (t.id === batchTaskId ? { ...t, status: "failed", progressText: `失败，任务已保留: ${describeAppError(err)}` } : t))
       );
       void processNextBatchItem();
     }
@@ -1002,17 +936,52 @@ export default function ImportPage() {
     }
 
     setIsProcessing(true);
+    let durableTaskId: string | null = null;
     try {
+      const parsedUrl = new URL(url);
+      const draft = await durableImportController.create({
+        id: createId(),
+        filename: parsedUrl.hostname,
+        format: "html",
+        sourceKind: "url",
+        url,
+      });
+      durableTaskId = draft.id;
+      activeTaskIdRef.current = draft.id;
+      await durableImportController.transition(draft.id, { type: "reading" });
       setStatus("开始解析 URL...");
       const parsedBook = await parseUrlWithBackendFallback(url);
-      setStatus(`解析完成，共发现 ${parsedBook.chapters.length} 章`);
-      await createImportTask(parsedBook, "url", {
-        format: "html",
-        sourceUrl: url,
+      await durableImportController.transition(draft.id, {
+        type: "parsing",
+        totalChapters: parsedBook.chapters.length,
       });
+      const result = buildParsedImportResult({ draft, parsedBook, createId });
+      await durableImportController.transition(draft.id, {
+        type: "progress",
+        receivedChapters: result.chapters.length,
+      });
+      await durableImportController.attachParsedResult(draft.id, result);
+      setStatus(`解析完成，共发现 ${parsedBook.chapters.length} 章`);
+      activeTaskIdRef.current = null;
+      setIsProcessing(false);
+      router.push(`/import/preview/${draft.id}`);
     } catch (e) {
       const error = e as Error;
       const message = describeAppError(error) || "未知错误";
+      if (durableTaskId) {
+        try {
+          const current = await durableImportController.recover(durableTaskId);
+          if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+            await durableImportController.transition(durableTaskId, {
+              type: "failed",
+              errorCode: "URL_IMPORT_FAILED",
+              errorMessage: message,
+            });
+          }
+        } catch (persistenceError) {
+          console.error("[Import] URL 任务失败状态无法落盘:", persistenceError);
+        }
+      }
       if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
         setStatus("网络请求失败：目标网站拒绝跨域访问，且后端代理未启动。请确认 API 服务运行于端口 4000。");
       } else if (message.includes("章节内容")) {
@@ -1172,6 +1141,7 @@ export default function ImportPage() {
                   </p>
                 </div>
                 <input
+                  aria-label="批量选择 TXT 或 EPUB 文件"
                   type="file"
                   multiple
                   accept=".txt,.epub"
