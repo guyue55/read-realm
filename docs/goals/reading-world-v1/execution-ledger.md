@@ -2,15 +2,15 @@
 
 ## 当前指针
 - 控制包版本：4
-- 当前控制修订：REV-0001
+- 当前控制修订：REV-0002
 - Goal ID：GOAL-READING-WORLD-V1
-- 当前状态：BLOCKED_DESIGN_REVIEW_REQUIRED
+- 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：停止实现并等待用户批准新控制修订；新 REV 必须绑定触发门 GATE-01，明确验证基础设施资格门、历史 ATTEMPT 继承和后续差异实验，未经批准不得重跑或开始 PHASE-03。
-- 最近有效提交：bae4d0fedbe7d61df9badc8248edc3d7f09de65c
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-attempt-03.json，SHA-256 `c8ddadfe46cbebc894b954eb58be742a41ca6958fd19012bd1234280332d188b`，2026-08-13T07:03:44+08:00
-- 当前阻塞：GATE-01 在 REV-0001 下的 EXP-01/02/03 均失败，设计门失败计数 3/3；已进入 `BLOCKED_DESIGN_REVIEW_REQUIRED`。只有用户批准新 REV 后才能恢复执行。
-- 停止原因：ATTEMPT-03 在恢复后书架因同名书严格定位器歧义 exit 1；尽管此前纵切结果均已走完，总控要求完整结果通过且第三次失败自动熔断，因此停止实现并保留全部证据。
+- 当前入口：PHASE-02 / TASK-0205；读取 REV-0002、EVID-27/28/29 与 GATE-00 合同，先实现验证基础设施资格门 EXP-08。不得修改产品机制、重跑旧实验、执行 EXP-09 或开始 PHASE-03。
+- 最近有效提交：fbbbf5642ee8e4aa36699d8f466fc630f0f93447
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/rev-0002-approval.md，SHA-256 `9858a1c86f33c74aa42ce5801060d1dca7b974881c0e140a56e7e9af5de1a7df`，2026-08-13T08:36:02+08:00
+- 当前阻塞：无；用户已批准 REV-0002，控制层从 `BLOCKED_DESIGN_REVIEW_REQUIRED` 恢复为执行中。产品扩张仍由 GATE-00 与 GATE-01 双门冻结。
+- 停止原因：无；恢复后下一动作仅为 GATE-00 资格门，不代表旧 GATE-01 失败已撤销或 PHASE-02 已完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -21,6 +21,7 @@
 - RUN-0005：保持执行中并撤回 PHASE-01 提前完成口径；依据：最后一次非写入基线重跑新增 attempt-04 后，独立复审发现遗留 attempt-03 的 6 条日志路径仍指向当前 records，5 份 JSON / 30 条记录中有 6 项 SHA 失配；修复并复算前不得进入 PHASE-02。
 - RUN-0006：保持执行中；PHASE-01 执行中 -> 完成，PHASE-02 就绪待执行 -> 执行中。依据：attempt-03 遗留路径已修复，5/5 JSON、30/30 records 独立复算匹配，安全预检 22/22 Green，执行期 `--mode resume` exit 0，独立结论 READY；GATE-01 仍未过门。
 - RUN-0011：执行中 -> BLOCKED_DESIGN_REVIEW_REQUIRED；依据：REV-0001 下 GATE-01 的 EXP-01/02/03 三次差异化实验均有独立失败证据 EVID-27/28/29，达到 3/3 自动熔断条件；未经用户批准新 REV 不得恢复。
+- RUN-0012：BLOCKED_DESIGN_REVIEW_REQUIRED -> 执行中；依据：用户批准 REV-0002 与 ACT-07，触发门 GATE-01，授权证据 DEC-14/EVID-44。旧 TRY-01/02/03 与 EVID-27/28/29 永久保留，先执行 GATE-00，未经资格放行不得执行新产品实验。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -116,3 +117,12 @@
 - 副作用处理：正式报告保留 `trackedMutationObservedBeforeCompensation=true` 和补偿前 `public/sw.js` 变更；检查器恢复后 `trackedWorktreeMutated=false`，当前 blob 与 clean 候选一致，3102 无监听。EVID-29 六份日志 SHA 独立复算 6/6。
 - 状态结论：TRY-03 失败；REV-0001 下同一 GATE-01 的三次差异化实验均失败，按总控自动进入 `BLOCKED_DESIGN_REVIEW_REQUIRED`。GATE-01、PHASE-02 与 Goal 均未完成，PHASE-03~06 继续冻结。
 - 下一入口：等待用户批准新控制修订。建议新 REV 先增加验证基础设施资格门，区分产品结果失败与检查器不可判定，并只在资格门通过后注册新的差异实验；不得改写 EVID-27/28/29。
+
+### RUN-0012 · 2026-08-13T08:36:02+08:00 · REV-0002 恢复
+- 本轮输入：用户原文“批准 REV-0002”、clean@`fbbbf5642ee8e4aa36699d8f466fc630f0f93447`、REV-0001 三份不可变 ATTEMPT 与设计复核建议。
+- 本轮范围：只创建 REV-0002 控制修订并恢复控制层执行；不修产品、不重跑 GATE-01、不开始 PHASE-03、不部署或触及真实数据。
+- 授权证据：DEC-14 / EVID-44 / ACT-07；批准摘要 SHA-256 `9858a1c86f33c74aa42ce5801060d1dca7b974881c0e140a56e7e9af5de1a7df`。
+- 修订设计：追加 GATE-00 验证基础设施资格门和 EXP-08/12/13；只有 EVID-45 FINAL 通过后，才允许按 EXP-09/10/11 重新验证 GATE-01。两道门分别计数，任一门在 REV-0002 下三次差异失败都自动熔断。
+- 历史继承：REV-0001 标记 SUPERSEDED，但 TRY-01/02/03、EVID-27/28/29 及失败结论不删除、不改写、不折算为 REV-0002 的失败次数。
+- 状态结论：控制层恢复为执行中；GATE-00、GATE-01、PHASE-02 和 Goal 均未完成，PHASE-03~06 继续冻结。
+- 下一入口：PHASE-02 / TASK-0205 / EXP-08；先证明检查器可判定、可补偿、无进程或端口遗留且证据可复算。
