@@ -21,6 +21,7 @@
 - TASK-0401：从 useReader 抽离阅读会话、章节加载、进度、设置和书签服务，保持单一数据契约。
 - TASK-0402：统一滚动/分页、语义锚点恢复、预加载和长章节虚拟化/分块策略。
 - TASK-0403：优化手机触控、抽屉/Sheet、焦点与安全区，保留现有视觉基调。
+- 动效实现约束：简单圆角、排版、图标和静态状态优先设计 tokens/CSS；只有翻页、章节切换、目录/设置面板需要可中断或同步过渡时才使用 GSAP。使用时以 transform/autoAlpha 为主，通过 `gsap.matchMedia()` 区分手机/桌面并尊重 `prefers-reduced-motion`，不得用布局属性动画制造卡顿。
 - TASK-0404：完成阅读回归、恢复偏差/性能采样与人工体验量表，写入 `reports/phase-04-reader-ux.md` 和 `reviews/phase-04-reader.md`。
 
 ## 副作用与重放
