@@ -354,6 +354,8 @@ function phaseThreeChecks() {
     { id: "IMPORT_CAPACITY_LIVE", command: process.execPath, args: ["scripts/run-import-capacity.mjs"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
     { id: "DURABLE_FOLDER_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/durable-folder-import.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
     { id: "IMPORT_FAILURE_RECOVERY_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/import-failure-recovery.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+    { id: "DURABLE_IMPORT_AND_PROVIDER_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/durable-import.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+    { id: "BACKUP_RESTORE_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/backup-restore.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
     { id: "PORTABILITY_CONTRACT", command: process.execPath, args: ["scripts/check-phase-03-portability.mjs"] },
   ];
 }

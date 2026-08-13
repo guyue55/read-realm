@@ -8,7 +8,7 @@
 - 依赖：PHASE-02 完成且 RISK-03 通过。
 - 本阶段改动边界：parser/content-utils、导入领域服务与 Worker、备份/恢复服务、导入与数据管理 UI、Provider 边界测试。
 - 本阶段不做：不内置第三方盗版书源、不绕过访问限制、不做多来源自动换源、不做 PDF/MOBI/AZW3 主链路。
-- 定向检查：`node scripts/verify-reading-world.mjs --phase 03 --output docs/goals/reading-world-v1/reports/phase-03-import-portability.json`，内部运行 parser/content-utils 测试、`e2e/import-stress.spec.ts`、`e2e/backup-restore.spec.ts`、备份 schema 校验和固定哈希/计数对账。
+- 定向检查：`node scripts/verify-reading-world.mjs --phase 03 --output docs/goals/reading-world-v1/reports/phase-03-import-portability.json`，内部运行 parser/content-utils 测试、容量/目录/故障注入、`e2e/durable-import.spec.ts`、`e2e/backup-restore.spec.ts`、备份 schema 校验和固定哈希/计数对账。
 - 主线门禁：解析不阻塞主线程；失败保留原文件和草稿；恢复前预览影响，恢复后逐项校验且不污染原库。
 - 活体验收：真实大文件导入并中断恢复；完整包导出后在隔离环境执行合并和副本恢复；打开 Markdown/JSON 导出人工检查。
 - 失败处理：容量不足、权限丢失、解析异常、URL 拒绝和恢复冲突均提供可执行下一步；数据不一致立即回滚。
