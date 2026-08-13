@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：PHASE-02 / TASK-0205；先将 EVID-52 PASS ATTEMPT 固化到 clean 提交，并由可复算收束器生成 EVID-45 FINAL。EVID-45 未生成前不得执行 EXP-09 或开始 PHASE-03。
-- 最近有效提交：425efaea499d0c8a059758b676e48941539314ba
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.json，SHA-256 `12b2a107155bf24e57bcef838712529757153309f3b97ac24c9b6fb1167eb5b7`，2026-08-13T09:21:29+08:00
-- 当前阻塞：无；GATE-00 已取得通过 ATTEMPT，但 EVID-45 FINAL 尚未生成，因此产品扩张和 GATE-01 新实验仍冻结。GATE-01 产品尝试计数不变。
-- 停止原因：无；当前仅收束 GATE-00 FINAL，不把 ATTEMPT 直接当 FINAL，也不提前执行产品门。
+- 当前入口：PHASE-02 / TASK-0206 / EXP-09；从 clean 基线实现固定 EPUB + 兼容存储 + 唯一 book ID 定位的首个 REV-0002 产品实验，正式运行前先证明单一枚举、隔离生成物与副作用补偿合同。
+- 最近有效提交：5ba6284dcc1acf8216db128f39b282669748e5bf
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-00-final.json，SHA-256 `2fd6b61a1fb58a6a6b12b3533e6db5939badd422463884c43d18036538f841c3`，2026-08-13T09:31:36+08:00
+- 当前阻塞：无；GATE-00 已通过并生成 EVID-45，只放行 REV-0002 的 EXP-09/10/11。GATE-01 与 PHASE-02 仍未通过，PHASE-03 和产品扩张继续冻结。
+- 停止原因：无；从 EXP-09 开始累计 REV-0002 的 GATE-01 产品尝试，不覆盖 REV-0001 历史 ATTEMPT。
 - 完成判定：未完成
 
 ## 状态转换
@@ -30,7 +30,7 @@
 | TRY-02 | REV-0001 | GATE-01 | HYP-01 | EXP-02 | ATTEMPT-02：同一 TXT 改走 Worker 流式导入与新会话适配器；生产浏览器停在解析中并记录打包运行时 bind 异常，受控 SW 改写已补偿，转 EXP-03 | EVID-28 | 失败 |
 | TRY-03 | REV-0001 | GATE-01 | HYP-01 | EXP-03 | ATTEMPT-03：固定 EPUB 改走主线程解析与兼容存储读回适配器；纵切完成至隔离恢复后的书架，最终因同名书严格定位器歧义 exit 1，PWA 生成写入已由检查器补偿，触发 3/3 熔断 | EVID-29 | 失败 |
 | TRY-04 | REV-0002 | GATE-00 | HYP-04 | EXP-08 | ATTEMPT-01：基线资格设施完成唯一枚举、生产构建、服务健康、端口/进程/public 补偿与 records 复算；只读目标在 React 稳定渲染前计数为 0，归类 VALIDATOR_INDETERMINATE，转 EXP-12 | EVID-51 | 失败 |
-| TRY-05 | REV-0002 | GATE-00 | HYP-04 | EXP-12 | ATTEMPT-02：稳定渲染后唯一目标为 1，PWA 生成物隔离到临时目录，显式进程组退出，端口/进程/public/records 全部闭合；通过，待生成 EVID-45 FINAL | EVID-52 | 通过 |
+| TRY-05 | REV-0002 | GATE-00 | HYP-04 | EXP-12 | ATTEMPT-02：稳定渲染后唯一目标为 1，PWA 生成物隔离到临时目录，显式进程组退出，端口/进程/public/records 全部闭合；通过，并由 clean 证据提交另行生成 EVID-45 FINAL | EVID-52 | 通过 |
 
 ## 阶段记录
 
@@ -146,3 +146,11 @@
 - 活体证据：EVID-52 JSON SHA-256 `12b2a107155bf24e57bcef838712529757153309f3b97ac24c9b6fb1167eb5b7`，3/3 records 存在且 SHA 外层独立复算匹配；报告与 records 无个人绝对路径。
 - 状态结论：TRY-05 通过；只证明 GATE-00 ATTEMPT，不证明 GATE-01、PHASE-02 或 Goal 完成。
 - 下一入口：将通过 ATTEMPT 固化到 clean 提交，再生成 EVID-45 FINAL；FINAL 未闭合前不得进入 EXP-09。
+
+### RUN-0015 · 2026-08-13T09:31:36+08:00 · PHASE-02 / TASK-0205 / GATE-00 FINAL
+- 本轮输入：clean@`5ba6284dcc1acf8216db128f39b282669748e5bf`、EVID-52 PASS ATTEMPT、不可覆盖的 FINAL 收束器。
+- 本轮范围：只从已固化的资格 ATTEMPT 生成和复算 EVID-45，不运行 GATE-01、不改产品数据或阅读机制。
+- 候选验证：FINAL 构造合同 13/13、全仓 204 tests、执行期控制包 resume 检查通过；三个改动文件逐文件安全预检 Green；脏工作树运行按合同拒绝且未生成证据。
+- 正式结果：`node scripts/finalize-gate-00.mjs` 从 clean 基线 exit 0；EVID-45 SHA-256 `2fd6b61a1fb58a6a6b12b3533e6db5939badd422463884c43d18036538f841c3`，来源 EVID-52 SHA 精确匹配，implementation/evidence commit 均为当前历史祖先，3/3 records 闭合且无个人绝对路径。
+- 状态结论：GATE-00 通过；仅放行 REV-0002 EXP-09/10/11，GATE-01、PHASE-02 与 Goal 均未完成，PHASE-03 继续冻结。
+- 下一入口：PHASE-02 / TASK-0206 / EXP-09；先在候选验证中实现固定 EPUB、兼容存储读回与唯一 book ID 定位，再按 EVID-48 固定命令正式运行一次。
