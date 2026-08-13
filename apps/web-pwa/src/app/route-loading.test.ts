@@ -44,4 +44,18 @@ describe("root view loading", () => {
     expect(provider).not.toMatch(/window\.db|\(window as any\)\.db/);
     expect(nextConfig).not.toContain("lxgw-wenkai");
   });
+
+  it("数据库升级完成前不渲染业务视图，失败时提供可理解说明与重试", async () => {
+    const provider = await readFile(
+      new URL("../components/RouteProvider.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(provider).toContain('const connectDatabase = db["open"].bind(db)');
+    expect(provider).toContain("await connectDatabase()");
+    expect(provider).toContain("describeLocalDataMigrationError");
+    expect(provider).toContain('role="alert"');
+    expect(provider).toContain("重试打开本地数据");
+    expect(provider).toContain('storageState !== "ready"');
+  });
 });
