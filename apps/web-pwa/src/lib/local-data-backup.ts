@@ -1,12 +1,17 @@
 import {
+  buildLocalDataMergePlan,
   createLocalDataBackup,
   createPortableBackupPackage,
   db,
+  executeLocalDataMergeRestore,
   inspectPortableBackupPackage,
   parseLocalDataSnapshot,
   restoreLocalDataBackupToEmptyTarget,
   serializeLocalDataSnapshot,
   type PortableBackupPreview,
+  type LocalDataMergePlan,
+  type LocalDataMergeResolution,
+  type LocalDataMergeRestoreTarget,
   type LocalDataSnapshotRestoreTarget,
 } from "@reader/storage-core";
 import type { LocalDataSnapshotData } from "@reader/shared-types";
@@ -111,7 +116,7 @@ export async function inspectBrowserPortableDataBackup(
           bookmarks: snapshot.data.bookmarks.length,
           fileRefs: snapshot.data.fileRefs.length,
         },
-        restoreModes: ["copy"],
+        restoreModes: ["merge", "copy"],
         warnings: ["这是旧版单快照备份；校验结构有效，但不含包级 SHA-256 manifest。"],
         snapshot,
       };
@@ -186,6 +191,61 @@ export async function restoreBrowserPortableDataBackup(serialized: string) {
   );
 }
 
+function createBrowserMergeRestoreTarget(): LocalDataMergeRestoreTarget {
+  return {
+    readCurrent: readBrowserLocalData,
+    async replaceCurrent(data) {
+      if (data.fileRefs.length > 0) {
+        throw new Error("LOCAL_DATA_RESTORE_FILE_REFS_UNSUPPORTED");
+      }
+      await db.transaction(
+        "rw",
+        [db.books, db.chapters, db.progress, db.bookmarks],
+        async () => {
+          await Promise.all([
+            db.books.clear(),
+            db.chapters.clear(),
+            db.progress.clear(),
+            db.bookmarks.clear(),
+          ]);
+          await db.books.bulkPut(data.books);
+          await db.chapters.bulkPut(data.chapters);
+          await db.progress.bulkPut(data.progress);
+          await db.bookmarks.bulkPut(data.bookmarks);
+        },
+      );
+      saveReaderSettings(data.settings);
+    },
+  };
+}
+
+export async function planBrowserPortableMerge(
+  serialized: string,
+  resolutions?: Record<string, LocalDataMergeResolution>,
+): Promise<LocalDataMergePlan> {
+  const [preview, current] = await Promise.all([
+    inspectBrowserPortableDataBackup(serialized),
+    readBrowserLocalData(),
+  ]);
+  return buildLocalDataMergePlan({
+    current,
+    incoming: preview.snapshot.data,
+    ...(resolutions ? { resolutions } : {}),
+  });
+}
+
+export async function mergeBrowserPortableDataBackup(
+  serialized: string,
+  resolutions?: Record<string, LocalDataMergeResolution>,
+) {
+  const preview = await inspectBrowserPortableDataBackup(serialized);
+  return executeLocalDataMergeRestore({
+    incoming: preview.snapshot.data,
+    target: createBrowserMergeRestoreTarget(),
+    ...(resolutions ? { resolutions } : {}),
+  });
+}
+
 export function describeLocalDataBackupError(error: unknown): string {
   const value = error instanceof Error ? error.message : String(error);
   if (value === "LOCAL_DATA_BACKUP_EMPTY_LIBRARY") {
@@ -217,6 +277,15 @@ export function describeLocalDataBackupError(error: unknown): string {
   }
   if (value.startsWith("LOCAL_DATA_RESTORE_FAILED_CLEANUP_FAILED:")) {
     return "恢复与自动清理都失败，请保留备份并重新打开应用，不要继续导入。";
+  }
+  if (value.startsWith("LOCAL_DATA_MERGE_UNRESOLVED_CONFLICTS:")) {
+    return "仍有未处理的同 ID 冲突，请逐项选择保留现有数据或使用备份。";
+  }
+  if (value.startsWith("LOCAL_DATA_MERGE_FAILED_ROLLED_BACK:")) {
+    return "合并校验失败，已恢复合并前数据；请保留备份后重试。";
+  }
+  if (value.startsWith("LOCAL_DATA_MERGE_FAILED_ROLLBACK_FAILED:")) {
+    return "合并与自动回滚都失败，请立即停止写入并保留备份。";
   }
   return "备份文件无法校验或处理，请确认文件完整且未被修改。";
 }

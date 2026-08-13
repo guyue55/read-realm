@@ -58,6 +58,26 @@ export type {
   PortableBackupPackageV1,
   PortableBackupPreview,
 } from "./portable-backup-package.js";
+export {
+  buildLocalDataMergePlan,
+  localDataValueFingerprint,
+} from "./local-merge-restore.js";
+export type {
+  BuildLocalDataMergePlanOptions,
+  LocalDataMergeConflict,
+  LocalDataMergePlan,
+  LocalDataMergeResolution,
+} from "./local-merge-restore.js";
+export { executeLocalDataMergeRestore } from "./local-merge-restore-service.js";
+export type {
+  ExecuteLocalDataMergeRestoreOptions,
+  LocalDataMergeRestoreTarget,
+} from "./local-merge-restore-service.js";
+export {
+  createHumanNotesJsonExport,
+  createHumanNotesMarkdownExport,
+} from "./human-notes-export.js";
+export type { CreateHumanNotesExportOptions } from "./human-notes-export.js";
 export type {
   LocalDataMigrationResult,
   LocalDataMigrationStep,

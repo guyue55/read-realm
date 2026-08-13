@@ -38,7 +38,7 @@ export interface PortableBackupPreview {
     bookmarks: number;
     fileRefs: number;
   };
-  restoreModes: ["copy"];
+  restoreModes: ["merge", "copy"];
   warnings: string[];
   snapshot: LocalDataSnapshotEnvelope;
 }
@@ -217,7 +217,7 @@ export async function inspectPortableBackupPackage(
       bookmarks: snapshot.data.bookmarks.length,
       fileRefs: snapshot.data.fileRefs.length,
     },
-    restoreModes: ["copy"],
+    restoreModes: ["merge", "copy"],
     warnings:
       snapshot.data.fileRefs.length > 0
         ? ["备份包含外部文件引用；恢复前需要重新绑定来源。"]

@@ -17,9 +17,15 @@ import {
   createBrowserPortableDataBackup,
   describeLocalDataBackupError,
   inspectBrowserPortableDataBackup,
+  mergeBrowserPortableDataBackup,
+  planBrowserPortableMerge,
   restoreBrowserPortableDataBackup,
 } from "@/lib/local-data-backup";
-import type { PortableBackupPreview } from "@reader/storage-core";
+import type {
+  LocalDataMergePlan,
+  LocalDataMergeResolution,
+  PortableBackupPreview,
+} from "@reader/storage-core";
 
 export default function SettingsPage() {
   const router = useVirtualRouter();
@@ -43,6 +49,11 @@ export default function SettingsPage() {
     fileName: string;
     preview: PortableBackupPreview;
   } | null>(null);
+  const [restoreMode, setRestoreMode] = useState<"copy" | "merge">("copy");
+  const [mergePlan, setMergePlan] = useState<LocalDataMergePlan | null>(null);
+  const [mergeResolutions, setMergeResolutions] = useState<
+    Record<string, LocalDataMergeResolution>
+  >({});
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -142,11 +153,18 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     setRestorePreview(null);
+    setMergePlan(null);
+    setMergeResolutions({});
+    setRestoreMode("copy");
     setBackupStatus({ state: "working", message: "正在逐项校验备份并生成恢复预览…" });
     try {
       const serialized = await file.text();
-      const preview = await inspectBrowserPortableDataBackup(serialized);
+      const [preview, nextMergePlan] = await Promise.all([
+        inspectBrowserPortableDataBackup(serialized),
+        planBrowserPortableMerge(serialized),
+      ]);
       setRestorePreview({ serialized, fileName: file.name, preview });
+      setMergePlan(nextMergePlan);
       setBackupStatus({
         state: "success",
         message: "校验通过；请核对下方影响后再确认恢复，当前尚未写入书架。",
@@ -163,11 +181,39 @@ export default function SettingsPage() {
 
   const handleConfirmPortableRestore = async () => {
     if (!restorePreview) return;
-    setBackupStatus({ state: "working", message: "正在恢复到空书架并逐项回读校验…" });
+    setBackupStatus({
+      state: "working",
+      message:
+        restoreMode === "merge"
+          ? "正在按冲突选择合并，并准备失败回滚…"
+          : "正在恢复到空书架并逐项回读校验…",
+    });
     try {
-      const result = await restoreBrowserPortableDataBackup(
-        restorePreview.serialized,
-      );
+      if (restoreMode === "merge") {
+        const nextPlan = await planBrowserPortableMerge(
+          restorePreview.serialized,
+          mergeResolutions,
+        );
+        setMergePlan(nextPlan);
+        if (!nextPlan.executable) {
+          throw new Error(
+            `LOCAL_DATA_MERGE_UNRESOLVED_CONFLICTS:${nextPlan.unresolvedConflictKeys.join(",")}`,
+          );
+        }
+        const result = await mergeBrowserPortableDataBackup(
+          restorePreview.serialized,
+          mergeResolutions,
+        );
+        setSettings(loadReaderSettings());
+        setRestorePreview(null);
+        setMergePlan(null);
+        setBackupStatus({
+          state: "success",
+          message: `合并完成：新增 ${result.summary.addedBooks} 本书、${result.summary.addedChapters} 章，推进 ${result.summary.advancedProgress} 条进度。`,
+        });
+        return;
+      }
+      const result = await restoreBrowserPortableDataBackup(restorePreview.serialized);
       setSettings(loadReaderSettings());
       setRestorePreview(null);
       setBackupStatus({
@@ -309,23 +355,72 @@ export default function SettingsPage() {
                 <div><dt className="text-[var(--ui-muted)]">文件引用</dt><dd className="font-bold">{restorePreview.preview.counts.fileRefs}</dd></div>
               </dl>
               <p className="mt-3 text-sm text-[var(--ui-muted)]">
-                当前只支持恢复到空书架；合并恢复将在下一任务完成前保持不可用。
+                选择恢复方式后再确认。空库副本不会覆盖现有书架；合并模式会列出同 ID 内容冲突，不会静默覆盖。
               </p>
               {restorePreview.preview.warnings.map((warning) => (
                 <p key={warning} className="mt-2 text-sm text-amber-700">{warning}</p>
               ))}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2" aria-label="恢复模式">
+                <button
+                  type="button"
+                  aria-pressed={restoreMode === "copy"}
+                  onClick={() => setRestoreMode("copy")}
+                  className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "copy" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                >
+                  <span className="block font-bold">空库副本恢复</span>
+                  <span className="mt-1 block text-[var(--ui-muted)]">只允许空书架，确认后逐项回读。</span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={restoreMode === "merge"}
+                  onClick={() => setRestoreMode("merge")}
+                  className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "merge" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                >
+                  <span className="block font-bold">合并当前书架</span>
+                  <span className="mt-1 block text-[var(--ui-muted)]">新增项直接加入，内容分歧逐项决定。</span>
+                </button>
+              </div>
+              {restoreMode === "merge" && mergePlan && (
+                <div className="mt-4 space-y-3" aria-label="合并冲突清单">
+                  <p className="text-sm text-[var(--ui-muted)]">
+                    将新增 {mergePlan.summary.addedBooks} 本书、{mergePlan.summary.addedChapters} 章；发现 {mergePlan.conflicts.length} 项内容分歧。
+                  </p>
+                  {mergePlan.conflicts.map((conflict) => (
+                    <fieldset key={conflict.key} className="rounded-xl border border-[var(--ui-border)] p-3">
+                      <legend className="px-1 text-sm font-bold">
+                        {conflict.kind === "settings" ? "阅读设置" : `${conflict.kind} · ${conflict.id}`}
+                      </legend>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(["keep-existing", "use-incoming"] as const).map((choice) => (
+                          <button
+                            key={choice}
+                            type="button"
+                            aria-pressed={mergeResolutions[conflict.key] === choice}
+                            onClick={() => setMergeResolutions((current) => ({ ...current, [conflict.key]: choice }))}
+                            className={`ui-focus-ring min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold ${mergeResolutions[conflict.key] === choice ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                          >
+                            {choice === "keep-existing" ? "保留现有" : "使用备份"}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => void handleConfirmPortableRestore()}
                   className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
                 >
-                  确认恢复到空书架
+                  {restoreMode === "merge" ? "确认合并并校验" : "确认恢复到空书架"}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setRestorePreview(null);
+                    setMergePlan(null);
+                    setMergeResolutions({});
                     setBackupStatus({ state: "idle", message: "已取消恢复，书架未发生变化。" });
                   }}
                   className="ui-focus-ring min-h-11 rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold"

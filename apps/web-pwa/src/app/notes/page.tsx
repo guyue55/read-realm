@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
-import { db } from "@reader/storage-core";
+import {
+  createHumanNotesJsonExport,
+  createHumanNotesMarkdownExport,
+  db,
+} from "@reader/storage-core";
 import type { Bookmark } from "@reader/shared-types";
 import { PageLayout } from "@/components/PageLayout";
 import { EmptyState } from "@/components/EmptyState";
@@ -51,10 +55,48 @@ export default function NotesPage() {
     setBookId("");
   };
 
+  const downloadNotes = async (format: "markdown" | "json") => {
+    const [bookmarks, currentBooks] = await Promise.all([
+      db.bookmarks.toArray(),
+      db.books.toArray(),
+    ]);
+    const createdAt = new Date().toISOString();
+    const content =
+      format === "markdown"
+        ? createHumanNotesMarkdownExport({ books: currentBooks, bookmarks, createdAt })
+        : createHumanNotesJsonExport({ books: currentBooks, bookmarks, createdAt });
+    const extension = format === "markdown" ? "md" : "json";
+    const mediaType = format === "markdown" ? "text/markdown" : "application/json";
+    const url = URL.createObjectURL(new Blob([content], { type: `${mediaType};charset=utf-8` }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `read-realm-notes-${createdAt.slice(0, 10)}.${extension}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <PageLayout title="笔记" subtitle={`${notes.length} 条本地记录`} onBack={() => router.push("/library")} hideSidebar>
       <div className="mx-auto mt-4 w-full max-w-5xl space-y-5">
         <section className="ui-card rounded-lg p-4">
+          <div className="mb-3 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => void downloadNotes("markdown")}
+              disabled={notes.length === 0}
+              className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
+            >
+              导出 Markdown
+            </button>
+            <button
+              type="button"
+              onClick={() => void downloadNotes("json")}
+              disabled={notes.length === 0}
+              className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
+            >
+              导出 JSON
+            </button>
+          </div>
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
             <label className="relative">
               <span className="sr-only">搜索笔记</span>
