@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "phase": "02",
+  "experiment": null,
+  "qualificationExperiment": null,
+  "migrationRisk": "RISK-03",
+  "startedAt": "2026-08-13T02:38:31.132Z",
+  "endedAt": "2026-08-13T02:39:10.575Z",
+  "archivedPreviousReport": null,
+  "repository": {
+    "root": ".",
+    "head": "d1ccbaf644c2e6df77d6b76f62b090028b81baa3",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/migration_gate_contract_test.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/migration_gate_live.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/storage_build.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/storage_test.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/web_lint.txt"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-13T02:38:31.162Z",
+      "endedAt": "2026-08-13T02:38:31.170Z",
+      "durationMs": 8,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/patch_whitespace.txt",
+      "logSha256": "aac701cdacce643be41dcdc9e1390b7d2db26a825e161f922c7c8c536f221327"
+    },
+    {
+      "id": "STORAGE_TEST",
+      "command": "corepack pnpm --filter @reader/storage-core test",
+      "startedAt": "2026-08-13T02:38:31.239Z",
+      "endedAt": "2026-08-13T02:38:32.210Z",
+      "durationMs": 971,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/storage_test.txt",
+      "logSha256": "8a338506f7dde0966dff2c929ee84b2cc24cc0e39129398389b95a1685aca821"
+    },
+    {
+      "id": "STORAGE_BUILD",
+      "command": "corepack pnpm --filter @reader/storage-core build",
+      "startedAt": "2026-08-13T02:38:32.284Z",
+      "endedAt": "2026-08-13T02:38:33.840Z",
+      "durationMs": 1556,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/storage_build.txt",
+      "logSha256": "2e84fb0ed8032e31c62edd6e9ec96612db79a9a8af4dd4ebef34db2091f745d3"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-13T02:38:33.896Z",
+      "endedAt": "2026-08-13T02:38:36.325Z",
+      "durationMs": 2429,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/web_lint.txt",
+      "logSha256": "521fb962a8e8be84ef054ea2c90ac433ec9325ddcdafccf4dacd98d65b2d06d3"
+    },
+    {
+      "id": "MIGRATION_GATE_CONTRACT_TEST",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-migration-run.test.mjs",
+      "startedAt": "2026-08-13T02:38:36.384Z",
+      "endedAt": "2026-08-13T02:38:36.525Z",
+      "durationMs": 141,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/migration_gate_contract_test.txt",
+      "logSha256": "1b1de912d253530d339a88f3b4694e48868260672eed9117a42d9128a790ca7d"
+    },
+    {
+      "id": "MIGRATION_GATE_LIVE",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-migration-gate.mjs RISK-03",
+      "startedAt": "2026-08-13T02:38:36.589Z",
+      "endedAt": "2026-08-13T02:39:10.296Z",
+      "durationMs": 33707,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.records/migration_gate_live.txt",
+      "logSha256": "4975afe7e3c9a6644f564f7ea95be92aea615bf6ecfa0f148ccfeda8e3861f26"
+    }
+  ],
+  "qualification": null,
+  "productGate": null,
+  "migrationGate": {
+    "classification": "PASS",
+    "reasons": [],
+    "observation": {
+      "riskId": "RISK-03",
+      "classification": "PASS",
+      "reasons": [],
+      "prerequisiteValid": true,
+      "listExitCode": 0,
+      "listedTestCount": 1,
+      "buildExitCode": 0,
+      "serviceReady": true,
+      "testExitCode": 0,
+      "portFreeBefore": true,
+      "portFreeAfter": true,
+      "orphanProcessCount": 0,
+      "publicRestored": true,
+      "evidenceRecordsValid": true,
+      "strategy": {
+        "realDexieUpgrade": true,
+        "preUpgradeCompleteSnapshot": true,
+        "idempotentReopen": true,
+        "failedVersionchangeRollback": true,
+        "previousStableReadable": true,
+        "isolatedPwaDestination": true,
+        "explicitProcessGroup": true
+      }
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 6,
+      "failures": []
+    }
+  },
+  "summary": {
+    "passed": true,
+    "passedCount": 6,
+    "failedCount": 0,
+    "trackedMutationCount": 0
+  }
+}

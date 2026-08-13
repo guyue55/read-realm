@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：PHASE-02 / TASK-0207 / RISK-03；在隔离浏览器数据库证明真实 Dexie 升级前完整备份、幂等升级、故障事务回滚和上一稳定版可读，生成 EVID-25 后再复审 PHASE-02。
-- 最近有效提交：a683b4e77eaf5ab38d166710850544c43cd7ac04
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-final.json，SHA-256 `ff273958e72ca28a6e87012a26b448eabe5f59b05efcf4b11df05feb9236a880`，2026-08-13T10:04:41+08:00
-- 当前阻塞：无；GATE-00 与 GATE-01 已通过，但 PHASE-03 依赖的 RISK-03/EVID-25 尚未闭合，因此 PHASE-02 仍执行中、PHASE-03 继续冻结。
-- 停止原因：无；停止 EXP-10/11，转向同阶段剩余迁移门，不把 GATE-01 外推为阶段完成。
+- 当前入口：PHASE-02 / TASK-0207；把真实数据库 `open()` 设为应用启动门，升级失败时展示非技术说明和重试入口，并用隔离浏览器验证失败界面与旧数据仍可读；完成后复审 PHASE-02。
+- 最近有效提交：d1ccbaf644c2e6df77d6b76f62b090028b81baa3
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
+- 当前阻塞：无；GATE-00、GATE-01 与 RISK-03 已通过，但迁移失败文案尚未接入真实启动 UI，PHASE-02 人工检查点未闭合，因此阶段仍执行中、PHASE-03 继续冻结。
+- 停止原因：无；只补阶段人工检查点，不重跑或改写 EVID-25，不开始 PHASE-03。
 - 完成判定：未完成
 
 ## 状态转换
@@ -173,3 +173,12 @@
 - 人工检查：备份/恢复与保存失败提示有可执行下一步；迁移仅冻结写前失败、已回滚、回滚失败三类说明，真实升级 UI 未接入，终局用户评分未执行。
 - 门禁复核：GATE-01 已通过，但 PHASE-03 明确依赖 PHASE-02 完成且 RISK-03 通过；EVID-25 尚未生成。因此阶段汇总记为 `PENDING_RISK_03`，不提前放行。
 - 下一入口：PHASE-02 / TASK-0207；以隔离浏览器数据库闭合真实 Dexie 迁移门并生成 EVID-25。
+
+### RUN-0018 · 2026-08-13T10:39:10+08:00 · PHASE-02 / TASK-0207 / RISK-03
+- 本轮输入：clean@`d1ccbaf644c2e6df77d6b76f62b090028b81baa3`、v9 真实 IndexedDB fixture、v10 Dexie versionchange、完整公开快照契约。
+- 本轮范围：只闭合本地迁移风险门；不运行 GATE-01、新导入扩张、同步或真实用户数据迁移。
+- 实现结果：v10 新增 `migrationBackups` 表；versionchange 事务先读取书、章、进度、书签、来源与文件引用，结合设置生成 v9 完整快照，写入并回读验证后才允许升级提交。存在但损坏的设置会稳定中止，不静默替换为默认值。
+- 正式结果：EVID-25 固定命令 exit 0；真实 v9→v10 升级保留旧数据并生成完整备份，重开不重复改写；损坏设置触发升级失败后原生数据库版本仍为 v9，旧书与正文可读。
+- 活体证据：归档前仅删除 live 日志末尾单个空白行并级联重算 record 与外层 SHA；EVID-25 最终 SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，6/6 records 匹配，migrationGate=`PASS`，3102 前后空闲、孤儿进程 0、public 指纹一致且无个人绝对路径。
+- 状态结论：RISK-03 通过；但 `describeLocalDataMigrationError()` 尚未接应用启动失败界面，人工检查点仍缺真实展示与重试回放，PHASE-02 不提前完成。
+- 下一入口：显式 `db.open()` 启动门 + 用户可见迁移失败说明/重试，隔离浏览器验证后再复审阶段完成。
