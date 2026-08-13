@@ -1,7 +1,12 @@
 import {
   createLocalDataBackup,
+  createPortableBackupPackage,
   db,
+  inspectPortableBackupPackage,
+  parseLocalDataSnapshot,
   restoreLocalDataBackupToEmptyTarget,
+  serializeLocalDataSnapshot,
+  type PortableBackupPreview,
   type LocalDataSnapshotRestoreTarget,
 } from "@reader/storage-core";
 import type { LocalDataSnapshotData } from "@reader/shared-types";
@@ -81,6 +86,41 @@ export async function createBrowserLocalDataBackup(): Promise<string> {
   });
 }
 
+export async function createBrowserPortableDataBackup(): Promise<string> {
+  const serializedSnapshot = await createBrowserLocalDataBackup();
+  return createPortableBackupPackage(parseLocalDataSnapshot(serializedSnapshot));
+}
+
+export async function inspectBrowserPortableDataBackup(
+  serialized: string,
+): Promise<PortableBackupPreview> {
+  try {
+    return await inspectPortableBackupPackage(serialized);
+  } catch (packageError) {
+    try {
+      const snapshot = parseLocalDataSnapshot(serialized);
+      return {
+        contentId: "legacy-local-snapshot-v1",
+        packageVersion: 1,
+        createdAt: snapshot.createdAt,
+        source: snapshot.source,
+        counts: {
+          books: snapshot.data.books.length,
+          chapters: snapshot.data.chapters.length,
+          progress: snapshot.data.progress.length,
+          bookmarks: snapshot.data.bookmarks.length,
+          fileRefs: snapshot.data.fileRefs.length,
+        },
+        restoreModes: ["copy"],
+        warnings: ["这是旧版单快照备份；校验结构有效，但不含包级 SHA-256 manifest。"],
+        snapshot,
+      };
+    } catch {
+      throw packageError;
+    }
+  }
+}
+
 function createBrowserRestoreTarget(): LocalDataSnapshotRestoreTarget {
   const previousSettings: ReaderSettingsState = loadReaderSettings();
 
@@ -139,6 +179,13 @@ export async function restoreBrowserLocalDataBackup(serialized: string) {
   });
 }
 
+export async function restoreBrowserPortableDataBackup(serialized: string) {
+  const preview = await inspectBrowserPortableDataBackup(serialized);
+  return restoreBrowserLocalDataBackup(
+    serializeLocalDataSnapshot(preview.snapshot),
+  );
+}
+
 export function describeLocalDataBackupError(error: unknown): string {
   const value = error instanceof Error ? error.message : String(error);
   if (value === "LOCAL_DATA_BACKUP_EMPTY_LIBRARY") {
@@ -158,6 +205,12 @@ export function describeLocalDataBackupError(error: unknown): string {
   }
   if (value.startsWith("UNSUPPORTED_LOCAL_DATA_SCHEMA_VERSION:")) {
     return "该备份来自更新版本，请升级应用后再恢复。";
+  }
+  if (value.startsWith("UNSUPPORTED_PORTABLE_BACKUP_VERSION:")) {
+    return "该备份包来自更新版本，请升级应用后再恢复。";
+  }
+  if (value.startsWith("PORTABLE_BACKUP_ENTRY_INTEGRITY_MISMATCH:")) {
+    return "备份包内容与校验清单不一致，文件可能不完整或已被修改。";
   }
   if (value.startsWith("LOCAL_DATA_RESTORE_FAILED_CLEANED:")) {
     return "恢复校验失败，已清理本次写入，原空书架未被污染。";

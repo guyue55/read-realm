@@ -98,22 +98,28 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
 
   await page.goto("/#/settings");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载最小完整备份" }).click();
+  await page.getByRole("button", { name: "下载完整备份包" }).click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const backupBuffer = Buffer.concat(chunks);
   const backup = JSON.parse(backupBuffer.toString("utf8"));
+  const restoredSnapshot = JSON.parse(backup.entries["data/local-snapshot-v1.json"]);
   expect(backup).toMatchObject({
+    kind: "read-realm-portable-backup",
+    packageVersion: 1,
+    manifest: { algorithm: "SHA-256", entryCount: 1 },
+  });
+  expect(restoredSnapshot).toMatchObject({
     kind: "read-realm-local-snapshot",
     schemaVersion: 1,
-    source: { databaseVersion: 9 },
+    source: { databaseVersion: 10 },
   });
-  expect(backup.data.books).toHaveLength(1);
-  expect(backup.data.chapters).toHaveLength(2);
-  expect(backup.data.progress[0].chapterIndex).toBe(1);
-  expect(backup.data.bookmarks).toHaveLength(1);
+  expect(restoredSnapshot.data.books).toHaveLength(1);
+  expect(restoredSnapshot.data.chapters).toHaveLength(2);
+  expect(restoredSnapshot.data.progress[0].chapterIndex).toBe(1);
+  expect(restoredSnapshot.data.bookmarks).toHaveLength(1);
 
   const restoreContext = await browser.newContext();
   const restorePage = await restoreContext.newPage();
@@ -124,6 +130,8 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
       mimeType: "application/json",
       buffer: backupBuffer,
     });
+    await expect(restorePage.getByLabel("备份恢复预览")).toBeVisible();
+    await restorePage.getByRole("button", { name: "确认恢复到空书架" }).click();
     await expect(restorePage.getByRole("status")).toContainText("恢复完成：1 本书、2 章、1 条进度");
 
     const [books, chapters, progress, bookmarks] = await Promise.all([
@@ -141,7 +149,7 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
       await restorePage.evaluate(() =>
         JSON.parse(localStorage.getItem("reader-settings") ?? "null"),
       ),
-    ).toEqual(backup.data.settings);
+    ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
     await restorePage.getByText("short-novel", { exact: true }).click();
@@ -212,17 +220,18 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
 
   await page.goto("/#/settings");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载最小完整备份" }).click();
+  await page.getByRole("button", { name: "下载完整备份包" }).click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const backupBuffer = Buffer.concat(chunks);
   const backup = JSON.parse(backupBuffer.toString("utf8"));
-  expect(backup.data.books).toHaveLength(1);
-  expect(backup.data.chapters).toHaveLength(2);
-  expect(backup.data.progress[0].chapterIndex).toBe(1);
-  expect(backup.data.bookmarks).toHaveLength(1);
+  const restoredSnapshot = JSON.parse(backup.entries["data/local-snapshot-v1.json"]);
+  expect(restoredSnapshot.data.books).toHaveLength(1);
+  expect(restoredSnapshot.data.chapters).toHaveLength(2);
+  expect(restoredSnapshot.data.progress[0].chapterIndex).toBe(1);
+  expect(restoredSnapshot.data.bookmarks).toHaveLength(1);
 
   const restoreContext = await browser.newContext();
   const restorePage = await restoreContext.newPage();
@@ -233,6 +242,8 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
       mimeType: "application/json",
       buffer: backupBuffer,
     });
+    await expect(restorePage.getByLabel("备份恢复预览")).toBeVisible();
+    await restorePage.getByRole("button", { name: "确认恢复到空书架" }).click();
     await expect(restorePage.getByRole("status")).toContainText("恢复完成：1 本书、2 章、1 条进度");
     expect((await readStore<StoredProgress>(restorePage, "progress"))[0]?.chapterIndex).toBe(1);
     expect(await readStore(restorePage, "bookmarks")).toHaveLength(1);
@@ -240,7 +251,7 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
       await restorePage.evaluate(() =>
         JSON.parse(localStorage.getItem("reader-settings") ?? "null"),
       ),
-    ).toEqual(backup.data.settings);
+    ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
     await restorePage.getByText("short-novel", { exact: true }).click();
@@ -316,17 +327,18 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
 
   await page.goto("/#/settings");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载最小完整备份" }).click();
+  await page.getByRole("button", { name: "下载完整备份包" }).click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const backupBuffer = Buffer.concat(chunks);
   const backup = JSON.parse(backupBuffer.toString("utf8"));
-  expect(backup.data.books).toHaveLength(1);
-  expect(backup.data.chapters).toHaveLength(2);
-  expect(backup.data.progress[0].chapterIndex).toBe(1);
-  expect(backup.data.bookmarks).toHaveLength(1);
+  const restoredSnapshot = JSON.parse(backup.entries["data/local-snapshot-v1.json"]);
+  expect(restoredSnapshot.data.books).toHaveLength(1);
+  expect(restoredSnapshot.data.chapters).toHaveLength(2);
+  expect(restoredSnapshot.data.progress[0].chapterIndex).toBe(1);
+  expect(restoredSnapshot.data.bookmarks).toHaveLength(1);
 
   const restoreContext = await browser.newContext();
   const restorePage = await restoreContext.newPage();
@@ -337,6 +349,8 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
       mimeType: "application/json",
       buffer: backupBuffer,
     });
+    await expect(restorePage.getByLabel("备份恢复预览")).toBeVisible();
+    await restorePage.getByRole("button", { name: "确认恢复到空书架" }).click();
     await expect(restorePage.getByRole("status")).toContainText("恢复完成：1 本书、2 章、1 条进度");
     expect((await readStore<StoredProgress>(restorePage, "progress"))[0]?.chapterIndex).toBe(1);
     expect(await readStore(restorePage, "bookmarks")).toHaveLength(1);
@@ -344,7 +358,7 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
       await restorePage.evaluate(() =>
         JSON.parse(localStorage.getItem("reader-settings") ?? "null"),
       ),
-    ).toEqual(backup.data.settings);
+    ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
     await restorePage.getByText("固定 EPUB", { exact: true }).click();
@@ -423,18 +437,19 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
 
   await page.goto("/#/settings");
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载最小完整备份" }).click();
+  await page.getByRole("button", { name: "下载完整备份包" }).click();
   const download = await downloadPromise;
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const backupBuffer = Buffer.concat(chunks);
   const backup = JSON.parse(backupBuffer.toString("utf8"));
-  expect(backup.data.books).toHaveLength(1);
-  expect(backup.data.chapters).toHaveLength(2);
-  expect(backup.data.progress[0].chapterIndex).toBe(1);
-  expect(backup.data.bookmarks).toHaveLength(1);
-  const restoredBookId = backup.data.books[0].id;
+  const restoredSnapshot = JSON.parse(backup.entries["data/local-snapshot-v1.json"]);
+  expect(restoredSnapshot.data.books).toHaveLength(1);
+  expect(restoredSnapshot.data.chapters).toHaveLength(2);
+  expect(restoredSnapshot.data.progress[0].chapterIndex).toBe(1);
+  expect(restoredSnapshot.data.bookmarks).toHaveLength(1);
+  const restoredBookId = restoredSnapshot.data.books[0].id;
   expect(restoredBookId).toBe(importedBook.id);
 
   const restoreContext = await browser.newContext();
@@ -446,6 +461,8 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
       mimeType: "application/json",
       buffer: backupBuffer,
     });
+    await expect(restorePage.getByLabel("备份恢复预览")).toBeVisible();
+    await restorePage.getByRole("button", { name: "确认恢复到空书架" }).click();
     await expect(restorePage.getByRole("status")).toContainText(
       "恢复完成：1 本书、2 章、1 条进度",
     );
@@ -455,7 +472,7 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
       await restorePage.evaluate(() =>
         JSON.parse(localStorage.getItem("reader-settings") ?? "null"),
       ),
-    ).toEqual(backup.data.settings);
+    ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
     const restoredCard = restorePage.locator(`[data-book-id="${restoredBookId}"]`);

@@ -49,6 +49,15 @@ export type {
   LocalDataSnapshotRestoreTarget,
   RestoreLocalDataBackupOptions,
 } from "./local-backup-service.js";
+export {
+  createPortableBackupPackage,
+  inspectPortableBackupPackage,
+} from "./portable-backup-package.js";
+export type {
+  PortableBackupManifestEntry,
+  PortableBackupPackageV1,
+  PortableBackupPreview,
+} from "./portable-backup-package.js";
 export type {
   LocalDataMigrationResult,
   LocalDataMigrationStep,

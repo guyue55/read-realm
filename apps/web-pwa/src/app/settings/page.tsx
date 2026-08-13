@@ -14,10 +14,12 @@ import { useVirtualRouter } from "@/lib/route-store";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import {
-  createBrowserLocalDataBackup,
+  createBrowserPortableDataBackup,
   describeLocalDataBackupError,
-  restoreBrowserLocalDataBackup,
+  inspectBrowserPortableDataBackup,
+  restoreBrowserPortableDataBackup,
 } from "@/lib/local-data-backup";
+import type { PortableBackupPreview } from "@reader/storage-core";
 
 export default function SettingsPage() {
   const router = useVirtualRouter();
@@ -36,6 +38,11 @@ export default function SettingsPage() {
     state: "idle" | "working" | "success" | "failed";
     message: string;
   }>({ state: "idle", message: "" });
+  const [restorePreview, setRestorePreview] = useState<{
+    serialized: string;
+    fileName: string;
+    preview: PortableBackupPreview;
+  } | null>(null);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -108,17 +115,18 @@ export default function SettingsPage() {
   const handleCreateBackup = async () => {
     setBackupStatus({ state: "working", message: "正在核对完整本地数据…" });
     try {
-      const serialized = await createBrowserLocalDataBackup();
+      const serialized = await createBrowserPortableDataBackup();
+      const preview = await inspectBrowserPortableDataBackup(serialized);
       const blob = new Blob([serialized], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `read-realm-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.download = `read-realm-portable-backup-${preview.contentId.slice(0, 16)}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
       setBackupStatus({
         state: "success",
-        message: "备份已下载；文件包含已完整缓存的正文与阅读位置。",
+        message: "完整备份包已下载；manifest 已记录版本、条目大小与 SHA-256 校验。",
       });
     } catch (error) {
       setBackupStatus({
@@ -133,13 +141,15 @@ export default function SettingsPage() {
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    setBackupStatus({ state: "working", message: "正在校验备份并恢复到空书架…" });
+    setRestorePreview(null);
+    setBackupStatus({ state: "working", message: "正在逐项校验备份并生成恢复预览…" });
     try {
-      const result = await restoreBrowserLocalDataBackup(await file.text());
-      setSettings(loadReaderSettings());
+      const serialized = await file.text();
+      const preview = await inspectBrowserPortableDataBackup(serialized);
+      setRestorePreview({ serialized, fileName: file.name, preview });
       setBackupStatus({
         state: "success",
-        message: `恢复完成：${result.bookCount} 本书、${result.chapterCount} 章、${result.progressCount} 条进度。`,
+        message: "校验通过；请核对下方影响后再确认恢复，当前尚未写入书架。",
       });
     } catch (error) {
       setBackupStatus({
@@ -148,6 +158,24 @@ export default function SettingsPage() {
       });
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const handleConfirmPortableRestore = async () => {
+    if (!restorePreview) return;
+    setBackupStatus({ state: "working", message: "正在恢复到空书架并逐项回读校验…" });
+    try {
+      const result = await restoreBrowserPortableDataBackup(
+        restorePreview.serialized,
+      );
+      setSettings(loadReaderSettings());
+      setRestorePreview(null);
+      setBackupStatus({
+        state: "success",
+        message: `恢复完成：${result.bookCount} 本书、${result.chapterCount} 章、${result.progressCount} 条进度。`,
+      });
+    } catch (error) {
+      setBackupStatus({ state: "failed", message: describeLocalDataBackupError(error) });
     }
   };
 
@@ -239,7 +267,7 @@ export default function SettingsPage() {
               disabled={backupStatus.state === "working"}
               className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
-              下载最小完整备份
+              下载完整备份包
             </button>
             <label className="ui-focus-ring flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold">
               选择备份恢复
@@ -263,6 +291,49 @@ export default function SettingsPage() {
             >
               {backupStatus.message}
             </p>
+          )}
+          {restorePreview && (
+            <div
+              aria-label="备份恢复预览"
+              className="mt-4 rounded-xl border border-[var(--ui-border)] bg-white/72 p-4"
+            >
+              <h3 className="font-bold">恢复影响预览</h3>
+              <p className="mt-1 break-all text-sm text-[var(--ui-muted)]">
+                {restorePreview.fileName} · 包格式 v{restorePreview.preview.packageVersion}
+              </p>
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+                <div><dt className="text-[var(--ui-muted)]">书籍</dt><dd className="font-bold">{restorePreview.preview.counts.books}</dd></div>
+                <div><dt className="text-[var(--ui-muted)]">章节</dt><dd className="font-bold">{restorePreview.preview.counts.chapters}</dd></div>
+                <div><dt className="text-[var(--ui-muted)]">进度</dt><dd className="font-bold">{restorePreview.preview.counts.progress}</dd></div>
+                <div><dt className="text-[var(--ui-muted)]">书签</dt><dd className="font-bold">{restorePreview.preview.counts.bookmarks}</dd></div>
+                <div><dt className="text-[var(--ui-muted)]">文件引用</dt><dd className="font-bold">{restorePreview.preview.counts.fileRefs}</dd></div>
+              </dl>
+              <p className="mt-3 text-sm text-[var(--ui-muted)]">
+                当前只支持恢复到空书架；合并恢复将在下一任务完成前保持不可用。
+              </p>
+              {restorePreview.preview.warnings.map((warning) => (
+                <p key={warning} className="mt-2 text-sm text-amber-700">{warning}</p>
+              ))}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmPortableRestore()}
+                  className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
+                >
+                  确认恢复到空书架
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRestorePreview(null);
+                    setBackupStatus({ state: "idle", message: "已取消恢复，书架未发生变化。" });
+                  }}
+                  className="ui-focus-ring min-h-11 rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
           )}
         </section>
 
