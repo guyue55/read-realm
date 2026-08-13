@@ -9,6 +9,13 @@ import type {
   TxtChapterIndex,
   LocalChapter,
 } from "@reader/shared-types";
+import {
+  buildPreUpgradeSnapshot,
+} from "./dexie-migration-backup.js";
+import {
+  parseLocalDataSnapshot,
+  serializeLocalDataSnapshot,
+} from "./local-snapshot.js";
 
 export interface ImportTask {
   id: string;
@@ -38,6 +45,14 @@ export interface LocalAIView {
   createdAt: string;
 }
 
+export interface LocalMigrationBackup {
+  id: string;
+  fromVersion: number;
+  toVersion: number;
+  createdAt: string;
+  serializedSnapshot: string;
+}
+
 export class ReaderDatabase extends Dexie {
   books!: Table<Book, string>;
   chapters!: Table<LocalChapter, string>;
@@ -46,6 +61,7 @@ export class ReaderDatabase extends Dexie {
   importTasks!: Table<ImportTask, string>;
   aiViews!: Table<LocalAIView, string>;
   aiUserConfigs!: Table<LocalAIUserConfig, string>;
+  migrationBackups!: Table<LocalMigrationBackup, string>;
 
   librarySources!: Table<LibrarySource, string>;
   libraryFolders!: Table<LibraryFolder, string>;
@@ -101,6 +117,66 @@ export class ReaderDatabase extends Dexie {
       indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
       txtChapterIndices: "chapterId, [bookId+index], bookId, index",
       aiUserConfigs: "id", // 🏮 AI 用户配置加密存储
+    });
+
+    this.version(10).stores({
+      books: "id, title, createdAt, lastReadAt, sourceFolderId",
+      chapters: "id, [bookId+index], bookId, index",
+      progress: "bookId",
+      bookmarks: "id, bookId, chapterIndex",
+      importTasks: "id",
+      aiViews: "id, bookId, chapterIndex, sourceHash",
+      librarySources: "id, type, permissionState, lastScanAt",
+      libraryFolders: "id, parentId, sourceId, relativePath",
+      indexedNovelFiles: "id, sourceId, parentFolderId, relativePath, bookId, status",
+      txtChapterIndices: "chapterId, [bookId+index], bookId, index",
+      aiUserConfigs: "id",
+      migrationBackups: "id, fromVersion, createdAt",
+    }).upgrade(async (transaction) => {
+      const createdAt = new Date().toISOString();
+      const [books, chapters, progress, bookmarks, indexedFiles, sources] =
+        await Promise.all([
+          transaction.table("books").toArray(),
+          transaction.table("chapters").toArray(),
+          transaction.table("progress").toArray(),
+          transaction.table("bookmarks").toArray(),
+          transaction.table("indexedNovelFiles").toArray(),
+          transaction.table("librarySources").toArray(),
+        ]);
+      const snapshot = buildPreUpgradeSnapshot({
+        databaseVersion: 9,
+        createdAt,
+        books,
+        chapters,
+        progress,
+        bookmarks,
+        indexedFiles,
+        sources,
+        settingsValue:
+          typeof window === "undefined"
+            ? null
+            : window.localStorage.getItem("reader-settings"),
+      });
+      const serializedSnapshot = serializeLocalDataSnapshot(snapshot);
+      const backup: LocalMigrationBackup = {
+        id: "pre-upgrade-v9-to-v10",
+        fromVersion: 9,
+        toVersion: 10,
+        createdAt,
+        serializedSnapshot,
+      };
+      const backupTable = transaction.table("migrationBackups");
+      await backupTable.put(backup);
+      const readback = await backupTable.get(backup.id);
+      if (
+        !readback ||
+        readback.serializedSnapshot !== serializedSnapshot ||
+        serializeLocalDataSnapshot(
+          parseLocalDataSnapshot(readback.serializedSnapshot),
+        ) !== serializedSnapshot
+      ) {
+        throw new Error("LOCAL_DATA_MIGRATION_BACKUP_VERIFICATION_FAILED");
+      }
     });
 
     // 挂载 Dexie AOP 拦截 Hook：当用户进行任何增删改书籍、进度或书签操作时，

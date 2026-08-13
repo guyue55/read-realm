@@ -1,6 +1,6 @@
 export { default as Dexie } from "dexie";
 export { db, ReaderDatabase, backupMetadataToStorage, checkAndRestoreFromBackup, executeStorageGarbageCollection, setTransactionWriting, executeSafeWriteTransaction } from "./db.js";
-export type { ImportTask, MetaShelfBackup } from "./db.js";
+export type { ImportTask, LocalMigrationBackup, MetaShelfBackup } from "./db.js";
 export type { LocalChapter } from "@reader/shared-types";
 export {
   parseLocalDataSnapshot,
@@ -20,6 +20,11 @@ export {
   createDefaultLocalDataMigrations,
   runRecoverableLocalDataMigration,
 } from "./local-data-migration.js";
+export {
+  buildPreUpgradeSnapshot,
+  describeLocalDataMigrationError,
+} from "./dexie-migration-backup.js";
+export type { PreUpgradeSnapshotInput } from "./dexie-migration-backup.js";
 export {
   createLocalDataBackup,
   restoreLocalDataBackupToEmptyTarget,
