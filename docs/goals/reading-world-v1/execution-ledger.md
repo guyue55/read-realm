@@ -5,12 +5,12 @@
 - 当前控制修订：REV-0002
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
-- 当前阶段 ID：PHASE-02
-- 当前入口：PHASE-02 / TASK-0207；把真实数据库 `open()` 设为应用启动门，升级失败时展示非技术说明和重试入口，并用隔离浏览器验证失败界面与旧数据仍可读；完成后复审 PHASE-02。
-- 最近有效提交：d1ccbaf644c2e6df77d6b76f62b090028b81baa3
+- 当前阶段 ID：PHASE-03
+- 当前入口：PHASE-03 / TASK-0301；冻结 TXT/EPUB/文件夹/合法 URL 导入任务状态机、容量 fixtures、取消/重试与草稿恢复合同，先实现阶段检查器真实命令再扩张 UI。
+- 最近有效提交：a249d5139bee1f0382d7b974387a404f0ab07628
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
-- 当前阻塞：无；GATE-00、GATE-01 与 RISK-03 已通过，但迁移失败文案尚未接入真实启动 UI，PHASE-02 人工检查点未闭合，因此阶段仍执行中、PHASE-03 继续冻结。
-- 停止原因：无；只补阶段人工检查点，不重跑或改写 EVID-25，不开始 PHASE-03。
+- 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
+- 停止原因：无；从 PHASE-03 / TASK-0301 继续，EVID-17/EVID-25 与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -22,6 +22,7 @@
 - RUN-0006：保持执行中；PHASE-01 执行中 -> 完成，PHASE-02 就绪待执行 -> 执行中。依据：attempt-03 遗留路径已修复，5/5 JSON、30/30 records 独立复算匹配，安全预检 22/22 Green，执行期 `--mode resume` exit 0，独立结论 READY；GATE-01 仍未过门。
 - RUN-0011：执行中 -> BLOCKED_DESIGN_REVIEW_REQUIRED；依据：REV-0001 下 GATE-01 的 EXP-01/02/03 三次差异化实验均有独立失败证据 EVID-27/28/29，达到 3/3 自动熔断条件；未经用户批准新 REV 不得恢复。
 - RUN-0012：BLOCKED_DESIGN_REVIEW_REQUIRED -> 执行中；依据：用户批准 REV-0002 与 ACT-07，触发门 GATE-01，授权证据 DEC-14/EVID-44。旧 TRY-01/02/03 与 EVID-27/28/29 永久保留，先执行 GATE-00，未经资格放行不得执行新产品实验。
+- RUN-0019：保持执行中；PHASE-02 执行中 -> 完成，PHASE-03 就绪待执行 -> 执行中。依据：EVID-45、EVID-17、EVID-25、阶段 JSON 与审查均可复算；真实迁移失败说明与重试在 clean@`a249d5139bee1f0382d7b974387a404f0ab07628` 活体通过。Goal 与终局人工体验仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -181,4 +182,12 @@
 - 正式结果：EVID-25 固定命令 exit 0；真实 v9→v10 升级保留旧数据并生成完整备份，重开不重复改写；损坏设置触发升级失败后原生数据库版本仍为 v9，旧书与正文可读。
 - 活体证据：归档前仅删除 live 日志末尾单个空白行并级联重算 record 与外层 SHA；EVID-25 最终 SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，6/6 records 匹配，migrationGate=`PASS`，3102 前后空闲、孤儿进程 0、public 指纹一致且无个人绝对路径。
 - 状态结论：RISK-03 通过；但 `describeLocalDataMigrationError()` 尚未接应用启动失败界面，人工检查点仍缺真实展示与重试回放，PHASE-02 不提前完成。
-- 下一入口：显式 `db.open()` 启动门 + 用户可见迁移失败说明/重试，隔离浏览器验证后再复审阶段完成。
+- 下一入口：数据库显式启动门 + 用户可见迁移失败说明/重试，隔离浏览器验证后再复审阶段完成。
+
+### RUN-0019 · 2026-08-13T11:03:00+08:00 · PHASE-02 收束 / PHASE-03 启动
+- 本轮输入：EVID-45、EVID-17、EVID-25、clean@`a249d5139bee1f0382d7b974387a404f0ab07628` 与 PHASE-02 三份阶段报告。
+- 本轮范围：只闭合迁移失败人工检查点并同步阶段状态；不实现 PHASE-03 功能、不部署、不触及真实用户数据。
+- 实现结果：`RouteProvider` 在业务视图前等待数据库打开；升级失败显示明确说明与 44px 重试按钮。隔离浏览器点击重试后仍安全失败，数据库保持 v9、旧书与正文可读。
+- 验证结果：全仓 208 tests、完整禁用 PWA 写入 build、Web/API lint、启动门静态合同、真实迁移 UI 回放、逐文件安全预检与副作用检查通过；EVID-25 保持 SHA `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，未重跑或改写。
+- 状态结论：PHASE-02 完成；PHASE-03 进入执行中。只证明本地数据骨架、早期纵切与迁移门，不证明 PHASE-03~09、终局人工体验或 Goal 完成。
+- 下一入口：PHASE-03 / TASK-0301；先冻结导入任务状态机与容量 fixtures，再实现可重放检查器合同。
