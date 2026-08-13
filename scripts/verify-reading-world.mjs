@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   classifyGateRun,
+  normalizeMachinePaths,
   parseQualificationObservation,
   verifyEvidenceRecords,
 } from "./gate-qualification.mjs";
@@ -41,9 +42,9 @@ function parseArguments(argv) {
 }
 
 function commandText(command, args) {
-  return [command, ...args]
+  return normalizeMachinePaths([command, ...args]
     .map((part) => (/^[A-Za-z0-9_./:=@{},*+-]+$/.test(part) ? part : JSON.stringify(part)))
-    .join(" ");
+    .join(" "), homedir());
 }
 
 function runCapture(command, args, options = {}) {
@@ -274,9 +275,9 @@ function phaseTwoExperimentChecks(experiment) {
 }
 
 function phaseTwoQualificationChecks(qualification) {
-  if (qualification !== "EXP-08") {
+  if (qualification !== "EXP-12") {
     throw new Error(
-      `PHASE-02 GATE-00 当前只放行 EXP-08；${qualification ?? "缺少资格实验 ID"} 不可执行`,
+      `PHASE-02 GATE-00 当前只放行 EXP-12；${qualification ?? "缺少资格实验 ID"} 不可执行`,
     );
   }
   return [
@@ -332,12 +333,14 @@ function main() {
     throw new Error("--output 必须位于仓库内");
   }
 
+  // 所有入口校验必须早于证据归档或目录创建，避免非法重放移动历史 ATTEMPT。
+  const checks = checksFor(args.phase, args.experiment, args.qualification);
+
   const logDirectory = `${outputPath.slice(0, -5)}.records`;
   const archivedPreviousReport = archivePreviousReport(outputPath, logDirectory);
   mkdirSync(dirname(outputPath), { recursive: true });
   mkdirSync(logDirectory, { recursive: true });
 
-  const checks = checksFor(args.phase, args.experiment, args.qualification);
   const startedAt = new Date().toISOString();
   const results = [];
 
