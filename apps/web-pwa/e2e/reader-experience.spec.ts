@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-async function readProgress(page: import("@playwright/test").Page) {
-  return await page.evaluate(async () => {
+async function readProgress(
+  page: import("@playwright/test").Page,
+  bookId = "pagination-e2e-book",
+) {
+  return await page.evaluate(async (targetBookId) => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("ReaderDatabase");
       request.onsuccess = () => resolve(request.result);
@@ -12,7 +15,7 @@ async function readProgress(page: import("@playwright/test").Page) {
     try {
       return await new Promise<{ chapterIndex: number; characterOffset: number }>((resolve, reject) => {
         const request = database.transaction("progress", "readonly")
-          .objectStore("progress").get("pagination-e2e-book");
+          .objectStore("progress").get(targetBookId);
         request.onsuccess = () => resolve({
           chapterIndex: request.result?.chapterIndex ?? -1,
           characterOffset: request.result?.characterOffset ?? 0,
@@ -22,7 +25,7 @@ async function readProgress(page: import("@playwright/test").Page) {
     } finally {
       database.close();
     }
-  });
+  }, bookId);
 }
 
 test("mobile pagination advances one page before changing chapters and restores its anchor", async ({ page }) => {
@@ -179,4 +182,148 @@ test("mobile pagination advances one page before changing chapters and restores 
     timeout: 5_000,
   }).toBe(1);
   await expect(mobileCanvas.getByRole("heading", { name: "第二章" })).toBeVisible();
+});
+
+test("continuous scroll keeps an active three-chapter window while moving both directions", async ({ page }) => {
+  await page.goto("/#/library");
+  await page.evaluate(async () => {
+    localStorage.setItem("reader-settings", JSON.stringify({
+      fontFamily: "kaiti",
+      fontSize: 18,
+      lineHeight: 1.7,
+      theme: "paper",
+      pageMode: "scroll",
+      uiMode: "default",
+      paragraphSpacing: 16,
+      letterSpacing: 0.03,
+      autoFlipAtBottom: false,
+    }));
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("ReaderDatabase");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(
+          ["books", "chapters", "progress", "bookmarks"],
+          "readwrite",
+        );
+        for (const name of ["books", "chapters", "progress", "bookmarks"]) {
+          transaction.objectStore(name).clear();
+        }
+        const now = "2026-08-14T02:55:00.000Z";
+        const toc = Array.from({ length: 20 }, (_, index) => ({
+          index,
+          title: `第 ${index + 1} 章`,
+        }));
+        transaction.objectStore("books").put({
+          id: "scroll-window-e2e-book",
+          title: "滚动窗口纵切",
+          sourceType: "upload",
+          format: "txt",
+          status: "reading",
+          tags: [],
+          chapterCount: toc.length,
+          toc,
+          parseStatus: "parsed",
+          cacheStatus: "chapters_full",
+          sourceAvailability: "full_cached",
+          createdAt: now,
+          updatedAt: now,
+        });
+        for (const item of toc) {
+          transaction.objectStore("chapters").put({
+            id: `scroll-window-chapter-${item.index}`,
+            bookId: "scroll-window-e2e-book",
+            index: item.index,
+            title: item.title,
+            content: `章节锚点 ${item.index} ${"正文段落".repeat(180)}`,
+          });
+        }
+        transaction.objectStore("progress").put({
+          bookId: "scroll-window-e2e-book",
+          chapterId: "scroll-window-chapter-0",
+          chapterIndex: 0,
+          offset: 0,
+          paragraphIndex: 0,
+          characterOffset: 0,
+          percentage: 0,
+          updatedAt: now,
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally {
+      database.close();
+    }
+  });
+
+  await page.goto("/#/reader/scroll-window-e2e-book");
+  const mobileCanvas = page.locator('[data-reader-content-canvas="mobile"]');
+  const chapterNodes = mobileCanvas.locator(".chapter-container");
+  await expect(chapterNodes).toHaveCount(2, { timeout: 15_000 });
+
+  const waitForWindow = async (expected: number[]) => {
+    await expect.poll(async () => chapterNodes.evaluateAll((nodes) =>
+      nodes.map((node) => Number((node as HTMLElement).dataset.chapterIndex)),
+    ), { timeout: 15_000 }).toEqual(expected);
+    expect(await chapterNodes.count()).toBeLessThanOrEqual(3);
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+  };
+  const scrollToChapter = async (index: number) => {
+    await mobileCanvas.locator(`[data-chapter-index="${index}"]`).evaluate((node) => {
+      const chapterElement = node as HTMLElement;
+      const container = chapterElement.closest(
+        '[data-reader-content-canvas="mobile"]',
+      ) as HTMLElement | null;
+      if (!container) throw new Error("SCROLL_CONTAINER_NOT_FOUND");
+      const previousBehavior = container.style.scrollBehavior;
+      container.style.scrollBehavior = "auto";
+      container.scrollTop = chapterElement.offsetTop;
+      requestAnimationFrame(() => {
+        container.style.scrollBehavior = previousBehavior;
+      });
+    });
+  };
+
+  for (let index = 1; index <= 11; index += 1) {
+    await scrollToChapter(index);
+    await waitForWindow([index - 1, index, index + 1]);
+  }
+  await expect.poll(async () => (
+    await readProgress(page, "scroll-window-e2e-book")
+  ).chapterIndex).toBe(11);
+
+  for (let index = 10; index >= 8; index -= 1) {
+    await scrollToChapter(index);
+    await waitForWindow([index - 1, index, index + 1]);
+  }
+  await expect.poll(async () => (
+    await readProgress(page, "scroll-window-e2e-book")
+  ).chapterIndex).toBe(8);
+  await expect(mobileCanvas.getByText("章节锚点 8", { exact: false })).toBeVisible();
+
+  const savedAtChapterEight = await readProgress(page, "scroll-window-e2e-book");
+  await page.reload();
+  await expect.poll(async () => (
+    await readProgress(page, "scroll-window-e2e-book")
+  )).toEqual(savedAtChapterEight);
+  await waitForWindow([7, 8, 9]);
+  await expect(mobileCanvas.getByText("章节锚点 8", { exact: false })).toBeVisible();
+
+  const tocButton = page.locator("button:visible").filter({ hasText: "目录" }).first();
+  await tocButton.focus();
+  await page.keyboard.press("Enter");
+  const targetChapterButton = page.locator("button:visible").filter({ hasText: "第 18 章" });
+  await targetChapterButton.focus();
+  await page.keyboard.press("Enter");
+  await waitForWindow([16, 17, 18]);
+  await expect.poll(async () => (
+    await readProgress(page, "scroll-window-e2e-book")
+  ).chapterIndex).toBe(17);
+  await expect(mobileCanvas.getByText("章节锚点 17", { exact: false })).toBeVisible();
 });
