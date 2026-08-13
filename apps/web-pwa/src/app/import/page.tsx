@@ -14,7 +14,6 @@ import { useEffect, useRef, useState } from "react";
 import { FolderPreviewTree } from "@/components/FolderPreviewTree";
 import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/services/FolderScanService";
 import { createStreamingImportSession } from "@/features/import/streaming-import-session";
-import { buildCompatibleImportTask } from "@/features/import/compatible-import-storage";
 import { createDurableImportTaskController } from "@/features/import/durable-import-task";
 import {
   commitDurableImportResult,
@@ -254,34 +253,6 @@ export default function ImportPage() {
       const buffer = await file.arrayBuffer();
 
       setStatus("启动解析引擎...");
-      const fallbackBuffer = buffer.slice(0);
-
-      if (type === "epub") {
-        setStatus("正在兼容模式解析 EPUB...");
-        const { parseEpubBook } = await import("@reader/parser-core/epub-parser");
-        const parsedBook = await parseEpubBook(file.name, buffer);
-        await durableImportController.transition(durableTaskId, {
-          type: "parsing",
-          totalChapters: parsedBook.chapters.length,
-        });
-        const task = buildCompatibleImportTask({
-          parsedBook,
-          format: "epub",
-          taskId: durableTaskId,
-          bookId: draft.bookMetadata.id,
-          createId,
-        });
-        await durableImportController.transition(durableTaskId, {
-          type: "progress",
-          receivedChapters: task.chapters.length,
-        });
-        await durableImportController.attachParsedResult(durableTaskId, task);
-        setStatus("EPUB 解析并校验完成！");
-        setIsProcessing(false);
-        activeTaskIdRef.current = null;
-        router.push(`/import/preview/${durableTaskId}`);
-        return;
-      }
 
       const worker = createParserWorker(type);
       workerRef.current = worker;
@@ -361,51 +332,9 @@ export default function ImportPage() {
         workerRef.current = null;
         messageQueue = messageQueue.then(async () => {
           if (cancelledTaskIdsRef.current.has(durableTaskId)) return;
-          try {
-            setStatus("后台解析不可用，正在使用兼容模式...");
-            const { parseTxtBook } = await import("@reader/parser-core/txt-parser");
-            const parsed = parseTxtBook(file.name, fallbackBuffer);
-            const current = await durableImportController.recover(durableTaskId);
-            if (current.lifecycle.state === "reading") {
-              await durableImportController.transition(durableTaskId, {
-                type: "parsing",
-                totalChapters: parsed.chapters.length,
-              });
-            }
-            const now = new Date().toISOString();
-            const chapters = parsed.chapters.map((chapter, index) => ({
-              id: createId(),
-              bookId: draft.bookMetadata.id,
-              index,
-              title: chapter.title || `第 ${index + 1} 章`,
-              content: chapter.content,
-              wordCount: chapter.content.length,
-              createdAt: now,
-              updatedAt: now,
-            }));
-            await durableImportController.transition(durableTaskId, {
-              type: "progress",
-              receivedChapters: chapters.length,
-            });
-            await durableImportController.attachParsedResult(durableTaskId, {
-              bookMetadata: {
-                ...draft.bookMetadata,
-                title: parsed.title,
-                chapterCount: chapters.length,
-                wordCount: chapters.reduce((total, chapter) => total + chapter.content.length, 0),
-                updatedAt: now,
-              },
-              chapters,
-            });
-            setStatus("兼容解析完成，草稿已校验保存！");
-            setIsProcessing(false);
-            activeTaskIdRef.current = null;
-            router.push(`/import/preview/${durableTaskId}`);
-          } catch (fallbackError) {
-            await failTask(fallbackError || event.message, "FALLBACK_PARSE_FAILED");
-            setStatus(`解析异常，草稿已保留，可重试：${describeAppError(fallbackError || event.message)}`);
-            setIsProcessing(false);
-          }
+          await failTask(event.message, "WORKER_CRASHED");
+          setStatus(`解析引擎异常，草稿已保留，可重试：${describeAppError(event.message)}`);
+          setIsProcessing(false);
         });
       };
 

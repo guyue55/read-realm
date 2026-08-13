@@ -1,7 +1,7 @@
 import JSZip from "jszip";
-import DOMPurify from "isomorphic-dompurify";
 import { DOMParser } from "@xmldom/xmldom";
 import type { ParsedBook, ParsedChapter } from "./txt-parser";
+import { sanitizeWorkerSafeHtml } from "./worker-safe-html-sanitizer";
 
 export async function parseEpubBook(
   filename: string,
@@ -143,47 +143,7 @@ export async function parseEpubBook(
     const rawHtml = await chapterFile.async("text");
 
     // 4. Sanitize HTML
-    const cleanHtml = DOMPurify.sanitize(rawHtml, {
-      ALLOWED_TAGS: [
-        "p",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "div",
-        "span",
-        "br",
-        "b",
-        "i",
-        "strong",
-        "em",
-        "u",
-        "s",
-        "sub",
-        "sup",
-        "img",
-        "a",
-        "blockquote",
-        "pre",
-        "code",
-        "ul",
-        "ol",
-        "li",
-        "table",
-        "thead",
-        "tbody",
-        "tr",
-        "td",
-        "th",
-        "hr",
-        "dl",
-        "dt",
-        "dd",
-      ],
-      ALLOWED_ATTR: ["src", "alt", "href", "title", "class", "id", "style"],
-    });
+    const cleanHtml = sanitizeWorkerSafeHtml(rawHtml);
 
     const rawHrefFilename = rawHref.includes("/") ? rawHref.substring(rawHref.lastIndexOf("/") + 1) : rawHref;
     let chapterTitle = tocMap[rawHref] || tocMap[rawHrefFilename];

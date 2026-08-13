@@ -211,3 +211,13 @@
 - 旁路事实：API `start:prod` 因运行时找不到直接依赖 `express` 退出；生产 Web 回放使用仅服务 `/ai/status` 的本机健康桩且旅程不调用 API。因此本轮不宣称 API 生产启动通过，缺口留待 PHASE-08/09 生产硬化。
 - 状态结论：PHASE-03 与 TASK-0301 仍执行中；文件夹任务语义、200MB TXT、500MB EPUB、1 万章、中断/配额活体与阶段检查器尚未闭合。
 - 下一入口：PHASE-03 / TASK-0301；定义目录扫描/预览/索引提交任务，再建立内容寻址容量 fixtures 与故障注入合同。
+
+### RUN-0022 · 2026-08-13T13:15:00+08:00 · PHASE-03 / TASK-0301 容量与 Worker 安全子切片
+- 本轮输入：批量/URL checkpoint `9b312f2d6df25ce5b8b5120700c77db7d24a6432`、REQ-02 的 200MB TXT / 500MB EPUB / 1 万章门槛、格式专属 Worker 路径。
+- 本轮范围：只闭合可重放容量 fixture、主线程响应与 Worker-safe EPUB 净化；不扩张备份/同步/阅读 UI，不修改 EVID-17 或历史 ATTEMPT。
+- 候选失败链：TXT 首次因 fixture 末尾截断 UTF-8 字符而只识别 1 章，修复生成器后通过；EPUB 首次因 DOMPurify 在 Worker 初始化访问未定义实例而进入可重试失败，替换为 XML DOM 允许列表净化后通过。两类都是实现候选因果，不计 GATE-01 三次设计实验。
+- 活体容量：TXT `209746702` bytes / 10000 章 / SHA `9a3ffff13fd14eefccf8cf1529930651a3a5994f5c5061266353d16480962670`；EPUB `524289552` bytes / 1 章 / SHA `e3643a62a441383bc3fd2052c6c346185c5826a8ba8c91bde36be324655ba461`。系统 Chrome 最终精确枚举 2/2，串行通过 40.3 秒，心跳与 IndexedDB 耐久章数全部匹配。
+- 安全边界：EPUB 净化的 script、事件属性、危险 URL、iframe 与 style 否定测试通过；单文件 Worker 崩溃不再退回主线程整本复制/解析，而是保留可重试耐久草稿。fixture 清理只允许对 SHA/size 全部校验且无外来文件的生成器自有目录执行。
+- 验证结果：fixture 合同 4/4、工作区 231 tests、Web/API 非写入 lint、无 PWA 写入生产构建、diff 校验与 resume 控制复算全部通过。控制包 38/38 Green；本轮文件的 Yellow 仅来自合法 URL/IndexedDB/API namespace 字面量与恶意输入否定测试，人工复核无凭证、执行下载或新增外传。
+- 状态结论：容量子切片通过；PHASE-03 与 TASK-0301 仍执行中，不声称 EVID-03 FINAL、文件夹、故障注入或 Goal 完成。
+- 下一入口：PHASE-03 / TASK-0301；先实现目录扫描/预览/索引提交的耐久任务，再闭合配额、权限丢失和 Worker 终止的故障注入与阶段检查器。
