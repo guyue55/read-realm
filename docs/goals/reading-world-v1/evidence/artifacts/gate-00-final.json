@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "gateId": "GATE-00",
+  "result": "PASS",
+  "generatedAt": "2026-08-13T01:31:36.346Z",
+  "evidenceCommit": "5ba6284dcc1acf8216db128f39b282669748e5bf",
+  "sourceAttempt": {
+    "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.json",
+    "sha256": "12b2a107155bf24e57bcef838712529757153309f3b97ac24c9b6fb1167eb5b7",
+    "implementationHead": "425efaea499d0c8a059758b676e48941539314ba",
+    "qualificationExperiment": "EXP-12"
+  },
+  "verifiedOutcomes": {
+    "listedTestCount": 1,
+    "targetCount": 1,
+    "buildExitCode": 0,
+    "testExitCode": 0,
+    "serviceReady": true,
+    "portFreeBefore": true,
+    "portFreeAfter": true,
+    "orphanProcessCount": 0,
+    "publicRestored": true,
+    "strategy": {
+      "stableRender": true,
+      "isolatedPwaDestination": true,
+      "explicitProcessGroup": true
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 3,
+      "failures": []
+    }
+  },
+  "boundary": "仅证明 GATE-01 验证基础设施可判定、可补偿且证据可复算；不证明 GATE-01、PHASE-02 或 Goal 完成。"
+}
