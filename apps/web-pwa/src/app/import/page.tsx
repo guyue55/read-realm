@@ -1195,7 +1195,7 @@ export default function ImportPage() {
                       {status}
                     </div>
                     {(isProcessing || canRetrySingleImport) && (
-                      <div className="relative z-10 flex flex-wrap justify-center gap-2">
+                      <div className="pointer-events-auto relative z-20 flex flex-wrap justify-center gap-2">
                         {canRetrySingleImport && retryFileRef.current && (
                           <button
                             type="button"
@@ -1231,7 +1231,7 @@ export default function ImportPage() {
                 accept=".txt,.epub"
                 onChange={handleFileUpload}
                 disabled={isProcessing}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
               />
             </label>
           )}

@@ -185,10 +185,18 @@ const APP_ERROR_MESSAGES: Record<string, string> = {
   NETWORK_OFFLINE: "网络不可用，请检查后再试。",
   TASK_TIMEOUT: "任务执行超时，已自动中止。",
   TASK_CANCELLED: "任务已被取消。",
+  FORCED_WORKER_TERMINATION: "后台解析引擎已中断。请先点击“立即重试”；若再次失败，请重新选择原文件。",
+};
+
+const BROWSER_ERROR_MESSAGES: Record<string, string> = {
+  QuotaExceededError: "本地存储空间不足。请释放浏览器空间或删除不需要的本地缓存，然后使用原草稿重试。",
+  NotAllowedError: "本地目录权限已拒绝或失效。请重新选择并授权原目录，任务草稿会继续保留。",
 };
 
 export function describeAppError(err: unknown): string {
   if (err instanceof Error) {
+    const browserMessage = BROWSER_ERROR_MESSAGES[err.name];
+    if (browserMessage) return browserMessage;
     const mapped = APP_ERROR_MESSAGES[err.message];
     return mapped ?? err.message;
   }

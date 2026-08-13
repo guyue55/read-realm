@@ -13,6 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { commitDurableImportResult } from "@/features/import/durable-import-commit";
+import { describeAppError } from "@/lib/i18n";
 
 export default function PreviewPage({
   params,
@@ -160,7 +161,7 @@ export default function PreviewPage({
       } catch (statusError) {
         console.error("[Import] 保存失败状态无法落盘:", statusError);
       }
-      setValidationMessage(`保存失败，解析草稿仍在，可重试：${message}`);
+      setValidationMessage(`保存失败，解析草稿仍在，可重试：${describeAppError(e)}`);
       savingRef.current = false;
       setSaving(false);
     }
