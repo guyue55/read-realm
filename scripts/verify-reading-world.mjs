@@ -21,6 +21,10 @@ import {
   parseQualificationObservation,
   verifyEvidenceRecords,
 } from "./gate-qualification.mjs";
+import {
+  classifyProductGateRun,
+  parseProductGateObservation,
+} from "./gate-product-run.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -214,9 +218,9 @@ function phaseOneChecks() {
 }
 
 function phaseTwoExperimentChecks(experiment) {
-  if (!["EXP-01", "EXP-02", "EXP-03"].includes(experiment)) {
+  if (experiment !== "EXP-09") {
     throw new Error(
-      `PHASE-02 当前只放行 EXP-01/EXP-02/EXP-03；${experiment ?? "缺少实验 ID"} 不可执行`,
+      `PHASE-02 REV-0002 当前只放行 EXP-09；${experiment ?? "缺少实验 ID"} 不可执行`,
     );
   }
   return [
@@ -249,27 +253,19 @@ function phaseTwoExperimentChecks(experiment) {
       ],
     },
     {
+      id: "PRODUCT_GATE_CONTRACT_TEST",
+      command: process.execPath,
+      args: ["--test", "scripts/gate-product-run.test.mjs"],
+    },
+    {
       id: "GATE_01_VERTICAL_SLICE",
-      command: "corepack",
-      args: [
-        "pnpm",
-        "--filter",
-        "web-pwa",
-        "exec",
-        "playwright",
-        "test",
-        "e2e/gate-01.spec.ts",
-        "--config",
-        "playwright.gate-01.config.ts",
-        "--grep",
-        experiment,
-      ],
+      command: process.execPath,
+      args: ["scripts/run-gate-01-product.mjs", experiment],
       env: {
         CI: "1",
         PLAYWRIGHT_BROWSER_CHANNEL:
           process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome",
       },
-      compensateDirectory: "apps/web-pwa/public",
     },
   ];
 }
@@ -454,13 +450,46 @@ function main() {
       recordVerification,
     };
   }
+  let productGate = null;
+  if (args.experiment) {
+    const productCheck = results.find((result) => result.id === "GATE_01_VERTICAL_SLICE");
+    let observation;
+    try {
+      const productLog = readFileSync(resolve(repoRoot, productCheck.logPath), "utf8");
+      observation = parseProductGateObservation(productLog);
+    } catch (error) {
+      observation = {
+        prerequisiteValid: false,
+        listExitCode: 1,
+        listedTestCount: 0,
+        buildExitCode: 1,
+        serviceReady: false,
+        testExitCode: productCheck?.exitCode ?? 1,
+        portFreeBefore: false,
+        portFreeAfter: false,
+        orphanProcessCount: 1,
+        publicRestored: false,
+        observationError: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const recordVerification = verifyEvidenceRecords({ checks: results }, (path) => {
+      const absolute = resolve(repoRoot, path);
+      return existsSync(absolute) ? readFileSync(absolute) : null;
+    });
+    productGate = {
+      ...classifyProductGateRun({ ...observation, evidenceRecordsValid: recordVerification.valid }),
+      observation,
+      recordVerification,
+    };
+  }
   const passed = results.every(
     (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
-  ) && (!qualification || qualification.classification === "QUALIFIED");
+  ) && (!qualification || qualification.classification === "QUALIFIED")
+    && (!productGate || productGate.classification === "PASS");
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision: args.qualification ? "REV-0002" : "REV-0001",
+    controlRevision: args.qualification || args.experiment ? "REV-0002" : "REV-0001",
     phase: args.phase,
     experiment: args.experiment ?? null,
     qualificationExperiment: args.qualification ?? null,
@@ -481,6 +510,7 @@ function main() {
       "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
     checks: results,
     qualification,
+    productGate,
     summary: {
       passed,
       passedCount: results.filter(
