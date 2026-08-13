@@ -29,6 +29,10 @@ async function fixedEpub(): Promise<ArrayBuffer> {
       <h1 onclick="steal()">第一章</h1><p>清晨，林舟。</p>
       <script>window.stolen = true</script>
       <a href="javascript:steal()">危险链接</a>
+      <a href="data:text/html,&lt;script&gt;steal()&lt;/script&gt;">危险数据链接</a>
+      <iframe src="https://attacker.invalid/"></iframe>
+      <img src="https://tracker.invalid/pixel.gif" alt="远程跟踪" />
+      <p style="background:url(javascript:steal())">仍需保留的正文</p>
     </body></html>`,
   );
   zip.file(
@@ -56,6 +60,10 @@ describe("epub parser", () => {
     ]);
     expect(parsed.chapters[0]?.content).toContain("清晨，林舟。");
     expect(parsed.chapters[1]?.content).toContain("傍晚，林舟。");
-    expect(parsed.chapters[0]?.content).not.toMatch(/script|onclick|javascript:/i);
+    expect(parsed.chapters[0]?.content).toContain("仍需保留的正文");
+    expect(parsed.chapters[0]?.content).not.toMatch(
+      /script|onclick|javascript:|data:text\/html|iframe|style=/i,
+    );
+    expect(parsed.chapters[0]?.content).not.toContain("https://tracker.invalid");
   });
 });
