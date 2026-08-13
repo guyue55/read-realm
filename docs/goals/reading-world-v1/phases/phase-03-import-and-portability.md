@@ -2,7 +2,7 @@
 
 - Goal ID：GOAL-READING-WORLD-V1
 - 阶段 ID：PHASE-03
-- 状态：就绪待执行
+- 状态：执行中
 - 阶段目标：让大文件导入、解析预览、任务恢复、完整备份恢复和人读导出成为稳定正式能力。
 - 稳定输入：PHASE-02 数据契约与迁移门、合法 TXT/EPUB/文件夹/URL fixtures、容量压力样本。
 - 依赖：PHASE-02 完成且 RISK-03 通过。

@@ -3,9 +3,9 @@
   "goalId": "GOAL-READING-WORLD-V1",
   "controlRevision": "REV-0002",
   "phase": "02",
-  "result": "PENDING_RISK_03",
-  "generatedAt": "2026-08-13T10:04:41+08:00",
-  "evidenceCommit": "a683b4e77eaf5ab38d166710850544c43cd7ac04",
+  "result": "PASS",
+  "generatedAt": "2026-08-13T11:03:00+08:00",
+  "evidenceCommit": "a249d5139bee1f0382d7b974387a404f0ab07628",
   "inputs": [
     {
       "path": "docs/goals/reading-world-v1/reports/phase-02-data-contract.md",
@@ -17,7 +17,7 @@
     },
     {
       "path": "docs/goals/reading-world-v1/reports/phase-02-migration-safety.md",
-      "sha256": "09252e2be25fc354b3a50dedb13252f1908069b43ebe3358a7681213d51e8a08"
+      "sha256": "4ac020fb5d2d2966dc018e0fa8a78246edd825c4a2e26488d29d773ac1c2fa6e"
     },
     {
       "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-final.json",
@@ -30,6 +30,18 @@
     {
       "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-final.json",
       "sha256": "ff273958e72ca28a6e87012a26b448eabe5f59b05efcf4b11df05feb9236a880"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json",
+      "sha256": "724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91"
+    },
+    {
+      "path": "apps/web-pwa/src/components/RouteProvider.tsx",
+      "sha256": "423229d7c28133050eb34e4e3635b4081f9c78139e991fb33ec4556227189f4e"
+    },
+    {
+      "path": "apps/web-pwa/e2e/migration-gate.spec.ts",
+      "sha256": "e6a46d0fb067b0c2ec3b3db73793762f177b00a9ee0557ab48cad7d75ac072f2"
     }
   ],
   "deliverables": {
@@ -40,7 +52,8 @@
     "previousStableSnapshotCompatibility": true,
     "gate00Qualified": true,
     "gate01Passed": true,
-    "risk03FinalPassed": false
+    "risk03FinalPassed": true,
+    "migrationFailureUiLive": true
   },
   "liveAcceptance": {
     "fixture": "fixed-two-chapter.epub.base64",
@@ -58,15 +71,14 @@
     "reviewer": "explicit-agent",
     "backupAndRestoreCopy": "PASS",
     "progressFailureCopy": "PASS",
-    "migrationFailureCopyContract": "PASS_WITH_BOUNDARY",
-    "boundary": "迁移内核尚未接入真实浏览器启动升级；本阶段只冻结错误类别与下一步说明，不声称迁移失败 UI 已在生产入口展示。终局用户体验评分仍未执行。"
+    "migrationFailureCopyContract": "PASS",
+    "boundary": "真实启动门已在业务视图前等待数据库打开；失败说明与重试通过隔离浏览器回放。终局用户体验五项评分仍未执行。"
   },
   "remainingBoundaries": [
-    "EVID-25 终局迁移门证据仍待首次真实 schema 转换入口与隔离浏览器回放重采。",
     "大文件、多格式、合并恢复和人读导出属于 PHASE-03。",
     "阅读舒适度、手机与桌面长期阅读属于 PHASE-04。",
     "生产冷启离线、升级和配额异常属于 PHASE-06。",
     "同步、跨环境与终局人工体验均未完成。"
   ],
-  "nextEntry": "PHASE-02 / TASK-0207：在隔离浏览器数据库证明真实 Dexie 升级前完整备份、幂等升级、故障事务回滚和上一稳定版可读，生成 EVID-25 后再复审阶段完成。"
+  "nextEntry": "PHASE-03 / TASK-0301：冻结导入任务状态机与容量 fixtures；不得把 PHASE-02 风险门外推为完整导入、阅读体验或 Goal 完成。"
 }
