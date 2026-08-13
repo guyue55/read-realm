@@ -221,3 +221,13 @@
 - 验证结果：fixture 合同 4/4、工作区 231 tests、Web/API 非写入 lint、无 PWA 写入生产构建、diff 校验与 resume 控制复算全部通过。控制包 38/38 Green；本轮文件的 Yellow 仅来自合法 URL/IndexedDB/API namespace 字面量与恶意输入否定测试，人工复核无凭证、执行下载或新增外传。
 - 状态结论：容量子切片通过；PHASE-03 与 TASK-0301 仍执行中，不声称 EVID-03 FINAL、文件夹、故障注入或 Goal 完成。
 - 下一入口：PHASE-03 / TASK-0301；先实现目录扫描/预览/索引提交的耐久任务，再闭合配额、权限丢失和 Worker 终止的故障注入与阶段检查器。
+
+### RUN-0023 · 2026-08-13T13:50:00+08:00 · PHASE-03 / TASK-0301 文件夹耐久任务子切片
+- 本轮输入：容量 checkpoint `b84ec096c068f78be3f42d488ca57b6e3b766269`、页面内非耐久目录扫描与四表手写事务、File System Access 句柄落库路径。
+- 本轮范围：只闭合目录扫描进度、中断/重新授权、显式放弃与原子元数据提交；不改目录懒加载阅读机制，不外推为 OS 权限、故障注入、EVID-03 或 PHASE-03 完成。
+- 实现结果：新增 folder 扫描进度与 `restart` 转换；刷新后不伪造预览存活，必须重新授权并在同 task ID 上 attempt+1 重扫；同会话提交失败保留 preview 可直接重试；放弃转 cancelled。预览树先在事务外纯计算为四组写入计划，事务内用固定 bulk 写与 `saving/completed` 原子提交。
+- 失败谱系：前两次真实 Chrome 提交因递归 async 闭包跨越 Dexie 生命周期而报 `Transaction committed too early`，产品正确回滚并保留可重试失败；改为纯计算 + bulk 事务。一次 Chrome context 启动超时与一次 native handle 跨进程序列化为 `{}` 均是 VALIDATOR_INDETERMINATE，不计产品失败。本轮不是 GATE-01 新设计实验，不改写其 ATTEMPT 计数。
+- 活体结果：系统 Chrome 使用原生 OPFS directory/file handles 与真实 IndexedDB，仅注入选择器返回值；最终 2/2 通过 30.5 秒。首条从 preview 回读 2 文件/2 目录扫描进度，提交后 source handle、逻辑文件夹、2 书壳、2 索引与 completed 任务同时存在；第二条刷新 preview 后以同 task ID / attempt+1 重新授权、重扫和提交。工作区 237 tests（逐包 4+10+17+10+52+43+31+70）、Web/API lint、无 PWA 写入生产构建和 diff 校验均通过。OS 选择器/权限撤销/重新授权仍是人工检查点。
+- 控制与安全：resume 复算通过；控制包 Yellow 只因报告中的 IndexedDB `open()` 字面量。本轮六文件四个 Green，导入页的 `https://` 与 E2E 的 `open()` 经人工复核分别是合法 URL 边界与 IndexedDB 探针，无凭证、下载执行或新增外传；3100/4100 补偿后无监听。
+- 状态结论：文件夹耐久任务子切片通过；TASK-0301 和 PHASE-03 仍执行中，不生成 FINAL 证据。
+- 下一入口：PHASE-03 / TASK-0301；闭合存储配额不足、真实目录权限丢失和 Worker 强制终止的 UI 故障注入，再固化 PHASE-03 检查器。

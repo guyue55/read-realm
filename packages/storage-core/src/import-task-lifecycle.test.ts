@@ -145,8 +145,128 @@ describe("durable import task lifecycle", () => {
       .toThrow("IMPORT_TASK_TRANSITION_FORBIDDEN:cancelled:retry");
   });
 
+  it("allows a user to abandon a completed folder preview explicitly", () => {
+    const queued = createImportTaskDraft({
+      id: "folder-task",
+      filename: "本地书库",
+      format: "unknown",
+      sourceKind: "folder",
+      now,
+    });
+    const preview = transitionImportTask(
+      transitionImportTask(
+        transitionImportTask(queued, { type: "reading", at: now }),
+        { type: "parsing", at: now, totalChapters: null },
+      ),
+      { type: "preview", at: now },
+    );
+    const cancelled = transitionImportTask(preview, {
+      type: "cancelled",
+      at: now,
+      reason: "用户放弃目录预览",
+    });
+
+    expect(cancelled.lifecycle).toMatchObject({
+      state: "cancelled",
+      canRetry: false,
+      errorCode: "TASK_CANCELLED",
+    });
+  });
+
   it("rejects illegal state jumps instead of fabricating success", () => {
     expect(() => transitionImportTask(draft(), { type: "preview", at: now }))
       .toThrow("IMPORT_TASK_TRANSITION_FORBIDDEN:queued:preview");
+  });
+
+  it("tracks a folder scan independently from chapter parsing and retries a completed scan", () => {
+    const queued = createImportTaskDraft({
+      id: "folder-task",
+      filename: "本地书库",
+      format: "unknown",
+      sourceKind: "folder",
+      now,
+    });
+    const scanning = transitionImportTask(
+      transitionImportTask(queued, { type: "reading", at: now }),
+      { type: "parsing", at: now, totalChapters: null },
+    );
+    const progressed = transitionImportTask(scanning, {
+      type: "scanProgress",
+      at: now,
+      scannedFiles: 8,
+      scannedDirectories: 3,
+    });
+    const preview = transitionImportTask(progressed, { type: "preview", at: now });
+    const failed = transitionImportTask(preview, {
+      type: "failed",
+      at: now,
+      errorCode: "FOLDER_COMMIT_FAILED",
+      errorMessage: "配额不足",
+    });
+    const retried = transitionImportTask(failed, { type: "retry", at: now });
+
+    expect(preview.lifecycle).toMatchObject({
+      state: "preview",
+      progress: { scannedFiles: 8, scannedDirectories: 3, scanCompleted: true },
+    });
+    expect(retried.lifecycle).toMatchObject({ state: "preview", attempt: 2 });
+  });
+
+  it("rejects decreasing folder scan progress", () => {
+    const scanning = transitionImportTask(
+      transitionImportTask(createImportTaskDraft({
+        id: "folder-task",
+        filename: "本地书库",
+        format: "unknown",
+        sourceKind: "folder",
+        now,
+      }), { type: "reading", at: now }),
+      { type: "parsing", at: now, totalChapters: null },
+    );
+    const progressed = transitionImportTask(scanning, {
+      type: "scanProgress",
+      at: now,
+      scannedFiles: 8,
+      scannedDirectories: 3,
+    });
+
+    expect(() => transitionImportTask(progressed, {
+      type: "scanProgress",
+      at: now,
+      scannedFiles: 7,
+      scannedDirectories: 3,
+    })).toThrow("IMPORT_TASK_SCAN_PROGRESS_INVALID");
+  });
+
+  it("restarts a failed folder scan after refresh without claiming the lost preview survived", () => {
+    const queued = createImportTaskDraft({
+      id: "folder-task",
+      filename: "本地书库",
+      format: "unknown",
+      sourceKind: "folder",
+      now,
+    });
+    const preview = transitionImportTask(
+      transitionImportTask(
+        transitionImportTask(queued, { type: "reading", at: now }),
+        { type: "parsing", at: now, totalChapters: null },
+      ),
+      { type: "preview", at: now },
+    );
+    const failed = transitionImportTask(preview, {
+      type: "failed",
+      at: now,
+      errorCode: "FOLDER_COMMIT_FAILED",
+      errorMessage: "配额不足",
+    });
+    const restarted = transitionImportTask(failed, { type: "restart", at: now });
+
+    expect(restarted.lifecycle).toMatchObject({
+      state: "queued",
+      attempt: 2,
+      canRetry: false,
+      progress: { receivedChapters: 0, totalChapters: null },
+    });
+    expect(restarted.lifecycle.progress.scanCompleted).toBeUndefined();
   });
 });

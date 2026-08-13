@@ -54,3 +54,21 @@
 - 容量子切片已通过，但文件夹目录扫描/预览/索引提交仍未统一到耐久任务语义。
 - 尚未以真实 UI 故障注入闭合存储配额不足、文件权限丢失、Worker 强制终止后的取消/重试/草稿恢复。
 - 下一入口：继续 TASK-0301，先实现文件夹耐久目录任务，再建立三类故障注入和 PHASE-03 检查器合同。
+
+## 追加：文件夹耐久任务子切片
+
+- 文件夹不再是脱离导入状态机的页面内操作：目录选择后先创建 `sourceKind=folder / format=unknown` 耐久草稿，再进入 reading/parsing；扫描文件数与目录数单调落盘，完整扫描后才进入 preview。
+- 中途离页、刷新或权限错误会转成带原因的可重试 `failed`。由于原生句柄与预览树不被伪造为“刷新后仍在内存”，重新授权同名目录时使用专用 `restart`：保留同一 task ID 和 attempt 谱系，但清空扫描进度并真实重扫。同会话提交失败则可保留完整预览直接重试。
+- 用户“清空放弃”会显式把 queued/reading/parsing/preview/failed 目录任务标记为 cancelled，不删原目录，不留无解释悬空草稿。
+- 初始两次真实 Chrome 候选都在扫描/preview 后正确进入可重试失败，页面显示 `Transaction committed too early`；根因是目录递归写入通过任意 async 闭包跨越 Dexie transaction 生命周期。两次失败 trace 被后续 Playwright 默认路径覆盖，因此只作执行账本中的候选因果，不冒充可复算 FINAL 证据。
+- 最终机制先在事务外将预览树纯计算为 `source/folders/books/indexedFiles` 不可变写入计划，再在单一 Dexie transaction 中执行四组固定 bulk 写入和 `preview -> saving -> completed`。配额或任意元数据写失败时整个事务回滚，不伪造 completed。
+- 系统 Chrome 最终 `2 passed (30.5s)`：在页面内以 Chrome 原生 OPFS 创建可结构化克隆的真实 directory/file handles，仅将系统选择器入口注入为返回该句柄；第一条验证异步目录迭代、文件元数据、IndexedDB 句柄落库、扫描计数、一个 source、一个逻辑文件夹、两本书壳、两条索引与 completed 任务同时存在；第二条真实刷新 preview，验证同 task ID 在 attempt+1 后重新授权、重扫并提交完成。
+- 提交前工作区回归为 237 tests（逐包计数 4+10+17+10+52+43+31+70）、Web/API 非写入 lint、无 PWA 写入生产构建与 `git diff --check` 全部 exit 0；统一串行命令的 Playwright 末尾输出因工具会话关闭未捕获，随后单独重放两条用例取得明确 2/2 与 exit 0，不借用未捕获输出做结论。
+- resume 控制包复算通过。控制包 Yellow 仅来自本报告如实记录 IndexedDB `open()`；六个本轮实现/测试文件中四个 Green，导入页 Yellow 为既有合法 URL `https://` 校验，E2E Yellow 为 IndexedDB `open()` 探针；人工复核无凭证、下载执行或新增外传。
+- 一次重放在 Chrome `browser.newContext` 前超过默认 30 秒，分类 `VALIDATOR_INDETERMINATE`；另一次已证明产品 completed，但验证器将原生 handle 跨进程序列化成 `{}`，改为在浏览器内提取 `kind/name` 标量后通过。二者均不计产品/设计失败。
+- 证据边界：OPFS 是对浏览器 File System Access 句柄、扫描与落库的等价自动化，不代表真实 OS 目录选择器、权限撤销或重新授权人工体验已通过；这些仍是 TASK-0301/PHASE-03 人工检查点。
+
+## 文件夹子切片后的下一入口
+
+- TASK-0301 继续执行；下一入口是存储配额不足、真实目录权限丢失与 Worker 强制终止的 UI 故障注入，然后固化 PHASE-03 检查器。
+- 本子切片不生成 EVID-03 FINAL，不声称真实 OS 权限人工检查、TASK-0301、PHASE-03 或 Goal 完成。

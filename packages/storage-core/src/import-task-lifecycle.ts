@@ -11,7 +11,7 @@ export type ImportTaskState =
   | "cancelled";
 
 export type ImportSourceKind = "file" | "folder" | "url";
-export type ImportFormat = "txt" | "epub" | "html";
+export type ImportFormat = "txt" | "epub" | "html" | "unknown";
 
 export interface ImportTaskLifecycle {
   state: ImportTaskState;
@@ -27,6 +27,9 @@ export interface ImportTaskLifecycle {
   progress: {
     receivedChapters: number;
     totalChapters: number | null;
+    scannedFiles?: number;
+    scannedDirectories?: number;
+    scanCompleted?: boolean;
   };
   errorCode?: string;
   errorMessage?: string;
@@ -55,12 +58,14 @@ export type ImportTaskTransition =
   | { type: "reading"; at: string }
   | { type: "parsing"; at: string; totalChapters: number | null }
   | { type: "progress"; at: string; receivedChapters: number }
+  | { type: "scanProgress"; at: string; scannedFiles: number; scannedDirectories: number }
   | { type: "preview"; at: string }
   | { type: "saving"; at: string }
   | { type: "completed"; at: string }
   | { type: "failed"; at: string; errorCode: string; errorMessage: string }
   | { type: "cancelled"; at: string; reason: string }
-  | { type: "retry"; at: string };
+  | { type: "retry"; at: string }
+  | { type: "restart"; at: string };
 
 function titleFromFilename(filename: string) {
   return filename.replace(/\.[^/.]+$/, "").trim() || "未命名导入";
@@ -154,9 +159,40 @@ export function transitionImportTask(
       progress: { ...task.lifecycle.progress, receivedChapters: action.receivedChapters },
     });
   }
+  if (action.type === "scanProgress") {
+    if (state !== "parsing" || task.lifecycle.source.kind !== "folder") {
+      return forbidden(state, action.type);
+    }
+    const previousFiles = task.lifecycle.progress.scannedFiles ?? 0;
+    const previousDirectories = task.lifecycle.progress.scannedDirectories ?? 0;
+    if (
+      !Number.isInteger(action.scannedFiles) ||
+      !Number.isInteger(action.scannedDirectories) ||
+      action.scannedFiles < previousFiles ||
+      action.scannedDirectories < previousDirectories
+    ) {
+      throw new Error("IMPORT_TASK_SCAN_PROGRESS_INVALID");
+    }
+    return next({
+      ...task.lifecycle,
+      progress: {
+        ...task.lifecycle.progress,
+        scannedFiles: action.scannedFiles,
+        scannedDirectories: action.scannedDirectories,
+        scanCompleted: false,
+      },
+    });
+  }
   if (action.type === "preview") {
     if (state !== "parsing") return forbidden(state, action.type);
-    return next({ ...task.lifecycle, state: "preview", canRetry: false });
+    return next({
+      ...task.lifecycle,
+      state: "preview",
+      canRetry: false,
+      progress: task.lifecycle.source.kind === "folder"
+        ? { ...task.lifecycle.progress, scanCompleted: true }
+        : task.lifecycle.progress,
+    });
   }
   if (action.type === "saving") {
     if (state !== "preview") return forbidden(state, action.type);
@@ -182,7 +218,7 @@ export function transitionImportTask(
     });
   }
   if (action.type === "cancelled") {
-    if (!["queued", "reading", "parsing"].includes(state)) {
+    if (!["queued", "reading", "parsing", "preview", "failed"].includes(state)) {
       return forbidden(state, action.type);
     }
     return next({
@@ -207,16 +243,21 @@ export function transitionImportTask(
         (chapter, index) =>
           chapter.bookId === task.bookMetadata.id && chapter.index === index,
       );
-    if (hasCompleteResult) {
+    const hasCompleteFolderScan =
+      task.lifecycle.source.kind === "folder" &&
+      task.lifecycle.progress.scanCompleted === true;
+    if (hasCompleteResult || hasCompleteFolderScan) {
       return next({
         ...retryLifecycle,
         state: "preview",
         attempt: task.lifecycle.attempt + 1,
         canRetry: false,
-        progress: {
-          receivedChapters: task.chapters.length,
-          totalChapters: task.chapters.length,
-        },
+        progress: hasCompleteResult
+          ? {
+              receivedChapters: task.chapters.length,
+              totalChapters: task.chapters.length,
+            }
+          : task.lifecycle.progress,
       });
     }
     return {
@@ -236,5 +277,25 @@ export function transitionImportTask(
       chapters: [],
     };
   }
-  return forbidden(state, action);
+  if (action.type === "restart") {
+    if (state !== "failed" || task.lifecycle.source.kind !== "folder") {
+      return forbidden(state, action.type);
+    }
+    const {
+      errorCode: _errorCode,
+      errorMessage: _errorMessage,
+      ...restartLifecycle
+    } = task.lifecycle;
+    return {
+      ...next({
+        ...restartLifecycle,
+        state: "queued",
+        attempt: task.lifecycle.attempt + 1,
+        canRetry: false,
+        progress: { receivedChapters: 0, totalChapters: null },
+      }),
+      chapters: [],
+    };
+  }
+  throw new Error(`IMPORT_TASK_TRANSITION_UNREACHABLE:${state}`);
 }
