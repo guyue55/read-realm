@@ -201,3 +201,13 @@
 - 安全与控制：执行期 resume 检查通过；控制包 37/37 Green，九个关键实现文件逐项 Green；导入页因既有合法 URL 协议字面量为人工复核 Yellow，无新增外传、密钥或权限扩张。
 - 状态结论：PHASE-03 保持执行中；本记录只证明 TASK-0301 的单文件子切片，不证明文件夹/URL、200MB TXT、500MB EPUB、1 万章、EVID-03 或 PHASE-03 完成。
 - 下一入口：PHASE-03 / TASK-0301；统一文件夹/合法 URL 任务端口，随后生成容量 fixtures、故障注入和可重放阶段检查器。
+
+### RUN-0021 · 2026-08-13T12:35:00+08:00 · PHASE-03 / TASK-0301 批量与合法 URL 子切片
+- 本轮输入：单文件 checkpoint `6e539a2af81cdc42585e3678192a69633d340892`、批量生产主线程/开发 Worker 分裂、URL 旧一次性 `add` 路径和预览页手写事务。
+- 本轮范围：统一批量与合法 URL 的耐久任务及书架提交语义；不把文件夹目录索引伪装成全文解析，不生成容量完成结论，不修改既有 GATE-01 证据。
+- 实现结果：抽出原子 `commitDurableImportResult` 端口并由预览与批量共用；批量与 URL 均在读取/请求前建档，失败保留；URL 保存合法来源；生产/开发都用 Worker；TXT 与 EPUB Worker 拆分依赖边界。
+- 失败与因果链：首次 Chrome 候选中 URL 通过，批量 0/2，两个任务均安全停在 `failed`，trace 定位共享 Worker 将 TXT 与 EPUB/XML 打入同一运行时并触发 `bind` 初始化异常。第二种机制拆为格式专属 Worker 后，开发 Chrome 2/2、生产 Web Chrome 2/2 均通过；首次失败产物保留，未计为 GATE 风险门实验。
+- 验证结果：全工作区 231 tests、Web lint、API 非写入 lint、完整禁用 PWA 写入 build、类型检查和 `git diff --check` 通过；开发与生产 Web 的批量两本/合法 URL 回放均通过，完成任务只留零章轻量历史。
+- 旁路事实：API `start:prod` 因运行时找不到直接依赖 `express` 退出；生产 Web 回放使用仅服务 `/ai/status` 的本机健康桩且旅程不调用 API。因此本轮不宣称 API 生产启动通过，缺口留待 PHASE-08/09 生产硬化。
+- 状态结论：PHASE-03 与 TASK-0301 仍执行中；文件夹任务语义、200MB TXT、500MB EPUB、1 万章、中断/配额活体与阶段检查器尚未闭合。
+- 下一入口：PHASE-03 / TASK-0301；定义目录扫描/预览/索引提交任务，再建立内容寻址容量 fixtures 与故障注入合同。
