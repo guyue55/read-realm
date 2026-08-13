@@ -1,0 +1,30 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-qualification.test.mjs
+started_at=2026-08-13T00:57:46.695Z
+ended_at=2026-08-13T00:57:46.792Z
+duration_ms=97
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+✔ 只统计精确实验 ID 的 Playwright 枚举项 (0.728333ms)
+✔ 所有资格条件可靠且浏览器通过时返回 QUALIFIED (0.5ms)
+✔ 目标定位歧义必须归类为验证器不可判定 (0.079708ms)
+✔ 枚举、构建或服务健康失败必须归类为验证器不可判定 (0.110417ms)
+✔ 端口、孤儿进程、补偿或证据任一失效都不可判为产品失败 (0.118875ms)
+✔ 只有设施可靠时的非零浏览器退出才可归类为 PRODUCT_FAILURE (0.079041ms)
+✔ 证据记录要求路径唯一、文件存在且 SHA-256 全匹配 (0.81275ms)
+✔ 目录指纹绑定相对路径与文件字节且不受遍历顺序影响 (1.446666ms)
+✔ 资格观察只接受单一带标记 JSON 行 (0.949375ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 60.154666
+
+[stderr]
