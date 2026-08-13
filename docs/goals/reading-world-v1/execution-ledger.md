@@ -6,7 +6,7 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-03
-- 当前入口：PHASE-03 / TASK-0301 真实 OS 目录权限人工检查；自动化与阶段检查器已闭合导入子域，检查器总体 FAIL 仅因 TASK-0302~0304 的备份恢复/导出产物尚未实现。人工检查后转 TASK-0302。
+- 当前入口：PHASE-03 / TASK-0301 真实 OS 目录权限人工检查；当前因 Mac 锁屏暂停，用户手动解锁后从同一入口重放。自动化与阶段检查器已闭合导入子域，检查器总体 FAIL 仅因 TASK-0302~0304 的备份恢复/导出产物尚未实现。人工检查后转 TASK-0302。
 - 最近有效提交：a249d5139bee1f0382d7b974387a404f0ab07628
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
 - 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
@@ -251,3 +251,11 @@
 - 独立复算：报告绑定 clean@`000adfea7ea74c0316eba729ea187afdf5578fef`；12/12 records 存在且 SHA-256 与外层 JSON 匹配；full fixture 已清理，3100/4100 无监听，所有检查 `trackedWorktreeMutated=false`。
 - 状态结论：TASK-0301 的自动化/检查器范围闭合，但真实 OS 目录选择、撤权和重新授权仍是人工检查点；TASK-0301、PHASE-03 和 Goal 均不标记完成，不生成 EVID-03 FINAL。
 - 下一入口：先完成 TASK-0301 真实 OS 权限人工检查；通过后从 TASK-0302 建立带 manifest、版本、逐项校验和恢复预览的完整备份包。
+
+### RUN-0026 · 2026-08-13T15:05:00+08:00 · TASK-0301 真实 OS 权限检查暂停
+- 本轮输入：clean@`5ccf510f58c44904d4b91da9ab8fbf92824aca9e`、computer-use 原生 Mac/Chrome 操作合同、仓库忽略目录 `.tmp/manual-folder-permission` 中两份无敏感测试 TXT。
+- 本轮范围：只计划在系统 Chrome 中使用原生目录选择器完成选择 -> 撤权 -> 重新授权，不选择用户真实书库，不用 Playwright/OPFS 等价注入替代人工结论。
+- 暂停事实：computer-use 在首次只读 Chrome 状态前返回“Mac is locked and automatic unlock could not unlock it”；尚未点击、选择、授权或改变任何 OS/Chrome 权限，不得记为通过、失败或设计实验。
+- 副作用补偿：本地 Web/API 开发服务已停止，3001/4100 无监听；隔离 fixture 保留以便 `verify_before_repeat`，不属于用户真实阅读数据且被 Git 忽略。
+- 状态结论：这是 `human_required` 环境暂停，不是 `BLOCKED_DESIGN_REVIEW_REQUIRED`，不增加任何设计门 ATTEMPT 计数；TASK-0301、PHASE-03 和 Goal 仍未完成。
+- 恢复入口：用户手动解锁 Mac 后回复“已解锁，继续”；先确认 3001/4100 空闲和 fixture 仍在，重启本地服务，再按 computer-use 合同从 Chrome 只读状态继续。
