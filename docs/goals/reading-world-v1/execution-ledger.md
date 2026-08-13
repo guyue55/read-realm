@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-03
-- 当前入口：PHASE-03 / TASK-0303；实现合并/副本恢复的冲突计划、隔离写入/失败回滚与书签笔记 Markdown/JSON 人读导出。TASK-0302 的版本化完整包、逐项 SHA-256、旧快照兼容和恢复预览已通过；阶段检查器仍因 TASK-0303~0304 与阶段审查未完成而总体 FAIL。
-- 最近有效提交：70aeeb0
+- 当前入口：PHASE-03 / TASK-0304；落实合法 URL/自配 Provider 合规边界、手动刷新与默认关闭的定时检查，并完成阶段审查与 EVID-03/04/05/16 候选收束。TASK-0303 的显式冲突合并、补偿回滚和 Markdown/JSON 导出已通过。
+- 最近有效提交：9c6fd75
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
 - 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
-- 停止原因：无；从 PHASE-03 / TASK-0303 继续，EVID-17/EVID-25、TASK-0301 活体记录、TASK-0302 包合同与历史 ATTEMPT 均不可覆盖。
+- 停止原因：无；从 PHASE-03 / TASK-0304 继续，EVID-17/EVID-25、TASK-0301 活体记录、TASK-0302 包合同、TASK-0303 合并/导出合同与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -289,3 +289,23 @@
 - 提交记录：TASK-0302 产品切片 `70aeeb0`；未 push。
 - 状态结论：TASK-0302 完成；只证明完整包、逐项校验、恢复预览与空库副本恢复，不证明 TASK-0303 合并/导出、TASK-0304 Provider、EVID-04 FINAL、PHASE-03 或 Goal 完成。
 - 下一入口：PHASE-03 / TASK-0303；先用纯函数生成 merge/copy 恢复计划与冲突清单，再实现隔离事务/回滚和书签笔记 Markdown/JSON 导出。
+
+### RUN-0030 · 2026-08-13T23:46:00+08:00 · PHASE-03 / TASK-0303 合并恢复与人读导出
+- 本轮输入：TASK-0302 checkpoint `70aeeb0`、公开本地快照契约、空库恢复端口与 REQ-03/04 的合并、回滚和 Markdown/JSON 承诺。
+- TDD 与实现：先观察 merge plan、执行服务和人读导出三个模块缺失 RED；随后实现新增/相同/冲突/进度前进计划，未解决冲突不返回结果；执行前读取完整旧快照，写后完整回读，失败恢复旧快照并再次验证，回滚失败保留双错误。storage-core 最终 63 tests 通过。
+- 合并语义：新 ID 直接加入；同 ID 且公开内容相同跳过；书、章、书签、文件引用与设置的真实内容分歧必须逐项选择“保留现有/使用备份”；进度只采用更晚 `updatedAt`。比较先递归键排序并通过公开 schema 归一化，避免字段插入顺序或数据库私有扩展字段制造虚假冲突。
+- 活体失败链：首次 Chrome 合并旅程把书、两章、书签误报 4 项冲突，先修稳定指纹；第二次仍误报两章，根因是数据库对象含公开快照外扩展字段，改为双方公开 schema 归一化；第三次产品已正确只剩 1 项书名冲突，但 Next 空路由 announcer 造成 `role=alert` 歧义，收紧到精确错误文案。最终合并/导出单旅程 `1 passed (23.7s)`，完整备份 2/2 `2 passed (29.0s)`。
+- 人读导出：笔记页可下载稳定 UTF-8 Markdown/JSON；只含书名、章节、位置、摘录、笔记和时间，Markdown 转义结构字符并逐行引用摘录。活体检查可打开、书名正确，且不含本机路径或 Provider Key 模式。
+- 门禁与副作用：全工作区 260 tests、无 PWA 写入生产构建编译与类型阶段、Web/API 非写入 lint、控制包 resume、diff 均通过；11 个关键文件安全预检 Green。3100/4100 无监听，`public/sw.js` blob 与 HEAD 同为 `94df47777cded246a6787c4816daaed6cffdd055`。
+- 提交记录：TASK-0303 产品切片 `9c6fd75`；未 push。
+- 状态结论：TASK-0303 完成；只证明显式冲突合并、补偿回滚与人读导出，不证明 TASK-0304 Provider、EVID-04/05 FINAL、PHASE-03 或 Goal 完成。
+- 下一入口：PHASE-03 / TASK-0304；先审计现有 URL/Provider 入口与持久化状态，再落实合法来源边界、手动刷新、默认关闭的定时检查和阶段复审。
+
+### RUN-0031 · 2026-08-14T00:04:28+08:00 · PHASE-03 / TASK-0304 Provider 边界候选
+- 本轮输入：TASK-0303 checkpoint `9c6fd75`、DEC-07/REQ-15、既有浏览器直读后任意错误自动转后端代理的 URL 实现，以及用户“合法来源、稳定但不越界”的既定范围。
+- TDD 与实现：先新增 URL 策略测试并观察 3 项缺失 RED；实现仅 HTTP(S)、禁止内嵌账号密码、显式权利确认、默认关闭且仅允许 6/12/24/72/168 小时的检查间隔、到期判定和差异预览。导入任务/书籍公开 schema 持久化授权时间、检查偏好、最近检查与预览，不依赖浏览器私有 localStorage。
+- 访问边界：浏览器仅在 `TypeError` 网络/CORS 失败时使用本机 API 读取公开页面；超时、空正文、动态渲染、登录、付费、验证码和反爬均直接停止。API body 再次要求 `rightsConfirmed: true`，拒绝私网/重定向私网/内嵌凭据，并使用诚实的 `ReadRealm` User-Agent，不伪装通用浏览器。
+- 刷新语义：书籍详情提供手动检查；可选周期检查默认关闭，仅在用户打开详情且间隔到期时运行。检查只比较远端书名/章节数并写 `sourceCheckPreview`，不覆盖书名、目录或章节正文；旧 URL 书没有权利确认记录时拒绝检查并要求重新导入。
+- 活体与失败链：策略单测 7/7、API SSRF/凭据测试 5/5。首个 Playwright 命令误用未安装的 bundled Chromium，3 项均在启动前 `VALIDATOR_INDETERMINATE`；改用既定系统 Chrome channel。反爬用例首次因完成状态只在 processing 时渲染而不可见，修正为稳定 `role=status` 后 1/1 通过。手动检查用例首次从书架标题误入阅读器而找不到详情按钮，改按持久化 book ID 进入详情；最终 URL 全文件 4/4 通过 42.4 秒，其中登录/验证码未调用后端、手动预览后章节计数不变。
+- 静态门与安全：Web lint、API 非写入 lint、Web/API 类型检查、diff 均通过；11 个改动实现文件中 7 个 Green，4 个 Yellow 仅命中合法测试 URL、IndexedDB `open()` 和正则 `.exec()`，逐项人工复核无凭证、无下载执行、无新增数据外传。3100/4100 已释放。
+- 证据边界：本记录只证明 TASK-0304 产品候选；EVID-03/04/05/16、PHASE-03 与 Goal 尚未完成。下一步先提交该候选，再从 clean checkpoint 生成阶段审查并执行完整 `--phase 03` 复算。

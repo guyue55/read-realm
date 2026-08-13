@@ -5,7 +5,15 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PageLayout } from "@/components/PageLayout";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
+import { describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
+import { parseAuthorizedUrlSource } from "@/lib/url-source-client";
+import {
+  createDefaultSourceCheckPreference,
+  createUrlSourceCheckPreview,
+  isSourceCheckDue,
+  type SourceCheckPreference,
+} from "@/lib/url-source-policy";
 import type { Book } from "@reader/shared-types";
 import { db } from "@reader/storage-core";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -20,6 +28,8 @@ export default function BookDetailPage({
   const [book, setBook] = useState<Book | null>(null);
   const [showCacheSheet, setShowCacheSheet] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [sourceChecking, setSourceChecking] = useState(false);
+  const [sourceCheckMessage, setSourceCheckMessage] = useState("");
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -72,6 +82,60 @@ export default function BookDetailPage({
       return () => clearTimeout(timer);
     }
   }, [toastMsg]);
+
+  const checkUrlSource = async (trigger: "manual" | "scheduled") => {
+    if (!book?.sourceUrl || book.sourceType !== "url" || sourceChecking) return;
+    if (!book.sourceRightsConfirmedAt) {
+      setSourceCheckMessage("此旧来源没有权利确认记录，请重新从导入页添加后再检查。");
+      return;
+    }
+    setSourceChecking(true);
+    setSourceCheckMessage(trigger === "scheduled" ? "按已启用周期检查来源…" : "检查公开来源…");
+    try {
+      const remote = await parseAuthorizedUrlSource(book.sourceUrl, true);
+      const preview = createUrlSourceCheckPreview(book, remote);
+      const nextBook: Book = {
+        ...book,
+        sourceLastCheckedAt: new Date().toISOString(),
+        sourceCheckPreview: preview,
+        updatedAt: book.updatedAt,
+      };
+      await db.books.put(nextBook);
+      setBook(nextBook);
+      setSourceCheckMessage(preview.status === "current"
+        ? `已检查：来源仍为 ${preview.remoteChapterCount} 章，本地内容未改动。`
+        : `发现 ${preview.differences.join("；")}。这只是预览，本地内容未改动。`);
+    } catch (error) {
+      setSourceCheckMessage(`检查已停止：${describeAppError(error)}`);
+    } finally {
+      setSourceChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!book || sourceChecking || book.sourceType !== "url") return;
+    const preference = book.sourceCheckPreference ?? createDefaultSourceCheckPreference();
+    if (!isSourceCheckDue(preference, book.sourceLastCheckedAt)) return;
+    void checkUrlSource("scheduled");
+    // 一本书每次进入详情只会在到期时触发；成功写入时间会使下一轮不再到期。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    book?.id,
+    book?.sourceLastCheckedAt,
+    book?.sourceCheckPreference?.enabled,
+    book?.sourceCheckPreference?.intervalHours,
+  ]);
+
+  const updateSourceCheckPreference = async (preference: SourceCheckPreference) => {
+    if (!book || book.sourceType !== "url") return;
+    const nextBook: Book = { ...book, sourceCheckPreference: preference };
+    await db.books.put(nextBook);
+    setBook(nextBook);
+    setSourceCheckMessage(preference.enabled
+      ? `已启用：打开本书详情且间隔到期时检查，每 ${preference.intervalHours} 小时最多一次。`
+      : "定时检查已关闭；仍可手动检查。",
+    );
+  };
 
   if (!book) {
     return (
@@ -245,6 +309,73 @@ export default function BookDetailPage({
               </p>
             </div>
           </div>
+
+          {book.sourceType === "url" && book.sourceUrl && (
+            <section
+              className="mt-6 rounded-[18px] border p-5"
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.38)",
+                borderColor: colors.border,
+              }}
+              aria-labelledby="source-check-title"
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 id="source-check-title" className="font-bold" style={{ color: colors.text }}>
+                    公开来源检查
+                  </h2>
+                  <p className="mt-1 text-xs leading-5" style={{ color: colors.muted }}>
+                    只比较书名与章节数，不自动覆盖本地正文。遇到登录、付费、验证码或反爬会停止。
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { void checkUrlSource("manual"); }}
+                  disabled={sourceChecking}
+                  className="ui-focus-ring min-h-10 shrink-0 rounded-full border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
+                  style={{ borderColor: colors.border, color: colors.text }}
+                >
+                  {sourceChecking ? "检查中…" : "立即检查"}
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 text-sm" style={{ color: colors.muted }}>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).enabled}
+                    onChange={(event) => { void updateSourceCheckPreference({
+                      ...(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()),
+                      enabled: event.currentTarget.checked,
+                    }); }}
+                    className="h-4 w-4 accent-[var(--ui-accent)]"
+                  />
+                  <span>按周期检查（默认关闭，仅在打开本书详情且到期时执行）</span>
+                </label>
+                {(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).enabled && (
+                  <label className="flex items-center gap-3 pl-7">
+                    <span>最短间隔</span>
+                    <select
+                      value={(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).intervalHours}
+                      onChange={(event) => { void updateSourceCheckPreference({
+                        enabled: true,
+                        intervalHours: Number(event.currentTarget.value) as SourceCheckPreference["intervalHours"],
+                      }); }}
+                      className="rounded-full border bg-white/80 px-3 py-1.5"
+                      style={{ borderColor: colors.border, color: colors.text }}
+                    >
+                      <option value={6}>6 小时</option>
+                      <option value={12}>12 小时</option>
+                      <option value={24}>24 小时</option>
+                      <option value={72}>3 天</option>
+                      <option value={168}>7 天</option>
+                    </select>
+                  </label>
+                )}
+                {sourceCheckMessage && <p role="status" className="leading-6">{sourceCheckMessage}</p>}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 

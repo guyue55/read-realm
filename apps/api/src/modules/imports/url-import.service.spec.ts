@@ -23,6 +23,10 @@ describe('UrlImportService (SSRF 守门)', () => {
     await reject('not a url');
   });
 
+  it('拒绝在公开链接中夹带用户名或密码', async () => {
+    await reject('https://reader:secret@example.com/book');
+  });
+
   it('拒绝 IPv4 内网、回环与链路本地地址', async () => {
     await reject('http://127.0.0.1/');
     await reject('http://10.0.0.1/');
