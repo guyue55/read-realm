@@ -341,6 +341,23 @@ function phaseTwoMigrationChecks(migration) {
   ];
 }
 
+function phaseThreeChecks() {
+  return [
+    { id: "PATCH_WHITESPACE", command: "git", args: ["diff", "--check"] },
+    { id: "IMPORT_CAPACITY_CONTRACT", command: process.execPath, args: ["--test", "scripts/import-capacity-fixtures.test.mjs", "scripts/import-capacity-run.test.mjs"] },
+    { id: "PARSER_TEST", command: "corepack", args: ["pnpm", "--filter", "@reader/parser-core", "test"] },
+    { id: "CONTENT_UTILS_BUILD", command: "corepack", args: ["pnpm", "--filter", "@reader/content-utils", "build"] },
+    { id: "WORKSPACE_TEST", command: "corepack", args: ["pnpm", "test"] },
+    { id: "WEB_LINT", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "lint"] },
+    { id: "API_LINT_NON_FIXING", command: "corepack", args: ["pnpm", "--filter", "api", "exec", "eslint", "{src,apps,libs,test}/**/*.ts"] },
+    { id: "WORKSPACE_BUILD", command: "corepack", args: ["pnpm", "build"], env: { READING_WORLD_VERIFY_NO_PWA_WRITE: "1" } },
+    { id: "IMPORT_CAPACITY_LIVE", command: process.execPath, args: ["scripts/run-import-capacity.mjs"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+    { id: "DURABLE_FOLDER_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/durable-folder-import.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+    { id: "IMPORT_FAILURE_RECOVERY_LIVE", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "playwright", "test", "e2e/import-failure-recovery.spec.ts", "--project=chromium-chrome", "--timeout=120000", "--reporter=line"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+    { id: "PORTABILITY_CONTRACT", command: process.execPath, args: ["scripts/check-phase-03-portability.mjs"] },
+  ];
+}
+
 function checksFor(phase, experiment, qualification, migration) {
   if (phase === "01") {
     if (experiment || qualification || migration) {
@@ -355,6 +372,10 @@ function checksFor(phase, experiment, qualification, migration) {
     if (migration) return phaseTwoMigrationChecks(migration);
     if (qualification) return phaseTwoQualificationChecks(qualification);
     return phaseTwoExperimentChecks(experiment);
+  }
+  if (phase === "03") {
+    if (experiment || qualification || migration) throw new Error("PHASE-03 不接受风险门实验参数");
+    return phaseThreeChecks();
   }
   throw new Error(
     `PHASE-${phase} 的检查合同尚未随对应实现阶段落盘；拒绝生成伪证据`,
@@ -576,8 +597,7 @@ function main() {
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision:
-      args.qualification || args.experiment || args.migration ? "REV-0002" : "REV-0001",
+    controlRevision: args.phase === "01" ? "REV-0001" : "REV-0002",
     phase: args.phase,
     experiment: args.experiment ?? null,
     qualificationExperiment: args.qualification ?? null,
