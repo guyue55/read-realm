@@ -1,0 +1,16 @@
+$ corepack pnpm --filter @reader/content-utils build
+started_at=2026-08-13T06:48:16.424Z
+ended_at=2026-08-13T06:48:17.052Z
+duration_ms=628
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+> @reader/content-utils@0.1.0 build ./packages/content-utils
+> tsc
+
+[stderr]

@@ -1,0 +1,13 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/check-phase-03-portability.mjs
+started_at=2026-08-13T06:51:35.699Z
+ended_at=2026-08-13T06:51:35.809Z
+duration_ms=110
+exit_code=1
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+[stderr]
+PHASE_03_PORTABILITY_MISSING=["apps/web-pwa/e2e/backup-restore.spec.ts","docs/goals/reading-world-v1/reports/backup-format-v1.md","docs/goals/reading-world-v1/reviews/phase-03-data-portability.md"]
