@@ -47,4 +47,23 @@ describe("ReaderEngine Settings", () => {
     expect(settings.theme).toBe("dark");
     expect(settings.fontFamily).toBe("sans-serif"); // unchanged
   });
+
+  it("hydrates a chapter snapshot without fetching it again", async () => {
+    const chapterRepo: ChapterRepository = {
+      getChapter: vi.fn(async () => null),
+      getChapterCount: vi.fn(async () => 1),
+    };
+    const engine = new ReaderEngine("book-1", chapterRepo, mockProgressRepo);
+    const chapter = {
+      id: "chapter-3",
+      index: 3,
+      title: "第四章",
+      content: "正文",
+    };
+
+    engine.hydrateChapter(chapter);
+
+    expect(engine.getCurrentChapter()).toEqual(chapter);
+    expect(chapterRepo.getChapter).not.toHaveBeenCalledWith("book-1", 3);
+  });
 });

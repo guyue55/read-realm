@@ -91,3 +91,19 @@ export function saveReaderSettings(settings: ReaderSettingsState): void {
     JSON.stringify(normalizeSettings(settings)),
   );
 }
+
+export function createReaderSettingsWriteQueue(
+  persist: (settings: ReaderSettingsState) => void | Promise<void>,
+) {
+  let tail: Promise<void> = Promise.resolve();
+  return (settings: ReaderSettingsState): Promise<void> => {
+    const snapshot = normalizeSettings(settings);
+    const write = tail.then(() => persist(snapshot));
+    tail = write.catch(() => undefined);
+    return write;
+  };
+}
+
+export const queueReaderSettingsSave = createReaderSettingsWriteQueue(
+  saveReaderSettings,
+);
