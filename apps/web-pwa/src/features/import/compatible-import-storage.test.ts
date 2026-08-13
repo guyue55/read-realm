@@ -69,6 +69,23 @@ describe("compatible import storage", () => {
     ]);
   });
 
+  it("can build into identifiers reserved by a durable draft", () => {
+    const built = buildCompatibleImportTask({
+      parsedBook: {
+        title: "固定 EPUB",
+        chapters: [{ index: 0, title: "第一章", content: "清晨。" }],
+      },
+      format: "epub",
+      taskId: "durable-task",
+      bookId: "durable-task:book",
+      createId: () => "chapter-1",
+      now: () => "2026-08-13T07:00:00+08:00",
+    });
+
+    expect(built.id).toBe("durable-task");
+    expect(built.bookMetadata.id).toBe("durable-task:book");
+  });
+
   it("writes once and verifies an exact readback", async () => {
     const value = task();
     const port = {
