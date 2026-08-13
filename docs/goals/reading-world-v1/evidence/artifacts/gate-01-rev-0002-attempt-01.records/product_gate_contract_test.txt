@@ -1,0 +1,27 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-product-run.test.mjs
+started_at=2026-08-13T01:53:53.818Z
+ended_at=2026-08-13T01:53:53.888Z
+duration_ms=70
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+✔ EXP-09 固定为 EPUB、兼容存储、唯一书 ID 与资格设施策略 (0.79225ms)
+✔ 设施可靠且纵切通过时产品门为 PASS (0.098958ms)
+✔ 只有设施可靠时的浏览器失败才是 PRODUCT_FAILURE (0.0655ms)
+✔ 前置门、枚举、服务、端口、进程、补偿或 records 失败均不可下产品结论 (0.081625ms)
+✔ 产品门只接受单一观察行 (0.738458ms)
+✔ EVID-45 前置门绑定 REV-0002、GATE-00、PASS 与历史提交 (0.111125ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 40.587042
+
+[stderr]
