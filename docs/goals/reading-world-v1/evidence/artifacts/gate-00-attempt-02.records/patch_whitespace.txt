@@ -1,0 +1,12 @@
+$ git diff --check
+started_at=2026-08-13T01:20:37.211Z
+ended_at=2026-08-13T01:20:37.218Z
+duration_ms=7
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+[stderr]
