@@ -7,7 +7,12 @@ import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
 import type { ParsedBook } from "@reader/parser-core";
-import { createId, type Book } from "@reader/shared-types";
+import {
+  createId,
+  type Book,
+  type IndexedNovelFile,
+  type LibraryFolder,
+} from "@reader/shared-types";
 import { db, type DurableImportTask } from "@reader/storage-core";
 import { useEffect, useRef, useState } from "react";
 
@@ -19,6 +24,10 @@ import {
   commitDurableImportResult,
   type DurableImportCommitPort,
 } from "@/features/import/durable-import-commit";
+import {
+  commitDurableFolderImport,
+  type DurableFolderImportPort,
+} from "@/features/import/durable-folder-import";
 import { buildParsedImportResult } from "@/features/import/parsed-import-result";
 
 interface BatchTask {
@@ -57,6 +66,28 @@ const durableImportCommitPort: DurableImportCommitPort = {
         putTask: async (task) => { await db.importTasks.put(task); },
         addBook: async (book) => { await db.books.add(book); },
         putChapters: async (chapters) => { await db.chapters.bulkPut(chapters); },
+      }),
+    );
+  },
+};
+
+const durableFolderImportPort: DurableFolderImportPort = {
+  transaction: async (operation) => {
+    await db.transaction(
+      "rw",
+      [db.importTasks, db.librarySources, db.libraryFolders, db.books, db.indexedNovelFiles],
+      () => operation({
+        getTask: async (taskId) => {
+          const current = await db.importTasks.get(taskId);
+          return current?.lifecycle && current.updatedAt
+            ? current as DurableImportTask
+            : undefined;
+        },
+        putTask: async (task) => { await db.importTasks.put(task); },
+        putSource: async (source) => { await db.librarySources.put(source); },
+        addFolders: async (folders) => { await db.libraryFolders.bulkAdd(folders); },
+        addBooks: async (books) => { await db.books.bulkAdd(books); },
+        addIndexedFiles: async (files) => { await db.indexedNovelFiles.bulkAdd(files); },
       }),
     );
   },
@@ -128,6 +159,8 @@ export default function ImportPage() {
   const activeTaskIdRef = useRef<string | null>(null);
   const retryFileRef = useRef<File | null>(null);
   const recoveredDraftRef = useRef<DurableImportTask | null>(null);
+  const recoveredFolderDraftRef = useRef<DurableImportTask | null>(null);
+  const folderTaskIdRef = useRef<string | null>(null);
   const cancelledTaskIdsRef = useRef(new Set<string>());
   const workerRef = useRef<Worker | null>(null);
   const [canRetrySingleImport, setCanRetrySingleImport] = useState(false);
@@ -142,6 +175,7 @@ export default function ImportPage() {
             Boolean(
               task.lifecycle &&
               task.updatedAt &&
+              task.lifecycle.source.kind !== "folder" &&
               (["queued", "reading", "parsing", "failed"].includes(task.lifecycle.state)),
             ),
         )
@@ -180,10 +214,16 @@ export default function ImportPage() {
           try {
             const task = await db.importTasks.get(staleId);
             if (task?.lifecycle && ["queued", "reading", "parsing"].includes(task.lifecycle.state)) {
-              await durableImportController.transition(staleId, {
-                type: "cancelled",
-                reason: "已离开导入页面；原文件未被删除。",
-              });
+              await durableImportController.transition(staleId, task.lifecycle.source.kind === "folder"
+                ? {
+                    type: "failed",
+                    errorCode: "FOLDER_SCAN_INTERRUPTED",
+                    errorMessage: "目录扫描被离页或刷新中断；请重新授权同一目录后重试。",
+                  }
+                : {
+                    type: "cancelled",
+                    reason: "已离开导入页面；原文件未被删除。",
+                  });
               console.log(`[Import] 已保留取消任务草稿: ${staleId}`);
             } else if (task && !task.lifecycle && task.chapters.length === 0) {
               await db.importTasks.delete(staleId);
@@ -213,6 +253,40 @@ export default function ImportPage() {
   const [ignoredNodes, setIgnoredNodes] = useState<Set<string>>(new Set());
   const [customTypes, setCustomTypes] = useState<Map<string, ImportPreviewNode["detectedType"] | "ignore" | "category_folder">>(new Map());
   const [scanningSourceHandle, setScanningSourceHandle] = useState<FileSystemDirectoryHandle | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void db.importTasks.toArray().then(async (tasks) => {
+      if (!active) return;
+      const candidate = tasks
+        .filter((task): task is DurableImportTask => Boolean(
+          task.lifecycle &&
+          task.updatedAt &&
+          task.lifecycle.source.kind === "folder" &&
+          ["queued", "reading", "parsing", "preview", "saving", "failed"].includes(task.lifecycle.state),
+        ))
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+      let recoverable = candidate;
+      if (candidate && ["queued", "reading", "parsing"].includes(candidate.lifecycle.state)) {
+        recoverable = await durableImportController.markInterrupted(candidate.id);
+      } else if (candidate && ["preview", "saving"].includes(candidate.lifecycle.state)) {
+        recoverable = await durableImportController.transition(candidate.id, {
+          type: "failed",
+          errorCode: "FOLDER_PREVIEW_INTERRUPTED",
+          errorMessage: "目录预览因刷新或关闭已丢失；请重新授权同一目录后重扫。",
+        });
+      }
+      if (!recoverable) return;
+      recoveredFolderDraftRef.current = recoverable;
+      folderTaskIdRef.current = recoverable.id;
+      setScanStatus(
+        `发现中断的目录任务“${recoverable.lifecycle.source.filename}”。请重新授权同一目录，继续第 ${recoverable.lifecycle.attempt + 1} 次尝试。`,
+      );
+    }).catch((error) => {
+      console.warn("[Import] 恢复目录任务失败:", error);
+    });
+    return () => { active = false; };
+  }, []);
 
   // ==========================================
   // 【场景 A】：上传单本小说流程
@@ -574,20 +648,78 @@ export default function ImportPage() {
       return;
     }
 
+    let taskId: string | null = null;
     try {
       setScanStatus("正在申请本地目录起封授权...");
       const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
       setScanningSourceHandle(handle);
 
+      const recovered = recoveredFolderDraftRef.current;
+      const previousTaskId = folderTaskIdRef.current;
+      if (previousTaskId && previousTaskId !== recovered?.id) {
+        const previous = await durableImportController.recover(previousTaskId);
+        if (["queued", "reading", "parsing", "preview", "failed"].includes(previous.lifecycle.state)) {
+          await durableImportController.transition(previousTaskId, {
+            type: "cancelled",
+            reason: `用户选择重新绑定目录“${handle.name}”；旧预览已放弃，原目录未被删除。`,
+          });
+        }
+      }
+      if (recovered && recovered.lifecycle.source.filename !== handle.name) {
+        await durableImportController.transition(recovered.id, {
+          type: "cancelled",
+          reason: `已改选目录“${handle.name}”；旧目录任务已放弃，原目录未被删除。`,
+        });
+      }
+      const draft = recovered?.lifecycle.source.filename === handle.name
+        ? await durableImportController.transition(recovered.id, { type: "restart" })
+        : await durableImportController.create({
+            id: createId(),
+            filename: handle.name,
+            format: "unknown",
+            sourceKind: "folder",
+          });
+      taskId = draft.id;
+      folderTaskIdRef.current = draft.id;
+      activeTaskIdRef.current = draft.id;
+      recoveredFolderDraftRef.current = null;
+      await durableImportController.transition(draft.id, { type: "reading" });
+      await durableImportController.transition(draft.id, { type: "parsing", totalChapters: null });
+
       setScanStatus("授权通过，正在递归探照文件树中 (0% 卡死物理熔断隔离已生效)...");
+      let progressWrites = Promise.resolve();
       const rootNode = await FolderScanService.scanDirectoryToPreviewTree(handle, (p) => {
         setScanStatus(`📁 勘探进度：已扫 ${p.scannedDirectories} 目录，${p.scannedFiles} 小说文件。${p.currentStatus}`);
+        progressWrites = progressWrites.then(async () => {
+          await durableImportController.transition(draft.id, {
+            type: "scanProgress",
+            scannedFiles: p.scannedFiles,
+            scannedDirectories: p.scannedDirectories,
+          });
+        });
       });
+      await progressWrites;
+      await durableImportController.transition(draft.id, { type: "preview" });
 
       setPreviewTree(rootNode);
       setScanStatus("✨ 画卷展开完成！您可以微调类型判定，随后一键确认落墨入库。");
     } catch (err) {
-      setScanStatus(`❌ 授权或扫描中断: ${describeAppError(err)}`);
+      if (taskId) {
+        try {
+          const current = await durableImportController.recover(taskId);
+          if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+            const failed = await durableImportController.transition(taskId, {
+              type: "failed",
+              errorCode: "FOLDER_SCAN_FAILED",
+              errorMessage: importErrorMessage(err),
+            });
+            recoveredFolderDraftRef.current = failed;
+          }
+        } catch (persistenceError) {
+          console.error("[Import] 目录扫描失败状态无法落盘:", persistenceError);
+        }
+      }
+      setScanStatus(`❌ 授权或扫描中断，任务已保留：${describeAppError(err)}`);
     }
   };
 
@@ -614,7 +746,8 @@ export default function ImportPage() {
 
   // 执行最终的文件夹预览树快速索引入库
   const commitFolderImport = async () => {
-    if (!previewTree || !scanningSourceHandle) return;
+    const taskId = folderTaskIdRef.current;
+    if (!previewTree || !scanningSourceHandle || !taskId) return;
     setScanStatus("🍁 正在向本地书阁大量篆刻元数据与逻辑文件夹结构...");
     
     const sourceId = createId();
@@ -636,14 +769,16 @@ export default function ImportPage() {
     };
 
     try {
-      await db.transaction(
-        "rw",
-        [db.librarySources, db.libraryFolders, db.books, db.indexedNovelFiles],
-        async () => {
-          await db.librarySources.put(sourceRecord);
+      const current = await durableImportController.recover(taskId);
+      if (current.lifecycle.state === "failed") {
+        await durableImportController.transition(taskId, { type: "retry" });
+      }
+      const folders: LibraryFolder[] = [];
+      const books: Book[] = [];
+      const indexedFiles: IndexedNovelFile[] = [];
 
       // 递归处理树并快速索引
-      const importNodeRecursive = async (
+      const importNodeRecursive = (
         node: ImportPreviewNode,
         parentId?: string,
         depth = 0
@@ -704,10 +839,10 @@ export default function ImportPage() {
               },
             };
 
-            await db.books.add(bookShell as unknown as Book);
+            books.push(bookShell as unknown as Book);
 
             // 注册文件索引
-            await db.indexedNovelFiles.add({
+            indexedFiles.push({
               id: node.id,
               sourceId,
               parentFolderId: parentId,
@@ -723,7 +858,7 @@ export default function ImportPage() {
           } else {
             // 普通分类逻辑文件夹
             const folderId = node.id;
-            await db.libraryFolders.add({
+            folders.push({
               id: folderId,
               name: node.name,
               parentId: parentId,
@@ -739,7 +874,7 @@ export default function ImportPage() {
             // 递归处理子节点
             if (node.children) {
               for (const child of node.children) {
-                await importNodeRecursive(child, folderId, depth + 1);
+                importNodeRecursive(child, folderId, depth + 1);
               }
             }
           }
@@ -774,10 +909,10 @@ export default function ImportPage() {
             },
           };
 
-          await db.books.add(bookShell as unknown as Book);
+          books.push(bookShell as unknown as Book);
 
           // 注册文件索引
-          await db.indexedNovelFiles.add({
+          indexedFiles.push({
             id: node.id,
             sourceId,
             parentFolderId: parentId,
@@ -806,19 +941,68 @@ export default function ImportPage() {
 
       // 遍历优化后的高内聚、简练化节点数组，原样递归落库
       for (const node of optimizedTopNodes) {
-        await importNodeRecursive(node, undefined, 0);
+        importNodeRecursive(node, undefined, 0);
       }
+
+      await commitDurableFolderImport({
+        port: durableFolderImportPort,
+        taskId,
+        plan: {
+          source: sourceRecord,
+          folders,
+          books,
+          indexedFiles,
         },
-      );
+      });
 
       setScanStatus("🎉 一键入阁大功告成！已成功将整书库及逻辑结构导入书架！");
+      activeTaskIdRef.current = null;
+      folderTaskIdRef.current = null;
+      recoveredFolderDraftRef.current = null;
       setTimeout(() => {
         router.push("/library");
       }, 1500);
 
     } catch (err) {
-      setScanStatus(`❌ 数据库写入断点: ${describeAppError(err)}`);
+      try {
+        const current = await durableImportController.recover(taskId);
+        if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+          const failed = await durableImportController.transition(taskId, {
+            type: "failed",
+            errorCode: "FOLDER_COMMIT_FAILED",
+            errorMessage: importErrorMessage(err),
+          });
+          recoveredFolderDraftRef.current = failed;
+        }
+      } catch (persistenceError) {
+        console.error("[Import] 目录提交失败状态无法落盘:", persistenceError);
+      }
+      setScanStatus(`❌ 数据库写入中断，预览已保留可重试：${describeAppError(err)}`);
     }
+  };
+
+  const abandonFolderImport = async () => {
+    const taskId = folderTaskIdRef.current;
+    if (taskId) {
+      try {
+        const current = await durableImportController.recover(taskId);
+        if (["queued", "reading", "parsing", "preview", "failed"].includes(current.lifecycle.state)) {
+          await durableImportController.transition(taskId, {
+            type: "cancelled",
+            reason: "用户放弃目录扫描预览；原目录未被删除。",
+          });
+        }
+      } catch (error) {
+        setScanStatus(`放弃状态保存失败：${describeAppError(error)}`);
+        return;
+      }
+    }
+    activeTaskIdRef.current = null;
+    folderTaskIdRef.current = null;
+    recoveredFolderDraftRef.current = null;
+    setPreviewTree(null);
+    setScanningSourceHandle(null);
+    setScanStatus("已放弃目录预览，任务记录与原目录均已保留。");
   };
 
   // ==========================================
@@ -1178,7 +1362,7 @@ export default function ImportPage() {
 
                   <div className="flex justify-end gap-3 border-t border-[#E9DCC8]/40 pt-4">
                     <button
-                      onClick={() => setPreviewTree(null)}
+                      onClick={() => { void abandonFolderImport(); }}
                       className="rounded-full border border-[var(--ui-border)] bg-white px-5 py-2 text-xs font-bold text-[var(--ui-muted)]"
                     >
                       清空放弃
