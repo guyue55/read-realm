@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   classifyGateRun,
+  buildQualificationFinal,
   countListedExperimentTests,
   directoryFingerprint,
   normalizeMachinePaths,
@@ -182,4 +183,59 @@ test("next-pwa 临时目标使用从 Web 根可逆解析的相对路径", () => 
 
   assert.equal(destination, "../../../private/tmp/reading-world/generated-public");
   assert.equal(join(webRoot, destination), temporary);
+});
+
+test("GATE-00 FINAL 只从完整通过且 records 闭合的 ATTEMPT 构造", () => {
+  const attempt = {
+    goalId: "GOAL-READING-WORLD-V1",
+    controlRevision: "REV-0002",
+    repository: { head: "a".repeat(40) },
+    qualificationExperiment: "EXP-12",
+    qualification: {
+      classification: "QUALIFIED",
+      reasons: [],
+      recordVerification: { valid: true, checkedCount: 3, failures: [] },
+      observation: {
+        listExitCode: 0,
+        listedTestCount: 1,
+        buildExitCode: 0,
+        serviceReady: true,
+        testExitCode: 0,
+        targetCount: 1,
+        portFreeBefore: true,
+        portFreeAfter: true,
+        orphanProcessCount: 0,
+        publicRestored: true,
+        strategy: {
+          stableRender: true,
+          isolatedPwaDestination: true,
+          explicitProcessGroup: true,
+        },
+      },
+    },
+    summary: { passed: true, failedCount: 0, trackedMutationCount: 0 },
+  };
+
+  const final = buildQualificationFinal({
+    attempt,
+    attemptPath: "evidence/gate-00-attempt-02.json",
+    attemptSha256: "b".repeat(64),
+    evidenceCommit: "c".repeat(40),
+    generatedAt: "2026-08-13T09:30:00+08:00",
+  });
+
+  assert.equal(final.gateId, "GATE-00");
+  assert.equal(final.result, "PASS");
+  assert.equal(final.sourceAttempt.sha256, "b".repeat(64));
+  assert.equal(final.evidenceCommit, "c".repeat(40));
+  assert.throws(
+    () => buildQualificationFinal({
+      attempt: { ...attempt, summary: { ...attempt.summary, passed: false } },
+      attemptPath: "evidence/gate-00-attempt-02.json",
+      attemptSha256: "b".repeat(64),
+      evidenceCommit: "c".repeat(40),
+      generatedAt: "2026-08-13T09:30:00+08:00",
+    }),
+    /QUALIFICATION_FINAL_SOURCE_NOT_PASSING/,
+  );
 });

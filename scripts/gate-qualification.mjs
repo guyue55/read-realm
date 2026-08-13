@@ -82,6 +82,79 @@ export function pwaDestinationFor(webRoot, temporaryDirectory) {
   return destination;
 }
 
+export function buildQualificationFinal({
+  attempt,
+  attemptPath,
+  attemptSha256,
+  evidenceCommit,
+  generatedAt,
+}) {
+  const observation = attempt?.qualification?.observation;
+  const sourcePassing =
+    attempt?.goalId === "GOAL-READING-WORLD-V1" &&
+    attempt?.controlRevision === "REV-0002" &&
+    attempt?.qualificationExperiment === "EXP-12" &&
+    attempt?.qualification?.classification === "QUALIFIED" &&
+    attempt?.qualification?.recordVerification?.valid === true &&
+    attempt?.qualification?.recordVerification?.checkedCount === 3 &&
+    observation?.listExitCode === 0 &&
+    observation?.listedTestCount === 1 &&
+    observation?.buildExitCode === 0 &&
+    observation?.serviceReady === true &&
+    observation?.testExitCode === 0 &&
+    observation?.targetCount === 1 &&
+    observation?.portFreeBefore === true &&
+    observation?.portFreeAfter === true &&
+    observation?.orphanProcessCount === 0 &&
+    observation?.publicRestored === true &&
+    observation?.strategy?.stableRender === true &&
+    observation?.strategy?.isolatedPwaDestination === true &&
+    observation?.strategy?.explicitProcessGroup === true &&
+    attempt?.summary?.passed === true &&
+    attempt?.summary?.failedCount === 0 &&
+    attempt?.summary?.trackedMutationCount === 0;
+  if (!sourcePassing) {
+    throw new Error("QUALIFICATION_FINAL_SOURCE_NOT_PASSING");
+  }
+  if (!/^[a-f0-9]{64}$/.test(attemptSha256)) {
+    throw new Error("QUALIFICATION_FINAL_ATTEMPT_SHA_INVALID");
+  }
+  if (!/^[a-f0-9]{40,64}$/.test(evidenceCommit)) {
+    throw new Error("QUALIFICATION_FINAL_EVIDENCE_COMMIT_INVALID");
+  }
+
+  return {
+    schemaVersion: 1,
+    goalId: attempt.goalId,
+    controlRevision: attempt.controlRevision,
+    gateId: "GATE-00",
+    result: "PASS",
+    generatedAt,
+    evidenceCommit,
+    sourceAttempt: {
+      path: attemptPath,
+      sha256: attemptSha256,
+      implementationHead: attempt.repository.head,
+      qualificationExperiment: attempt.qualificationExperiment,
+    },
+    verifiedOutcomes: {
+      listedTestCount: observation.listedTestCount,
+      targetCount: observation.targetCount,
+      buildExitCode: observation.buildExitCode,
+      testExitCode: observation.testExitCode,
+      serviceReady: observation.serviceReady,
+      portFreeBefore: observation.portFreeBefore,
+      portFreeAfter: observation.portFreeAfter,
+      orphanProcessCount: observation.orphanProcessCount,
+      publicRestored: observation.publicRestored,
+      strategy: observation.strategy,
+      recordVerification: attempt.qualification.recordVerification,
+    },
+    boundary:
+      "仅证明 GATE-01 验证基础设施可判定、可补偿且证据可复算；不证明 GATE-01、PHASE-02 或 Goal 完成。",
+  };
+}
+
 export function classifyGateRun(run) {
   const reasons = [];
   if (run.listExitCode !== 0) reasons.push(`LIST_EXIT_${run.listExitCode}`);
