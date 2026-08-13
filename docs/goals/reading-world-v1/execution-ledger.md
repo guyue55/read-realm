@@ -231,3 +231,14 @@
 - 控制与安全：resume 复算通过；控制包 Yellow 只因报告中的 IndexedDB `open()` 字面量。本轮六文件四个 Green，导入页的 `https://` 与 E2E 的 `open()` 经人工复核分别是合法 URL 边界与 IndexedDB 探针，无凭证、下载执行或新增外传；3100/4100 补偿后无监听。
 - 状态结论：文件夹耐久任务子切片通过；TASK-0301 和 PHASE-03 仍执行中，不生成 FINAL 证据。
 - 下一入口：PHASE-03 / TASK-0301；闭合存储配额不足、真实目录权限丢失和 Worker 强制终止的 UI 故障注入，再固化 PHASE-03 检查器。
+
+### RUN-0024 · 2026-08-13T14:20:00+08:00 · PHASE-03 / TASK-0301 故障恢复子切片
+- 本轮输入：目录 checkpoint `694f155e078706eea5fbddd45f187dd5d071c5a2`、原生 QuotaExceededError/NotAllowedError 未翻译、单文件 Worker 可重试 UI 和既有原子提交端口。
+- 本轮范围：只闭合配额、目录权限和 Worker 强制终止的用户可见恢复；不加生产测试开关，不扩张备份/恢复或改写 GATE-01 证据。
+- TDD 与实现：三条错误引导测试先 RED，证明原生异常/内部码直接泄露；按 Error.name 与固定故障码映射为可执行中文建议，预览保存页也复用同一翻译边界。原生边界一次性注入覆盖 IndexedDB books.add 配额、目录 getFile 权限与 Worker error，生产代码无注入开关。
+- 失败谱系：首次三类矩阵中配额与权限恢复通过；Worker 故障已安全进入 failed，建议/按钮均出现，但透明 file input 拦截“立即重试”点击并超时。修正控件层级后精确 Worker 用例 1/1 通过 21.0 秒。该失败是交互实现候选，不计 GATE-01 设计实验。
+- 活体结果：系统 Chrome 最终精确枚举 3/3 且 `3 passed (25.0s)`。配额失败事务回滚、完整解析草稿保留并重存成功；权限失效任务保留并在同 task ID / attempt+1 重新授权重扫；Worker 终止后真实点击重试并在同 task ID / attempt+1 进入 preview。
+- 回归结果：工作区 240 tests（逐包 4+10+17+10+52+43+31+73）、Web/API 非写入 lint、无 PWA 写入生产构建与 diff 校验全部通过。
+- 控制与安全：resume 复算通过，3100/4100 无监听；实现/单测 3 Green，导入页 `https://`、E2E IndexedDB `open()` 与引用该二字面量的控制报告为人工复核 Yellow，无凭证、下载执行或新增外传。
+- 证据边界：配额与 Worker 为真实页面/原生浏览器边界故障；权限为原生 NotAllowedError 等价注入，不替代真实 OS 选择器撤权人工检查。TASK-0301 与 PHASE-03 仍执行中，不生成 EVID-03 FINAL。
+- 下一入口：PHASE-03 / TASK-0301；将容量、耐久目录与三类故障命令固化到 `verify-reading-world.mjs --phase 03`，明确 fixture 生成/验证/清理、端口与进程补偿；再执行真实 OS 目录权限人工检查。
