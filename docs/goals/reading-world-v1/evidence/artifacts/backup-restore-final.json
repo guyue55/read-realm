@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "phaseId": "PHASE-03",
+  "evidenceId": "EVID-04",
+  "requirementId": "REQ-03",
+  "result": "PASS",
+  "generatedAt": "2026-08-13T16:19:02.193Z",
+  "evidenceCommit": "86815f792e904bbc0147a5301445d4b10040b28b",
+  "sourceReport": {
+    "path": "docs/goals/reading-world-v1/reports/phase-03-import-portability.json",
+    "sha256": "89bc198a5e5d5fa8004c9c45c0edaa43b6ee1e23ff334415f0bbffd75b85e5a7",
+    "implementationHead": "c8abb3547eb52afac5037889be68d2bf4a98801a",
+    "passedCheckCount": 14,
+    "verifiedRecordCount": 14,
+    "requiredChecks": [
+      "WORKSPACE_TEST",
+      "BACKUP_RESTORE_LIVE",
+      "PORTABILITY_CONTRACT"
+    ]
+  },
+  "verifiedOutcomes": {
+    "versionedPublicPackage": true,
+    "manifestAndSha256": true,
+    "previewBeforeWrite": true,
+    "tamperRejectedWithoutWrites": true,
+    "copyRestoreReadback": true,
+    "mergeRequiresExplicitConflictChoices": true,
+    "failedWriteCompensatedAndVerified": true
+  },
+  "boundary": "证明 PHASE-03 本地完整备份包、预览、合并/副本恢复与逐项校验；不证明私有云同步或灾备部署。"
+}

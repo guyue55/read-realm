@@ -5,12 +5,12 @@
 - 当前控制修订：REV-0002
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
-- 当前阶段 ID：PHASE-03
-- 当前入口：PHASE-03 / TASK-0304；落实合法 URL/自配 Provider 合规边界、手动刷新与默认关闭的定时检查，并完成阶段审查与 EVID-03/04/05/16 候选收束。TASK-0303 的显式冲突合并、补偿回滚和 Markdown/JSON 导出已通过。
-- 最近有效提交：9c6fd75
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
-- 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
-- 停止原因：无；从 PHASE-03 / TASK-0304 继续，EVID-17/EVID-25、TASK-0301 活体记录、TASK-0302 包合同、TASK-0303 合并/导出合同与历史 ATTEMPT 均不可覆盖。
+- 当前阶段 ID：PHASE-04
+- 当前入口：PHASE-04 / TASK-0401；抽离阅读会话领域服务，先冻结滚动/分页、字体排版、章节切换、进度恢复和手机手势的状态/位置合同，再以现有阅读器为兼容入口渐进接线。
+- 最近有效提交：86815f7
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/provider-boundary-final.json，SHA-256 `709f392e28db559e303907413d53f061209362864f505748a228ebdc007943d7`，2026-08-14T00:19:02+08:00
+- 当前阻塞：无；PHASE-02/03、GATE-00/01 与 RISK-03 已通过。PHASE-04 只按阅读会话与体验范围执行，不提前扩张公共多用户“藏经阁”、同步、部署或 Goal 完成。
+- 停止原因：无；从 PHASE-04 / TASK-0401 继续，EVID-03/04/05/16/17/25、TASK-0301 原生活体、阶段失败归档与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -318,3 +318,11 @@
 - 证据规范化：6 份 runner 日志各在测试正文之后带一个额外空白行，触发 `git diff --check`；封证前只删除该末尾空白行，并级联重算对应 6 条 `logSha256` 与外层报告 SHA。未改变命令、stdout/stderr 正文、退出码、时间、tracked mutation 或 PASS 结论；规范化后 14/14 SHA 再次独立匹配，报告 SHA-256 为 `89bc198a5e5d5fa8004c9c45c0edaa43b6ee1e23ff334415f0bbffd75b85e5a7`。
 - 历史保留：RUN-0025 的 11/12 FAIL 报告和原 records 已移动到 `reports/history/phase-03-import-portability-attempt-01/`；当前 PASS 不删除、不改写其失败结论。
 - 当前边界：阶段机器门已通过，但 EVID-03/04/05/16 尚未从 clean 证据提交生成，因此 PHASE-03 暂不提前标记完成，也不推进 PHASE-04。
+
+### RUN-0033 · 2026-08-14T00:19:02+08:00 · PHASE-03 FINAL / PHASE-04 启动
+- 本轮输入：clean 证据提交 `86815f792e904bbc0147a5301445d4b10040b28b`、阶段 PASS 报告 SHA `89bc198a5e5d5fa8004c9c45c0edaa43b6ee1e23ff334415f0bbffd75b85e5a7` 与 clean-only finalizer。
+- FINAL 生成：`node scripts/finalize-phase-03.mjs` 在空工作树上 exit 0；分别生成 EVID-03/04/05/16，四份证据各绑定同一阶段报告和 14/14 record 复算，但用独立 `requiredChecks`/`verifiedOutcomes`/边界证明 REQ-02/03/04/15，不以一份宽泛报告冒充四项承诺。
+- 哈希：EVID-03 `6baa7d3294bedbf009edea00c8dbe5a866bc31d91b278e1cd72a04dc537f9844`；EVID-04 `bdd87e5b9067a8b0762170ba1d9678e5a4813e3849a0804f94a901bfae421975`；EVID-05 `875cfa4641f7db2ab73be0be9a37fda3be270bdbd12cfa8d6a517f658180b695`；EVID-16 `709f392e28db559e303907413d53f061209362864f505748a228ebdc007943d7`。
+- 状态结论：TASK-0304 与 PHASE-03 完成，PHASE-04 进入执行中。这里只证明稳定导入、数据可携带与 Provider 边界，不证明阅读器终局体验、UI 圆润度、书架规模、PWA、同步、VPS 部署或 Goal 完成。
+- 新需求登记判断：用户提出公共多用户“藏经阁”；其全民上传、用户主页、公共云内容和治理超出当前“单用户、本地优先、可选私有云同步”控制范围。当前不写实现、不阻塞 PHASE-04，也不混入私有同步数据模型；仅在 PHASE-04 阅读核心稳定后，以独立新修订或新 Goal 决定只读馆藏纵切与后续上传治理。
+- 下一入口：PHASE-04 / TASK-0401；先抽离阅读会话状态与位置合同，再处理滚动/分页、字体、章节切换、进度与手机适配。视觉圆润度、图标、文案和字体体系按 PHASE-05 独立收束。
