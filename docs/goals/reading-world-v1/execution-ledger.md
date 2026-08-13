@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-03
-- 当前入口：PHASE-03 / TASK-0301 真实 OS 目录权限人工检查；当前因 Mac 锁屏暂停，用户手动解锁后从同一入口重放。自动化与阶段检查器已闭合导入子域，检查器总体 FAIL 仅因 TASK-0302~0304 的备份恢复/导出产物尚未实现。人工检查后转 TASK-0302。
-- 最近有效提交：a249d5139bee1f0382d7b974387a404f0ab07628
+- 当前入口：PHASE-03 / TASK-0302；建立带 manifest、版本、逐项校验、公开 schema 和恢复预览的完整备份包。TASK-0301 自动化、容量、故障恢复与真实 OS 选择/撤权/重新授权均已通过；阶段检查器仍因 TASK-0302~0304 产物缺失而总体 FAIL。
+- 最近有效提交：7994fdf95fbbaf80a629023a21ea87c671884778
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/migration-gate-final.json，SHA-256 `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，2026-08-13T10:39:10+08:00
 - 当前阻塞：无；PHASE-02、GATE-00、GATE-01 与 RISK-03 已通过。PHASE-03 只按既定范围执行，不把薄切片外推为完整导入、阅读体验或 Goal 完成。
-- 停止原因：无；从 PHASE-03 / TASK-0301 继续，EVID-17/EVID-25 与历史 ATTEMPT 均不可覆盖。
+- 停止原因：无；从 PHASE-03 / TASK-0302 继续，EVID-17/EVID-25、TASK-0301 活体记录与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -259,3 +259,13 @@
 - 副作用补偿：本地 Web/API 开发服务已停止，3001/4100 无监听；隔离 fixture 保留以便 `verify_before_repeat`，不属于用户真实阅读数据且被 Git 忽略。
 - 状态结论：这是 `human_required` 环境暂停，不是 `BLOCKED_DESIGN_REVIEW_REQUIRED`，不增加任何设计门 ATTEMPT 计数；TASK-0301、PHASE-03 和 Goal 仍未完成。
 - 恢复入口：用户手动解锁 Mac 后回复“已解锁，继续”；先确认 3001/4100 空闲和 fixture 仍在，重启本地服务，再按 computer-use 合同从 Chrome 只读状态继续。
+
+### RUN-0027 · 2026-08-13T22:34:24+08:00 · TASK-0301 原生目录权限活体通过
+- 本轮输入：用户原文“已解锁，继续”、clean@`7994fdf95fbbaf80a629023a21ea87c671884778`、RUN-0026 固定隔离目录与两份 SHA 锁定 TXT。
+- 本轮范围：严格重放真实 macOS/Chrome 目录选择、授权、撤权和重新授权；不读取用户真实书库、不以自动化注入替代原生结论、不扩张备份或同步。
+- 原生选择与扫描：系统 Chrome 访客会话通过 macOS 原生目录选择器选择隔离目录；Chrome 明确提示站点可查看并复制该目录文件。允许后应用识别 1 个分类与 2 本 TXT，`星海.txt` 88 B、`火星.txt` 97 B，与固定输入一致，并成功入库为“科幻”书箧。
+- 真实撤权与恢复：从 Chrome“此页面可查看文件”快捷面板执行“撤消访问权限”；打开《火星》后产品显示“物理起封授权缺失”与 44px“唤醒物理授权”动作，没有伪成功。点击动作并重新允许同一目录后，阅读器自动恢复至第一章“抵达”，正文“风吹过红色平原。”可读。
+- 副作用补偿：关闭隔离访客窗口并停止本地 Web/API 服务；3001/4100 无监听，工作树在落盘本记录前保持 clean；两份 fixture SHA 分别仍为 `3eb477ec7a1fa55e2065079e72f32c26066ad7272a4cade69646c1636196661f`、`a7448067d9ac66897f6ab64ba7cf5aa7b821994b003d5cf95b6f12be89cc6d29`。
+- 活体记录：`reviews/task-0301-native-folder-permission.md`；该记录补齐原生权限人工检查，但不覆盖 RUN-0024 的等价注入或 RUN-0025 的机器报告。
+- 状态结论：TASK-0301 完成；PHASE-03 与 Goal 仍执行中，EVID-03/04/05/16 均未生成 FINAL，不把导入子域完成外推为阶段完成。
+- 下一入口：PHASE-03 / TASK-0302；按 `replay_safe` 建立内容寻址、版本化、带 manifest/逐项校验/公开 schema 的完整备份包与恢复预览流程，契约写入 `reports/backup-format-v1.md`。
