@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：PHASE-02 / TASK-0205；读取 REV-0002、EVID-27/28/29 与 GATE-00 合同，先实现验证基础设施资格门 EXP-08。不得修改产品机制、重跑旧实验、执行 EXP-09 或开始 PHASE-03。
-- 最近有效提交：fbbbf5642ee8e4aa36699d8f466fc630f0f93447
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/rev-0002-approval.md，SHA-256 `9858a1c86f33c74aa42ce5801060d1dca7b974881c0e140a56e7e9af5de1a7df`，2026-08-13T08:36:02+08:00
-- 当前阻塞：无；用户已批准 REV-0002，控制层从 `BLOCKED_DESIGN_REVIEW_REQUIRED` 恢复为执行中。产品扩张仍由 GATE-00 与 GATE-01 双门冻结。
-- 停止原因：无；恢复后下一动作仅为 GATE-00 资格门，不代表旧 GATE-01 失败已撤销或 PHASE-02 已完成。
+- 当前入口：PHASE-02 / TASK-0205 / EXP-12；保留 EVID-51，改用稳定渲染等待、隔离生成目录与显式进程生命周期验证同一 GATE-00 资格结果。不得重跑 EXP-08、修改产品机制、执行 EXP-09 或开始 PHASE-03。
+- 最近有效提交：45ffb56cab02b0b2a6fba93a56603bfc1b570a92
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.json，SHA-256 `f6ad55052a00fb8d5470858ba8849035defdeb3fa4c79a92758c1cf0120fe8cc`，2026-08-13T08:58:28+08:00
+- 当前阻塞：无；GATE-00 资格失败计数 1/3，EXP-08 已正确区分为 VALIDATOR_INDETERMINATE，未消耗 GATE-01 产品尝试。产品扩张仍由 GATE-00 与 GATE-01 双门冻结。
+- 停止原因：EXP-08 的目标计数发生在 React 稳定渲染前，结果不可判定；副作用与证据均已收束，按预登记转 EXP-12。
 - 完成判定：未完成
 
 ## 状态转换
@@ -29,6 +29,7 @@
 | TRY-01 | REV-0001 | GATE-01 | HYP-01 | EXP-01 | ATTEMPT-01：现有导入 UI/阅读器 + 统一进度 + 生产 PWA runner + 最小备份/空库恢复；runner 超时孤儿化并改写受控 SW，补偿完成后转 EXP-02 | EVID-27 | 失败 |
 | TRY-02 | REV-0001 | GATE-01 | HYP-01 | EXP-02 | ATTEMPT-02：同一 TXT 改走 Worker 流式导入与新会话适配器；生产浏览器停在解析中并记录打包运行时 bind 异常，受控 SW 改写已补偿，转 EXP-03 | EVID-28 | 失败 |
 | TRY-03 | REV-0001 | GATE-01 | HYP-01 | EXP-03 | ATTEMPT-03：固定 EPUB 改走主线程解析与兼容存储读回适配器；纵切完成至隔离恢复后的书架，最终因同名书严格定位器歧义 exit 1，PWA 生成写入已由检查器补偿，触发 3/3 熔断 | EVID-29 | 失败 |
+| TRY-04 | REV-0002 | GATE-00 | HYP-04 | EXP-08 | ATTEMPT-01：基线资格设施完成唯一枚举、生产构建、服务健康、端口/进程/public 补偿与 records 复算；只读目标在 React 稳定渲染前计数为 0，归类 VALIDATOR_INDETERMINATE，转 EXP-12 | EVID-51 | 失败 |
 
 ## 阶段记录
 
@@ -126,3 +127,12 @@
 - 历史继承：REV-0001 标记 SUPERSEDED，但 TRY-01/02/03、EVID-27/28/29 及失败结论不删除、不改写、不折算为 REV-0002 的失败次数。
 - 状态结论：控制层恢复为执行中；GATE-00、GATE-01、PHASE-02 和 Goal 均未完成，PHASE-03~06 继续冻结。
 - 下一入口：PHASE-02 / TASK-0205 / EXP-08；先证明检查器可判定、可补偿、无进程或端口遗留且证据可复算。
+
+### RUN-0013 · 2026-08-13T08:58:28+08:00 · PHASE-02 / TASK-0205 / EXP-08
+- 本轮输入：clean@`45ffb56cab02b0b2a6fba93a56603bfc1b570a92`、REV-0002、固定空书架只读探针与 GATE-00 基线资格合同。
+- 本轮范围：只验证设施生命周期与可判定性，不导入书籍、不写阅读数据、不运行 GATE-01。
+- 候选验证：资格纯合同 9/9、精确 Playwright 枚举 1/1、全仓 204 tests、无 PWA 写入 build、Web/API lint 与控制包 resume 检查均通过。
+- 正式失败：EVID-51 前两项检查 exit 0；生产构建、服务健康、启动前后端口、进程组、public 字节恢复与 3/3 records SHA 均可靠。空书架页面最终包含唯一目标，但测试在 React 稳定渲染前立即 count 得到 0，外层分类为 `VALIDATOR_INDETERMINATE / TARGET_COUNT_0`，没有误记产品失败。
+- 副作用处理：3102 无监听、无 gate-00/Next/Playwright 孤儿进程，`public/sw.js` blob 与 clean 候选一致。安全预检发现报告与两份 records 的命令首行含个人 Node 绝对路径；归档前仅确定性替换为 `$HOME`，重算对应 record SHA 与外层 SHA，不修改退出码、分类、时间或日志正文。EVID-51 最终 JSON SHA-256 `f6ad55052a00fb8d5470858ba8849035defdeb3fa4c79a92758c1cf0120fe8cc`，3/3 records 独立复算匹配。
+- 状态结论：TRY-04 失败，GATE-00 计数 1/3；GATE-01 与 PHASE-02 未完成，产品尝试计数不变。
+- 下一入口：PHASE-02 / TASK-0205 / EXP-12；增加稳定渲染等待，并把生成物与显式进程生命周期进一步隔离，复用相同资格判据。

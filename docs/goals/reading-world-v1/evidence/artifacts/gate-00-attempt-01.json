@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "phase": "02",
+  "experiment": null,
+  "qualificationExperiment": "EXP-08",
+  "startedAt": "2026-08-13T00:57:46.563Z",
+  "endedAt": "2026-08-13T00:58:28.985Z",
+  "archivedPreviousReport": null,
+  "repository": {
+    "root": ".",
+    "head": "45ffb56cab02b0b2a6fba93a56603bfc1b570a92",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/gate_00_qualification.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/qualification_contract_test.txt"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-13T00:57:46.601Z",
+      "endedAt": "2026-08-13T00:57:46.609Z",
+      "durationMs": 8,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/patch_whitespace.txt",
+      "logSha256": "469c35492caceab69034435d04a8ad21d3a8391825aedd1da5458ddfc8810743"
+    },
+    {
+      "id": "QUALIFICATION_CONTRACT_TEST",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-qualification.test.mjs",
+      "startedAt": "2026-08-13T00:57:46.695Z",
+      "endedAt": "2026-08-13T00:57:46.792Z",
+      "durationMs": 97,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/qualification_contract_test.txt",
+      "logSha256": "77d9a5de7a8fa24be6b51a0eeb3af4ec4943b52be7038be4dfad86d95e6e609b"
+    },
+    {
+      "id": "GATE_00_QUALIFICATION",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-gate-00-qualification.mjs EXP-08",
+      "startedAt": "2026-08-13T00:57:46.868Z",
+      "endedAt": "2026-08-13T00:58:28.789Z",
+      "durationMs": 41921,
+      "exitCode": 1,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-01.records/gate_00_qualification.txt",
+      "logSha256": "c172dfd1a6f74489ce9f6bee7fe1630334883c6329571a5de9a4d27e23c47dd9"
+    }
+  ],
+  "qualification": {
+    "classification": "VALIDATOR_INDETERMINATE",
+    "reasons": [
+      "TARGET_COUNT_0"
+    ],
+    "observation": {
+      "experiment": "EXP-08",
+      "classification": "VALIDATOR_INDETERMINATE",
+      "reasons": [
+        "TARGET_COUNT_0"
+      ],
+      "listExitCode": 0,
+      "listedTestCount": 1,
+      "buildExitCode": 0,
+      "serviceReady": true,
+      "testExitCode": 1,
+      "targetCount": 0,
+      "portFreeBefore": true,
+      "portFreeAfter": true,
+      "orphanProcessCount": 0,
+      "publicRestored": true,
+      "publicFingerprintBefore": "6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341",
+      "publicFingerprintAfter": "6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341"
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 3,
+      "failures": []
+    }
+  },
+  "summary": {
+    "passed": false,
+    "passedCount": 2,
+    "failedCount": 1,
+    "trackedMutationCount": 0
+  }
+}

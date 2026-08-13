@@ -1,0 +1,119 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-gate-00-qualification.mjs EXP-08
+started_at=2026-08-13T00:57:46.868Z
+ended_at=2026-08-13T00:58:28.789Z
+duration_ms=41921
+exit_code=1
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+QUALIFICATION_OBSERVATION={"experiment":"EXP-08","classification":"VALIDATOR_INDETERMINATE","reasons":["TARGET_COUNT_0"],"listExitCode":0,"listedTestCount":1,"buildExitCode":0,"serviceReady":true,"testExitCode":1,"targetCount":0,"portFreeBefore":true,"portFreeAfter":true,"orphanProcessCount":0,"publicRestored":true,"publicFingerprintBefore":"6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341","publicFingerprintAfter":"6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341"}
+
+[list]
+Listing tests:
+  [chromium-chrome] › gate-00.spec.ts:3:5 › EXP-08 validator qualification uses one observable target
+Total: 1 test in 1 file
+
+[build]
+
+> web-pwa@0.1.0 build ./apps/web-pwa
+> next build
+
+   ▲ Next.js 15.5.20
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: ./node_modules/.pnpm/next-pwa@5.6.0_@babel+core@7.29.6_@types+babel__core@7.20.5_esbuild@0.28.1_next@15.5.20_@babe_lzs65335gp4vegkq27nfq7k5n4/node_modules/next-pwa/register.js
+> [PWA] Service worker: ./apps/web-pwa/public/sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+ ✓ Compiled successfully in 11.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/13) ...
+   Generating static pages (3/13)
+   Generating static pages (6/13)
+   Generating static pages (9/13)
+ ✓ Generating static pages (13/13)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    4.34 kB         153 kB
+├ ○ /_not-found                            995 B         104 kB
+├ ● /book/[bookId]                       5.51 kB         164 kB
+├   └ /book/placeholder
+├ ○ /import                              17.9 kB         174 kB
+├ ● /import/preview/[taskId]             6.19 kB         162 kB
+├   └ /import/preview/placeholder
+├ ○ /library                             35.1 kB         215 kB
+├ ○ /notes                               5.16 kB         161 kB
+├ ● /reader/[bookId]                       17 kB         187 kB
+├   └ /reader/placeholder
+├ ○ /search                              12.3 kB         168 kB
+└ ○ /settings                            8.56 kB         172 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
+  ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
+  └ other shared chunks (total)          2.36 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+
+[test]
+
+Running 1 test using 1 worker
+
+
+
+[1/1] [chromium-chrome] › e2e/gate-00.spec.ts:3:5 › EXP-08 validator qualification uses one observable target
+[chromium-chrome] › e2e/gate-00.spec.ts:3:5 › EXP-08 validator qualification uses one observable target
+QUALIFICATION_TARGET_COUNT=0
+
+  1) [chromium-chrome] › e2e/gate-00.spec.ts:3:5 › EXP-08 validator qualification uses one observable target
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 0
+
+       6 |   const targetCount = await target.count();
+       7 |   console.log(`QUALIFICATION_TARGET_COUNT=${targetCount}`);
+    >  8 |   expect(targetCount).toBe(1);
+         |                       ^
+       9 |   await expect(target).toBeVisible();
+      10 |   await expect(page.getByText("内容优先保存在本机", { exact: false })).toBeVisible();
+      11 | });
+        at ./apps/web-pwa/e2e/gate-00.spec.ts:8:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gate-00-EXP-08-validator-q-faeab--uses-one-observable-target-chromium-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gate-00-EXP-08-validator-q-faeab--uses-one-observable-target-chromium-chrome/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/gate-00-EXP-08-validator-q-faeab--uses-one-observable-target-chromium-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/gate-00-EXP-08-validator-q-faeab--uses-one-observable-target-chromium-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-chrome] › e2e/gate-00.spec.ts:3:5 › EXP-08 validator qualification uses one observable target
+undefined
+./apps/web-pwa:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/gate-00.spec.ts --config playwright.gate-00.config.ts --grep EXP-08
+
+[stderr]
+[test]
+(node:79938) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
