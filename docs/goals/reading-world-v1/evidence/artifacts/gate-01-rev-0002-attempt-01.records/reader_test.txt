@@ -1,0 +1,25 @@
+$ corepack pnpm --filter @reader/reader-core test
+started_at=2026-08-13T01:53:47.234Z
+ended_at=2026-08-13T01:53:47.994Z
+duration_ms=760
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+> @reader/reader-core@0.1.0 test ./packages/reader-core
+> vitest run
+
+
+ RUN  v4.1.7 ./packages/reader-core
+
+
+ Test Files  8 passed (8)
+      Tests  52 passed (52)
+   Start at  09:53:47
+   Duration  257ms (transform 177ms, setup 0ms, import 285ms, tests 27ms, environment 0ms)
+
+[stderr]
