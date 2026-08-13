@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "phase": "02",
+  "experiment": null,
+  "qualificationExperiment": "EXP-12",
+  "startedAt": "2026-08-13T01:20:37.183Z",
+  "endedAt": "2026-08-13T01:21:29.051Z",
+  "archivedPreviousReport": null,
+  "repository": {
+    "root": ".",
+    "head": "425efaea499d0c8a059758b676e48941539314ba",
+    "branch": "codex/deep-reading-experience-audit",
+    "statusPorcelain": [
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/gate_00_qualification.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/qualification_contract_test.txt"
+    ]
+  },
+  "runtime": {
+    "node": "v24.13.0",
+    "pnpm": "9.0.0"
+  },
+  "sourceMutationPolicy": "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-13T01:20:37.211Z",
+      "endedAt": "2026-08-13T01:20:37.218Z",
+      "durationMs": 7,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/patch_whitespace.txt",
+      "logSha256": "a47f5c2328f928613a00d8ea15b47fdacd33270583343fcb81345a48dc04d77d"
+    },
+    {
+      "id": "QUALIFICATION_CONTRACT_TEST",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-qualification.test.mjs",
+      "startedAt": "2026-08-13T01:20:37.278Z",
+      "endedAt": "2026-08-13T01:20:37.356Z",
+      "durationMs": 78,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/qualification_contract_test.txt",
+      "logSha256": "29f1914e8362edfbf44efa993f9578fdfd1eb639674df2880cf0b9d6d54b478e"
+    },
+    {
+      "id": "GATE_00_QUALIFICATION",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-gate-00-qualification.mjs EXP-12",
+      "startedAt": "2026-08-13T01:20:37.415Z",
+      "endedAt": "2026-08-13T01:21:28.831Z",
+      "durationMs": 51416,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "trackedMutationObservedBeforeCompensation": false,
+      "trackedStatusBefore": [],
+      "trackedStatusBeforeCompensation": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-attempt-02.records/gate_00_qualification.txt",
+      "logSha256": "132e955e420937c68977ac696787a851fdb1b3543c626c6628422f10f6b085b7"
+    }
+  ],
+  "qualification": {
+    "classification": "QUALIFIED",
+    "reasons": [],
+    "observation": {
+      "experiment": "EXP-12",
+      "classification": "QUALIFIED",
+      "reasons": [],
+      "listExitCode": 0,
+      "listedTestCount": 1,
+      "buildExitCode": 0,
+      "serviceReady": true,
+      "testExitCode": 0,
+      "targetCount": 1,
+      "portFreeBefore": true,
+      "portFreeAfter": true,
+      "orphanProcessCount": 0,
+      "publicRestored": true,
+      "publicFingerprintBefore": "6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341",
+      "publicFingerprintAfter": "6310aef2d6abc17cfd44bd6cb538ae812b7806b8e53a1192500a6865e4035341",
+      "strategy": {
+        "stableRender": true,
+        "isolatedPwaDestination": true,
+        "explicitProcessGroup": true
+      }
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 3,
+      "failures": []
+    }
+  },
+  "summary": {
+    "passed": true,
+    "passedCount": 3,
+    "failedCount": 0,
+    "trackedMutationCount": 0
+  }
+}

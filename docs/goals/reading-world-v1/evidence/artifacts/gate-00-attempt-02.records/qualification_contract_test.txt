@@ -1,0 +1,33 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-qualification.test.mjs
+started_at=2026-08-13T01:20:37.278Z
+ended_at=2026-08-13T01:20:37.356Z
+duration_ms=78
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+✔ 只统计精确实验 ID 的 Playwright 枚举项 (0.65625ms)
+✔ 所有资格条件可靠且浏览器通过时返回 QUALIFIED (0.418125ms)
+✔ 目标定位歧义必须归类为验证器不可判定 (0.072542ms)
+✔ 枚举、构建或服务健康失败必须归类为验证器不可判定 (0.06325ms)
+✔ 端口、孤儿进程、补偿或证据任一失效都不可判为产品失败 (0.077875ms)
+✔ 只有设施可靠时的非零浏览器退出才可归类为 PRODUCT_FAILURE (0.078917ms)
+✔ 证据记录要求路径唯一、文件存在且 SHA-256 全匹配 (0.380833ms)
+✔ 目录指纹绑定相对路径与文件字节且不受遍历顺序影响 (1.678666ms)
+✔ 资格观察只接受单一带标记 JSON 行 (0.327084ms)
+✔ 证据命令从源头归一化个人目录 (0.124958ms)
+✔ EXP-12 明确使用稳定渲染、临时 PWA 目录与显式进程组 (0.08925ms)
+✔ next-pwa 临时目标使用从 Web 根可逆解析的相对路径 (0.085542ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 50.489459
+
+[stderr]
