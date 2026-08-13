@@ -5,6 +5,9 @@ import { resolve } from "node:path";
 
 const required = [
   "apps/web-pwa/e2e/backup-restore.spec.ts",
+  "apps/web-pwa/e2e/durable-import.spec.ts",
+  "apps/web-pwa/src/lib/url-source-policy.ts",
+  "apps/web-pwa/src/lib/url-source-client.ts",
   "docs/goals/reading-world-v1/reports/backup-format-v1.md",
   "docs/goals/reading-world-v1/reviews/phase-03-data-portability.md",
 ];
