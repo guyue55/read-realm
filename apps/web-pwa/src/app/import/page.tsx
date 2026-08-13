@@ -2,11 +2,14 @@
 
 import { AppShell } from "@/components/AppShell";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { apiUrl, getShareHeaders } from "@/lib/api";
 import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
-import { parseUrlBookInBrowser } from "@/lib/url-import";
-import type { ParsedBook } from "@reader/parser-core";
+import { parseAuthorizedUrlSource } from "@/lib/url-source-client";
+import {
+  assertAuthorizedPublicSourceUrl,
+  createDefaultSourceCheckPreference,
+  type SourceCheckPreference,
+} from "@/lib/url-source-policy";
 import {
   createId,
   type Book,
@@ -240,6 +243,10 @@ export default function ImportPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeMode, setActiveMode] = useState<"single" | "batch" | "folder" | "url">("single");
   const [urlInput, setUrlInput] = useState("");
+  const [urlRightsConfirmed, setUrlRightsConfirmed] = useState(false);
+  const [urlCheckPreference, setUrlCheckPreference] = useState<SourceCheckPreference>(
+    createDefaultSourceCheckPreference,
+  );
   const router = useVirtualRouter();
 
   // 1. 批量上传相关 State
@@ -1008,43 +1015,18 @@ export default function ImportPage() {
   // ==========================================
   // 【场景 E】: URL 解析 (保留原有模式)
   // ==========================================
-  const parseUrlWithBackendFallback = async (url: string) => {
-    try {
-      return await parseUrlBookInBrowser(url, setStatus);
-    } catch (frontendError) {
-      console.warn("Frontend URL parse failed, falling back to backend", frontendError);
-      setStatus("前端直接解析受限，切换后端兜底...");
-      const response = await fetch(apiUrl("/imports/url/parse"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getShareHeaders() },
-        body: JSON.stringify({ url }),
-      });
-      if (!response.ok) {
-        const detail = await response.text();
-        let message = detail;
-        try {
-          const parsed = JSON.parse(detail) as { message?: string | string[] };
-          message = Array.isArray(parsed.message)
-            ? parsed.message.join("，")
-            : parsed.message || detail;
-        } catch {
-          message = detail;
-        }
-        throw new Error(message || `后端解析失败：HTTP ${response.status}`);
-      }
-      return (await response.json()) as ParsedBook;
-    }
-  };
-
   const handleUrlImport = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!urlInput.trim() || isProcessing) return;
 
     let url: string;
     try {
-      url = new URL(urlInput.trim()).toString();
-    } catch {
-      setStatus("请输入完整的 http(s) 链接");
+      url = assertAuthorizedPublicSourceUrl(urlInput, urlRightsConfirmed);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : String(error);
+      setStatus(code === "SOURCE_RIGHTS_CONFIRMATION_REQUIRED"
+        ? "请先确认你有权访问和保存该公开来源"
+        : "请输入不含账号密码的完整 http(s) 公开链接");
       return;
     }
 
@@ -1063,12 +1045,20 @@ export default function ImportPage() {
       activeTaskIdRef.current = draft.id;
       await durableImportController.transition(draft.id, { type: "reading" });
       setStatus("开始解析 URL...");
-      const parsedBook = await parseUrlWithBackendFallback(url);
+      const parsedBook = await parseAuthorizedUrlSource(url, true, setStatus);
       await durableImportController.transition(draft.id, {
         type: "parsing",
         totalChapters: parsedBook.chapters.length,
       });
-      const result = buildParsedImportResult({ draft, parsedBook, createId });
+      const parsedResult = buildParsedImportResult({ draft, parsedBook, createId });
+      const result = {
+        ...parsedResult,
+        bookMetadata: {
+          ...parsedResult.bookMetadata,
+          sourceRightsConfirmedAt: new Date().toISOString(),
+          sourceCheckPreference: urlCheckPreference,
+        },
+      };
       await durableImportController.transition(draft.id, {
         type: "progress",
         receivedChapters: result.chapters.length,
@@ -1394,7 +1384,7 @@ export default function ImportPage() {
                 粘贴小说目录页或章节页链接
               </h2>
               <p className="mx-auto mt-2 max-w-xl text-center text-sm leading-6 text-[var(--ui-muted)]">
-                优先在前端直接解析；遇到 CORS、反爬提示或动态页面时自动切到后端代理。
+                仅处理你有权保存的公开页面。后端只解决浏览器 CORS/网络拓扑限制；遇到登录、付费、验证码或反爬会立即停止。
               </p>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -1408,11 +1398,54 @@ export default function ImportPage() {
                 />
                 <button
                   type="submit"
-                  disabled={isProcessing || !urlInput.trim() || !isOnline}
+                  disabled={isProcessing || !urlInput.trim() || !urlRightsConfirmed || !isOnline}
                   className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isProcessing ? "解析中" : "解析 URL"}
                 </button>
+              </div>
+
+              <div className="mx-auto mt-4 flex w-full max-w-xl flex-col gap-3 rounded-[14px] border border-[rgba(95,125,82,0.16)] bg-white/60 p-4 text-sm text-[var(--ui-muted)]">
+                <label className="flex items-start gap-3 leading-6">
+                  <input
+                    type="checkbox"
+                    checked={urlRightsConfirmed}
+                    onChange={(event) => setUrlRightsConfirmed(event.currentTarget.checked)}
+                    className="mt-1 h-4 w-4 accent-[var(--ui-accent)]"
+                  />
+                  <span>我确认有权访问和保存此公开来源，不会用本系统绕过登录、付费、验证码或反爬限制。</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={urlCheckPreference.enabled}
+                    onChange={(event) => setUrlCheckPreference((current) => ({
+                      ...current,
+                      enabled: event.currentTarget.checked,
+                    }))}
+                    className="h-4 w-4 accent-[var(--ui-accent)]"
+                  />
+                  <span>定时检查更新（默认关闭，只生成差异预览，不覆盖本地内容）</span>
+                </label>
+                {urlCheckPreference.enabled && (
+                  <label className="flex items-center justify-between gap-3 pl-7">
+                    <span>检查间隔</span>
+                    <select
+                      value={urlCheckPreference.intervalHours}
+                      onChange={(event) => setUrlCheckPreference({
+                        enabled: true,
+                        intervalHours: Number(event.currentTarget.value) as SourceCheckPreference["intervalHours"],
+                      })}
+                      className="rounded-full border border-[var(--ui-border)] bg-white px-3 py-1.5 text-[var(--ui-text)]"
+                    >
+                      <option value={6}>6 小时</option>
+                      <option value={12}>12 小时</option>
+                      <option value={24}>24 小时</option>
+                      <option value={72}>3 天</option>
+                      <option value={168}>7 天</option>
+                    </select>
+                  </label>
+                )}
               </div>
 
               {!isOnline && (
@@ -1421,9 +1454,11 @@ export default function ImportPage() {
                 </p>
               )}
 
-              {isProcessing && (
-                <div className="mt-6 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
+              {status !== "等待导入" && (
+                <div role="status" className="mt-6 flex items-center justify-center gap-2 text-center font-semibold text-[var(--ui-warm)]">
+                  {isProcessing && (
+                    <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
+                  )}
                   {status}
                 </div>
               )}

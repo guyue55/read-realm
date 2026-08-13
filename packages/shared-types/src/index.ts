@@ -160,6 +160,24 @@ export const BookSchema = z.object({
     "cloud_cache"
   ]),
   sourceUrl: z.string().optional(),
+  sourceRightsConfirmedAt: z.string().optional(),
+  sourceCheckPreference: z.object({
+    enabled: z.boolean(),
+    intervalHours: z.union([
+      z.literal(6),
+      z.literal(12),
+      z.literal(24),
+      z.literal(72),
+      z.literal(168),
+    ]),
+  }).optional(),
+  sourceLastCheckedAt: z.string().optional(),
+  sourceCheckPreview: z.object({
+    status: z.enum(["current", "update_available"]),
+    remoteTitle: z.string(),
+    remoteChapterCount: z.number().int().nonnegative(),
+    differences: z.array(z.string()),
+  }).optional(),
   format: z.enum(["txt", "epub", "html", "md", "pdf", "docx", "mobi", "azw3", "unknown"]),
   status: z.enum(["reading", "finished", "dropped", "to_read"]),
   tags: z.array(z.string()),

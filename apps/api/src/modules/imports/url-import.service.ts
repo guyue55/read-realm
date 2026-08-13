@@ -25,7 +25,7 @@ const nextPagePattern =
   /^(下一页|下页|下一頁|下頁|继续阅读|本章未完|>|›|»)\s*$/i;
 const nextChapterPattern = /(下一章|下章|下一回|下一节|下一卷|next chapter)/i;
 const blockedPagePattern =
-  /(验证码|访问过于频繁|安全验证|人机验证|请开启javascript|enable javascript|checking your browser|just a moment|cloudflare|access denied|forbidden)/i;
+  /(验证码|访问过于频繁|安全验证|人机验证|登录后(?:阅读|查看)|会员专享|付费阅读|订阅后|请开启javascript|enable javascript|checking your browser|just a moment|cloudflare|access denied|forbidden|sign in|log in|paywall|subscribe to read)/i;
 
 function normalizeWhitespace(value: string) {
   return value
@@ -182,6 +182,9 @@ async function assertPublicUrl(rawUrl: string) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new BadRequestException('仅支持 HTTP/HTTPS 链接');
   }
+  if (url.username || url.password) {
+    throw new BadRequestException('链接不得包含用户名或密码');
+  }
 
   const host = url.hostname.toLowerCase();
   if (isPrivateHost(host)) {
@@ -236,7 +239,7 @@ export class UrlImportService {
               'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.7',
             'user-agent':
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
+              'ReadRealm/0.1 (local authorized public-source import)',
           },
         });
         if (
@@ -269,7 +272,7 @@ export class UrlImportService {
     const sample = stripHtml(html).slice(0, 3000);
     if (blockedPagePattern.test(sample)) {
       throw new BadRequestException(
-        '页面疑似需要验证码或触发反爬，暂无法稳定解析',
+        '页面需要登录、付费、验证码或触发反爬；来源边界禁止继续解析',
       );
     }
     return html;

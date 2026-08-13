@@ -10,7 +10,7 @@ const nextPagePattern =
   /^(下一页|下页|下一頁|下頁|继续阅读|本章未完|>|›|»)\s*$/i;
 const nextChapterPattern = /(下一章|下章|下一回|下一节|下一卷|next chapter)/i;
 const blockedPagePattern =
-  /(验证码|访问过于频繁|安全验证|人机验证|请开启javascript|enable javascript|checking your browser|just a moment|cloudflare|access denied|forbidden)/i;
+  /(验证码|访问过于频繁|安全验证|人机验证|登录后(?:阅读|查看)|会员专享|付费阅读|订阅后|请开启javascript|enable javascript|checking your browser|just a moment|cloudflare|access denied|forbidden|sign in|log in|paywall|subscribe to read)/i;
 
 export class UrlImportError extends Error {
   constructor(
@@ -45,7 +45,7 @@ function toAbsoluteUrl(href: string | null, baseUrl: string) {
 function assertUsablePage(text: string) {
   if (blockedPagePattern.test(text.slice(0, 3000))) {
     throw new UrlImportError(
-      "页面疑似触发反爬或需要验证码，已切换到后端兜底。",
+      "页面需要登录、付费、验证码或触发反爬；为保护来源边界，已停止解析。",
       "SOURCE_RATE_LIMITED",
     );
   }
