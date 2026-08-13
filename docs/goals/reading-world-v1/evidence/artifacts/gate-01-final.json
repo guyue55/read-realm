@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "gateId": "GATE-01",
+  "result": "PASS",
+  "generatedAt": "2026-08-13T02:04:41.877Z",
+  "evidenceCommit": "a683b4e77eaf5ab38d166710850544c43cd7ac04",
+  "prerequisite": {
+    "gateId": "GATE-00",
+    "sha256": "2fd6b61a1fb58a6a6b12b3533e6db5939badd422463884c43d18036538f841c3",
+    "result": "PASS"
+  },
+  "sourceAttempt": {
+    "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-rev-0002-attempt-01.json",
+    "sha256": "8fbf1201f7dbdecfc29a94e021318cb7606f7240160efe6cc62ede6fab909245",
+    "implementationHead": "8a7b5b7c7e053c360b6e2050eda1012402484130",
+    "experiment": "EXP-09"
+  },
+  "verifiedOutcomes": {
+    "inputAndPreview": true,
+    "libraryAndReading": true,
+    "progressPersistedWithinOneSecond": true,
+    "refreshResume": true,
+    "trueOffline": true,
+    "minimalBackup": true,
+    "isolatedRestore": true,
+    "uniqueBookIdLocator": true,
+    "listedTestCount": 1,
+    "portFreeBefore": true,
+    "portFreeAfter": true,
+    "orphanProcessCount": 0,
+    "publicRestored": true,
+    "strategy": {
+      "fixture": "fixed-two-chapter.epub.base64",
+      "importMechanism": "compatible-storage",
+      "locator": "book-id",
+      "isolatedPwaDestination": true,
+      "serveGeneratedPwaDuringRun": true,
+      "explicitProcessGroup": true
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 7,
+      "failures": []
+    }
+  },
+  "boundary": "仅证明 PHASE-02 的早期本地纵向薄切片 GATE-01；不证明后续导入扩张、阅读体验终局、同步、PHASE-03~09 或 Goal 完成。"
+}

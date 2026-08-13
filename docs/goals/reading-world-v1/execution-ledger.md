@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-02
-- 当前入口：PHASE-02 / TASK-0206；先将 EVID-48 PASS ATTEMPT 固化到 clean 证据提交，再用不可覆盖收束器生成 EVID-17 FINAL、阶段 JSON 与 GATE-01 审查。EVID-17 未闭合前不得开始 PHASE-03。
-- 最近有效提交：8a7b5b7c7e053c360b6e2050eda1012402484130
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-rev-0002-attempt-01.json，SHA-256 `8fbf1201f7dbdecfc29a94e021318cb7606f7240160efe6cc62ede6fab909245`，2026-08-13T09:54:24+08:00
-- 当前阻塞：无；GATE-00 和 REV-0002 首个 GATE-01 产品 ATTEMPT 均通过，但 EVID-17 FINAL 与阶段审查尚未生成，因此 PHASE-02 未完成、PHASE-03 继续冻结。
-- 停止原因：无；EXP-09 已通过，不执行只在失败后放行的 EXP-10/11，也不覆盖 REV-0001 历史 ATTEMPT。
+- 当前入口：PHASE-02 / TASK-0207 / RISK-03；在隔离浏览器数据库证明真实 Dexie 升级前完整备份、幂等升级、故障事务回滚和上一稳定版可读，生成 EVID-25 后再复审 PHASE-02。
+- 最近有效提交：a683b4e77eaf5ab38d166710850544c43cd7ac04
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-01-final.json，SHA-256 `ff273958e72ca28a6e87012a26b448eabe5f59b05efcf4b11df05feb9236a880`，2026-08-13T10:04:41+08:00
+- 当前阻塞：无；GATE-00 与 GATE-01 已通过，但 PHASE-03 依赖的 RISK-03/EVID-25 尚未闭合，因此 PHASE-02 仍执行中、PHASE-03 继续冻结。
+- 停止原因：无；停止 EXP-10/11，转向同阶段剩余迁移门，不把 GATE-01 外推为阶段完成。
 - 完成判定：未完成
 
 ## 状态转换
@@ -165,3 +165,11 @@
 - 活体证据：归档前仅删除纵切日志末尾单个空白行并级联重算该 record SHA 与外层 SHA，不改测试正文、退出码、时间或产品结论；EVID-48 最终 SHA-256 `8fbf1201f7dbdecfc29a94e021318cb7606f7240160efe6cc62ede6fab909245`，7/7 records SHA 独立复算匹配，productGate=`PASS`，3102 前后空闲、孤儿进程 0、public 指纹一致、临时目录清理且无个人绝对路径。
 - 状态结论：TRY-06 通过；停止后续差异实验。GATE-01 已有 PASS ATTEMPT，但 EVID-17 FINAL 与阶段审查未闭合，PHASE-02 和 Goal 仍未完成。
 - 下一入口：先固化 EVID-48 至 clean 证据提交，再生成 EVID-17、`reports/phase-02-local-data.json` 与 `reviews/phase-02-gate-01.md`；全部复算前不进入 PHASE-03。
+
+### RUN-0017 · 2026-08-13T10:04:41+08:00 · PHASE-02 / GATE-01 FINAL
+- 本轮输入：clean@`a683b4e77eaf5ab38d166710850544c43cd7ac04`、EVID-45、EVID-48 与不可覆盖的 GATE-01 收束器。
+- 本轮范围：只生成 EVID-17、阶段机器汇总和 GATE-01 审查；不执行新产品实验、不开始 PHASE-03。
+- 正式结果：EVID-17 SHA-256 `ff273958e72ca28a6e87012a26b448eabe5f59b05efcf4b11df05feb9236a880`；来源 EVID-48 SHA `8fbf1201f7dbdecfc29a94e021318cb7606f7240160efe6cc62ede6fab909245` 与前置 EVID-45 SHA `2fd6b61a1fb58a6a6b12b3533e6db5939badd422463884c43d18036538f841c3` 均精确匹配。
+- 人工检查：备份/恢复与保存失败提示有可执行下一步；迁移仅冻结写前失败、已回滚、回滚失败三类说明，真实升级 UI 未接入，终局用户评分未执行。
+- 门禁复核：GATE-01 已通过，但 PHASE-03 明确依赖 PHASE-02 完成且 RISK-03 通过；EVID-25 尚未生成。因此阶段汇总记为 `PENDING_RISK_03`，不提前放行。
+- 下一入口：PHASE-02 / TASK-0207；以隔离浏览器数据库闭合真实 Dexie 迁移门并生成 EVID-25。

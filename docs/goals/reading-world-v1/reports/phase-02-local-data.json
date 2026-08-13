@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0002",
+  "phase": "02",
+  "result": "PENDING_RISK_03",
+  "generatedAt": "2026-08-13T10:04:41+08:00",
+  "evidenceCommit": "a683b4e77eaf5ab38d166710850544c43cd7ac04",
+  "inputs": [
+    {
+      "path": "docs/goals/reading-world-v1/reports/phase-02-data-contract.md",
+      "sha256": "4bea0deca7a5c6361e6a93df807b6e2f08bf9b179390a2592ef97a54169d446f"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/reports/phase-02-progress-save.md",
+      "sha256": "8962da697ccd5237168535d8adb83f343ee2f450e5c3f309d3e9db4ef6d06f28"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/reports/phase-02-migration-safety.md",
+      "sha256": "09252e2be25fc354b3a50dedb13252f1908069b43ebe3358a7681213d51e8a08"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-00-final.json",
+      "sha256": "2fd6b61a1fb58a6a6b12b3533e6db5939badd422463884c43d18036538f841c3"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-rev-0002-attempt-01.json",
+      "sha256": "8fbf1201f7dbdecfc29a94e021318cb7606f7240160efe6cc62ede6fab909245"
+    },
+    {
+      "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-01-final.json",
+      "sha256": "ff273958e72ca28a6e87012a26b448eabe5f59b05efcf4b11df05feb9236a880"
+    }
+  ],
+  "deliverables": {
+    "versionedLocalDataContract": true,
+    "progressSaveCoordinator": true,
+    "progressFailureVisibleAndRetryable": true,
+    "migrationOrchestratorWithBackupAndRollback": true,
+    "previousStableSnapshotCompatibility": true,
+    "gate00Qualified": true,
+    "gate01Passed": true,
+    "risk03FinalPassed": false
+  },
+  "liveAcceptance": {
+    "fixture": "fixed-two-chapter.epub.base64",
+    "importPreviewLibraryReading": true,
+    "progressPersistedWithinOneSecond": true,
+    "refreshResume": true,
+    "serviceWorkerControlled": true,
+    "trueOfflineResume": true,
+    "minimalBackup": true,
+    "isolatedRestore": true,
+    "uniqueBookIdLocator": true,
+    "recordsVerified": "7/7"
+  },
+  "humanCheckpoint": {
+    "reviewer": "explicit-agent",
+    "backupAndRestoreCopy": "PASS",
+    "progressFailureCopy": "PASS",
+    "migrationFailureCopyContract": "PASS_WITH_BOUNDARY",
+    "boundary": "迁移内核尚未接入真实浏览器启动升级；本阶段只冻结错误类别与下一步说明，不声称迁移失败 UI 已在生产入口展示。终局用户体验评分仍未执行。"
+  },
+  "remainingBoundaries": [
+    "EVID-25 终局迁移门证据仍待首次真实 schema 转换入口与隔离浏览器回放重采。",
+    "大文件、多格式、合并恢复和人读导出属于 PHASE-03。",
+    "阅读舒适度、手机与桌面长期阅读属于 PHASE-04。",
+    "生产冷启离线、升级和配额异常属于 PHASE-06。",
+    "同步、跨环境与终局人工体验均未完成。"
+  ],
+  "nextEntry": "PHASE-02 / TASK-0207：在隔离浏览器数据库证明真实 Dexie 升级前完整备份、幂等升级、故障事务回滚和上一稳定版可读，生成 EVID-25 后再复审阶段完成。"
+}
