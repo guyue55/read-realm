@@ -5,6 +5,10 @@ import {
   getPageScrollLeft,
   getNextPageScrollLeft,
   getPrevPageScrollLeft,
+  findPageIndexForAnchor,
+  renderPaginationPage,
+  getPaginationSpacerWidth,
+  PAGE_GAP,
   type PaginationStyle,
 } from './pagination-engine';
 
@@ -91,6 +95,125 @@ describe('paginateContent', () => {
     const result = paginateContent(content, 760, 900, defaultStyle);
     expect(result.totalPages).toBeGreaterThanOrEqual(1);
   });
+
+  it('splits one oversized paragraph with contiguous character anchors', () => {
+    const visibleText = '长'.repeat(12_000);
+    const result = paginateContent(
+      `<p data-idx="0">${visibleText}</p>`,
+      390,
+      720,
+      defaultStyle,
+    );
+
+    expect(result.totalPages).toBeGreaterThan(1);
+    expect(result.pages[0]).toEqual(expect.objectContaining({
+      startParaIndex: 0,
+      startCharOffset: 0,
+    }));
+    for (let index = 1; index < result.pages.length; index += 1) {
+      expect(result.pages[index]!.startParaIndex).toBe(0);
+      expect(result.pages[index]!.startCharOffset).toBe(
+        result.pages[index - 1]!.endCharOffset,
+      );
+    }
+    expect(result.pages.at(-1)!.endCharOffset).toBe(visibleText.length);
+  });
+
+  it('finds the semantic anchor again after viewport repagination', () => {
+    const content = `<p data-idx="0">${'甲'.repeat(8_000)}</p>`;
+    const narrow = paginateContent(content, 390, 720, defaultStyle);
+    const wide = paginateContent(content, 1024, 900, defaultStyle);
+    const anchor = { paragraphIndex: 0, characterOffset: 4_321 };
+
+    const narrowPage = findPageIndexForAnchor(narrow.pages, anchor);
+    const widePage = findPageIndexForAnchor(wide.pages, anchor);
+
+    expect(narrowPage).toBeGreaterThanOrEqual(0);
+    expect(widePage).toBeGreaterThanOrEqual(0);
+    expect(narrow.pages[narrowPage]!.startCharOffset).toBeLessThanOrEqual(anchor.characterOffset);
+    expect(narrow.pages[narrowPage]!.endCharOffset).toBeGreaterThan(anchor.characterOffset);
+    expect(wide.pages[widePage]!.startCharOffset).toBeLessThanOrEqual(anchor.characterOffset);
+    expect(wide.pages[widePage]!.endCharOffset).toBeGreaterThan(anchor.characterOffset);
+  });
+
+  it('renders every oversized paragraph character exactly once and escapes fragments', () => {
+    const visibleText = `${'文'.repeat(6_000)}<script>alert(1)</script>${'末'.repeat(4_000)}`;
+    const content = `<p data-idx="0">${visibleText
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')}</p>`;
+    const result = paginateContent(content, 390, 720, defaultStyle);
+    const rendered = result.pages.map((page) => renderPaginationPage(content, page)).join('');
+    const text = rendered
+      .replace(/<[^>]*>/g, '')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&');
+
+    expect(text).toBe(visibleText);
+    expect(rendered).not.toContain('<script>');
+  });
+
+  it('preserves leading, trailing and entity-decoded characters in sliced paragraphs', () => {
+    const visibleText = `  开头${'中'.repeat(10_000)} & < > 结尾  `;
+    const encoded = visibleText
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    const content = `<p data-idx="0">${encoded}</p>`;
+    const result = paginateContent(content, 390, 720, defaultStyle);
+    const rendered = result.pages.map((page) => renderPaginationPage(content, page)).join('');
+    const text = rendered
+      .replace(/<[^>]*>/g, '')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&amp;', '&');
+
+    expect(text).toBe(visibleText);
+  });
+
+  it('reserves title space on the first page only', () => {
+    const content = makeContent(30, 20);
+    const withoutTitle = paginateContent(content, 760, 900, defaultStyle);
+    const withTitle = paginateContent(content, 760, 900, {
+      ...defaultStyle,
+      firstPageReservedHeight: 180,
+    });
+
+    expect(withTitle.pages[0]!.endParaIndex).toBeLessThanOrEqual(
+      withoutTitle.pages[0]!.endParaIndex,
+    );
+    expect(withTitle.pages[1]!.startParaIndex).toBe(withTitle.pages[0]!.endParaIndex);
+  });
+
+  it('uses a smaller first fragment when a title shares an oversized first paragraph page', () => {
+    const content = `<p data-idx="0">${'首'.repeat(12_000)}</p>`;
+    const result = paginateContent(content, 390, 720, {
+      ...defaultStyle,
+      firstPageReservedHeight: 180,
+    });
+    const firstLength = result.pages[0]!.endCharOffset - result.pages[0]!.startCharOffset;
+    const secondLength = result.pages[1]!.endCharOffset - result.pages[1]!.startCharOffset;
+
+    expect(firstLength).toBeGreaterThan(0);
+    expect(firstLength).toBeLessThan(secondLength);
+  });
+
+  it('never splits an emoji surrogate pair across page fragments', () => {
+    const visibleText = `开${'🙂'.repeat(6_000)}终`;
+    const content = `<p data-idx="0">${visibleText}</p>`;
+    const result = paginateContent(content, 390, 720, defaultStyle);
+    const rendered = result.pages.map((page) => renderPaginationPage(content, page)).join('');
+    const restored = rendered.replace(/<[^>]*>/g, '');
+
+    expect(restored).toBe(visibleText);
+    for (const page of result.pages.slice(0, -1)) {
+      const previous = visibleText.charCodeAt(page.endCharOffset - 1);
+      const next = visibleText.charCodeAt(page.endCharOffset);
+      expect(previous >= 0xD800 && previous <= 0xDBFF).toBe(false);
+      expect(next >= 0xDC00 && next <= 0xDFFF).toBe(false);
+    }
+  });
 });
 
 describe('getCurrentPageIndex', () => {
@@ -106,6 +229,22 @@ describe('getCurrentPageIndex', () => {
 
   it('clamps to last page', () => {
     expect(getCurrentPageIndex(99999, 760, 3)).toBe(2);
+  });
+});
+
+describe('getPaginationSpacerWidth', () => {
+  it('keeps a virtualized page at its canonical horizontal offset', () => {
+    const pageWidth = 390;
+    const hiddenPages = 12;
+    const spacerWidth = getPaginationSpacerWidth(hiddenPages, pageWidth);
+
+    expect(spacerWidth + PAGE_GAP).toBe(
+      hiddenPages * (pageWidth + PAGE_GAP),
+    );
+  });
+
+  it('does not create negative width for an empty window edge', () => {
+    expect(getPaginationSpacerWidth(0, 390)).toBe(0);
   });
 });
 

@@ -6,6 +6,9 @@ import {
   getCurrentPageIndex,
   getNextPageScrollLeft,
   getPrevPageScrollLeft,
+  findPageIndexForAnchor,
+  getPaginationSpacerWidth,
+  renderPaginationPage,
   type PaginationPage,
   type PaginationStyle,
   PAGE_GAP,
@@ -23,7 +26,18 @@ export interface PaginatedReaderProps {
   paragraphSpacing: number;
   letterSpacing: number;
   onPageChange?: (pageIndex: number, totalPages: number) => void;
+  onAnchorChange?: (
+    anchor: { paragraphIndex: number; characterOffset: number },
+    pageIndex: number,
+    totalPages: number,
+  ) => void;
+  onBoundaryNext?: () => void | Promise<void>;
+  onBoundaryPrev?: () => void | Promise<void>;
   initialPage?: number;
+  initialAnchor?: {
+    paragraphIndex: number;
+    characterOffset: number;
+  };
 }
 
 /** 暴露给父组件的翻页操作接口 */
@@ -47,13 +61,23 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
     paragraphSpacing,
     letterSpacing,
     onPageChange,
+    onAnchorChange,
+    onBoundaryNext,
+    onBoundaryPrev,
     initialPage = 0,
+    initialAnchor,
   }, ref) {
     const outerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
     const [currentPage, setCurrentPage] = useState(initialPage);
+    const activeAnchorRef = useRef(initialAnchor ?? null);
+    const lastReportedAnchorRef = useRef<string | null>(null);
+    const anchorRestoredRef = useRef(false);
+    const suppressScrollReportRef = useRef(false);
+    const restoreTargetLeftRef = useRef(0);
+    const handleScrollRef = useRef<() => void>(() => undefined);
     const [measured, setMeasured] = useState(false);
 
     const paddingTop = 48;
@@ -68,6 +92,7 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       paddingTop,
       paddingBottom,
       maxWidth: readerTokens.layout.desktopContentMaxWidth,
+      firstPageReservedHeight: fontSize * 1.67 * lineHeight + 40,
     }), [fontSize, lineHeight, fontFamily, paragraphSpacing, letterSpacing]);
 
     const safeBody = useMemo(() => buildReaderHtml(content), [content]);
@@ -88,38 +113,9 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
     const pageContent = useMemo(() => {
       if (pages.length === 0 || !content) return [];
-
-      // 与 paginateContentAdaptive 内部 extractParagraphs 保持一致的段落提取逻辑，
-      // 支持 raw text（无 <p> 标签）和 HTML 段落两种格式。
-      const fullHtml = `${titleHtml}${safeBody}`;
-      let allParagraphs: string[] = [];
-      const paraRegex = /<p\b[^>]*>(.*?)<\/p>/gi;
-      let match;
-      while ((match = paraRegex.exec(fullHtml)) !== null) {
-        allParagraphs.push(match[0]);
-      }
-      const isRawText = allParagraphs.length === 0;
-      if (isRawText) {
-        // raw text: 按换行拆分并包裹 <p> 标签。
-        // extractParagraphs 会将 <h1> 标签剥离后标题文本与第一段合并为一行，
-        // 因此 allParagraphs[0] 已包含标题。此处保持索引与分页引擎一致。
-        const textOnly = fullHtml.replace(/<[^>]*>/g, '');
-        const lines = textOnly.split(/\n+/).filter(l => l.trim());
-        allParagraphs = lines.map(l => `<p>${l.trim()}</p>`);
-      }
-
-      return pages.map((page) => {
-        let html = '';
-        // HTML 内容：标题通过 <h1> 单独渲染（标题不在 allParagraphs 中）
-        // raw text：标题已包含在 allParagraphs[0] 中，不重复渲染 <h1>
-        if (page.startParaIndex === 0 && !isRawText) {
-          html += titleHtml;
-        }
-        for (let i = page.startParaIndex; i < page.endParaIndex && i < allParagraphs.length; i++) {
-          html += allParagraphs[i];
-        }
-        return html;
-      });
+      return pages.map((page, index) =>
+        `${index === 0 ? titleHtml : ''}${renderPaginationPage(safeBody, page)}`,
+      );
     }, [pages, content, titleHtml, safeBody]);
 
     // 🏮 暴露翻页操作给父组件
@@ -189,11 +185,30 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       if (!container || containerWidth <= 0) return;
 
       const pageIdx = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+      if (!anchorRestoredRef.current) return;
+      if (suppressScrollReportRef.current) {
+        if (Math.abs(container.scrollLeft - restoreTargetLeftRef.current) <= 1) return;
+        suppressScrollReportRef.current = false;
+      }
+      const page = pages[pageIdx];
+      if (page) {
+        const anchor = {
+          paragraphIndex: page.startParaIndex,
+          characterOffset: page.startCharOffset,
+        };
+        activeAnchorRef.current = anchor;
+        const fingerprint = `${pageIdx}:${anchor.paragraphIndex}:${anchor.characterOffset}:${totalPages}`;
+        if (lastReportedAnchorRef.current !== fingerprint) {
+          lastReportedAnchorRef.current = fingerprint;
+          onAnchorChange?.(anchor, pageIdx, totalPages);
+        }
+      }
       if (pageIdx !== currentPage) {
         setCurrentPage(pageIdx);
         onPageChange?.(pageIdx, totalPages);
       }
-    }, [containerWidth, totalPages, currentPage, onPageChange]);
+    }, [containerWidth, totalPages, currentPage, onPageChange, onAnchorChange, pages]);
+    handleScrollRef.current = handleScroll;
 
     // 🏮 键盘翻页：检查焦点不在输入元素中才触发
     useEffect(() => {
@@ -213,10 +228,20 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
         if (e.key === 'ArrowRight' || e.key === 'PageDown') {
           e.preventDefault();
+          const current = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+          if (current >= totalPages - 1) {
+            void onBoundaryNext?.();
+            return;
+          }
           const next = getNextPageScrollLeft(container.scrollLeft, containerWidth, totalPages);
           container.scrollTo({ left: next, behavior: 'smooth' });
         } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
           e.preventDefault();
+          const current = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+          if (current <= 0) {
+            void onBoundaryPrev?.();
+            return;
+          }
           const prev = getPrevPageScrollLeft(container.scrollLeft, containerWidth);
           container.scrollTo({ left: prev, behavior: 'smooth' });
         }
@@ -224,19 +249,73 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [containerWidth, totalPages]);
+    }, [containerWidth, totalPages, onBoundaryNext, onBoundaryPrev]);
 
     useEffect(() => {
-      if (scrollRef.current && initialPage > 0 && containerWidth > 0) {
-        const targetLeft = initialPage * (containerWidth + PAGE_GAP);
-        scrollRef.current.scrollLeft = targetLeft;
+      const container = scrollRef.current;
+      if (
+        !container ||
+        containerWidth <= 0 ||
+        pages.length === 0 ||
+        !initialAnchor
+      ) return;
+      const anchor = initialAnchor ?? activeAnchorRef.current;
+      const targetPage = anchor
+        ? findPageIndexForAnchor(pages, anchor)
+        : Math.max(0, Math.min(pages.length - 1, initialPage));
+      const targetLeft = targetPage * (containerWidth + PAGE_GAP);
+      anchorRestoredRef.current = false;
+      suppressScrollReportRef.current = true;
+      restoreTargetLeftRef.current = targetLeft;
+      const previousScrollBehavior = container.style.scrollBehavior;
+      // 恢复必须是原子定位；若沿用 smooth，中间帧会被误认为用户回到前一页。
+      container.style.scrollBehavior = 'auto';
+      container.scrollLeft = targetLeft;
+      setCurrentPage(targetPage);
+      const page = pages[targetPage];
+      if (page) {
+        const pageStartAnchor = {
+          paragraphIndex: page.startParaIndex,
+          characterOffset: page.startCharOffset,
+        };
+        const preservedAnchor = anchor ?? pageStartAnchor;
+        activeAnchorRef.current = preservedAnchor;
+        lastReportedAnchorRef.current = `${targetPage}:${pageStartAnchor.paragraphIndex}:${pageStartAnchor.characterOffset}:${totalPages}`;
       }
-    }, [initialPage, containerWidth]);
+      anchorRestoredRef.current = true;
+      onPageChange?.(targetPage, totalPages);
+      const firstFrame = requestAnimationFrame(() => {
+        container.style.scrollBehavior = previousScrollBehavior;
+        suppressScrollReportRef.current = false;
+        const currentLeft = scrollRef.current?.scrollLeft ?? targetLeft;
+        if (Math.abs(currentLeft - targetLeft) > 1) {
+          handleScrollRef.current();
+        }
+      });
+      return () => {
+        cancelAnimationFrame(firstFrame);
+        container.style.scrollBehavior = previousScrollBehavior;
+      };
+    }, [initialAnchor, initialPage, containerWidth, pages, totalPages, onPageChange]);
 
     const pageWidth = containerWidth;
+    const anchorPage = initialAnchor
+      ? findPageIndexForAnchor(pages, initialAnchor)
+      : -1;
+    const windowStart = Math.max(0, currentPage - 1);
+    const windowEnd = Math.min(totalPages, currentPage + 2);
+    const visiblePages = pageContent.slice(windowStart, windowEnd);
 
     return (
-      <div ref={outerRef} className="absolute inset-0 flex flex-col">
+      <div
+        ref={outerRef}
+        className="absolute inset-0 flex flex-col"
+        data-current-page={currentPage}
+        data-anchor-page={anchorPage}
+        data-anchor-paragraph={initialAnchor?.paragraphIndex ?? -1}
+        data-anchor-character={initialAnchor?.characterOffset ?? -1}
+        data-anchor-restored={anchorRestoredRef.current ? "true" : "false"}
+      >
         {!measured && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-inherit">
             <p className="text-sm opacity-50">正在计算分页...</p>
@@ -255,10 +334,24 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
           }}
         >
           <div className="flex h-full" style={{ gap: `${PAGE_GAP}px` }}>
-            {pageContent.map((html, idx) => (
+            {windowStart > 0 && (
               <div
-                key={idx}
-                className="flex-shrink-0 h-full overflow-y-auto"
+                aria-hidden="true"
+                className="h-full flex-shrink-0"
+                style={{ width: `${getPaginationSpacerWidth(windowStart, pageWidth)}px` }}
+              />
+            )}
+            {visiblePages.map((html, offset) => {
+              const pageIndex = windowStart + offset;
+              const page = pages[pageIndex];
+              return (
+              <div
+                key={pageIndex}
+                data-page-index={pageIndex}
+                data-start-paragraph={page?.startParaIndex}
+                data-start-character={page?.startCharOffset}
+                data-end-character={page?.endCharOffset}
+                className="flex-shrink-0 h-full overflow-hidden"
                 style={{
                   width: `${pageWidth}px`,
                   scrollSnapAlign: 'start',
@@ -279,7 +372,15 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
               </div>
-            ))}
+              );
+            })}
+            {windowEnd < totalPages && (
+              <div
+                aria-hidden="true"
+                className="h-full flex-shrink-0"
+                style={{ width: `${getPaginationSpacerWidth(totalPages - windowEnd, pageWidth)}px` }}
+              />
+            )}
           </div>
         </div>
 
