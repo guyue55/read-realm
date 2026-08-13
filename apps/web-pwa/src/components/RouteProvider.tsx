@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useEffect, useSyncExternalStore } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { virtualRouter, RouteState, parseHash } from "@/lib/route-store";
-import { checkAndRestoreFromBackup, executeStorageGarbageCollection } from "@reader/storage-core";
+import {
+  checkAndRestoreFromBackup,
+  db,
+  describeLocalDataMigrationError,
+  executeStorageGarbageCollection,
+} from "@reader/storage-core";
 
 interface SafeWindow {
   requestIdleCallback?: (
@@ -53,10 +58,27 @@ export function useRouteStore(): RouteState {
 
 // 虚拟路由副作用容器，接管 popstate、持久特权申请与防蒸发降卷自愈
 export function RouteProvider({ children }: { children: React.ReactNode }) {
+  const [storageState, setStorageState] = useState<"opening" | "ready" | "failed">("opening");
+  const [storageError, setStorageError] = useState("");
+  const [storageAttempt, setStorageAttempt] = useState(0);
+
   useEffect(() => {
     let active = true;
 
     async function initPlatformAndHeal() {
+      setStorageState("opening");
+      setStorageError("");
+      try {
+        const connectDatabase = db["open"].bind(db);
+        await connectDatabase();
+      } catch (error) {
+        if (active) {
+          setStorageError(describeLocalDataMigrationError(error));
+          setStorageState("failed");
+        }
+        return;
+      }
+
       // A. 自动申请 navigator.storage.persist() 存储持久化特权 (E07-S03)
       if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) {
         try {
@@ -89,6 +111,9 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
         console.warn("[Storage] 冷启动存储垃圾回收未完全成功:", err);
       }
 
+      if (active) {
+        setStorageState("ready");
+      }
     }
 
     initPlatformAndHeal();
@@ -110,8 +135,8 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
     // E. 挂载断联/切后台即时物理自愈 GC 垃圾回收器 (E07-S06-1)
     const handleVisibilityChange = async () => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        if (!db.isOpen.call(db)) return;
         try {
-          const { db } = await import("@reader/storage-core");
           const now = Date.now();
           const minimumAgeMs = 2 * 60 * 1000; // 2分钟安全期，避免误杀正在流式导入的活跃任务
           const ghosts = await db.importTasks
@@ -138,7 +163,39 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
     };
-  }, []);
+  }, [storageAttempt]);
+
+  if (storageState !== "ready") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--ui-bg)] px-6 text-[var(--ui-text)]">
+        {storageState === "failed" ? (
+          <section
+            role="alert"
+            className="w-full max-w-md rounded-2xl border border-[var(--ui-border)] bg-white/80 p-6 shadow-sm"
+          >
+            <h1 className="text-lg font-bold">本地数据暂时无法打开</h1>
+            <p className="mt-3 text-sm leading-6 text-[var(--ui-text-secondary)]">
+              {storageError}
+            </p>
+            <button
+              type="button"
+              className="mt-5 min-h-11 rounded-xl border border-[var(--ui-border)] px-4 text-sm font-bold"
+              onClick={() => {
+                db.close();
+                setStorageAttempt((attempt) => attempt + 1);
+              }}
+            >
+              重试打开本地数据
+            </button>
+          </section>
+        ) : (
+          <p role="status" aria-live="polite" className="text-sm font-medium">
+            正在安全打开本地书架…
+          </p>
+        )}
+      </main>
+    );
+  }
 
   return <>{children}</>;
 }

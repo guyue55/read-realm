@@ -165,6 +165,13 @@ test("RISK-03 real Dexie upgrade backs up, is idempotent and rolls back on failu
     const page = await failureContext.newPage();
     await seedVersionNine(page, "{broken-json");
     await page.goto("/#/library");
+    const migrationAlert = page.locator('section[role="alert"]');
+    await expect(migrationAlert).toContainText("本地数据暂时无法打开");
+    await expect(migrationAlert).toContainText("保留备份");
+    const retryButton = page.getByRole("button", { name: "重试打开本地数据" });
+    await expect(retryButton).toBeVisible();
+    await retryButton.click();
+    await expect(migrationAlert).toContainText("本地数据暂时无法打开");
     await page.goto("/manifest.json");
     const rolledBack = await inspectDatabase(page);
     expect(rolledBack.version).toBe(nativeVersionNine);
