@@ -114,7 +114,7 @@ describe("portable backup package", () => {
         bookmarks: 1,
         fileRefs: 0,
       },
-      restoreModes: ["copy"],
+      restoreModes: ["merge", "copy"],
       warnings: [],
       snapshot,
     });
