@@ -15,6 +15,11 @@ import { dirname, relative, resolve } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import {
+  classifyGateRun,
+  parseQualificationObservation,
+  verifyEvidenceRecords,
+} from "./gate-qualification.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -268,14 +273,44 @@ function phaseTwoExperimentChecks(experiment) {
   ];
 }
 
-function checksFor(phase, experiment) {
+function phaseTwoQualificationChecks(qualification) {
+  if (qualification !== "EXP-08") {
+    throw new Error(
+      `PHASE-02 GATE-00 当前只放行 EXP-08；${qualification ?? "缺少资格实验 ID"} 不可执行`,
+    );
+  }
+  return [
+    { id: "PATCH_WHITESPACE", command: "git", args: ["diff", "--check"] },
+    {
+      id: "QUALIFICATION_CONTRACT_TEST",
+      command: process.execPath,
+      args: ["--test", "scripts/gate-qualification.test.mjs"],
+    },
+    {
+      id: "GATE_00_QUALIFICATION",
+      command: process.execPath,
+      args: ["scripts/run-gate-00-qualification.mjs", qualification],
+      env: {
+        CI: "1",
+        PLAYWRIGHT_BROWSER_CHANNEL:
+          process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome",
+      },
+    },
+  ];
+}
+
+function checksFor(phase, experiment, qualification) {
   if (phase === "01") {
-    if (experiment) {
-      throw new Error("PHASE-01 不接受 --experiment；实验入口从 PHASE-02 开始实现");
+    if (experiment || qualification) {
+      throw new Error("PHASE-01 不接受实验参数；实验入口从 PHASE-02 开始实现");
     }
     return phaseOneChecks();
   }
   if (phase === "02") {
+    if (experiment && qualification) {
+      throw new Error("--experiment 与 --qualification 不可同时使用");
+    }
+    if (qualification) return phaseTwoQualificationChecks(qualification);
     return phaseTwoExperimentChecks(experiment);
   }
   throw new Error(
@@ -302,7 +337,7 @@ function main() {
   mkdirSync(dirname(outputPath), { recursive: true });
   mkdirSync(logDirectory, { recursive: true });
 
-  const checks = checksFor(args.phase, args.experiment);
+  const checks = checksFor(args.phase, args.experiment, args.qualification);
   const startedAt = new Date().toISOString();
   const results = [];
 
@@ -372,15 +407,60 @@ function main() {
   const gitStatus = probe("git", ["status", "--porcelain=v1", "--untracked-files=all"]);
   const nodeVersion = probe(process.execPath, ["--version"]);
   const pnpmVersion = probe("corepack", ["pnpm", "--version"]);
+  let qualification = null;
+  if (args.qualification) {
+    const qualificationCheck = results.find(
+      (result) => result.id === "GATE_00_QUALIFICATION",
+    );
+    let observation;
+    try {
+      const qualificationLog = readFileSync(
+        resolve(repoRoot, qualificationCheck.logPath),
+        "utf8",
+      );
+      observation = parseQualificationObservation(qualificationLog);
+    } catch (error) {
+      observation = {
+        listExitCode: 1,
+        buildExitCode: 1,
+        serviceReady: false,
+        testExitCode: qualificationCheck?.exitCode ?? 1,
+        listedTestCount: 0,
+        targetCount: 0,
+        portFreeBefore: false,
+        portFreeAfter: false,
+        orphanProcessCount: 1,
+        publicRestored: false,
+        observationError: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const provisionalReport = { checks: results };
+    const recordVerification = verifyEvidenceRecords(
+      provisionalReport,
+      (path) => {
+        const absolute = resolve(repoRoot, path);
+        return existsSync(absolute) ? readFileSync(absolute) : null;
+      },
+    );
+    qualification = {
+      ...classifyGateRun({
+        ...observation,
+        evidenceRecordsValid: recordVerification.valid,
+      }),
+      observation,
+      recordVerification,
+    };
+  }
   const passed = results.every(
     (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
-  );
+  ) && (!qualification || qualification.classification === "QUALIFIED");
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision: "REV-0001",
+    controlRevision: args.qualification ? "REV-0002" : "REV-0001",
     phase: args.phase,
     experiment: args.experiment ?? null,
+    qualificationExperiment: args.qualification ?? null,
     startedAt,
     endedAt: new Date().toISOString(),
     archivedPreviousReport,
@@ -397,6 +477,7 @@ function main() {
     sourceMutationPolicy:
       "检查命令不得修改受版本控制的源文件；构建缓存、隔离测试数据、日志和本报告属于声明的验证副作用",
     checks: results,
+    qualification,
     summary: {
       passed,
       passedCount: results.filter(
