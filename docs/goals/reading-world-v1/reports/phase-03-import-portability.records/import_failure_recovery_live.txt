@@ -1,13 +1,13 @@
 $ corepack pnpm --filter web-pwa exec playwright test e2e/import-failure-recovery.spec.ts --project=chromium-chrome --timeout=120000 --reporter=line
-started_at=2026-08-13T06:50:54.637Z
-ended_at=2026-08-13T06:51:35.487Z
-duration_ms=40850
+started_at=2026-08-13T16:11:42.909Z
+ended_at=2026-08-13T16:12:02.928Z
+duration_ms=20019
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
 [stdout]
 
 
@@ -24,22 +24,22 @@ Running 3 tests using 1 worker
 
 [2/3] [chromium-chrome] › e2e/import-failure-recovery.spec.ts:102:5 › directory permission loss preserves the task and reauthorization rescans it
 [3/3] [chromium-chrome] › e2e/import-failure-recovery.spec.ts:121:5 › forced worker termination exposes retry and the same task reaches preview
-  3 passed (39.2s)
+  3 passed (19.5s)
 
 [stderr]
-[WebServer] (node:88454) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:12829) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:88521) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:12860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:88940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:13053) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:89265) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:13377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:89287) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:13399) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:89372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:13486) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-(node:90286) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:13934) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
 [WebServer]  ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
 [WebServer] Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins

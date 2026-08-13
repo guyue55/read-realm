@@ -1,13 +1,13 @@
 $ corepack pnpm --filter @reader/parser-core test
-started_at=2026-08-13T06:48:14.028Z
-ended_at=2026-08-13T06:48:16.319Z
-duration_ms=2291
+started_at=2026-08-13T16:09:31.179Z
+ended_at=2026-08-13T16:09:33.755Z
+duration_ms=2576
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
 [stdout]
 
 > @reader/parser-core@0.1.0 test ./packages/parser-core
@@ -16,13 +16,13 @@ tracked_status_after=[]
 
  RUN  v1.6.1 ./packages/parser-core
 
- ✓ src/txt-parser.test.ts  (7 tests) 5ms
- ✓ src/epub-parser.test.ts  (1 test) 16ms
- ✓ src/html-parser.test.ts  (2 tests) 61ms
+ ✓ src/txt-parser.test.ts  (7 tests) 3ms
+ ✓ src/epub-parser.test.ts  (1 test) 21ms
+ ✓ src/html-parser.test.ts  (2 tests) 59ms
 
  Test Files  3 passed (3)
       Tests  10 passed (10)
-   Start at  14:48:14
-   Duration  1.57s (transform 219ms, setup 0ms, collect 1.32s, tests 82ms, environment 1ms, prepare 392ms)
+   Start at  00:09:32
+   Duration  1.61s (transform 233ms, setup 0ms, collect 1.44s, tests 83ms, environment 0ms, prepare 305ms)
 
 [stderr]

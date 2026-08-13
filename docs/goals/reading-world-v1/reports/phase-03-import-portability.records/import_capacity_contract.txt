@@ -1,20 +1,20 @@
 $ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/import-capacity-fixtures.test.mjs scripts/import-capacity-run.test.mjs
-started_at=2026-08-13T06:48:13.331Z
-ended_at=2026-08-13T06:48:13.964Z
-duration_ms=633
+started_at=2026-08-13T16:09:30.247Z
+ended_at=2026-08-13T16:09:31.102Z
+duration_ms=855
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-03-import-portability.json"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/content_utils_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/durable_folder_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_capacity_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/import_failure_recovery_live.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/parser_test.txt"," M docs/goals/reading-world-v1/reports/phase-03-import-portability.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/portability_contract.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_build.txt"," D docs/goals/reading-world-v1/reports/phase-03-import-portability.records/workspace_test.txt"]
 [stdout]
-✔ quick profile creates verifiable TXT and EPUB fixtures (101.801125ms)
-✔ refuses unknown profiles before creating output (42.809125ms)
-✔ replace only accepts a directory owned by this generator (174.116291ms)
-✔ clean removes only a verified generator-owned fixture directory (235.250375ms)
-✔ capacity runner passes only with exact enumeration and complete compensation (0.798666ms)
-✔ capacity runner exposes test, cleanup and port failures (0.095458ms)
+✔ quick profile creates verifiable TXT and EPUB fixtures (98.592792ms)
+✔ refuses unknown profiles before creating output (37.768667ms)
+✔ replace only accepts a directory owned by this generator (418.025625ms)
+✔ clean removes only a verified generator-owned fixture directory (220.95625ms)
+✔ capacity runner passes only with exact enumeration and complete compensation (1.192166ms)
+✔ capacity runner exposes test, cleanup and port failures (0.171625ms)
 ℹ tests 6
 ℹ suites 0
 ℹ pass 6
@@ -22,6 +22,6 @@ tracked_status_after=[]
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 599.735625
+ℹ duration_ms 822.645125
 
 [stderr]

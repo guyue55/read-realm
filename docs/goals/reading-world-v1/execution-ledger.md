@@ -309,3 +309,12 @@
 - 活体与失败链：策略单测 7/7、API SSRF/凭据测试 5/5。首个 Playwright 命令误用未安装的 bundled Chromium，3 项均在启动前 `VALIDATOR_INDETERMINATE`；改用既定系统 Chrome channel。反爬用例首次因完成状态只在 processing 时渲染而不可见，修正为稳定 `role=status` 后 1/1 通过。手动检查用例首次从书架标题误入阅读器而找不到详情按钮，改按持久化 book ID 进入详情；最终 URL 全文件 4/4 通过 42.4 秒，其中登录/验证码未调用后端、手动预览后章节计数不变。
 - 静态门与安全：Web lint、API 非写入 lint、Web/API 类型检查、diff 均通过；11 个改动实现文件中 7 个 Green，4 个 Yellow 仅命中合法测试 URL、IndexedDB `open()` 和正则 `.exec()`，逐项人工复核无凭证、无下载执行、无新增数据外传。3100/4100 已释放。
 - 证据边界：本记录只证明 TASK-0304 产品候选；EVID-03/04/05/16、PHASE-03 与 Goal 尚未完成。下一步先提交该候选，再从 clean checkpoint 生成阶段审查并执行完整 `--phase 03` 复算。
+
+### RUN-0032 · 2026-08-14T00:13:00+08:00 · PHASE-03 完整复算 PASS
+- 本轮输入：TASK-0304 产品 checkpoint `58c66d8`、检查器/候选审查 checkpoint `c8abb35`、上一份 11/12 FAIL 阶段报告与 12 条不可覆盖 records。
+- 完整命令：`node scripts/verify-reading-world.mjs --phase 03 --output docs/goals/reading-world-v1/reports/phase-03-import-portability.json`；结果 14 通过 / 0 失败 / tracked mutation 0，总体 PASS。
+- 活体覆盖：200MB TXT、500MB EPUB、1 万章容量 2/2；目录 2/2；配额/权限/Worker 恢复 3/3；耐久导入与 Provider 4/4；备份/合并/导出 2/2。全工作区 267 tests（逐包 4+10+17+10+52+63+31+80）、生产构建、Web/API 非写入 lint 和契约检查全部通过。
+- 独立复算：14/14 records 存在且 SHA-256 与外层 JSON 匹配；`summary.passed=true`、`trackedMutationCount=0`，报告绑定 clean@`c8abb3547eb52afac5037889be68d2bf4a98801a`。容量 full fixture 已清理，3100/4100 无监听。
+- 证据规范化：6 份 runner 日志各在测试正文之后带一个额外空白行，触发 `git diff --check`；封证前只删除该末尾空白行，并级联重算对应 6 条 `logSha256` 与外层报告 SHA。未改变命令、stdout/stderr 正文、退出码、时间、tracked mutation 或 PASS 结论；规范化后 14/14 SHA 再次独立匹配，报告 SHA-256 为 `89bc198a5e5d5fa8004c9c45c0edaa43b6ee1e23ff334415f0bbffd75b85e5a7`。
+- 历史保留：RUN-0025 的 11/12 FAIL 报告和原 records 已移动到 `reports/history/phase-03-import-portability-attempt-01/`；当前 PASS 不删除、不改写其失败结论。
+- 当前边界：阶段机器门已通过，但 EVID-03/04/05/16 尚未从 clean 证据提交生成，因此 PHASE-03 暂不提前标记完成，也不推进 PHASE-04。
