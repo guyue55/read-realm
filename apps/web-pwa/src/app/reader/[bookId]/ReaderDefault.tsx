@@ -11,7 +11,7 @@ import { ReaderContent } from "@/components/reader/ReaderContent";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
@@ -54,8 +54,6 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     handlePrev,
     handlePrevChapterActive,
     handleNextChapterActive,
-    handlePageNext,
-    handlePagePrev,
     addBookmark,
     jumpToBookmark,
     handleSummarize,
@@ -69,6 +67,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     updateLineHeight,
     seekToProgress,
     readingProgress,
+    paginationAnchor,
+    savePaginationAnchor,
     currentThemeColors,
     isPagination,
     toast,
@@ -90,15 +90,89 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [selectedText, setSelectedText] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
+  const paginationTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 768px)");
+    const syncViewport = () => setIsDesktopViewport(media.matches);
+    syncViewport();
+    media.addEventListener("change", syncViewport);
+    return () => media.removeEventListener("change", syncViewport);
+  }, []);
+
   // 🏮 分页模式下将 contentRef 指向 PaginatedReader 内部的 scroll 容器
   useEffect(() => {
-    if (isPagination && paginatedReaderRef.current) {
-      const scrollContainer = paginatedReaderRef.current.getScrollContainer();
+    if (isPagination) {
+      const scrollContainer = paginatedReaderRef.current?.getScrollContainer();
       if (scrollContainer) {
         (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = scrollContainer;
       }
     }
-  }, [isPagination, contentRef, chapter?.id]);
+  }, [isPagination, contentRef, chapter?.id, isDesktopViewport]);
+
+  const getActivePaginatedReader = useCallback(() => {
+    return paginatedReaderRef.current;
+  }, []);
+
+  const handleVisiblePageNext = useCallback(async () => {
+    if (isPagination && getActivePaginatedReader()?.nextPage()) return;
+    await handleNext();
+  }, [getActivePaginatedReader, handleNext, isPagination]);
+
+  const handleVisiblePagePrev = useCallback(async () => {
+    if (isPagination && getActivePaginatedReader()?.prevPage()) return;
+    await handlePrev();
+  }, [getActivePaginatedReader, handlePrev, isPagination]);
+
+  const handleVisibleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
+    if (!isPagination) {
+      handleContentTouchStart(event);
+      return;
+    }
+    if (isInteractiveReaderTarget(event.target) || activePanel) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
+    const touch = event.touches[0];
+    if (!touch || touch.clientX < 30 || touch.clientX > window.innerWidth - 30) {
+      paginationTouchRef.current = null;
+      return;
+    }
+    paginationTouchRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  }, [activePanel, handleContentTouchStart, isPagination]);
+
+  const handleVisibleTouchEnd = useCallback((event: TouchEvent<HTMLDivElement>) => {
+    if (!isPagination) {
+      handleContentTouchEnd(event);
+      return;
+    }
+    const start = paginationTouchRef.current;
+    paginationTouchRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const selection = window.getSelection();
+    const deltaX = touch.clientX - start.x;
+    if (selection && !selection.isCollapsed) {
+      if (Math.abs(deltaX) <= 70) return;
+      selection.removeAllRanges();
+    }
+    const action = recognizer.getSwipeAction(
+      { x: start.x, y: start.y },
+      { x: touch.clientX, y: touch.clientY },
+      Date.now() - start.time,
+    );
+    if (action === "swipeLeft" || action === "swipeUp") {
+      event.preventDefault();
+      void handleVisiblePageNext();
+    } else if (action === "swipeRight" || action === "swipeDown") {
+      event.preventDefault();
+      void handleVisiblePagePrev();
+    }
+  }, [handleContentTouchEnd, handleVisiblePageNext, handleVisiblePagePrev, isPagination]);
 
   const [aiInput, setAiInput] = useState(""); // 🏮 联动 AI 伴读的输入框内容
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -230,9 +304,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       // 1. 如果菜单尚未显示
       if (!showMenu) {
         if (action === "prev") {
-          void handlePagePrev();
+          void handleVisiblePagePrev();
         } else if (action === "next") {
-          void handlePageNext();
+          void handleVisiblePageNext();
         } else {
           // 点击中间区域，唤醒菜单
           setShowMenu(true);
@@ -242,19 +316,19 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
       // 2. 如果菜单已经显示
       if (action === "prev") {
-        void handlePagePrev();
+        void handleVisiblePagePrev();
         return;
       }
 
       if (action === "next") {
-        void handlePageNext();
+        void handleVisiblePageNext();
         return;
       }
 
       // 点击中间区域，隐藏菜单
       setShowMenu(false);
     },
-    [showMenu, handlePagePrev, handlePageNext, setShowMenu, activePanel, isPagination, isFlipCooldown, selectionRect],
+    [showMenu, handleVisiblePagePrev, handleVisiblePageNext, setShowMenu, activePanel, isPagination, isFlipCooldown, selectionRect],
   );
 
   if (error) {
@@ -510,17 +584,24 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             </div>
 
             {isPagination ? (
-              <PaginatedReader
-                ref={paginatedReaderRef}
-                title={chapter.title}
-                content={chapter.content}
-                isDark={isDark}
-                fontSize={settings.fontSize}
-                lineHeight={settings.lineHeight}
-                fontFamily={settings.fontFamily || "kaiti"}
-                paragraphSpacing={settings.paragraphSpacing ?? 16}
-                letterSpacing={settings.letterSpacing ?? 0.03}
-              />
+              isDesktopViewport === true ? (
+                <PaginatedReader
+                  key={`desktop-${chapter.id}`}
+                  ref={paginatedReaderRef}
+                  title={chapter.title}
+                  content={chapter.content}
+                  isDark={isDark}
+                  fontSize={settings.fontSize}
+                  lineHeight={settings.lineHeight}
+                  fontFamily={settings.fontFamily || "kaiti"}
+                  paragraphSpacing={settings.paragraphSpacing ?? 16}
+                  letterSpacing={settings.letterSpacing ?? 0.03}
+                  initialAnchor={paginationAnchor?.chapterIndex === chapter.index ? paginationAnchor : undefined}
+                  onAnchorChange={savePaginationAnchor}
+                  onBoundaryNext={handleNext}
+                  onBoundaryPrev={handlePrev}
+                />
+              ) : null
             ) : (
               renderedChapters.map((ch) => (
                 <div
@@ -588,8 +669,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           ref={(node) => setActiveContentRef(node, "mobile")}
           data-reader-content-canvas="mobile"
           onClick={handleMobileReaderClick}
-          onTouchStart={handleContentTouchStart}
-          onTouchEnd={handleContentTouchEnd}
+          onTouchStart={handleVisibleTouchStart}
+          onTouchEnd={handleVisibleTouchEnd}
           className={`flex-1 relative reader-gpu-accelerated ${
             isPagination
               ? "overflow-y-auto overflow-x-hidden"
@@ -602,25 +683,24 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           style={{ scrollBehavior: "smooth" }}
         >
           {isPagination ? (
-            <ReaderContent
-              title={chapter.title}
-              content={chapter.content}
-              isDark={isDark}
-              isPagination={isPagination}
-              buttonVariant="default"
-              onPrev={handlePrev}
-              onNext={handleNext}
-              className="mx-auto px-6 pt-12 pb-[120px]"
-              style={{
-                maxWidth: `100%`,
-                fontSize: `${settings.fontSize}px`,
-                lineHeight: settings.lineHeight,
-                "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-                "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-                "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-              } as React.CSSProperties}
-              titleClassName="text-2xl font-bold mb-8 font-serif"
-            />
+            isDesktopViewport === false ? (
+              <PaginatedReader
+                key={`mobile-${chapter.id}`}
+                ref={paginatedReaderRef}
+                title={chapter.title}
+                content={chapter.content}
+                isDark={isDark}
+                fontSize={settings.fontSize}
+                lineHeight={settings.lineHeight}
+                fontFamily={settings.fontFamily || "kaiti"}
+                paragraphSpacing={settings.paragraphSpacing ?? 16}
+                letterSpacing={settings.letterSpacing ?? 0.03}
+                initialAnchor={paginationAnchor?.chapterIndex === chapter.index ? paginationAnchor : undefined}
+                onAnchorChange={savePaginationAnchor}
+                onBoundaryNext={handleNext}
+                onBoundaryPrev={handlePrev}
+              />
+            ) : null
           ) : (
             renderedChapters.map((ch) => (
               <div
@@ -668,8 +748,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onToggleSettings={() => togglePanel("settings")}
           onToggleNightMode={handleNightModeToggle}
           onBookmark={addBookmark}
-          onPagePrev={handlePagePrev}
-          onPageNext={handlePageNext}
+          onPagePrev={handleVisiblePagePrev}
+          onPageNext={handleVisiblePageNext}
           onSeekProgress={seekToProgress}
           onPrevChapter={handlePrevChapterActive}
           onNextChapter={handleNextChapterActive}
@@ -742,7 +822,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               ⏮
             </button>
             <button
-              onClick={handlePagePrev}
+              onClick={handleVisiblePagePrev}
               className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xl`}
             >
               ‹
@@ -760,7 +840,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               className="w-full accent-[#678055]"
             />
             <button
-              onClick={handlePageNext}
+              onClick={handleVisiblePageNext}
               className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xl`}
             >
               ›

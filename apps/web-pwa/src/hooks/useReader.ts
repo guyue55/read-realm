@@ -599,6 +599,11 @@ export function useReader(bookId: string) {
   );
   const settingsRef = useRef<ReaderSettingsState>(settings);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [paginationAnchor, setPaginationAnchor] = useState<{
+    chapterIndex: number;
+    paragraphIndex: number;
+    characterOffset: number;
+  } | null>(null);
 
   const [autoFlipCountdown, setAutoFlipCountdown] = useState<number | null>(null);
   const autoFlipTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -956,19 +961,24 @@ export function useReader(bookId: string) {
       paragraphIndex = parseInt(targetP.getAttribute("data-idx") || "0", 10);
       const pRect = targetP.getBoundingClientRect();
       const text = targetP.textContent || "";
+      const fragmentStart = Number.parseInt(
+        targetP.getAttribute("data-char-start") || "0",
+        10,
+      );
+      characterOffset = Number.isFinite(fragmentStart) ? fragmentStart : 0;
       
       const isScroll = settings.pageMode === "scroll";
       if (isScroll) {
         const dY = rect.top - pRect.top;
         if (dY > 0 && pRect.height > 0) {
           const ratio = dY / pRect.height;
-          characterOffset = Math.floor(ratio * text.length);
+          characterOffset += Math.floor(ratio * text.length);
         }
       } else {
         const dX = rect.left - pRect.left;
         if (dX > 0 && pRect.width > 0) {
           const ratio = dX / pRect.width;
-          characterOffset = Math.floor(ratio * text.length);
+          characterOffset += Math.floor(ratio * text.length);
         }
       }
     }
@@ -1009,7 +1019,7 @@ export function useReader(bookId: string) {
   );
 
   useEffect(() => {
-    if (!chapter || !bookId) return;
+    if (!chapter || !bookId || settings.pageMode === "pagination") return;
 
     const handleScroll = () => {
       if (!isPositionRestoredRef.current) return;
@@ -1534,6 +1544,16 @@ export function useReader(bookId: string) {
       }
 
       const progress = sessionSnapshot.progress;
+      setPaginationAnchor({
+        chapterIndex: currentChapter.index,
+        paragraphIndex: progress.paragraphIndex ?? 0,
+        characterOffset: progress.characterOffset ?? 0,
+      });
+      if (loadedSettings.pageMode === "pagination") {
+        setReadingProgress(progress.percentage);
+        setIsPositionRestored(true);
+        return;
+      }
       if (
         progress.chapterIndex === currentChapter.index &&
         progress.offset > 0
@@ -1580,6 +1600,11 @@ export function useReader(bookId: string) {
   const saveCurrentProgress = useCallback(
     async (chapterData: ChapterData, offset: number, paragraphIndex?: number, characterOffset?: number) => {
       if (!bookId) return;
+      setPaginationAnchor({
+        chapterIndex: chapterData.index,
+        paragraphIndex: paragraphIndex ?? 0,
+        characterOffset: characterOffset ?? 0,
+      });
       const session = readerSessionRef.current;
       if (session?.belongsTo(bookId)) {
         const container = contentRef.current;
@@ -1600,6 +1625,42 @@ export function useReader(bookId: string) {
       );
     },
     [bookId, buildReadingProgress, getOffsetState, progressSaveCoordinator, settings.pageMode],
+  );
+
+  const savePaginationAnchor = useCallback(
+    (
+      anchor: { paragraphIndex: number; characterOffset: number },
+      pageIndex: number,
+      totalPages: number,
+    ) => {
+      if (!chapter || toc.length === 0) return;
+      const session = readerSessionRef.current;
+      if (!session?.belongsTo(bookId)) return;
+      setPaginationAnchor((current) => {
+        if (
+          current?.chapterIndex === chapter.index &&
+          current.paragraphIndex === anchor.paragraphIndex &&
+          current.characterOffset === anchor.characterOffset
+        ) {
+          return current;
+        }
+        return { chapterIndex: chapter.index, ...anchor };
+      });
+      const semanticProgress = session.trackPosition(
+        chapter,
+        {
+          offset: Math.max(0, pageIndex),
+          paragraphIndex: anchor.paragraphIndex,
+          characterOffset: anchor.characterOffset,
+          offsetRatio: totalPages > 0 ? pageIndex / totalPages : 0,
+        },
+        toc.length,
+      );
+      void progressSaveCoordinator.saveNow(semanticProgress).catch(() => {
+        // 协调器保留失败状态并由现有重试入口处理。
+      });
+    },
+    [bookId, chapter, progressSaveCoordinator, toc.length],
   );
 
   const jumpToChapter = useCallback(
@@ -2360,7 +2421,7 @@ ${data.answer || "未能生成回答。"}`;
     (delta: number) => {
       const container = contentRef.current;
       let percentage = 0;
-      if (container) {
+      if (container && settings.pageMode === "scroll") {
         percentage = getContainerOffsetRatio(container, settings.pageMode);
         pendingScrollRestoreRef.current = { ratio: percentage };
         setIsPositionRestored(false);
@@ -2387,7 +2448,7 @@ ${data.answer || "未能生成回答。"}`;
     (fontFamily: "kaiti" | "songti" | "heiti") => {
       const container = contentRef.current;
       let percentage = 0;
-      if (container) {
+      if (container && settings.pageMode === "scroll") {
         percentage = getContainerOffsetRatio(container, settings.pageMode);
         pendingScrollRestoreRef.current = { ratio: percentage };
         setIsPositionRestored(false);
@@ -2421,7 +2482,7 @@ ${data.answer || "未能生成回答。"}`;
     (spacing: number) => {
       const container = contentRef.current;
       let percentage = 0;
-      if (container) {
+      if (container && settings.pageMode === "scroll") {
         percentage = getContainerOffsetRatio(container, settings.pageMode);
         pendingScrollRestoreRef.current = { ratio: percentage };
         setIsPositionRestored(false);
@@ -2437,7 +2498,7 @@ ${data.answer || "未能生成回答。"}`;
     (spacing: number) => {
       const container = contentRef.current;
       let percentage = 0;
-      if (container) {
+      if (container && settings.pageMode === "scroll") {
         percentage = getContainerOffsetRatio(container, settings.pageMode);
         pendingScrollRestoreRef.current = { ratio: percentage };
         setIsPositionRestored(false);
@@ -2453,7 +2514,7 @@ ${data.answer || "未能生成回答。"}`;
     (height: number) => {
       const container = contentRef.current;
       let percentage = 0;
-      if (container) {
+      if (container && settings.pageMode === "scroll") {
         percentage = getContainerOffsetRatio(container, settings.pageMode);
         pendingScrollRestoreRef.current = { ratio: percentage };
         setIsPositionRestored(false);
@@ -2543,6 +2604,8 @@ ${data.answer || "未能生成回答。"}`;
     updateLineHeight,
     seekToProgress,
     readingProgress,
+    paginationAnchor,
+    savePaginationAnchor,
     currentThemeColors,
     isPagination,
     toast,

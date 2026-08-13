@@ -31,6 +31,7 @@ export interface PaginationStyle {
   paddingTop: number;
   paddingBottom: number;
   maxWidth: number;
+  firstPageReservedHeight?: number;
 }
 
 export interface PaginationResult {
@@ -39,6 +40,15 @@ export interface PaginationResult {
 }
 
 export const PAGE_GAP = 24;
+
+export function getPaginationSpacerWidth(
+  pageCount: number,
+  pageWidth: number,
+): number {
+  const count = Math.max(0, Math.trunc(pageCount));
+  const width = Math.max(0, pageWidth);
+  return count === 0 ? 0 : count * (width + PAGE_GAP) - PAGE_GAP;
+}
 
 /**
  * 估算单个字符的平均渲染宽度 (px)
@@ -78,6 +88,50 @@ function estimateParagraphLines(
   const plainText = text.replace(/<[^>]*>/g, '').trim();
   if (plainText.length === 0) return 0;
   return Math.max(1, Math.ceil(plainText.length / charsPerLine));
+}
+
+function decodeTextEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_match, value: string) =>
+      String.fromCodePoint(Number.parseInt(value, 10)),
+    )
+    .replace(/&#x([0-9a-f]+);/gi, (_match, value: string) =>
+      String.fromCodePoint(Number.parseInt(value, 16)),
+    )
+    .replaceAll('&nbsp;', '\u00a0')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&amp;', '&');
+}
+
+function paragraphText(paragraphHtml: string): string {
+  return decodeTextEntities(paragraphHtml.replace(/<[^>]*>/g, ''));
+}
+
+function escapeText(text: string): string {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function safeSliceEnd(text: string, start: number, requestedEnd: number): number {
+  let end = Math.min(text.length, Math.max(start + 1, requestedEnd));
+  if (end < text.length) {
+    const previous = text.charCodeAt(end - 1);
+    const next = text.charCodeAt(end);
+    if (
+      previous >= 0xD800 && previous <= 0xDBFF &&
+      next >= 0xDC00 && next <= 0xDFFF
+    ) {
+      end -= 1;
+    }
+  }
+  return Math.max(start + 1, end);
 }
 
 /**
@@ -151,10 +205,22 @@ export function paginateContent(
 
   const pages: PaginationPage[] = [];
   let pageStartIdx = 0;
-  let currentPageHeight = 0;
+  let currentPageHeight = Math.max(0, style.firstPageReservedHeight ?? 0);
+
+  const closeParagraphRange = (endParaIndex: number) => {
+    if (endParaIndex <= pageStartIdx) return;
+    const lastParagraph = paragraphs[endParaIndex - 1] || '';
+    pages.push({
+      startParaIndex: pageStartIdx,
+      endParaIndex: endParaIndex,
+      startCharOffset: 0,
+      endCharOffset: paragraphText(lastParagraph).length,
+    });
+  };
 
   for (let i = 0; i < paragraphs.length; i++) {
     const paraText = paragraphs[i] || "";
+    const plainText = paragraphText(paraText);
     const paraHeight = estimateParagraphHeight(
       paraText,
       style.fontSize,
@@ -163,15 +229,41 @@ export function paginateContent(
       charsPerLine,
     );
 
+    if (paraHeight > effectiveHeight && plainText.length > 0) {
+      const firstSliceReservedHeight = pages.length === 0 && i === 0
+        ? currentPageHeight
+        : 0;
+      closeParagraphRange(i);
+      let start = 0;
+      let sliceIndex = 0;
+      while (start < plainText.length) {
+        const availableHeight = Math.max(
+          style.fontSize * style.lineHeight,
+          effectiveHeight - (sliceIndex === 0 ? firstSliceReservedHeight : 0),
+        );
+        const linesPerPage = Math.max(
+          1,
+          Math.floor((availableHeight - style.paragraphSpacing) / (style.fontSize * style.lineHeight)),
+        );
+        const charsPerPage = Math.max(1, linesPerPage * charsPerLine);
+        const end = safeSliceEnd(plainText, start, start + charsPerPage);
+        pages.push({
+          startParaIndex: i,
+          endParaIndex: i + 1,
+          startCharOffset: start,
+          endCharOffset: end,
+        });
+        start = end;
+        sliceIndex += 1;
+      }
+      pageStartIdx = i + 1;
+      currentPageHeight = 0;
+      continue;
+    }
+
     // 如果当前段落的加入会超出页面
     if (currentPageHeight + paraHeight > effectiveHeight && i > pageStartIdx) {
-      // 闭合当前页
-      pages.push({
-        startParaIndex: pageStartIdx,
-        endParaIndex: i,
-        startCharOffset: 0,
-        endCharOffset: 0,
-      });
+      closeParagraphRange(i);
       pageStartIdx = i;
       currentPageHeight = 0;
     }
@@ -181,12 +273,7 @@ export function paginateContent(
 
   // 闭合最后一页
   if (pageStartIdx < paragraphs.length) {
-    pages.push({
-      startParaIndex: pageStartIdx,
-      endParaIndex: paragraphs.length,
-      startCharOffset: 0,
-      endCharOffset: 0,
-    });
+    closeParagraphRange(paragraphs.length);
   }
 
   // 如果没有任何页面（边界情况），创建单页
@@ -200,6 +287,66 @@ export function paginateContent(
   }
 
   return { pages, totalPages: pages.length };
+}
+
+export interface PaginationAnchor {
+  paragraphIndex: number;
+  characterOffset: number;
+}
+
+export function findPageIndexForAnchor(
+  pages: PaginationPage[],
+  anchor: PaginationAnchor,
+): number {
+  if (pages.length === 0) return 0;
+  const paragraphIndex = Math.max(0, Math.trunc(anchor.paragraphIndex));
+  const characterOffset = Math.max(0, Math.trunc(anchor.characterOffset));
+  const exact = pages.findIndex((page, pageIndex) => {
+    if (paragraphIndex < page.startParaIndex || paragraphIndex >= page.endParaIndex) {
+      return false;
+    }
+    if (page.startParaIndex === page.endParaIndex - 1) {
+      const isLastPage = pageIndex === pages.length - 1;
+      return characterOffset >= page.startCharOffset &&
+        (characterOffset < page.endCharOffset || (isLastPage && characterOffset === page.endCharOffset));
+    }
+    if (paragraphIndex === page.startParaIndex && characterOffset < page.startCharOffset) {
+      return false;
+    }
+    if (paragraphIndex === page.endParaIndex - 1 && characterOffset > page.endCharOffset) {
+      return false;
+    }
+    return true;
+  });
+  if (exact >= 0) return exact;
+  if (paragraphIndex < pages[0]!.startParaIndex) return 0;
+  return pages.length - 1;
+}
+
+export function renderPaginationPage(
+  htmlContent: string,
+  page: PaginationPage,
+): string {
+  const paragraphs = extractParagraphs(htmlContent);
+  let html = '';
+  for (
+    let index = page.startParaIndex;
+    index < page.endParaIndex && index < paragraphs.length;
+    index += 1
+  ) {
+    const paragraph = paragraphs[index] || '';
+    const text = paragraphText(paragraph);
+    const start = index === page.startParaIndex ? page.startCharOffset : 0;
+    const end = index === page.endParaIndex - 1
+      ? Math.min(text.length, page.endCharOffset)
+      : text.length;
+    if (start === 0 && end === text.length) {
+      html += paragraph;
+    } else {
+      html += `<p data-idx="${index}" data-char-start="${start}" data-char-end="${end}">${escapeText(text.slice(start, end))}</p>`;
+    }
+  }
+  return html;
 }
 
 /**
@@ -256,7 +403,13 @@ export function paginateContentAdaptive(
 
   // 浏览器环境：使用 DOM 微调
   if (typeof document !== 'undefined' && typeof window !== 'undefined') {
-    return refineWithDOM(htmlContent, containerWidth, style, estimated);
+    return refineWithDOM(
+      htmlContent,
+      containerWidth,
+      containerHeight,
+      style,
+      estimated,
+    );
   }
 
   return estimated;
@@ -268,10 +421,19 @@ export function paginateContentAdaptive(
 function refineWithDOM(
   htmlContent: string,
   containerWidth: number,
+  containerHeight: number,
   style: PaginationStyle,
   estimated: PaginationResult,
 ): PaginationResult {
   try {
+    const hasCharacterSlices = estimated.pages.some(
+      (page) => page.startCharOffset > 0 ||
+        (page.endParaIndex === page.startParaIndex + 1 &&
+          page.endCharOffset > 0 &&
+          page.endCharOffset < paragraphText(extractParagraphs(htmlContent)[page.startParaIndex] || '').length),
+    );
+    if (hasCharacterSlices) return estimated;
+
     const container = document.createElement('div');
     container.style.cssText = `
       position: absolute;
@@ -300,38 +462,34 @@ function refineWithDOM(
       return estimated;
     }
 
-    // 基于 DOM 位置重新计算页面边界
-    const containerRect = container.getBoundingClientRect();
-    const effectiveHeight = container.clientHeight - style.paddingTop - style.paddingBottom;
+    // 基于真实段落高度重算，但页面容量必须来自阅读视口，而不是整篇离屏文档的自身高度。
+    const effectiveHeight = containerHeight - style.paddingTop - style.paddingBottom;
+    if (effectiveHeight <= 0) {
+      document.body.removeChild(container);
+      return estimated;
+    }
 
     const pages: PaginationPage[] = [];
     let pageStart = 0;
-    let currentBottom = 0;
+    let currentPageHeight = Math.max(0, style.firstPageReservedHeight ?? 0);
 
     for (let i = 0; i < paragraphs.length; i++) {
       const paraEl = paragraphs[i];
       if (!paraEl) continue;
       const rect = paraEl.getBoundingClientRect();
-      const paraTop = rect.top - containerRect.top;
-      const paraBottom = rect.bottom - containerRect.top;
-
-      const pageIndex = effectiveHeight > 0
-        ? Math.floor(paraTop / effectiveHeight)
-        : 0;
-
-      if (pageIndex > pages.length && i > 0) {
+      const paragraphHeight = rect.height + style.paragraphSpacing;
+      if (currentPageHeight + paragraphHeight > effectiveHeight && i > pageStart) {
+        const lastParagraph = paragraphs[i - 1];
         pages.push({
           startParaIndex: pageStart,
           endParaIndex: i,
           startCharOffset: 0,
-          endCharOffset: 0,
+          endCharOffset: lastParagraph?.textContent?.length ?? 0,
         });
         pageStart = i;
+        currentPageHeight = 0;
       }
-
-      if (paraBottom > currentBottom) {
-        currentBottom = paraBottom;
-      }
+      currentPageHeight += paragraphHeight;
     }
 
     if (pageStart < paragraphs.length) {
@@ -339,7 +497,7 @@ function refineWithDOM(
         startParaIndex: pageStart,
         endParaIndex: paragraphs.length,
         startCharOffset: 0,
-        endCharOffset: 0,
+        endCharOffset: paragraphs[paragraphs.length - 1]?.textContent?.length ?? 0,
       });
     }
 
