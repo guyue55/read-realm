@@ -8,16 +8,14 @@ import { useVirtualRouter } from "@/lib/route-store";
 import { parseUrlBookInBrowser } from "@/lib/url-import";
 import type { ParsedBook } from "@reader/parser-core";
 import { createId, type Book } from "@reader/shared-types";
-import { db } from "@reader/storage-core";
+import { db, type DurableImportTask } from "@reader/storage-core";
 import { useEffect, useRef, useState } from "react";
 
 import { FolderPreviewTree } from "@/components/FolderPreviewTree";
 import { FolderScanService, getFileFormat, type ImportPreviewNode } from "@/services/FolderScanService";
 import { createStreamingImportSession } from "@/features/import/streaming-import-session";
-import {
-  buildCompatibleImportTask,
-  persistCompatibleImportTask,
-} from "@/features/import/compatible-import-storage";
+import { buildCompatibleImportTask } from "@/features/import/compatible-import-storage";
+import { createDurableImportTaskController } from "@/features/import/durable-import-task";
 
 interface BatchTask {
   id: string;
@@ -25,6 +23,23 @@ interface BatchTask {
   size: number;
   status: "waiting" | "parsing" | "success" | "failed";
   progressText: string;
+}
+
+const durableImportController = createDurableImportTaskController({
+  port: {
+    put: async (task) => {
+      await db.importTasks.put(task);
+    },
+    get: async (taskId) => {
+      const task = await db.importTasks.get(taskId);
+      if (!task?.lifecycle || !task.updatedAt) return undefined;
+      return task as DurableImportTask;
+    },
+  },
+});
+
+function importErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 
@@ -81,7 +96,41 @@ export default function ImportPage() {
   const isOnline = useOnlineStatus();
   const [status, setStatus] = useState<string>("等待导入");
   const activeTaskIdRef = useRef<string | null>(null);
+  const retryFileRef = useRef<File | null>(null);
+  const recoveredDraftRef = useRef<DurableImportTask | null>(null);
+  const cancelledTaskIdsRef = useRef(new Set<string>());
   const workerRef = useRef<Worker | null>(null);
+  const [canRetrySingleImport, setCanRetrySingleImport] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void db.importTasks.toArray().then(async (tasks) => {
+      if (!active) return;
+      const candidate = tasks
+        .filter(
+          (task): task is DurableImportTask =>
+            Boolean(
+              task.lifecycle &&
+              task.updatedAt &&
+              (["queued", "reading", "parsing", "failed"].includes(task.lifecycle.state)),
+            ),
+        )
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+      const recoverable = candidate && ["queued", "reading", "parsing"].includes(candidate.lifecycle.state)
+        ? await durableImportController.markInterrupted(candidate.id)
+        : candidate;
+      if (!recoverable) return;
+      recoveredDraftRef.current = recoverable;
+      setStatus(
+        `发现失败草稿“${recoverable.lifecycle.source.filename}”。请重新选择同一文件继续第 ${recoverable.lifecycle.attempt + 1} 次尝试。`,
+      );
+    }).catch((error) => {
+      console.warn("[Import] 恢复导入草稿失败:", error);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
@@ -100,9 +149,15 @@ export default function ImportPage() {
         void (async () => {
           try {
             const task = await db.importTasks.get(staleId);
-            if (task && task.chapters.length === 0) {
+            if (task?.lifecycle && ["queued", "reading", "parsing"].includes(task.lifecycle.state)) {
+              await durableImportController.transition(staleId, {
+                type: "cancelled",
+                reason: "已离开导入页面；原文件未被删除。",
+              });
+              console.log(`[Import] 已保留取消任务草稿: ${staleId}`);
+            } else if (task && !task.lifecycle && task.chapters.length === 0) {
               await db.importTasks.delete(staleId);
-              console.log(`[Storage GC] 组件离场！已清除临时空白任务: ${staleId}`);
+              console.log(`[Storage GC] 已清除旧版临时空白任务: ${staleId}`);
             }
           } catch (err) {
             console.warn("[Storage GC] 离场自愈清理失败:", err);
@@ -181,42 +236,68 @@ export default function ImportPage() {
   // ==========================================
   // 【场景 A】：上传单本小说流程
   // ==========================================
-  const handleFile = async (file: File) => {
+  const handleFile = async (file: File, retryTaskId?: string) => {
     if (!file) return;
 
     setIsProcessing(true);
+    setCanRetrySingleImport(false);
+    retryFileRef.current = file;
+    const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
+    let taskId = retryTaskId;
     try {
+      const draft = taskId
+        ? await durableImportController.transition(taskId, { type: "retry" })
+        : await durableImportController.create({
+            id: createId(),
+            filename: file.name,
+            format: type,
+            sourceKind: "file",
+            size: file.size,
+          });
+      taskId = draft.id;
+      const durableTaskId = draft.id;
+      recoveredDraftRef.current = null;
+      cancelledTaskIdsRef.current.delete(durableTaskId);
+      if (draft.lifecycle.state === "preview") {
+        activeTaskIdRef.current = null;
+        setStatus("完整解析草稿仍在，已返回预览继续保存。");
+        setIsProcessing(false);
+        router.push(`/import/preview/${durableTaskId}`);
+        return;
+      }
+      activeTaskIdRef.current = durableTaskId;
+      await durableImportController.transition(durableTaskId, { type: "reading" });
+
       setStatus("读取文件内容...");
       const buffer = await file.arrayBuffer();
 
       setStatus("启动解析引擎...");
-      const type = file.name.toLowerCase().endsWith(".epub") ? "epub" : "txt";
       const fallbackBuffer = buffer.slice(0);
 
       if (type === "epub") {
         setStatus("正在兼容模式解析 EPUB...");
         const { parseEpubBook } = await import("@reader/parser-core/epub-parser");
         const parsedBook = await parseEpubBook(file.name, buffer);
+        await durableImportController.transition(durableTaskId, {
+          type: "parsing",
+          totalChapters: parsedBook.chapters.length,
+        });
         const task = buildCompatibleImportTask({
           parsedBook,
           format: "epub",
+          taskId: durableTaskId,
+          bookId: draft.bookMetadata.id,
           createId,
         });
-        const taskId = await persistCompatibleImportTask(
-          {
-            put: async (value) => {
-              await db.importTasks.put(value);
-            },
-            get: async (id) => db.importTasks.get(id),
-            remove: async (id) => {
-              await db.importTasks.delete(id);
-            },
-          },
-          task,
-        );
+        await durableImportController.transition(durableTaskId, {
+          type: "progress",
+          receivedChapters: task.chapters.length,
+        });
+        await durableImportController.attachParsedResult(durableTaskId, task);
         setStatus("EPUB 解析并校验完成！");
         setIsProcessing(false);
-        router.push(`/import/preview/${taskId}`);
+        activeTaskIdRef.current = null;
+        router.push(`/import/preview/${durableTaskId}`);
         return;
       }
 
@@ -226,70 +307,189 @@ export default function ImportPage() {
       );
       workerRef.current = worker;
 
-      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
-      setStatus("引擎解析章节中...");
       const session = createStreamingImportSession({
         filename: file.name,
         format: type,
+        taskId: durableTaskId,
+        bookId: draft.bookMetadata.id,
         createId,
         saveTask: async (task) => {
-          await db.importTasks.add(task);
+          await durableImportController.attachParsedResult(durableTaskId, task);
         },
       });
-      
-      worker.onmessage = async (e) => {
-        const { type: msgType, success, error } = e.data;
+      let messageQueue = Promise.resolve();
 
+      const failTask = async (error: unknown, code: string) => {
         try {
-          const result = await session.accept(e.data);
+          const current = await durableImportController.recover(durableTaskId);
+          if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+            await durableImportController.transition(durableTaskId, {
+              type: "failed",
+              errorCode: code,
+              errorMessage: importErrorMessage(error),
+            });
+          }
+        } catch (persistenceError) {
+          console.error("[Import] 无法持久化失败状态:", persistenceError);
+        }
+        setCanRetrySingleImport(true);
+      };
+
+      const acceptWorkerMessage = async (message: Parameters<typeof session.accept>[0]) => {
+        const result = await session.accept(message);
+        if (message.success) {
+          const msgType = message.type;
           if (msgType === "METADATA") {
+            await durableImportController.transition(durableTaskId, {
+              type: "parsing",
+              totalChapters: message.chapterCount,
+            });
             setStatus("引擎识别成功，正在流式接收章节...");
           } else if (msgType === "CHUNK") {
-            const { startIndex, chapters: chunkChapters } = e.data;
+            await durableImportController.transition(durableTaskId, {
+              type: "progress",
+              receivedChapters: result.state === "collecting" ? result.receivedChapterCount : 0,
+            });
+            const { startIndex, chapters: chunkChapters } = message;
             setStatus(`正在流式载入第 ${startIndex + 1} - ${startIndex + chunkChapters.length} 章...`);
           }
-          if (result.state === "completed") {
-            worker.terminate();
-            workerRef.current = null;
-            setStatus("完美解析完成！");
-            setIsProcessing(false);
-            router.push(`/import/preview/${result.taskId}`);
-          }
-        } catch (sessionError) {
+        }
+        if (result.state === "completed") {
           worker.terminate();
           workerRef.current = null;
-          setStatus(`解析失败: ${success ? describeAppError(sessionError) : error}`);
+          setStatus("解析完成，草稿已校验保存！");
           setIsProcessing(false);
+          activeTaskIdRef.current = null;
+          router.push(`/import/preview/${result.taskId}`);
         }
       };
 
-      worker.onerror = async (e) => {
+      worker.onmessage = (event) => {
+        messageQueue = messageQueue
+          .then(() => acceptWorkerMessage(event.data))
+          .catch(async (sessionError) => {
+            worker.terminate();
+            workerRef.current = null;
+            if (cancelledTaskIdsRef.current.has(durableTaskId)) return;
+            await failTask(sessionError, "WORKER_PARSE_FAILED");
+            setStatus(`解析失败，草稿已保留，可重试：${describeAppError(sessionError)}`);
+            setIsProcessing(false);
+          });
+      };
+
+      worker.onerror = (event) => {
         worker.terminate();
         workerRef.current = null;
-        try {
-          if (activeTaskIdRef.current) {
-            await db.importTasks.delete(activeTaskIdRef.current);
+        messageQueue = messageQueue.then(async () => {
+          if (cancelledTaskIdsRef.current.has(durableTaskId)) return;
+          try {
+            setStatus("后台解析不可用，正在使用兼容模式...");
+            const { parseTxtBook } = await import("@reader/parser-core/txt-parser");
+            const parsed = parseTxtBook(file.name, fallbackBuffer);
+            const current = await durableImportController.recover(durableTaskId);
+            if (current.lifecycle.state === "reading") {
+              await durableImportController.transition(durableTaskId, {
+                type: "parsing",
+                totalChapters: parsed.chapters.length,
+              });
+            }
+            const now = new Date().toISOString();
+            const chapters = parsed.chapters.map((chapter, index) => ({
+              id: createId(),
+              bookId: draft.bookMetadata.id,
+              index,
+              title: chapter.title || `第 ${index + 1} 章`,
+              content: chapter.content,
+              wordCount: chapter.content.length,
+              createdAt: now,
+              updatedAt: now,
+            }));
+            await durableImportController.transition(durableTaskId, {
+              type: "progress",
+              receivedChapters: chapters.length,
+            });
+            await durableImportController.attachParsedResult(durableTaskId, {
+              bookMetadata: {
+                ...draft.bookMetadata,
+                title: parsed.title,
+                chapterCount: chapters.length,
+                wordCount: chapters.reduce((total, chapter) => total + chapter.content.length, 0),
+                updatedAt: now,
+              },
+              chapters,
+            });
+            setStatus("兼容解析完成，草稿已校验保存！");
+            setIsProcessing(false);
             activeTaskIdRef.current = null;
+            router.push(`/import/preview/${durableTaskId}`);
+          } catch (fallbackError) {
+            await failTask(fallbackError || event.message, "FALLBACK_PARSE_FAILED");
+            setStatus(`解析异常，草稿已保留，可重试：${describeAppError(fallbackError || event.message)}`);
+            setIsProcessing(false);
           }
-          setStatus("后台解析不可用，正在使用兼容模式...");
-          const { parseTxtBook } = await import("@reader/parser-core/txt-parser");
-          const parsed = parseTxtBook(file.name, fallbackBuffer);
-          await createImportTask(parsed, "upload", { format: type });
-          setIsProcessing(false);
-        } catch (fallbackError) {
-          setStatus(`解析异常: ${describeAppError(fallbackError || e.message)}`);
-          setIsProcessing(false);
-        }
+        });
       };
+
+      worker.postMessage({ filename: file.name, buffer, type }, [buffer]);
+      setStatus("引擎解析章节中...");
     } catch (e) {
-      setStatus(`解析失败: ${describeAppError(e)}`);
+      if (taskId) {
+        try {
+          const current = await durableImportController.recover(taskId);
+          if (["queued", "reading", "parsing", "preview", "saving"].includes(current.lifecycle.state)) {
+            await durableImportController.transition(taskId, {
+              type: "failed",
+              errorCode: "IMPORT_FAILED",
+              errorMessage: importErrorMessage(e),
+            });
+          }
+          setCanRetrySingleImport(true);
+        } catch (persistenceError) {
+          console.error("[Import] 无法持久化失败状态:", persistenceError);
+        }
+      }
+      setStatus(`解析失败，草稿已保留：${describeAppError(e)}`);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRetrySingleImport = async () => {
+    if (!activeTaskIdRef.current || !retryFileRef.current || isProcessing) return;
+    await handleFile(retryFileRef.current, activeTaskIdRef.current);
+  };
+
+  const handleCancelSingleImport = async () => {
+    const taskId = activeTaskIdRef.current;
+    if (!taskId) return;
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    cancelledTaskIdsRef.current.add(taskId);
+    try {
+      const current = await durableImportController.recover(taskId);
+      if (["queued", "reading", "parsing"].includes(current.lifecycle.state)) {
+        await durableImportController.transition(taskId, {
+          type: "cancelled",
+          reason: "用户取消导入；原文件未被删除。",
+        });
+      }
+      setStatus("已取消导入，任务记录与原文件均已保留。");
+    } catch (error) {
+      setStatus(`取消状态保存失败：${describeAppError(error)}`);
+    } finally {
+      activeTaskIdRef.current = null;
+      setCanRetrySingleImport(false);
       setIsProcessing(false);
     }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) await handleFile(file);
+    if (!file) return;
+    const recovered = recoveredDraftRef.current;
+    const matchesRecovered =
+      recovered?.lifecycle.source.filename === file.name &&
+      (recovered.lifecycle.source.size === undefined || recovered.lifecycle.source.size === file.size);
+    await handleFile(file, matchesRecovered ? recovered.id : undefined);
   };
 
   // ==========================================
@@ -907,9 +1107,39 @@ export default function ImportPage() {
                   选择单本文卷
                 </div>
                 {status !== "等待导入" && (
-                  <div className="mt-4 flex items-center justify-center gap-2 font-semibold text-[var(--ui-warm)]">
-                    {isProcessing && <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />}
-                    {status}
+                  <div className="mt-4 flex flex-col items-center gap-3 font-semibold text-[var(--ui-warm)]">
+                    <div className="flex items-center justify-center gap-2" role="status" aria-live="polite">
+                      {isProcessing && <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />}
+                      {status}
+                    </div>
+                    {(isProcessing || canRetrySingleImport) && (
+                      <div className="relative z-10 flex flex-wrap justify-center gap-2">
+                        {canRetrySingleImport && retryFileRef.current && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              void handleRetrySingleImport();
+                            }}
+                            className="ui-focus-ring min-h-11 rounded-full bg-[var(--ui-accent)] px-5 text-sm font-semibold text-white"
+                          >
+                            立即重试
+                          </button>
+                        )}
+                        {isProcessing && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              void handleCancelSingleImport();
+                            }}
+                            className="ui-focus-ring min-h-11 rounded-full border border-[rgba(95,125,82,0.28)] bg-white px-5 text-sm font-semibold text-[var(--ui-text)]"
+                          >
+                            取消并保留记录
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

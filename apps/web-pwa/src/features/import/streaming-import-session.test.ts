@@ -15,6 +15,41 @@ function createSession() {
 }
 
 describe("streaming import session", () => {
+  it("can attach worker output to a previously persisted durable draft", async () => {
+    const saveTask = vi.fn(async () => undefined);
+    const ids = ["chapter-1"];
+    const session = createStreamingImportSession({
+      filename: "short-novel.txt",
+      format: "txt",
+      taskId: "durable-task",
+      bookId: "durable-task:book",
+      createId: () => ids.shift() ?? "unexpected-id",
+      now: () => "2026-08-13T06:30:00+08:00",
+      saveTask,
+    });
+
+    await session.accept({
+      type: "METADATA",
+      success: true,
+      title: "short-novel",
+      chapterCount: 1,
+    });
+    await session.accept({
+      type: "CHUNK",
+      success: true,
+      startIndex: 0,
+      chapters: [{ title: "第一章", content: "清晨。" }],
+      isFinished: true,
+    });
+    const result = await session.accept({ type: "FINISHED", success: true });
+
+    expect(result).toEqual({ state: "completed", taskId: "durable-task" });
+    expect(saveTask).toHaveBeenCalledWith(expect.objectContaining({
+      id: "durable-task",
+      bookMetadata: expect.objectContaining({ id: "durable-task:book" }),
+    }));
+  });
+
   it("atomically saves one complete task after metadata, chunks and finish", async () => {
     const { session, saveTask } = createSession();
 

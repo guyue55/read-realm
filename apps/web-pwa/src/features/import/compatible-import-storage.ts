@@ -29,6 +29,8 @@ function canonicalJson(value: unknown): string {
 export interface BuildCompatibleImportTaskOptions {
   parsedBook: ParsedBook;
   format: "epub";
+  taskId?: string;
+  bookId?: string;
   createId: () => string;
   now?: () => string;
 }
@@ -36,6 +38,8 @@ export interface BuildCompatibleImportTaskOptions {
 export function buildCompatibleImportTask({
   parsedBook,
   format,
+  taskId: reservedTaskId,
+  bookId: reservedBookId,
   createId,
   now = () => new Date().toISOString(),
 }: BuildCompatibleImportTaskOptions): ImportTask {
@@ -43,8 +47,8 @@ export function buildCompatibleImportTask({
     throw new Error("COMPATIBLE_IMPORT_EMPTY_BOOK");
   }
   const createdAt = now();
-  const taskId = createId();
-  const bookId = createId();
+  const taskId = reservedTaskId ?? createId();
+  const bookId = reservedBookId ?? createId();
   const chapters = parsedBook.chapters.map((chapter, index) => ({
     id: createId(),
     bookId,

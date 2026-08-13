@@ -16,12 +16,15 @@ import {
   parseLocalDataSnapshot,
   serializeLocalDataSnapshot,
 } from "./local-snapshot.js";
+import { shouldSweepLegacyImportTask } from "./import-task-retention.js";
 
 export interface ImportTask {
   id: string;
   bookMetadata: Book;
   chapters: LocalChapter[];
+  lifecycle?: import("./import-task-lifecycle.js").ImportTaskLifecycle;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface LocalAIUserConfig {
@@ -482,9 +485,12 @@ export async function executeStorageGarbageCollection(): Promise<void> {
     const allTasks = await db.importTasks.toArray();
     const tasksToSweep = allTasks.filter(task => {
       // 判定条件：没有解析出任何本地章节，且其创建时间已超过 15 分钟
-      const createdAtMs = task.createdAt ? new Date(task.createdAt).getTime() : 0;
-      const isStale = now - createdAtMs > safetyBufferMs;
-      return (!task.chapters || task.chapters.length === 0) && isStale;
+      return shouldSweepLegacyImportTask({
+        createdAt: task.createdAt,
+        chapterCount: task.chapters?.length ?? 0,
+        hasLifecycle: Boolean(task.lifecycle),
+        lifecycleState: task.lifecycle?.state,
+      }, now, safetyBufferMs);
     });
 
     if (tasksToSweep.length > 0) {

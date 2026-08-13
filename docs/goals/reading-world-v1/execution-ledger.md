@@ -191,3 +191,13 @@
 - 验证结果：全仓 208 tests、完整禁用 PWA 写入 build、Web/API lint、启动门静态合同、真实迁移 UI 回放、逐文件安全预检与副作用检查通过；EVID-25 保持 SHA `724a0308733bd188722dff407bf42d0ae14e4931eeb9cc2364fb89696cee9e91`，未重跑或改写。
 - 状态结论：PHASE-02 完成；PHASE-03 进入执行中。只证明本地数据骨架、早期纵切与迁移门，不证明 PHASE-03~09、终局人工体验或 Goal 完成。
 - 下一入口：PHASE-03 / TASK-0301；先冻结导入任务状态机与容量 fixtures，再实现可重放检查器合同。
+
+### RUN-0020 · 2026-08-13T12:10:00+08:00 · PHASE-03 / TASK-0301 单文件耐久任务子切片
+- 本轮输入：PHASE-02 checkpoint `634c85f42434211ceba4a5e3f553dda226fcf52b`、现有 TXT Worker/EPUB 兼容导入、预览落库事务和两条会静默删除空任务的后台 GC。
+- 本轮范围：只闭合单文件 TXT/EPUB 的建档、进度、失败、取消、重试、中断恢复与预览落库状态；不扩张备份格式、同步、文件夹/URL 或容量结论。
+- 实现结果：新增 `queued/reading/parsing/preview/saving/completed/failed/cancelled` 耐久状态机、逐任务串行控制器和精确读回；TXT/EPUB 复用预留 ID；中断草稿转可见失败；取消/失败草稿保留；GC 只清旧版空壳；书/章节与 `saving/completed` 在同一事务，保存失败保留完整解析草稿。
+- TDD 与失败链：状态机、读回、快速 Worker 事件、预留 ID、GC 保留、保存重试和完成轻量化均先观察 RED 后实现 GREEN。两次语法错误与 exact optional 类型错误由定向检查捕获并局部修复；未触发产品风险门实验，也未改写既有 ATTEMPT。
+- 验证结果：全工作区 226 tests、Web lint、API 非写入 lint、完整禁用 PWA 写入 build、`git diff --check` 全部通过；真实 Chrome 的 TXT 导入、预览、加入书架、阅读、书签和刷新续读 1/1 通过。
+- 安全与控制：执行期 resume 检查通过；控制包 37/37 Green，九个关键实现文件逐项 Green；导入页因既有合法 URL 协议字面量为人工复核 Yellow，无新增外传、密钥或权限扩张。
+- 状态结论：PHASE-03 保持执行中；本记录只证明 TASK-0301 的单文件子切片，不证明文件夹/URL、200MB TXT、500MB EPUB、1 万章、EVID-03 或 PHASE-03 完成。
+- 下一入口：PHASE-03 / TASK-0301；统一文件夹/合法 URL 任务端口，随后生成容量 fixtures、故障注入和可重放阶段检查器。

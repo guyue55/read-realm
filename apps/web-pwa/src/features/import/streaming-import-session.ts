@@ -22,6 +22,8 @@ export type StreamingImportMessage =
 export interface StreamingImportSessionOptions {
   filename: string;
   format: "txt" | "epub";
+  taskId?: string;
+  bookId?: string;
   createId: () => string;
   now?: () => string;
   saveTask: (task: ImportTask) => Promise<void>;
@@ -34,12 +36,14 @@ export type StreamingImportSessionResult =
 export function createStreamingImportSession({
   filename,
   format,
+  taskId: reservedTaskId,
+  bookId: reservedBookId,
   createId,
   now = () => new Date().toISOString(),
   saveTask,
 }: StreamingImportSessionOptions) {
-  const taskId = createId();
-  const bookId = createId();
+  const taskId = reservedTaskId ?? createId();
+  const bookId = reservedBookId ?? createId();
   const createdAt = now();
   let metadata: { title: string; chapterCount: number } | null = null;
   const chaptersByIndex = new Map<number, StreamingChapter>();

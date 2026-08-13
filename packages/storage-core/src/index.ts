@@ -1,6 +1,21 @@
 export { default as Dexie } from "dexie";
 export { db, ReaderDatabase, backupMetadataToStorage, checkAndRestoreFromBackup, executeStorageGarbageCollection, setTransactionWriting, executeSafeWriteTransaction } from "./db.js";
 export type { ImportTask, LocalMigrationBackup, MetaShelfBackup } from "./db.js";
+export { shouldSweepLegacyImportTask } from "./import-task-retention.js";
+export type { ImportTaskRetentionCandidate } from "./import-task-retention.js";
+export {
+  createImportTaskDraft,
+  transitionImportTask,
+} from "./import-task-lifecycle.js";
+export type {
+  CreateImportTaskDraftOptions,
+  DurableImportTask,
+  ImportFormat,
+  ImportSourceKind,
+  ImportTaskLifecycle,
+  ImportTaskState,
+  ImportTaskTransition,
+} from "./import-task-lifecycle.js";
 export type { LocalChapter } from "@reader/shared-types";
 export {
   parseLocalDataSnapshot,

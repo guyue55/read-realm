@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { db, type ImportTask } from "@reader/storage-core";
+import {
+  db,
+  transitionImportTask,
+  type DurableImportTask,
+  type ImportTask,
+} from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
@@ -99,6 +104,28 @@ export default function PreviewPage({
         "rw",
         [db.books, db.chapters, db.importTasks],
         async () => {
+          const storedTask = await db.importTasks.get(task.id);
+          if (!storedTask) throw new Error("导入草稿已不存在，请返回导入页重新选择文件");
+          let durableTask = storedTask.lifecycle && storedTask.updatedAt
+            ? storedTask as DurableImportTask
+            : null;
+          if (durableTask?.lifecycle.state === "failed") {
+            durableTask = transitionImportTask(durableTask, {
+              type: "retry",
+              at: new Date().toISOString(),
+            });
+          }
+          if (durableTask && durableTask.lifecycle.state !== "preview") {
+            throw new Error(`导入草稿状态不允许保存：${durableTask.lifecycle.state}`);
+          }
+          const savingTask = durableTask
+            ? transitionImportTask(durableTask, {
+                type: "saving",
+                at: new Date().toISOString(),
+              })
+            : null;
+          if (savingTask) await db.importTasks.put(savingTask);
+
           // 提取轻量级 ToC 目录元数据，冗余保存到 books 表，以便进入阅读器时一帧内 2ms 极速拉取
           const toc = draft.chapters.map((ch) => ({
             index: ch.index,
@@ -112,12 +139,41 @@ export default function PreviewPage({
           };
           await db.books.add(bookWithToc);
           await db.chapters.bulkAdd(draft.chapters);
-          await db.importTasks.delete(task.id);
+          if (savingTask) {
+            await db.importTasks.put(
+              transitionImportTask(savingTask, {
+                type: "completed",
+                at: new Date().toISOString(),
+              }),
+            );
+          } else {
+            await db.importTasks.delete(task.id);
+          }
         },
       );
       router.push("/library");
     } catch (e) {
-      setError(`保存失败: ${(e as Error).message}`);
+      const message = e instanceof Error ? e.message : String(e);
+      try {
+        const latest = await db.importTasks.get(task.id);
+        if (
+          latest?.lifecycle &&
+          latest.updatedAt &&
+          ["preview", "saving"].includes(latest.lifecycle.state)
+        ) {
+          const failed = transitionImportTask(latest as DurableImportTask, {
+            type: "failed",
+            at: new Date().toISOString(),
+            errorCode: "BOOK_SAVE_FAILED",
+            errorMessage: message,
+          });
+          await db.importTasks.put(failed);
+          setTask(failed);
+        }
+      } catch (statusError) {
+        console.error("[Import] 保存失败状态无法落盘:", statusError);
+      }
+      setValidationMessage(`保存失败，解析草稿仍在，可重试：${message}`);
       savingRef.current = false;
       setSaving(false);
     }
@@ -212,7 +268,11 @@ export default function PreviewPage({
             disabled={saving}
             className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
           >
-            {saving ? "保存中..." : "加入书架"}
+            {saving
+              ? "保存中..."
+              : task.lifecycle?.state === "failed"
+                ? "重新保存"
+                : "加入书架"}
           </button>
         </>
       }

@@ -7,6 +7,7 @@ import {
   db,
   describeLocalDataMigrationError,
   executeStorageGarbageCollection,
+  shouldSweepLegacyImportTask,
 } from "@reader/storage-core";
 
 interface SafeWindow {
@@ -140,7 +141,12 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
           const now = Date.now();
           const minimumAgeMs = 2 * 60 * 1000; // 2分钟安全期，避免误杀正在流式导入的活跃任务
           const ghosts = await db.importTasks
-            .filter(t => t.chapters.length === 0 && (now - new Date(t.createdAt).getTime() > minimumAgeMs))
+            .filter((task) => shouldSweepLegacyImportTask({
+              createdAt: task.createdAt,
+              chapterCount: task.chapters.length,
+              hasLifecycle: Boolean(task.lifecycle),
+              lifecycleState: task.lifecycle?.state,
+            }, now, minimumAgeMs))
             .toArray();
           if (ghosts.length > 0) {
             await db.importTasks.bulkDelete(ghosts.map(g => g.id));
