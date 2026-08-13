@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   ReaderEngine,
+  ReaderSession,
   getChapterOffsetRatio,
   getChapterRelativeOffset,
   getSnappedPaginationOffset,
@@ -39,7 +40,7 @@ import { getAIConfigHeaders } from "@/lib/ai-config";
 import { strings } from "@/lib/i18n";
 import {
   loadReaderSettings,
-  saveReaderSettings,
+  queueReaderSettingsSave,
   type ReaderSettingsState,
 } from "@/lib/reader-settings";
 
@@ -590,11 +591,13 @@ export function useReader(bookId: string) {
     setIsPositionRestoredState(val);
   }, []);
   const [engine, setEngine] = useState<ReaderEngine | null>(null);
+  const readerSessionRef = useRef<ReaderSession | null>(null);
   const [showMenu, setShowMenu] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<ReaderSettingsState>(() =>
     loadReaderSettings(),
   );
+  const settingsRef = useRef<ReaderSettingsState>(settings);
   const [readingProgress, setReadingProgress] = useState(0);
 
   const [autoFlipCountdown, setAutoFlipCountdown] = useState<number | null>(null);
@@ -681,6 +684,35 @@ export function useReader(bookId: string) {
     }, 2500);
   }, []);
 
+  const persistSettings = useCallback(
+    (nextSettings: ReaderSettingsState) => {
+      engine?.updateSettings(nextSettings);
+      const session = readerSessionRef.current;
+      if (!session) {
+        void queueReaderSettingsSave(nextSettings).catch((err) => {
+          console.error("Failed to persist reader settings:", err);
+          showToast("阅读设置保存失败，请重试");
+        });
+        return;
+      }
+      void session.updateSettings(nextSettings).catch((err) => {
+        console.error("Failed to persist reader settings:", err);
+        showToast("阅读设置保存失败，请重试");
+      });
+    },
+    [engine, showToast],
+  );
+
+  const applySettings = useCallback(
+    (patch: Partial<ReaderSettingsState>) => {
+      const nextSettings = { ...settingsRef.current, ...patch };
+      settingsRef.current = nextSettings;
+      setSettings(nextSettings);
+      persistSettings(nextSettings);
+    },
+    [persistSettings],
+  );
+
   if (!progressSaveCoordinatorRef.current) {
     progressSaveCoordinatorRef.current = createProgressSaveCoordinator({
       persist: async (progress) => {
@@ -710,6 +742,7 @@ export function useReader(bookId: string) {
       offset: number,
       paragraphIndex?: number,
       characterOffset?: number,
+      offsetRatio = 0,
     ): ReadingProgress => ({
       bookId,
       chapterId: chapterData.id,
@@ -717,8 +750,11 @@ export function useReader(bookId: string) {
       offset,
       paragraphIndex,
       characterOffset,
-      percentage:
-        toc.length > 0 ? (chapterData.index / toc.length) * 100 : 0,
+      percentage: computeOverallProgress(
+        chapterData.index,
+        toc.length,
+        offsetRatio,
+      ),
       updatedAt: new Date().toISOString(),
     }),
     [bookId, toc.length],
@@ -847,6 +883,7 @@ export function useReader(bookId: string) {
   ]);
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const bookmarksRef = useRef<Bookmark[]>([]);
   const [activeTab, setActiveTab] = useState<"toc" | "bookmarks">("toc");
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -858,15 +895,17 @@ export function useReader(bookId: string) {
     [],
   );
 
+  const appendBookmarkToSession = useCallback((bookmark: Bookmark) => {
+    const nextBookmarks = [...bookmarksRef.current, bookmark];
+    bookmarksRef.current = nextBookmarks;
+    setBookmarks(nextBookmarks);
+    readerSessionRef.current?.replaceBookmarks(nextBookmarks);
+  }, []);
+
   const handleNightModeToggle = useCallback(() => {
-    setSettings((prev) => {
-      const nextTheme: ThemeName = prev.theme === "dark" ? "paper" : "dark";
-      const newSettings = { ...prev, theme: nextTheme };
-      saveReaderSettings(newSettings);
-      engine?.updateSettings(newSettings);
-      return newSettings;
-    });
-  }, [engine]);
+    const nextTheme: ThemeName = settingsRef.current.theme === "dark" ? "paper" : "dark";
+    applySettings({ theme: nextTheme });
+  }, [applySettings]);
 
   const getOffsetState = useCallback(() => {
     const container = contentRef.current;
@@ -1028,6 +1067,20 @@ export function useReader(bookId: string) {
       const activeChapterIndex = currentActiveChapter ? currentActiveChapter.index : (chapter?.index || 0);
       const overallProgress = computeOverallProgress(activeChapterIndex, toc.length, offsetRatio);
       throttledSetReadingProgressRef.current(overallProgress);
+      const activeSession = readerSessionRef.current;
+      const semanticProgress = currentActiveChapter &&
+        toc.length > 0 &&
+        activeSession?.belongsTo(bookId)
+        ? activeSession.trackPosition(
+            currentActiveChapter,
+            {
+              offset: activeChapterOffset,
+              ...getPrecisePosition(),
+              offsetRatio,
+            },
+            toc.length,
+          )
+        : null;
 
       // 触底自动切章逻辑监控
       if (settings.pageMode === "scroll" && settings.autoFlipAtBottom && activeChapterIndex < toc.length - 1) {
@@ -1057,13 +1110,13 @@ export function useReader(bookId: string) {
       }
 
       if (offset > 0 && currentActiveChapter) {
-        const { paragraphIndex, characterOffset } = getPrecisePosition();
         progressSaveCoordinator.schedule(
-          buildReadingProgress(
+          semanticProgress ?? buildReadingProgress(
             currentActiveChapter,
             activeChapterOffset,
-            paragraphIndex,
-            characterOffset,
+            undefined,
+            undefined,
+            offsetRatio,
           ),
         );
       }
@@ -1153,6 +1206,7 @@ export function useReader(bookId: string) {
 
   useEffect(() => {
     if (!bookId) return;
+    let active = true;
 
     const chapterRepo = {
       getChapter: async (id: string, index: number) => {
@@ -1258,7 +1312,7 @@ export function useReader(bookId: string) {
           : null;
       },
       getChapterCount: async (id: string) =>
-        await db.chapters.where("bookId").equals(id).count(),
+        (await chapterRepo.getToc(id)).length,
       getToc: async (id: string) => {
         const book = await db.books.get(id);
         if (book?.toc && book.toc.length > 0) {
@@ -1284,10 +1338,24 @@ export function useReader(bookId: string) {
       },
     };
 
+    const sessionRepo = {
+      getProgress: progressRepo.getProgress,
+      saveProgress: progressRepo.saveProgress,
+      getSettings: async () => loadReaderSettings(),
+      saveSettings: async (nextSettings: ReaderSettingsState) => {
+        await queueReaderSettingsSave(nextSettings);
+      },
+      getBookmarks: async (id: string) =>
+        await db.bookmarks.where("bookId").equals(id).toArray(),
+    };
+
     const reader = new ReaderEngine(bookId, chapterRepo, progressRepo);
+    const readerSession = new ReaderSession(bookId, chapterRepo, sessionRepo);
+    readerSessionRef.current = null;
     setError(null); // 每次挂载前置重置错情
 
     db.books.get(bookId).then(async (b) => {
+      if (!active) return;
       if (!b) {
         throw new Error(strings.reader?.bookNotFound || "书籍不存在或已被物理移除");
       }
@@ -1306,6 +1374,7 @@ export function useReader(bookId: string) {
         }
       }
 
+      if (!active) return;
       setBook(b);
 
       // 安全网：若 parseStatus 标记为已解析但本地章节为空（同步后数据不一致），重置并重新解析
@@ -1320,8 +1389,10 @@ export function useReader(bookId: string) {
       if (b.parseStatus === "not_parsed" && b.sourceType === "folder_index") {
         try {
           await autoParseAndCacheTxtBook(b);
+          if (!active) return;
           // 重新读取一次，以便后续载入到正确的 TOC 结构
           const updatedB = await db.books.get(bookId);
+          if (!active) return;
           if (updatedB) {
             b = updatedB;
             setBook(updatedB);
@@ -1335,7 +1406,11 @@ export function useReader(bookId: string) {
         }
       }
 
-      await reader.load();
+      const sessionSnapshot = await readerSession.load();
+      if (!active) return;
+      reader.hydrateChapter(sessionSnapshot.chapter);
+      reader.updateSettings(sessionSnapshot.settings);
+      readerSessionRef.current = readerSession;
       setEngine(reader);
       const currentChapter = reader.getCurrentChapter();
       
@@ -1355,14 +1430,13 @@ export function useReader(bookId: string) {
       setRenderedChapters([currentChapter]);
       lastLoadedChapterIndexRef.current = currentChapter.index;
 
-      const loadedSettings = loadReaderSettings();
-      reader.updateSettings(loadedSettings);
+      const loadedSettings = sessionSnapshot.settings;
+      settingsRef.current = loadedSettings;
       setSettings(loadedSettings);
       const loadedToc = await chapterRepo.getToc(bookId);
       setToc(loadedToc);
-      db.bookmarks.where("bookId").equals(bookId).toArray()
-        .then(setBookmarks)
-        .catch(err => console.warn("[useReader] 加载书签发生非致命异常:", err));
+      bookmarksRef.current = sessionSnapshot.bookmarks;
+      setBookmarks(sessionSnapshot.bookmarks);
 
       // 触发 lastReadAt 同步，将书阁的最近阅读智能置顶并打通排序
       void db.books.update(bookId, { lastReadAt: new Date().toISOString() }).catch((err) => {
@@ -1378,6 +1452,7 @@ export function useReader(bookId: string) {
         const targetChapterIndex = parseInt(urlChapter, 10);
         if (!isNaN(targetChapterIndex) && targetChapterIndex >= 0 && targetChapterIndex < loadedToc.length) {
           await reader.loadChapter(targetChapterIndex);
+          if (!active) return;
           const targetedChapter = reader.getCurrentChapter();
           
           if (!targetedChapter) {
@@ -1458,58 +1533,73 @@ export function useReader(bookId: string) {
         }
       }
 
-      await db.progress.get(bookId).then((progress) => {
-        if (
-          progress &&
-          progress.chapterIndex === currentChapter.index &&
-          progress.offset > 0
-        ) {
-          const container = contentRef.current;
-          restoreScrollPositionStable(
-            container,
-            progress.offset,
-            loadedSettings.pageMode,
-            (finalOffset, maxOffset) => {
-              const offsetRatio = maxOffset > 0 ? finalOffset / maxOffset : 0;
-              setReadingProgress(
-                computeOverallProgress(
-                  currentChapter.index,
-                  loadedToc.length,
-                  offsetRatio,
-                ),
-              );
-              setIsPositionRestored(true); // 定位咬合完成，安全淡入
-            },
-            progress.paragraphIndex,
-            progress.characterOffset
-          );
-        } else {
+      const progress = sessionSnapshot.progress;
+      if (
+        progress.chapterIndex === currentChapter.index &&
+        progress.offset > 0
+      ) {
+        const container = contentRef.current;
+        restoreScrollPositionStable(
+          container,
+          progress.offset,
+          loadedSettings.pageMode,
+          (finalOffset, maxOffset) => {
+            const offsetRatio = maxOffset > 0 ? finalOffset / maxOffset : 0;
           setReadingProgress(
-            computeOverallProgress(currentChapter.index, loadedToc.length, 0),
+            computeOverallProgress(
+              currentChapter.index,
+              loadedToc.length,
+              offsetRatio,
+            ),
           );
-          setIsPositionRestored(true); // 新书直接淡入
-        }
-      });
+            setIsPositionRestored(true); // 定位咬合完成，安全淡入
+          },
+          progress.paragraphIndex,
+          progress.characterOffset
+        );
+      } else {
+        setReadingProgress(
+          computeOverallProgress(currentChapter.index, loadedToc.length, 0),
+        );
+        setIsPositionRestored(true); // 新书直接淡入
+      }
     }).catch((err: unknown) => {
+      if (!active) return;
       console.error("「自愈阁」深度俘获展卷初始化异常:", err);
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(errMsg || "加载藏书与章节失败，请重新展卷或检查网络");
     });
+    return () => {
+      active = false;
+      if (readerSessionRef.current === readerSession) {
+        readerSessionRef.current = null;
+      }
+    };
   }, [bookId, progressSaveCoordinator, setIsPositionRestored]);
 
   const saveCurrentProgress = useCallback(
     async (chapterData: ChapterData, offset: number, paragraphIndex?: number, characterOffset?: number) => {
       if (!bookId) return;
-      await progressSaveCoordinator.saveNow(
-        buildReadingProgress(
-          chapterData,
+      const session = readerSessionRef.current;
+      if (session?.belongsTo(bookId)) {
+        const container = contentRef.current;
+        const chapterMetrics = settings.pageMode === "scroll" && container
+          ? getScrollChapterMetrics(container, chapterData.index)
+          : null;
+        const maxOffset = chapterMetrics?.maxOffset ?? getOffsetState().maxOffset;
+        await session.savePosition(chapterData, {
           offset,
           paragraphIndex,
           characterOffset,
-        ),
+          offsetRatio: maxOffset > 0 ? offset / maxOffset : 0,
+        });
+        return;
+      }
+      await progressSaveCoordinator.saveNow(
+        buildReadingProgress(chapterData, offset, paragraphIndex, characterOffset),
       );
     },
-    [bookId, buildReadingProgress, progressSaveCoordinator],
+    [bookId, buildReadingProgress, getOffsetState, progressSaveCoordinator, settings.pageMode],
   );
 
   const jumpToChapter = useCallback(
@@ -1899,10 +1989,10 @@ export function useReader(bookId: string) {
       createdAt: new Date().toISOString(),
     };
     await db.bookmarks.add(bookmark);
-    setBookmarks((prev) => [...prev, bookmark]);
+    appendBookmarkToSession(bookmark);
     triggerHapticFeedback(15); // 书签落盘震动反馈
     showToast(strings.reader.bookmarkAdded);
-  }, [chapter, bookId, settings.pageMode, showToast, getPrecisePosition]);
+  }, [appendBookmarkToSession, chapter, bookId, settings.pageMode, showToast, getPrecisePosition]);
 
   /**
    * 🏮 [NEW] 记录用户手写读书笔记并与高亮书签同构绑定
@@ -1943,14 +2033,14 @@ export function useReader(bookId: string) {
       };
 
       await db.bookmarks.add(bookmark);
-      setBookmarks((prev) => [...prev, bookmark]);
+      appendBookmarkToSession(bookmark);
       triggerHapticFeedback(15); // 书签笔记落盘震动反馈
       
       // 清除选区，释放 UI 焦点
       window.getSelection()?.removeAllRanges();
       showToast(strings.reader.bookmarkAdded); // 提示印刻成功
     },
-    [chapter, bookId, settings.pageMode, showToast, getPrecisePosition]
+    [appendBookmarkToSession, chapter, bookId, settings.pageMode, showToast, getPrecisePosition]
   );
 
   const jumpToBookmark = useCallback(
@@ -2276,28 +2366,21 @@ ${data.answer || "未能生成回答。"}`;
         setIsPositionRestored(false);
       }
 
-      setSettings((prev) => {
-        const newSize = Math.max(14, Math.min(36, prev.fontSize + delta));
-        const newSettings = { ...prev, fontSize: newSize };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      const newSize = Math.max(
+        14,
+        Math.min(36, settingsRef.current.fontSize + delta),
+      );
+      applySettings({ fontSize: newSize });
 
     },
-    [engine, settings.pageMode, setIsPositionRestored],
+    [applySettings, settings.pageMode, setIsPositionRestored],
   );
 
   const updateTheme = useCallback(
     (theme: ThemeName) => {
-      setSettings((prev) => {
-        const newSettings = { ...prev, theme };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ theme });
     },
-    [engine],
+    [applySettings],
   );
 
   const updateFontFamily = useCallback(
@@ -2310,15 +2393,10 @@ ${data.answer || "未能生成回答。"}`;
         setIsPositionRestored(false);
       }
 
-      setSettings((prev) => {
-        const newSettings = { ...prev, fontFamily };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ fontFamily });
 
     },
-    [engine, settings.pageMode, setIsPositionRestored],
+    [applySettings, settings.pageMode, setIsPositionRestored],
   );
 
   const updatePageMode = useCallback(
@@ -2334,14 +2412,9 @@ ${data.answer || "未能生成回答。"}`;
       pendingScrollRestoreRef.current = { ratio: percentage };
       setIsPositionRestored(false);
 
-      setSettings((prev) => {
-        const newSettings = { ...prev, pageMode: mode };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ pageMode: mode });
     },
-    [chapter, settings.pageMode, engine, setIsPositionRestored],
+    [applySettings, chapter, settings.pageMode, setIsPositionRestored],
   );
 
   const updateParagraphSpacing = useCallback(
@@ -2354,15 +2427,10 @@ ${data.answer || "未能生成回答。"}`;
         setIsPositionRestored(false);
       }
 
-      setSettings((prev) => {
-        const newSettings = { ...prev, paragraphSpacing: spacing };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ paragraphSpacing: spacing });
 
     },
-    [engine, settings.pageMode, setIsPositionRestored],
+    [applySettings, settings.pageMode, setIsPositionRestored],
   );
 
   const updateLetterSpacing = useCallback(
@@ -2375,15 +2443,10 @@ ${data.answer || "未能生成回答。"}`;
         setIsPositionRestored(false);
       }
 
-      setSettings((prev) => {
-        const newSettings = { ...prev, letterSpacing: spacing };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ letterSpacing: spacing });
 
     },
-    [engine, settings.pageMode, setIsPositionRestored],
+    [applySettings, settings.pageMode, setIsPositionRestored],
   );
 
   const updateLineHeight = useCallback(
@@ -2396,29 +2459,20 @@ ${data.answer || "未能生成回答。"}`;
         setIsPositionRestored(false);
       }
 
-      setSettings((prev) => {
-        const newSettings = { ...prev, lineHeight: height };
-        saveReaderSettings(newSettings);
-        engine?.updateSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ lineHeight: height });
 
     },
-    [engine, settings.pageMode, setIsPositionRestored],
+    [applySettings, settings.pageMode, setIsPositionRestored],
   );
 
   const updateAutoFlipAtBottom = useCallback(
     (enabled: boolean) => {
-      setSettings((prev) => {
-        const newSettings = { ...prev, autoFlipAtBottom: enabled };
-        saveReaderSettings(newSettings);
-        return newSettings;
-      });
+      applySettings({ autoFlipAtBottom: enabled });
       if (!enabled) {
         clearAutoFlipTimer();
       }
     },
-    [clearAutoFlipTimer],
+    [applySettings, clearAutoFlipTimer],
   );
 
   const regrantPermission = useCallback(async () => {

@@ -101,6 +101,16 @@ export class ReaderEngine {
     return this.currentChapter;
   }
 
+  /**
+   * Accepts a chapter already validated by a higher-level ReaderSession.
+   * This keeps the legacy navigation cache warm without reading persistence twice.
+   */
+  hydrateChapter(chapter: ChapterData): void {
+    this.currentChapter = { ...chapter };
+    this.cache.set(chapter.index, this.currentChapter);
+    this.preloadAdjacent(chapter.index);
+  }
+
   async nextChapter(): Promise<boolean> {
     if (!this.currentChapter) return false;
     const count = await this.chapterRepo.getChapterCount(this.bookId);
