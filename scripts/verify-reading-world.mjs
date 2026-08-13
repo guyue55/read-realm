@@ -25,6 +25,10 @@ import {
   classifyProductGateRun,
   parseProductGateObservation,
 } from "./gate-product-run.mjs";
+import {
+  classifyMigrationGateRun,
+  parseMigrationGateObservation,
+} from "./gate-migration-run.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -296,17 +300,59 @@ function phaseTwoQualificationChecks(qualification) {
   ];
 }
 
-function checksFor(phase, experiment, qualification) {
+function phaseTwoMigrationChecks(migration) {
+  if (migration !== "RISK-03") {
+    throw new Error(
+      `PHASE-02 迁移门当前只放行 RISK-03；${migration ?? "缺少风险 ID"} 不可执行`,
+    );
+  }
+  return [
+    { id: "PATCH_WHITESPACE", command: "git", args: ["diff", "--check"] },
+    {
+      id: "STORAGE_TEST",
+      command: "corepack",
+      args: ["pnpm", "--filter", "@reader/storage-core", "test"],
+    },
+    {
+      id: "STORAGE_BUILD",
+      command: "corepack",
+      args: ["pnpm", "--filter", "@reader/storage-core", "build"],
+    },
+    {
+      id: "WEB_LINT",
+      command: "corepack",
+      args: ["pnpm", "--filter", "web-pwa", "lint"],
+    },
+    {
+      id: "MIGRATION_GATE_CONTRACT_TEST",
+      command: process.execPath,
+      args: ["--test", "scripts/gate-migration-run.test.mjs"],
+    },
+    {
+      id: "MIGRATION_GATE_LIVE",
+      command: process.execPath,
+      args: ["scripts/run-migration-gate.mjs", migration],
+      env: {
+        CI: "1",
+        PLAYWRIGHT_BROWSER_CHANNEL:
+          process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome",
+      },
+    },
+  ];
+}
+
+function checksFor(phase, experiment, qualification, migration) {
   if (phase === "01") {
-    if (experiment || qualification) {
+    if (experiment || qualification || migration) {
       throw new Error("PHASE-01 不接受实验参数；实验入口从 PHASE-02 开始实现");
     }
     return phaseOneChecks();
   }
   if (phase === "02") {
-    if (experiment && qualification) {
-      throw new Error("--experiment 与 --qualification 不可同时使用");
+    if ([experiment, qualification, migration].filter(Boolean).length > 1) {
+      throw new Error("--experiment、--qualification 与 --migration 互斥");
     }
+    if (migration) return phaseTwoMigrationChecks(migration);
     if (qualification) return phaseTwoQualificationChecks(qualification);
     return phaseTwoExperimentChecks(experiment);
   }
@@ -330,7 +376,12 @@ function main() {
   }
 
   // 所有入口校验必须早于证据归档或目录创建，避免非法重放移动历史 ATTEMPT。
-  const checks = checksFor(args.phase, args.experiment, args.qualification);
+  const checks = checksFor(
+    args.phase,
+    args.experiment,
+    args.qualification,
+    args.migration,
+  );
 
   const logDirectory = `${outputPath.slice(0, -5)}.records`;
   const archivedPreviousReport = archivePreviousReport(outputPath, logDirectory);
@@ -482,17 +533,55 @@ function main() {
       recordVerification,
     };
   }
+  let migrationGate = null;
+  if (args.migration) {
+    const migrationCheck = results.find((result) => result.id === "MIGRATION_GATE_LIVE");
+    let observation;
+    try {
+      const migrationLog = readFileSync(resolve(repoRoot, migrationCheck.logPath), "utf8");
+      observation = parseMigrationGateObservation(migrationLog);
+    } catch (error) {
+      observation = {
+        prerequisiteValid: false,
+        listExitCode: 1,
+        listedTestCount: 0,
+        buildExitCode: 1,
+        serviceReady: false,
+        testExitCode: migrationCheck?.exitCode ?? 1,
+        portFreeBefore: false,
+        portFreeAfter: false,
+        orphanProcessCount: 1,
+        publicRestored: false,
+        observationError: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const recordVerification = verifyEvidenceRecords({ checks: results }, (path) => {
+      const absolute = resolve(repoRoot, path);
+      return existsSync(absolute) ? readFileSync(absolute) : null;
+    });
+    migrationGate = {
+      ...classifyMigrationGateRun({
+        ...observation,
+        evidenceRecordsValid: recordVerification.valid,
+      }),
+      observation,
+      recordVerification,
+    };
+  }
   const passed = results.every(
     (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
   ) && (!qualification || qualification.classification === "QUALIFIED")
-    && (!productGate || productGate.classification === "PASS");
+    && (!productGate || productGate.classification === "PASS")
+    && (!migrationGate || migrationGate.classification === "PASS");
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision: args.qualification || args.experiment ? "REV-0002" : "REV-0001",
+    controlRevision:
+      args.qualification || args.experiment || args.migration ? "REV-0002" : "REV-0001",
     phase: args.phase,
     experiment: args.experiment ?? null,
     qualificationExperiment: args.qualification ?? null,
+    migrationRisk: args.migration ?? null,
     startedAt,
     endedAt: new Date().toISOString(),
     archivedPreviousReport,
@@ -511,6 +600,7 @@ function main() {
     checks: results,
     qualification,
     productGate,
+    migrationGate,
     summary: {
       passed,
       passedCount: results.filter(
