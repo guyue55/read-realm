@@ -30,8 +30,25 @@ describe("library truth contract", () => {
     expect(source).toContain("libraryCommandService.createFolderAndMove");
     expect(source).toContain("libraryCommandService.dissolveFolder");
     expect(source).toContain("libraryCommandService.removeBook");
-    expect(source).toContain("libraryCommandService.offloadBook");
+    expect(source).toContain("operation.service.offloadVerifiedBook");
     expect(source).not.toContain("await db.libraryFolders.add(");
+  });
+
+  it("keeps legacy private sync transport out of the page", () => {
+    expect(source).toContain("createPersonalSyncOperation");
+    expect(source).toContain("createLegacyPersonalSyncApiClient");
+    expect(source).toContain("createPersonalSyncService");
+    expect(source).not.toContain("legacyPersonalSyncApiClient");
+    expect(source).not.toContain("personalSyncService");
+    expect(source).not.toMatch(/\bfetch\s*\(/);
+    expect(source).not.toContain("getShareHeaders");
+    expect(source).not.toContain('apiUrl("/books');
+    expect(source).not.toContain('apiUrl("/folders');
+    expect(source).toContain("const operation = createPersonalSyncOperation(currentShareToken)");
+    expect(source).toContain("currentShareTokenRef.current = trimmed");
+    expect(source).toContain("currentShareTokenRef.current !== recoveryShareToken");
+    expect(source).toContain("recoveredShareTokenRef.current === recoveryShareToken");
+    expect(source).not.toMatch(/setTimeout\([\s\S]{0,160}handleDualSync\(true\)/);
   });
 
   it("keeps large shelves on one bounded render window with indexed lookups", () => {

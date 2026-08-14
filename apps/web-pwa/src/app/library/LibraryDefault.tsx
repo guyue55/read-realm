@@ -2,14 +2,9 @@
 
 import { useEffect, useState, memo, useCallback, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, type LocalChapter } from "@reader/storage-core";
+import { db } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
-import {
-  apiUrl,
-  getShareHeaders,
-  isValidShareToken,
-  normalizeShareToken,
-} from "@/lib/api";
+import { isValidShareToken, normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -33,10 +28,16 @@ import {
 import { libraryQueryService } from "@/features/library/dexie-library-query";
 import { libraryCommandService } from "@/features/library/dexie-library-command";
 import {
+  createLegacyPersonalSyncApiClient,
+  readLegacyRemoteProgress,
+  type LegacyRemoteBook,
+} from "@/features/library/legacy-personal-sync-api";
+import { createPersonalSyncService } from "@/features/library/personal-sync-service";
+import {
   clearSyncTask,
   markSyncTask,
   readSyncTasks,
-  type ActiveSyncTasks,
+  type SyncTaskAction,
 } from "@/features/library/sync-tasks";
 
 type LibraryViewMode = "cover" | "compact" | "list";
@@ -64,12 +65,25 @@ function loadLibraryViewMode(): LibraryViewMode {
   return value === "compact" || value === "list" ? value : "cover";
 }
 
-function markActiveSyncTask(bookId: string, action: ActiveSyncTasks[string]) {
-  markSyncTask(window.localStorage, bookId, action);
+function markActiveSyncTask(
+  bookId: string,
+  action: SyncTaskAction,
+  shareToken: string,
+) {
+  markSyncTask(window.localStorage, bookId, action, shareToken);
 }
 
-function clearActiveSyncTask(bookId: string) {
-  clearSyncTask(window.localStorage, bookId);
+function clearActiveSyncTask(bookId: string, shareToken: string) {
+  clearSyncTask(window.localStorage, bookId, shareToken);
+}
+
+function createPersonalSyncOperation(shareToken: string) {
+  const api = createLegacyPersonalSyncApiClient(shareToken);
+  return {
+    api,
+    service: createPersonalSyncService(api),
+    shareToken,
+  };
 }
 
 function getProgressPercent(book: Book, progress?: ReadingProgress) {
@@ -85,94 +99,6 @@ function getProgressPercent(book: Book, progress?: ReadingProgress) {
 function getChapterSummary(progress?: ReadingProgress) {
   if (!progress) return "未开始";
   return `第 ${progress.chapterIndex + 1} 章`;
-}
-
-type RemoteChapter = {
-  id?: string;
-  index?: number;
-  chapterIndex?: number;
-  title?: string;
-  name?: string;
-  content?: string;
-  body?: string;
-  text?: string;
-};
-
-const CHAPTER_SYNC_PAGE_SIZE = 80;
-
-function toLocalChapter(bookId: string, chapter: RemoteChapter) {
-  const index = chapter.index ?? chapter.chapterIndex ?? 0;
-  return {
-    id: chapter.id ? chapter.id.split("#")[0] : `${bookId}-${index}`,
-    bookId,
-    index,
-    title: chapter.title || chapter.name || `第 ${index + 1} 章`,
-    content: chapter.content || chapter.body || chapter.text || "",
-  };
-}
-
-async function fetchRemoteChaptersPaged(
-  bookId: string,
-  onPage?: (loaded: number, total?: number) => void,
-) {
-  const chapters: RemoteChapter[] = [];
-  let offset = 0;
-
-  while (true) {
-    const response = await fetch(
-      apiUrl(
-        `/books/${bookId}/chapters?offset=${offset}&limit=${CHAPTER_SYNC_PAGE_SIZE}`,
-      ),
-      { headers: getShareHeaders() },
-    );
-    if (!response.ok) throw new Error(`章节下载失败：HTTP ${response.status}`);
-
-    const payload = await response.json();
-    if (Array.isArray(payload)) {
-      chapters.push(...payload);
-      onPage?.(chapters.length, chapters.length);
-      return chapters;
-    }
-
-    const items = Array.isArray(payload.items) ? payload.items : [];
-    chapters.push(...items);
-    onPage?.(chapters.length, payload.total);
-    if (items.length === 0 || chapters.length >= Number(payload.total || 0)) {
-      return chapters;
-    }
-    offset += items.length;
-  }
-}
-
-async function uploadBookInChunks(
-  book: Book,
-  chapters: LocalChapter[],
-  onPage?: (uploaded: number, total: number) => void,
-) {
-  if (chapters.length === 0) {
-    const response = await fetch(apiUrl("/books/import"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getShareHeaders() },
-      body: JSON.stringify({ metadata: book, chapters: [], replaceExisting: true }),
-    });
-    if (!response.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
-    return;
-  }
-
-  for (let offset = 0; offset < chapters.length; offset += CHAPTER_SYNC_PAGE_SIZE) {
-    const chunk = chapters.slice(offset, offset + CHAPTER_SYNC_PAGE_SIZE);
-    const response = await fetch(apiUrl("/books/import"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getShareHeaders() },
-      body: JSON.stringify({
-        metadata: book,
-        chapters: chunk,
-        replaceExisting: offset === 0,
-      }),
-    });
-    if (!response.ok) throw new Error(`云阁拒绝了典籍「${book.title}」的归档请求`);
-    onPage?.(Math.min(offset + chunk.length, chapters.length), chapters.length);
-  }
 }
 
 function getFriendlyRelativeTime(dateInput?: string | Date) {
@@ -534,14 +460,13 @@ export function LibraryDefault({
       
       let successCount = 0;
       for (const book of unbackedBooks) {
-        try {
-          await handleSingleUpload(book);
-          successCount++;
-        } catch (e) {
-          console.error(`备份藏书 [${book.title}] 失败:`, e);
-        }
+        if (await handleSingleUpload(book)) successCount++;
       }
-      setToastMsg(`⛩️ 「${folderName}」一键备份完成，成功同步 ${successCount} 卷，全部归档。`);
+      setToastMsg(
+        successCount === unbackedBooks.length
+          ? `⛩️ 「${folderName}」一键备份完成，已核验 ${successCount} 卷完整副本。`
+          : `💡 「${folderName}」已核验 ${successCount}/${unbackedBooks.length} 卷，其余保留待重试状态。`,
+      );
     } catch (err) {
       console.error("一键同步失败:", err);
       setToastMsg("⚠️ 一键备份数据库同步队列处理失败。");
@@ -661,7 +586,7 @@ export function LibraryDefault({
     });
   };
 
-  const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
+  const [cloudBooks, setCloudBooks] = useState<LegacyRemoteBook[]>([]);
   const localBookIds = useMemo(
     () => new Set((books ?? []).map((book) => book.id)),
     [books],
@@ -736,8 +661,10 @@ export function LibraryDefault({
     if (typeof window === "undefined") return "";
     return normalizeShareToken(window.localStorage.getItem("reader-share-token"));
   });
+  const currentShareTokenRef = useRef(currentShareToken);
 
   useEffect(() => {
+    currentShareTokenRef.current = currentShareToken;
     setShareTokenInput(currentShareToken);
   }, [currentShareToken]);
 
@@ -755,32 +682,35 @@ export function LibraryDefault({
       setToastMsg("分享口令仅支持中文、英文、数字、下划线和短横线，最长 64 位");
       return;
     }
+    if (syncMutexRef.current) {
+      setToastMsg("⏳ 同步操作尚未完成，请稍后再切换私有密钥。");
+      return;
+    }
     
     window.localStorage.setItem("reader-share-token", trimmed);
+    currentShareTokenRef.current = trimmed;
     setCurrentShareToken(trimmed);
     setCloudBooks([]);
     setToastMsg(strings.sync.shareBindSuccess);
-    
-    // 立即静默触发双向 DualSync
-    setTimeout(() => {
-      handleDualSync(true); // isSilent = true
-    }, 200);
   };
 
   const handleClearShareToken = () => {
+    if (syncMutexRef.current) {
+      setToastMsg("⏳ 同步操作尚未完成，请稍后再清除私有密钥。");
+      return;
+    }
     window.localStorage.removeItem("reader-share-token");
+    currentShareTokenRef.current = "";
     setCurrentShareToken("");
     setShareTokenInput("");
     setCloudBooks([]);
     setToastMsg(strings.sync.shareClearSuccess);
     
-    setTimeout(() => {
-      fetchCloudBooks();
-    }, 200);
   };
 
   const handleClearCloudBooks = async () => {
     if (!currentShareToken || !isOnline) return;
+    const operation = createPersonalSyncOperation(currentShareToken);
 
     setConfirmState({
       isOpen: true,
@@ -790,15 +720,10 @@ export function LibraryDefault({
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         try {
-          const res = await fetch(apiUrl("/books"), {
-            method: "DELETE",
-            headers: getShareHeaders(),
-          });
-          if (res.ok) {
-            setToastMsg("🧼 拂尘一扫，云端密阁藏书已全物理清空！");
+          await operation.api.clearBooks();
+          setToastMsg("🧼 拂尘一扫，云端密阁藏书已全物理清空！");
+          if (currentShareTokenRef.current === operation.shareToken) {
             setCloudBooks([]);
-          } else {
-            throw new Error();
           }
         } catch (err) {
           console.error("清空云端备份失败:", err);
@@ -828,26 +753,25 @@ export function LibraryDefault({
 
   // 拉取云端书籍列表
   const fetchCloudBooks = useCallback(async () => {
-    if (!currentShareToken) {
+    const shareToken = currentShareToken;
+    if (!shareToken) {
       setCloudBooks([]);
       return;
     }
+    const operation = createPersonalSyncOperation(shareToken);
     const online = typeof navigator !== "undefined" ? navigator.onLine : isOnline;
     if (!online) {
-      setCloudBooks([]);
-      setToastMsg("🌧️ 书阁已处于离线状态，暂无法同步云端藏书阁。");
+      setToastMsg("🌧️ 当前离线，保留上次已验证的云端状态，暂不可重新核验。");
       return;
     }
     try {
-      const res = await fetch(apiUrl("/books"), {
-        headers: getShareHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCloudBooks(data);
+      const verifiedBooks = await operation.api.listBooks();
+      if (currentShareTokenRef.current === shareToken) {
+        setCloudBooks(verifiedBooks);
       }
     } catch (e) {
       console.error("拉取云端书籍元数据失败:", e);
+      setToastMsg("💡 云端状态暂不可核验，本地书架与阅读不受影响。");
     }
   }, [currentShareToken, isOnline]);
 
@@ -919,6 +843,8 @@ export function LibraryDefault({
       });
       return;
     }
+    const operation = createPersonalSyncOperation(currentShareToken);
+    const syncShareToken = operation.shareToken;
 
     // 核心同步管道执行函数
     const executeSyncPipeline = async () => {
@@ -935,24 +861,15 @@ export function LibraryDefault({
       let hasSyncFailures = false;
 
       try {
-        const res = await fetch(apiUrl("/books"), {
-          headers: getShareHeaders(),
-        });
-        if (!res.ok) throw new Error("获取云阁典籍列表失败");
-        const currentCloudBooks = (await res.json()) as (Book & { lastReadProgress?: string })[];
-        setCloudBooks(currentCloudBooks);
+        const currentCloudBooks = await operation.api.listBooks();
+        if (currentShareTokenRef.current === syncShareToken) {
+          setCloudBooks(currentCloudBooks);
+        }
 
         // 🏮 1. 先拉取云端文件夹，准备比对与合并逻辑
         let cloudFolders: LibraryFolder[] = [];
         try {
-          const foldersRes = await fetch(apiUrl("/folders"), {
-            headers: getShareHeaders(),
-          });
-          if (foldersRes.ok) {
-            cloudFolders = await foldersRes.json();
-          } else {
-            console.error("获取云端书箧列表失败，接口可能不可用");
-          }
+          cloudFolders = await operation.api.listFolders();
         } catch (foldersErr) {
           console.error("获取云端书箧遭遇网络问题:", foldersErr);
         }
@@ -1046,15 +963,7 @@ export function LibraryDefault({
           // A. 同步上报至云端
           if (foldersToUpload.length > 0) {
             try {
-              const uploadRes = await fetch(apiUrl("/folders"), {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...getShareHeaders(),
-                },
-                body: JSON.stringify({ folders: foldersToUpload }),
-              });
-              if (!uploadRes.ok) throw new Error("同步本地书箧分类至云端失败");
+              await operation.api.syncFolders(foldersToUpload);
             } catch (uploadErr) {
               console.error("[Sync] 上报书箧失败，安全防丢断路隔离:", uploadErr);
               hasSyncFailures = true;
@@ -1088,36 +997,36 @@ export function LibraryDefault({
         for (const book of localOnly) {
           try {
             setSyncStepText(`正在备份「${book.title}」至云阁...`);
-            const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
-            
-            // 若本地章节缓存为空且为本地文件系统类型书籍，触发强制解析，确保云端存有完整章节
-            if (chapters.length === 0 && (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book")) {
-              try {
-                setSyncStepText(`正在解析「${book.title}」...`);
-                await cacheEntireBook(book.id);
-                const parsedChapters = await db.chapters.where("bookId").equals(book.id).toArray();
-                chapters.push(...parsedChapters);
-                console.log(`[Sync] 上传前预解析完成:「${book.title}」共 ${parsedChapters.length} 章。`);
-              } catch (parseErr) {
-                console.warn(`[Sync] 上传前预解析「${book.title}」失败，将以无章节状态上传:`, parseErr);
-              }
-            }
-            const progress = await db.progress.get(book.id);
-            const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
-            
-            // 绑定最新进度 JSON
-            const bookWithProgress = { ...book, lastReadProgress };
-
             // 记入活跃持久化上传任务，防刷新和崩溃
-            markActiveSyncTask(book.id, "upload");
+            markActiveSyncTask(book.id, "upload", syncShareToken);
 
-            await uploadBookInChunks(bookWithProgress, chapters, (uploaded, total) => {
-              updateProgress(completedSteps, Math.round((uploaded / Math.max(total, 1)) * 100));
-              setSyncStepText(`正在备份「${book.title}」章节 ${uploaded}/${total}`);
+            let outcome = await operation.service.uploadBook(book.id, {
+              onUploaded: (uploaded, total) => {
+                updateProgress(completedSteps, Math.round((uploaded / Math.max(total, 1)) * 100));
+                setSyncStepText(`正在核验「${book.title}」章节 ${uploaded}/${total}`);
+              },
             });
+            if (
+              outcome.status === "failed" &&
+              outcome.code === "invalid_local_upload" &&
+              (book.sourceType === "folder_index" ||
+                book.sourceType === "folder_multi_file_book")
+            ) {
+              setSyncStepText(`正在完整解析「${book.title}」...`);
+              await cacheEntireBook(book.id);
+              outcome = await operation.service.uploadBook(book.id, {
+                onUploaded: (uploaded, total) => {
+                  updateProgress(completedSteps, Math.round((uploaded / Math.max(total, 1)) * 100));
+                  setSyncStepText(`正在核验「${book.title}」章节 ${uploaded}/${total}`);
+                },
+              });
+            }
+            if (outcome.status === "failed") {
+              throw new Error(`云端整书备份失败：${outcome.code}`);
+            }
 
             // 任务完结，清除落盘记录
-            clearActiveSyncTask(book.id);
+            clearActiveSyncTask(book.id, syncShareToken);
           } catch (singleBookErr) {
             console.error(`[Sync] 备份本地典籍「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
             hasSyncFailures = true;
@@ -1133,72 +1042,25 @@ export function LibraryDefault({
             setSyncStepText(`正在从云阁拉取「${book.title}」...`);
             
             // 记入活跃持久化下载任务
-            markActiveSyncTask(book.id, "download");
+            markActiveSyncTask(book.id, "download", syncShareToken);
 
-            for (let p = 0; p <= 100; p += 25) {
-              updateProgress(completedSteps, p);
-              await new Promise((r) => setTimeout(r, 15));
-            }
-
-            await db.transaction("rw", [db.books, db.progress], async () => {
-              // 安全防丢历史备份
-              const oldProgress = await db.progress.get(book.id);
-              if (oldProgress) {
-                const key = `reader-progress-rollback-${book.id}`;
-                let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
-                try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
-                if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
-                  list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
-                  localStorage.setItem(key, JSON.stringify(list.slice(-5)));
-                }
-              }
-
-              await db.books.put(book);
-              if (book.lastReadProgress) {
-                try {
-                  const parsedProgress = JSON.parse(book.lastReadProgress);
-                  await db.progress.put(parsedProgress);
-                } catch (e) {
-                  console.error("解析进度快照失败:", e);
-                }
-              }
+            setSyncStepText(`正在下载「${book.title}」完整章节...`);
+            const outcome = await operation.service.downloadBook(book, {
+              onPage: (loaded, total) => {
+                updateProgress(
+                  completedSteps,
+                  Math.round((loaded / Math.max(total, 1)) * 100),
+                );
+                setSyncStepText(
+                  `正在下载「${book.title}」章节 ${loaded}/${total}`,
+                );
+              },
             });
-
-
-            // 同步拉取云阁章节内容，避免同步后「查看」出现 404 白屏
-            try {
-              setSyncStepText(`正在下载「${book.title}」章节内容...`);
-              const remoteChapters = await fetchRemoteChaptersPaged(
-                book.id,
-                (loaded, total) => {
-                  setSyncStepText(
-                    `正在下载「${book.title}」章节内容 ${loaded}/${total ?? "?"}`,
-                  );
-                },
-              );
-              if (remoteChapters.length > 0) {
-                await db.transaction("rw", [db.chapters], async () => {
-                  for (const chap of remoteChapters) {
-                    await db.chapters.put(toLocalChapter(book.id, chap));
-                  }
-                });
-                console.log(`[Sync] 已拉取「${book.title}」的 ${remoteChapters.length} 个章节。`);
-              } else {
-                console.warn(`[Sync] 云阁中「${book.title}」暂无章节内容，该书可能仅同步了元数据。`);
-                // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
-                if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
-                  await db.books.update(book.id, { parseStatus: "not_parsed" });
-                }
-              }
-            } catch (chaptersErr) {
-              console.warn(`[Sync] 拉取「${book.title}」章节时网络异常:`, chaptersErr);
-              if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
-                try { await db.books.update(book.id, { parseStatus: "not_parsed" }); } catch {}
-              }
-              // 不阻断：章节缺失不触发整书同步失败
+            if (outcome.status === "failed") {
+              throw new Error(`云端整书拉取失败：${outcome.code}`);
             }
             // 任务完结，清除落盘记录
-            clearActiveSyncTask(book.id);
+            clearActiveSyncTask(book.id, syncShareToken);
           } catch (singleBookErr) {
             console.error(`[Sync] 拉取云阁新书「${book.title}」遭遇错误，已断路保护:`, singleBookErr);
             hasSyncFailures = true;
@@ -1216,10 +1078,8 @@ export function LibraryDefault({
               const cloudBook = currentCloudBooks.find((cb) => cb.id === localBook.id);
               if (cloudBook) {
                 const localProgress = await db.progress.get(localBook.id);
-                let cloudProgress: ReadingProgress | null = null;
-                if (cloudBook.lastReadProgress) {
-                  try { cloudProgress = JSON.parse(cloudBook.lastReadProgress); } catch {}
-                }
+                const cloudProgress: ReadingProgress | null =
+                  readLegacyRemoteProgress(cloudBook) ?? null;
 
                 // 确定合并获胜端：最深阅读字数/章节大值优先对碰，彻底免疫设备分布式时钟偏差 (Clock Skew)
                 let winner: "local" | "cloud" = "local";
@@ -1289,35 +1149,22 @@ export function LibraryDefault({
                       lastReadAt: cloudBook.lastReadAt,
                       sourceFolderId: cloudBook.sourceFolderId,
                     });
-                    if (cloudBook.lastReadProgress) {
-                      try {
-                        const parsedProgress = JSON.parse(cloudBook.lastReadProgress);
-                        await db.progress.put(parsedProgress);
-                      } catch (e) {
-                        console.error("更新本地对准进度失败:", e);
-                      }
-                    }
+                    if (cloudProgress) await db.progress.put(cloudProgress);
                   });
                 } else if (winner === "local") {
                   // 本地读得更深：仅提交最轻量的进度数据覆盖云端，彻底免去重章节大文本传输
                   const progress = await db.progress.get(localBook.id);
-                  const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
                   const lastReadAt = localBook.lastReadAt || new Date().toISOString();
 
-                  if (lastReadProgress) {
-                    const progressRes = await fetch(apiUrl(`/books/${localBook.id}/progress`), {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        ...getShareHeaders(),
-                      },
-                      body: JSON.stringify({
-                        lastReadProgress,
+                  if (progress) {
+                    await operation.api.updateProgress(
+                      localBook.id,
+                      progress,
+                      {
                         lastReadAt,
                         sourceFolderId: localBook.sourceFolderId || null,
-                      }),
-                    });
-                    if (!progressRes.ok) throw new Error(`云阁拒绝了最深本地读痕的轻量进度上报`);
+                      },
+                    );
                   }
                 }
               }
@@ -1344,12 +1191,9 @@ export function LibraryDefault({
           }
         }
 
-        const finalRes = await fetch(apiUrl("/books"), {
-          headers: getShareHeaders(),
-        });
-        if (finalRes.ok) {
-          const finalData = await finalRes.json();
-          setCloudBooks(finalData);
+        const verifiedBooks = await operation.api.listBooks();
+        if (currentShareTokenRef.current === syncShareToken) {
+          setCloudBooks(verifiedBooks);
         }
       } catch (e) {
         console.error("一键双向同步过程遭遇异常:", e);
@@ -1421,19 +1265,24 @@ export function LibraryDefault({
   };
 
   // 单书快捷备份 (细粒度隔离进度状态)
-  const handleSingleUpload = async (book: Book) => {
+  const handleSingleUpload = async (book: Book): Promise<boolean> => {
+    if (!currentShareToken) {
+      setToastMsg("💡 请先在同步设置中绑定私有分享密钥，再备份到云端。");
+      return false;
+    }
     if (syncMutexRef.current) {
       setToastMsg("⏳ 上一项同步操作尚未完成，请稍后再试。");
-      return;
+      return false;
     }
     if (isSyncing || syncingBookId) {
       setToastMsg("⏳ 全量同步正在进行中，请等待完成后再拉取单本书籍。");
-      return;
+      return false;
     }
     if (!isOnline) {
       setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
-      return;
+      return false;
     }
+    const operation = createPersonalSyncOperation(currentShareToken);
     syncMutexRef.current = true;
     setSyncingBookId(book.id);
     setIsSyncing(true);
@@ -1444,59 +1293,72 @@ export function LibraryDefault({
 
     try {
       // 记入活跃持久化上传任务，防刷新和崩溃
-      markActiveSyncTask(book.id, "upload");
+      markActiveSyncTask(book.id, "upload", operation.shareToken);
 
-      const chapters = await db.chapters.where("bookId").equals(book.id).toArray();
-            
-            // 若本地章节缓存为空且为本地文件系统类型书籍，触发强制解析，确保云端存有完整章节
-            if (chapters.length === 0 && (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book")) {
-              try {
-                setSyncStepText(`正在解析「${book.title}」...`);
-                await cacheEntireBook(book.id);
-                const parsedChapters = await db.chapters.where("bookId").equals(book.id).toArray();
-                chapters.push(...parsedChapters);
-                console.log(`[Sync] 上传前预解析完成:「${book.title}」共 ${parsedChapters.length} 章。`);
-              } catch (parseErr) {
-                console.warn(`[Sync] 上传前预解析「${book.title}」失败，将以无章节状态上传:`, parseErr);
-              }
-            }
-      const progress = await db.progress.get(book.id);
-      const lastReadProgress = progress ? JSON.stringify(progress) : undefined;
-      const bookWithProgress = { ...book, lastReadProgress };
-
-      await uploadBookInChunks(bookWithProgress, chapters, (uploaded, total) => {
+      let outcome = await operation.service.uploadBook(book.id, {
+        onUploaded: (uploaded, total) => {
+          setBookSyncStates((prev) => ({
+            ...prev,
+            [book.id]: {
+              progress: Math.round((uploaded / Math.max(total, 1)) * 100),
+              stepText: `核验章节 ${uploaded}/${total}`,
+            },
+          }));
+        },
+      });
+      if (
+        outcome.status === "failed" &&
+        outcome.code === "invalid_local_upload" &&
+        (book.sourceType === "folder_index" ||
+          book.sourceType === "folder_multi_file_book")
+      ) {
         setBookSyncStates((prev) => ({
           ...prev,
-          [book.id]: {
-            progress: Math.round((uploaded / Math.max(total, 1)) * 100),
-            stepText: `备份章节 ${uploaded}/${total}`,
-          },
+          [book.id]: { progress: 10, stepText: "正在完整解析本地正文..." },
         }));
-      });
-
-      setToastMsg(`🍃 「${book.title}」云端备份成功！`);
-      await fetchCloudBooks();
-    } catch {
-      setToastMsg("💡 备份失败，请检查网络或后端服务。");
-    } finally {
-      // 任务完结，清除落盘记录
-      clearActiveSyncTask(book.id);
-
-      syncMutexRef.current = false;
-      setTimeout(() => {
-        setIsSyncing(false);
-        setSyncingBookId(null);
-        setBookSyncStates((prev) => {
-          const next = { ...prev };
-          delete next[book.id];
-          return next;
+        await cacheEntireBook(book.id);
+        outcome = await operation.service.uploadBook(book.id, {
+          onUploaded: (uploaded, total) => {
+            setBookSyncStates((prev) => ({
+              ...prev,
+              [book.id]: {
+                progress: Math.round((uploaded / Math.max(total, 1)) * 100),
+                stepText: `核验章节 ${uploaded}/${total}`,
+              },
+            }));
+          },
         });
-      }, 300);
+      }
+      if (outcome.status === "failed") {
+        throw new Error(`云端整书备份失败：${outcome.code}`);
+      }
+
+      clearActiveSyncTask(book.id, operation.shareToken);
+      setToastMsg(`🍃 「${book.title}」云端完整副本已读回核验。`);
+      await fetchCloudBooks();
+      return true;
+    } catch (error) {
+      console.error(`备份藏书「${book.title}」失败:`, error);
+      setToastMsg("💡 备份未通过完整性核验，已保留待重试状态。");
+      return false;
+    } finally {
+      syncMutexRef.current = false;
+      setIsSyncing(false);
+      setSyncingBookId(null);
+      setBookSyncStates((prev) => {
+        const next = { ...prev };
+        delete next[book.id];
+        return next;
+      });
     }
   };
 
   // 单书快捷拉取 (物理还原进度快照)
-  const handleSingleDownload = async (book: Book & { lastReadProgress?: string }) => {
+  const handleSingleDownload = async (book: LegacyRemoteBook) => {
+    if (!currentShareToken) {
+      setToastMsg("💡 请先绑定原私有分享密钥，再从云端拉取。");
+      return;
+    }
     if (syncMutexRef.current) {
       setToastMsg("⏳ 上一项同步操作尚未完成，请稍后再试。");
       return;
@@ -1509,6 +1371,7 @@ export function LibraryDefault({
       setToastMsg("🔌 当前处于离线状态，请连接网络后再行落墨拉取。");
       return;
     }
+    const operation = createPersonalSyncOperation(currentShareToken);
     syncMutexRef.current = true;
     setSyncingBookId(book.id);
     setIsSyncing(true);
@@ -1519,7 +1382,7 @@ export function LibraryDefault({
 
     try {
       // 记入活跃持久化下载任务
-      markActiveSyncTask(book.id, "download");
+      markActiveSyncTask(book.id, "download", operation.shareToken);
 
       for (let p = 0; p <= 40; p += 20) {
         setBookSyncStates((prev) => ({
@@ -1529,35 +1392,23 @@ export function LibraryDefault({
         await new Promise((r) => setTimeout(r, 40));
       }
 
-      const chapters = await fetchRemoteChaptersPaged(book.id, (loaded, total) => {
-        setBookSyncStates((prev) => ({
-          ...prev,
-          [book.id]: {
-            progress: Math.min(
-              85,
-              40 + Math.round((loaded / Math.max(total || loaded, 1)) * 45),
-            ),
-            stepText: `拉取章节 ${loaded}/${total ?? "?"}`,
-          },
-        }));
+      const outcome = await operation.service.downloadBook(book, {
+        onPage: (loaded, total) => {
+          setBookSyncStates((prev) => ({
+            ...prev,
+            [book.id]: {
+              progress: Math.min(
+                85,
+                40 + Math.round((loaded / Math.max(total, 1)) * 45),
+              ),
+              stepText: `拉取章节 ${loaded}/${total}`,
+            },
+          }));
+        },
       });
-
-        if (chapters.length === 0) {
-          console.warn(`[Download] 云阁中「${book.title}」暂无章节内容，该书章节可能未完成初次上传。`);
-          if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
-            setToastMsg("📂 此书的章节内容源自本地文件系统，需在原设备上打开一次阅读器完成解析后重新同步，方可在其他设备拉取。");
-          } else {
-            setToastMsg("💡 云阁中暂无此书的章节内容，请确认原设备已完成章节同步上传。");
-          }
-          // 不落库空章节，但仍存储元数据供书架展示
-          await db.books.put(book);
-          // 重置 parseStatus，让阅读器打开时尝试从本地文件系统重新解析
-          if (book.sourceType === "folder_index" || book.sourceType === "folder_multi_file_book") {
-            await db.books.update(book.id, { parseStatus: "not_parsed" });
-          }
-          await fetchCloudBooks();
-          return;
-        }
+      if (outcome.status === "failed") {
+        throw new Error(`云端整书拉取失败：${outcome.code}`);
+      }
         for (let p = 40; p <= 100; p += 20) {
           setBookSyncStates((prev) => ({
             ...prev,
@@ -1566,35 +1417,8 @@ export function LibraryDefault({
           await new Promise((r) => setTimeout(r, 30));
         }
 
-        await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
-          // 在覆盖本地进度前，做 L2 备份
-          const oldProgress = await db.progress.get(book.id);
-          if (oldProgress) {
-            const key = `reader-progress-rollback-${book.id}`;
-            let list: { chapterIndex: number; paragraphIndex?: number; [key: string]: unknown }[] = [];
-            try { list = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
-            if (!list.some(p => p.chapterIndex === oldProgress.chapterIndex && p.paragraphIndex === oldProgress.paragraphIndex)) {
-              list.push({ ...oldProgress, rollbackAt: new Date().toISOString() });
-              localStorage.setItem(key, JSON.stringify(list.slice(-5)));
-            }
-          }
-
-          await db.books.put(book);
-            // 🏮 核心适配转换层：对准后端异构字段，抵抗变更，保障未来接口防腐性
-          for (const chap of chapters) {
-            await db.chapters.put(toLocalChapter(book.id, chap));
-          }
-          if (book.lastReadProgress) {
-            try {
-              const parsedProgress = JSON.parse(book.lastReadProgress);
-              await db.progress.put(parsedProgress);
-            } catch (e) {
-              console.error("解析进度快照失败:", e);
-            }
-          }
-        });
-
         setToastMsg(`🍃 「${book.title}」已成功拉取至本地书阁！`);
+        clearActiveSyncTask(book.id, operation.shareToken);
         await fetchCloudBooks();
     } catch {
       if (!navigator.onLine) {
@@ -1603,9 +1427,6 @@ export function LibraryDefault({
         setToastMsg("💡 拉取失败，该书籍可能在云端已被清除。");
       }
     } finally {
-      // 任务完结，清除落盘记录
-      clearActiveSyncTask(book.id);
-
       syncMutexRef.current = false;
       setTimeout(() => {
         setIsSyncing(false);
@@ -1621,7 +1442,12 @@ export function LibraryDefault({
 
   // 单书物理空间释放 (Space Offloading 与等价行级 Integrity 校验)
   const handleSpaceOffload = async (book: Book) => {
-    if (isSyncing || syncingBookId) return;
+    if (!currentShareToken) {
+      setToastMsg("💡 请先绑定原私有分享密钥，再核验云端副本。");
+      return;
+    }
+    if (syncMutexRef.current || isSyncing || syncingBookId) return;
+    const operation = createPersonalSyncOperation(currentShareToken);
 
     // 1. 物理安全行级校验 Integrity Grid
     const cloudBook = cloudBooksById.get(book.id);
@@ -1644,39 +1470,46 @@ export function LibraryDefault({
       message: strings.sync.offloadConfirm.replace("{title}", book.title),
       isDanger: false,
       onConfirm: async () => {
+        if (syncMutexRef.current) {
+          setToastMsg("⏳ 同步操作尚未完成，暂不释放本地正文。");
+          return;
+        }
+        syncMutexRef.current = true;
         try {
-          const result = await libraryCommandService.offloadBook(book.id);
-          if (result.status === "applied") {
-            setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
-            await fetchCloudBooks();
-          } else {
-            setToastMsg("💡 藏书已不在本地，未执行空间释放。");
+          const outcome = await operation.service.offloadVerifiedBook(book.id);
+          if (outcome.status === "failed") {
+            setToastMsg("💡 云端正文未通过逐章核验，已取消释放本地空间。");
+            return;
           }
+          setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
+          await fetchCloudBooks();
         } catch (err) {
           console.error("释放本地空间失败:", err);
           setToastMsg("💡 物理释放空间失败，存储数据库繁忙。");
+        } finally {
+          syncMutexRef.current = false;
         }
       }
     });
   };
 
   // 冷启动自愈：1. 静默自动同步大盘 2. 持久化未完结单书同步任务自愈
-  const hasAutoSyncedRef = useRef(false);
+  const recoveredShareTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isOnline || !currentShareToken) return;
 
     const runAutoStartupSyncAndRecovery = async () => {
-      // 避免重复运行
-      if (hasAutoSyncedRef.current) return;
-      hasAutoSyncedRef.current = true;
+      const recoveryShareToken = currentShareToken;
+      if (recoveredShareTokenRef.current === recoveryShareToken) return;
+      recoveredShareTokenRef.current = recoveryShareToken;
 
       // 1. 冷启动自动双向对撞同步 (使用 sessionStorage 构筑会话级隔离锁，防刷限流)
       const hasSyncedInSession = sessionStorage.getItem("reader-session-auto-synced");
       if (autoSyncOnStartup && !isSyncing && !syncMutexRef.current && hasSyncedInSession !== "true") {
         console.log("[Sync Self-healing] 触发冷启动静默自动同步...");
         sessionStorage.setItem("reader-session-auto-synced", "true");
-        void handleDualSync(true); // 异步极静运行，无需阻塞，handleDualSync 内已有 syncMutexRef 保护
+        await handleDualSync(true);
       }
 
       // 2. 持久化任务重连校验与自愈
@@ -1684,18 +1517,41 @@ export function LibraryDefault({
         const activeTasks = readSyncTasks(window.localStorage);
         if (Object.keys(activeTasks).length > 0) {
           const { books: localBooks } = await libraryQueryService.readSyncInventory();
+          if (currentShareTokenRef.current !== recoveryShareToken) return;
+          const scopedTasks = Object.values(activeTasks).filter(
+            (task) => task.shareToken === recoveryShareToken,
+          );
+          const needsRemoteRecovery = scopedTasks.some(
+            (task) => task.action === "download",
+          );
+          const remoteBooks = needsRemoteRecovery
+            ? await createPersonalSyncOperation(recoveryShareToken).api.listBooks()
+            : [];
+          if (currentShareTokenRef.current !== recoveryShareToken) return;
           
-          for (const [bookId, action] of Object.entries(activeTasks)) {
+          for (const { bookId, action, shareToken } of scopedTasks) {
+            if (currentShareTokenRef.current !== recoveryShareToken) return;
             // 如果已经在同步该书，安全跳过
             if (syncingBookId === bookId) continue;
 
-            const book = localBooks.find(b => b.id === bookId);
-            if (book) {
-              console.log(`[Sync Self-healing] 检测到未完结持久任务「${book.title}」(${action})，启动断点自愈重连...`);
-              if (action === "upload") {
-                void handleSingleUpload(book);
-              } else if (action === "download") {
-                void handleSingleDownload(book);
+            const localBook = localBooks.find((book) => book.id === bookId);
+            const remoteBook = remoteBooks.find((book) => book.id === bookId);
+            if (action === "delete") {
+              try {
+                await createPersonalSyncOperation(shareToken).api.deleteBook(bookId);
+                clearActiveSyncTask(bookId, shareToken);
+              } catch (error) {
+                console.error(`[Sync Self-healing] 云端删除任务 ${bookId} 仍待重试:`, error);
+              }
+              continue;
+            }
+            const recoveryBook = action === "upload" ? localBook : remoteBook;
+            if (recoveryBook) {
+              console.log(`[Sync Self-healing] 检测到未完结持久任务「${recoveryBook.title}」(${action})，启动断点自愈重连...`);
+              if (action === "upload" && localBook) {
+                await handleSingleUpload(localBook);
+              } else if (action === "download" && remoteBook) {
+                await handleSingleDownload(remoteBook);
               }
             }
           }
@@ -1810,13 +1666,16 @@ export function LibraryDefault({
         try {
           await libraryCommandService.removeBook(bookId);
 
-          try {
-            await fetch(apiUrl(`/books/${bookId}`), {
-              method: "DELETE",
-              headers: getShareHeaders(),
-            });
-          } catch (e) {
-            console.error("Backend delete failed", e);
+          if (currentShareToken) {
+            const operation = createPersonalSyncOperation(currentShareToken);
+            markActiveSyncTask(bookId, "delete", operation.shareToken);
+            try {
+              await operation.api.deleteBook(bookId);
+              clearActiveSyncTask(bookId, operation.shareToken);
+            } catch (error) {
+              console.error("Backend delete failed", error);
+              setToastMsg("💡 已从本地移除；云端删除待网络恢复后重试。");
+            }
           }
           // 删除后拉取刷新云端对齐
           fetchCloudBooks();
