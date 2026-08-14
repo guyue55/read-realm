@@ -14,4 +14,14 @@ describe("library truth contract", () => {
     expect(source).not.toContain("发现本地与云端存在数据微澜");
     expect(source).toContain("currentShareToken || isSyncing");
   });
+
+  it("reads shelf metadata through one library query boundary", () => {
+    expect(source).toContain("libraryQueryService.readSnapshot");
+    expect(source).toContain("libraryQueryService.readSyncInventory");
+    expect(source).not.toContain("db.books.toArray()");
+    expect(source).not.toContain("db.progress.toArray()");
+    expect(source).not.toContain("db.libraryFolders.toArray()");
+    expect(source).not.toContain('db.chapters.orderBy("bookId").uniqueKeys()');
+    expect(source).not.toContain("db.bookmarks.count()");
+  });
 });

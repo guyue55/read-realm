@@ -13,6 +13,18 @@ import {
   buildPreUpgradeSnapshot,
 } from "./dexie-migration-backup.js";
 import {
+  META_SHELF_BACKUP_KEY,
+  META_SHELF_RECOVERY_GAP_KEY,
+  buildBrowserMetaShelfBackup,
+  getMetaShelfBackupCompleteness,
+  parseMetaShelfBackup,
+  readMetaShelfRecoveryGap,
+  writeBrowserMetaShelfBackup,
+  type MetaShelfBackup,
+  type MetadataBackupResult,
+  type MetadataRestoreResult,
+} from "./metadata-redundancy.js";
+import {
   parseLocalDataSnapshot,
   serializeLocalDataSnapshot,
 } from "./local-snapshot.js";
@@ -195,7 +207,10 @@ export class ReaderDatabase extends Dexie {
           clearTimeout(backupTimeout);
         }
         backupTimeout = setTimeout(() => {
-          void backupMetadataToStorage();
+          backupTimeout = null;
+          // A timer may already be queued when a durable write starts. The
+          // committing transaction schedules the authoritative backup itself.
+          if (!isTransactionWriting) void backupMetadataToStorage();
         }, 1200); // 1.2秒阻尼防抖，过滤极高频的连续翻页/划线开销
       };
 
@@ -218,9 +233,14 @@ export const db = new ReaderDatabase();
 
 // 🏮 1. 新增全局写事务隔离状态阀与状态设置函数
 let isTransactionWriting = false;
+let transactionWriteDepth = 0;
 
 export function setTransactionWriting(active: boolean) {
-  isTransactionWriting = active;
+  transactionWriteDepth = Math.max(
+    0,
+    transactionWriteDepth + (active ? 1 : -1),
+  );
+  isTransactionWriting = transactionWriteDepth > 0;
 }
 
 /**
@@ -232,112 +252,101 @@ export async function executeSafeWriteTransaction<T>(
   runner: () => Promise<T>
 ): Promise<T> {
   setTransactionWriting(true);
+  let result: T;
   try {
-    const result = await db.transaction("rw", tables, async () => {
+    result = await db.transaction("rw", tables, async () => {
       return await runner();
     });
-    // 只有事务 100% 完美提交后，此时数据库元数据完整无损，触发全量冷备份
-    await backupMetadataToStorage();
-    return result;
   } finally {
     setTransactionWriting(false);
   }
+  // Only a committed transaction may schedule the authoritative snapshot.
+  // Release the write guard first so the serialized backup is not skipped.
+  await scheduleMetadataBackup(true);
+  return result;
 }
 
 // ==========================================================
 // 🏮 「防蒸发柜」 双轨冗余镜像备份与冷自愈协议 (E07-S04 / E07-S03)
 // ==========================================================
 
-export interface MetaShelfBackup {
-  books: Book[];
-  progress: ReadingProgress[];
-  bookmarks: Bookmark[];
-  backupTime: string;
-  isPartial?: boolean;
-  originalBookCount?: number;
-}
-
 /**
  * 自动持久化双轨备份：将当前 IndexedDB 中的书架元数据、进度与书签打包存储。
  * 1. 优先备份到 localStorage 建立一级防线，配有 5MB 配额物理熔断和超量体积物理裁剪引擎；
  * 2. 检测到 Capacitor / Tauri 套壳宿主时，异步通过原生桥写入独立沙盒 Documents 物理文件，从底层杜绝由于 WebView 空间不足被系统静默驱逐（Eviction）。
  */
-export async function backupMetadataToStorage(): Promise<boolean> {
-  if (typeof window === "undefined" || !window.localStorage) return false;
+let metadataBackupQueue: Promise<void> = Promise.resolve();
+
+async function performMetadataBackup(
+  allowDuringWrite: boolean,
+): Promise<MetadataBackupResult> {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return { status: "skipped", storedBookCount: 0, expectedBookCount: 0 };
+  }
+  if (isTransactionWriting && !allowDuringWrite) {
+    return { status: "skipped", storedBookCount: 0, expectedBookCount: 0 };
+  }
   try {
-    const originalBooks = await db.books.toArray();
-    let books = originalBooks;
-    let progress = await db.progress.toArray();
-    let bookmarks = await db.bookmarks.toArray();
+    const [originalBooks, fullProgress, fullBookmarks] = await db.transaction(
+      "r",
+      [db.books, db.progress, db.bookmarks],
+      async () =>
+        Promise.all([
+          db.books.toArray(),
+          db.progress.toArray(),
+          db.bookmarks.toArray(),
+        ]),
+    );
     
     // 如果没有任何藏书，不进行覆盖式空备份以防恶意抹除
-    if (books.length === 0) {
+    if (originalBooks.length === 0) {
       console.log("[Storage] 书架暂无典籍，跳过镜像双轨备份。");
-      return false;
+      return { status: "skipped", storedBookCount: 0, expectedBookCount: 0 };
     }
 
-    const maxLocalBooks = 100;
-    const maxLocalBookmarks = 500;
-    const isPartial = books.length > maxLocalBooks || bookmarks.length > maxLocalBookmarks;
-
-    // localStorage 只保留轻量元数据快照，原生宿主会继续写全量备份。
-    if (isPartial) {
-      console.log(`[Storage Backup] ⚠️ 检测到数据量规模较大，启动 LocalStorage 熔断剪裁机制...`);
-      books = books
-        .sort((a, b) => {
-          const tA = a.lastReadAt ? new Date(a.lastReadAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-          const tB = b.lastReadAt ? new Date(b.lastReadAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-          return tB - tA;
-        })
-        .slice(0, maxLocalBooks);
-      const allowedBookIds = new Set(books.map(b => b.id));
-      progress = progress.filter(p => allowedBookIds.has(p.bookId));
-      bookmarks = bookmarks
-        .filter(b => allowedBookIds.has(b.bookId))
-        .slice(-maxLocalBookmarks);
+    const recordedRecoveryGap = readMetaShelfRecoveryGap(window.localStorage);
+    const unresolvedRecoveryGap =
+      recordedRecoveryGap > originalBooks.length ? recordedRecoveryGap : 0;
+    if (recordedRecoveryGap > 0 && unresolvedRecoveryGap === 0) {
+      try {
+        window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+      } catch {}
     }
-
-    const backupData: MetaShelfBackup = {
-      books,
-      progress,
-      bookmarks,
-      backupTime: new Date().toISOString(),
-      isPartial,
-      originalBookCount: originalBooks.length,
-    };
-
-    const serialized = JSON.stringify(backupData);
+    const backupTime = new Date().toISOString();
+    const backupData = buildBrowserMetaShelfBackup({
+      books: originalBooks,
+      progress: fullProgress,
+      bookmarks: fullBookmarks,
+      backupTime,
+      expectedBookCount: unresolvedRecoveryGap,
+    });
     
     // 一级防线：浏览器本地持久存储 localStorage (带 QuotaExceeded 熔断自愈)
-    try {
-      window.localStorage.setItem("read_realm_meta_shelf_backup", serialized);
+    const browserResult = writeBrowserMetaShelfBackup(window.localStorage, backupData);
+    if (browserResult.status === "failed") {
+      console.error("[Storage Backup] 备份写入 LocalStorage 失败，已保留上一份可用备份。");
+    } else if (browserResult.status === "skipped_stale") {
+      // The wall clock may have moved backwards or another context may have
+      // completed a newer snapshot. Do not let this older candidate replace
+      // either browser or native recovery media.
+      return browserResult;
+    } else {
       console.log(`[Storage] 双轨冗余：元数据（最新活跃 ${backupData.books.length} 本书）归档至 localStorage。`);
-    } catch (e: any) {
-      if (e.name === "QuotaExceededError" || e.code === 22 || e.number === 0x8007000E) {
-        console.error("[Storage Backup] ❌ 备份写入 LocalStorage 发生物理配额溢出，进行紧急冷自愈清除:", e);
-        try {
-          window.localStorage.removeItem("read_realm_meta_shelf_backup"); // 清理垃圾以防异常级联
-        } catch {}
-      } else {
-        console.error("[Storage Backup] 写入 LocalStorage 遭遇其他未知错误:", e);
-      }
     }
 
     // 二级防线：Capacitor 物理沙盒备份 (保留全量，不受 5MB 局限)
     const cap = (window as any).Capacitor;
+    let nativeFullBackupSucceeded = false;
     if (cap?.Plugins?.Filesystem) {
       try {
         const { Filesystem, Directory } = cap.Plugins;
-        const fullBooks = await db.books.toArray();
-        const fullProgress = await db.progress.toArray();
-        const fullBookmarks = await db.bookmarks.toArray();
         const fullBackup: MetaShelfBackup = {
-          books: fullBooks,
+          books: originalBooks,
           progress: fullProgress,
           bookmarks: fullBookmarks,
-          backupTime: new Date().toISOString(),
+          backupTime,
           isPartial: false,
-          originalBookCount: fullBooks.length,
+          originalBookCount: originalBooks.length,
         };
         const fullSerialized = JSON.stringify(fullBackup);
         await Filesystem.writeFile({
@@ -347,6 +356,7 @@ export async function backupMetadataToStorage(): Promise<boolean> {
           encoding: "utf8",
           recursive: true,
         });
+        nativeFullBackupSucceeded = true;
         console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Capacitor 原生物理沙盒 (Documents/read_realm_backup/meta_shelf.json)");
       } catch (err) {
         console.warn("[Storage] Capacitor 原生沙盒写入遭遇阻碍:", err);
@@ -356,31 +366,78 @@ export async function backupMetadataToStorage(): Promise<boolean> {
     else if ((window as any).__TAURI__?.fs) {
       try {
         const { writeTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
-        const fullBooks = await db.books.toArray();
-        const fullProgress = await db.progress.toArray();
-        const fullBookmarks = await db.bookmarks.toArray();
         const fullBackup: MetaShelfBackup = {
-          books: fullBooks,
+          books: originalBooks,
           progress: fullProgress,
           bookmarks: fullBookmarks,
-          backupTime: new Date().toISOString(),
+          backupTime,
           isPartial: false,
-          originalBookCount: fullBooks.length,
+          originalBookCount: originalBooks.length,
         };
         const fullSerialized = JSON.stringify(fullBackup);
         await writeTextFile("read_realm_backup/meta_shelf.json", fullSerialized, {
           dir: BaseDirectory.AppLocalData,
         });
+        nativeFullBackupSucceeded = true;
         console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Tauri 原生物理沙盒 (AppLocalData/read_realm_backup/meta_shelf.json)");
       } catch (err) {
         console.warn("[Storage] Tauri 原生沙盒写入遭遇阻碍:", err);
       }
     }
-    return true;
+    if (nativeFullBackupSucceeded) {
+      return {
+        status: "complete",
+        storedBookCount: originalBooks.length,
+        expectedBookCount: originalBooks.length,
+      };
+    }
+    return browserResult;
   } catch (err) {
     console.error("[Storage] 自动双轨备份异常中断:", err);
-    return false;
+    return { status: "failed", storedBookCount: 0, expectedBookCount: 0 };
   }
+}
+
+async function performMetadataBackupWithCrossTabLock(
+  allowDuringWrite: boolean,
+): Promise<MetadataBackupResult> {
+  const lockManager = (
+    window.navigator as Navigator & {
+      locks?: {
+        request<T>(name: string, callback: () => Promise<T>): Promise<T>;
+      };
+    }
+  ).locks;
+  if (!lockManager) return performMetadataBackup(allowDuringWrite);
+  return lockManager.request("reader-metadata-backup", () =>
+    performMetadataBackup(allowDuringWrite),
+  );
+}
+
+function scheduleMetadataBackup(
+  allowDuringWrite: boolean,
+): Promise<MetadataBackupResult> {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return Promise.resolve({
+      status: "skipped",
+      storedBookCount: 0,
+      expectedBookCount: 0,
+    });
+  }
+  const run = () => performMetadataBackupWithCrossTabLock(allowDuringWrite);
+  const task = metadataBackupQueue.then(
+    run,
+    run,
+  );
+  metadataBackupQueue = task.then(
+    () => undefined,
+    () => undefined,
+  );
+  return task;
+}
+
+export function backupMetadataToStorage(): Promise<MetadataBackupResult> {
+  return scheduleMetadataBackup(false);
 }
 
 /**
@@ -389,16 +446,33 @@ export async function backupMetadataToStorage(): Promise<boolean> {
  * 2. 若书籍表为空，但本地或原生沙盒存在有效备份，则一键唤醒“降卷自愈”；
  * 3. 使用数据库事务，安全可靠地恢复书架、阅读进度及书签。
  */
-export async function checkAndRestoreFromBackup(): Promise<boolean> {
-  if (typeof window === "undefined" || !window.localStorage) return false;
+export async function checkAndRestoreFromBackup(): Promise<MetadataRestoreResult> {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return { status: "not_found", restoredBookCount: 0, expectedBookCount: 0, source: null };
+  }
   try {
     const booksCount = await db.books.count();
     if (booksCount > 0) {
+      const expectedBookCount = readMetaShelfRecoveryGap(window.localStorage);
+      if (expectedBookCount > booksCount) {
+        return {
+          status: "recovery_gap",
+          restoredBookCount: booksCount,
+          expectedBookCount,
+          source: null,
+        };
+      }
+      if (expectedBookCount > 0) {
+        try {
+          window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+        } catch {}
+      }
       // 数据库元数据完整，不需要恢复
-      return false;
+      return { status: "not_needed", restoredBookCount: 0, expectedBookCount: booksCount, source: null };
     }
 
     let backupStr: string | null = null;
+    let source: MetadataRestoreResult["source"] = null;
 
     // 1. 尝试从 Capacitor 物理沙盒读取
     const cap = (window as any).Capacitor;
@@ -411,6 +485,7 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
           encoding: "utf8",
         });
         backupStr = result.data;
+        source = "capacitor";
         console.log("[Storage] 成功从 Capacitor 物理沙盒起封备份文卷。");
       } catch (e) {
         console.warn("[Storage] Capacitor 沙盒读取失败，降级寻求本地存储:", e);
@@ -423,6 +498,7 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
         backupStr = await readTextFile("read_realm_backup/meta_shelf.json", {
           dir: BaseDirectory.AppLocalData,
         });
+        source = "tauri";
         console.log("[Storage] 成功从 Tauri 物理沙盒起封备份文卷。");
       } catch (e) {
         console.warn("[Storage] Tauri 沙盒读取失败，降级寻求本地存储:", e);
@@ -431,16 +507,55 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
 
     // 3. 降级：从 localStorage 恢复
     if (!backupStr) {
-      backupStr = window.localStorage.getItem("read_realm_meta_shelf_backup");
+      backupStr = window.localStorage.getItem(META_SHELF_BACKUP_KEY);
+      if (backupStr) source = "browser";
     }
 
     if (!backupStr) {
-      return false;
+      return { status: "not_found", restoredBookCount: 0, expectedBookCount: 0, source: null };
     }
 
-    const backup: MetaShelfBackup = JSON.parse(backupStr);
-    if (!backup.books || backup.books.length === 0) {
-      return false;
+    const backup = parseMetaShelfBackup(backupStr);
+    if (backup.books.length === 0) {
+      return { status: "not_found", restoredBookCount: 0, expectedBookCount: backup.originalBookCount, source };
+    }
+
+    const completeness = getMetaShelfBackupCompleteness(backup);
+    const previousRecoveryGapMarker = window.localStorage.getItem(
+      META_SHELF_RECOVERY_GAP_KEY,
+    );
+    const restorePreviousRecoveryGapMarker = () => {
+      try {
+        if (previousRecoveryGapMarker === null) {
+          window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+        } else {
+          window.localStorage.setItem(
+            META_SHELF_RECOVERY_GAP_KEY,
+            previousRecoveryGapMarker,
+          );
+        }
+      } catch {}
+    };
+    if (completeness.status === "partial") {
+      const expected = String(completeness.expectedBookCount);
+      try {
+        window.localStorage.setItem(META_SHELF_RECOVERY_GAP_KEY, expected);
+        if (window.localStorage.getItem(META_SHELF_RECOVERY_GAP_KEY) !== expected) {
+          throw new Error("META_SHELF_RECOVERY_GAP_MARKER_READBACK_MISMATCH");
+        }
+      } catch (error) {
+        restorePreviousRecoveryGapMarker();
+        console.error(
+          "[Storage] 无法可靠记录部分恢复缺口，已取消恢复且未写入书架。",
+          error,
+        );
+        return {
+          status: "failed",
+          restoredBookCount: 0,
+          expectedBookCount: completeness.expectedBookCount,
+          source,
+        };
+      }
     }
 
     console.warn("[Storage] 检测到书架为空且存在有效备份，开始恢复书架元数据。");
@@ -448,24 +563,77 @@ export async function checkAndRestoreFromBackup(): Promise<boolean> {
     const restoreMode = backup.isPartial ? "轻量" : "全量";
     console.log(`[Storage] 发现归档于 ${backup.backupTime} 的${restoreMode}镜像，开始复苏重建事务...`);
 
-    // 使用事务保证原子级恢复
-    await db.transaction("rw", [db.books, db.progress, db.bookmarks], async () => {
-      if (backup.books && backup.books.length > 0) {
+    // Use the same write transaction both to re-check emptiness and restore.
+    // A different tab may have imported a book while a native backup was read.
+    setTransactionWriting(true);
+    let concurrentBookCount = 0;
+    let didRestore = false;
+    try {
+      await db.transaction("rw", [db.books, db.progress, db.bookmarks], async () => {
+        concurrentBookCount = await db.books.count();
+        if (concurrentBookCount > 0) return;
+        await Promise.all([db.books.clear(), db.progress.clear(), db.bookmarks.clear()]);
         await db.books.bulkPut(backup.books);
+        if (backup.progress.length > 0) await db.progress.bulkPut(backup.progress);
+        if (backup.bookmarks.length > 0) await db.bookmarks.bulkPut(backup.bookmarks);
+        const [restoredBooks, restoredProgress, restoredBookmarks] = await Promise.all([
+          db.books.count(),
+          db.progress.count(),
+          db.bookmarks.count(),
+        ]);
+        if (
+          restoredBooks !== backup.books.length ||
+          restoredProgress !== backup.progress.length ||
+          restoredBookmarks !== backup.bookmarks.length
+        ) {
+          throw new Error("META_SHELF_RESTORE_READBACK_MISMATCH");
+        }
+        didRestore = true;
+      });
+    } catch (error) {
+      if (completeness.status === "partial") {
+        restorePreviousRecoveryGapMarker();
       }
-      if (backup.progress && backup.progress.length > 0) {
-        await db.progress.bulkPut(backup.progress);
+      throw error;
+    } finally {
+      setTransactionWriting(false);
+    }
+
+    if (!didRestore) {
+      if (completeness.status === "partial") {
+        restorePreviousRecoveryGapMarker();
       }
-      if (backup.bookmarks && backup.bookmarks.length > 0) {
-        await db.bookmarks.bulkPut(backup.bookmarks);
-      }
-    });
+      const expectedBookCount = readMetaShelfRecoveryGap(window.localStorage);
+      return expectedBookCount > concurrentBookCount
+        ? {
+            status: "recovery_gap",
+            restoredBookCount: concurrentBookCount,
+            expectedBookCount,
+            source: null,
+          }
+        : {
+            status: "not_needed",
+            restoredBookCount: 0,
+            expectedBookCount: concurrentBookCount,
+            source: null,
+          };
+    }
 
     console.log(`[Storage] 🎉 妙手回春！「防蒸发柜」自动一键自愈完成！成功召回 ${backup.books.length} 本典籍及其阅读进度。`);
-    return true;
+    if (completeness.status === "complete") {
+      try {
+        window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+      } catch {}
+    }
+    return {
+      status: completeness.status,
+      restoredBookCount: completeness.storedBookCount,
+      expectedBookCount: completeness.expectedBookCount,
+      source,
+    };
   } catch (err) {
     console.error("[Storage] 降卷自愈过程遭遇致命故障:", err);
-    return false;
+    return { status: "failed", restoredBookCount: 0, expectedBookCount: 0, source: null };
   }
 }
 

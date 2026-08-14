@@ -1,6 +1,22 @@
 export { default as Dexie } from "dexie";
 export { db, ReaderDatabase, backupMetadataToStorage, checkAndRestoreFromBackup, executeStorageGarbageCollection, setTransactionWriting, executeSafeWriteTransaction } from "./db.js";
-export type { ImportTask, LocalMigrationBackup, MetaShelfBackup } from "./db.js";
+export type { ImportTask, LocalMigrationBackup } from "./db.js";
+export {
+  META_SHELF_BACKUP_KEY,
+  META_SHELF_RECOVERY_GAP_KEY,
+  buildBrowserMetaShelfBackup,
+  getMetaShelfBackupCompleteness,
+  parseMetaShelfBackup,
+  readMetaShelfRecoveryGap,
+  writeBrowserMetaShelfBackup,
+} from "./metadata-redundancy.js";
+export type {
+  MetaShelfBackup,
+  MetadataBackupCompleteness,
+  MetadataBackupResult,
+  MetadataBackupWriteResult,
+  MetadataRestoreResult,
+} from "./metadata-redundancy.js";
 export { shouldSweepLegacyImportTask } from "./import-task-retention.js";
 export type { ImportTaskRetentionCandidate } from "./import-task-retention.js";
 export {
