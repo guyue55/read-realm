@@ -29,6 +29,7 @@ import {
   classifyMigrationGateRun,
   parseMigrationGateObservation,
 } from "./gate-migration-run.mjs";
+import { classifyPhase04ReaderRun } from "./phase-04-reader-run.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -360,6 +361,21 @@ function phaseThreeChecks() {
   ];
 }
 
+function phaseFourChecks() {
+  return [
+    { id: "PATCH_WHITESPACE", command: "git", args: ["diff", "--check"] },
+    { id: "READER_TEST", command: "corepack", args: ["pnpm", "--filter", "@reader/reader-core", "test"] },
+    { id: "GESTURE_TEST", command: "corepack", args: ["pnpm", "--filter", "@reader/gesture-core", "test"] },
+    { id: "STORAGE_TEST", command: "corepack", args: ["pnpm", "--filter", "@reader/storage-core", "test"] },
+    { id: "WEB_TEST", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "test"] },
+    { id: "WEB_LINT", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "lint"] },
+    { id: "WEB_TYPECHECK", command: "corepack", args: ["pnpm", "--filter", "web-pwa", "exec", "tsc", "--noEmit"] },
+    { id: "WORKSPACE_BUILD", command: "corepack", args: ["pnpm", "build"], env: { READING_WORLD_VERIFY_NO_PWA_WRITE: "1" } },
+    { id: "READER_RUN_CONTRACT", command: process.execPath, args: ["--test", "scripts/phase-04-reader-run.test.mjs"] },
+    { id: "READER_EXPERIENCE_LIVE", command: process.execPath, args: ["scripts/run-phase-04-reader-experience.mjs"], env: { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" } },
+  ];
+}
+
 function checksFor(phase, experiment, qualification, migration) {
   if (phase === "01") {
     if (experiment || qualification || migration) {
@@ -378,6 +394,10 @@ function checksFor(phase, experiment, qualification, migration) {
   if (phase === "03") {
     if (experiment || qualification || migration) throw new Error("PHASE-03 不接受风险门实验参数");
     return phaseThreeChecks();
+  }
+  if (phase === "04") {
+    if (experiment || qualification || migration) throw new Error("PHASE-04 不接受风险门实验参数");
+    return phaseFourChecks();
   }
   throw new Error(
     `PHASE-${phase} 的检查合同尚未随对应实现阶段落盘；拒绝生成伪证据`,
@@ -405,6 +425,11 @@ function main() {
     args.qualification,
     args.migration,
   );
+
+  const initialStatus = probe("git", ["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (initialStatus.exitCode !== 0 || initialStatus.stdout) {
+    throw new Error("FORMAL_PHASE_VERIFICATION_REQUIRES_CLEAN_WORKTREE");
+  }
 
   const logDirectory = `${outputPath.slice(0, -5)}.records`;
   const archivedPreviousReport = archivePreviousReport(outputPath, logDirectory);
@@ -591,15 +616,33 @@ function main() {
       recordVerification,
     };
   }
+  let readerExperience = null;
+  if (args.phase === "04") {
+    const readerCheck = results.find((result) => result.id === "READER_EXPERIENCE_LIVE");
+    try {
+      const log = readFileSync(resolve(repoRoot, readerCheck.logPath), "utf8");
+      const matches = [...log.matchAll(/^PHASE04_READER_OBSERVATION=(.+)$/gm)];
+      if (matches.length !== 1) throw new Error(`PHASE04_READER_OBSERVATION_COUNT_${matches.length}`);
+      const observation = JSON.parse(matches[0][1]);
+      readerExperience = { ...classifyPhase04ReaderRun(observation), observation };
+    } catch (error) {
+      readerExperience = {
+        classification: "FAIL",
+        reasons: [error instanceof Error ? error.message : String(error)],
+        observation: null,
+      };
+    }
+  }
   const passed = results.every(
     (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
   ) && (!qualification || qualification.classification === "QUALIFIED")
     && (!productGate || productGate.classification === "PASS")
     && (!migrationGate || migrationGate.classification === "PASS");
+  const phasePassed = passed && (!readerExperience || readerExperience.classification === "PASS");
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision: args.phase === "01" ? "REV-0001" : "REV-0002",
+    controlRevision: args.phase === "01" ? "REV-0001" : args.phase === "04" ? "REV-0003" : "REV-0002",
     phase: args.phase,
     experiment: args.experiment ?? null,
     qualificationExperiment: args.qualification ?? null,
@@ -623,8 +666,9 @@ function main() {
     qualification,
     productGate,
     migrationGate,
+    readerExperience,
     summary: {
-      passed,
+      passed: phasePassed,
       passedCount: results.filter(
         (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
       ).length,
@@ -638,8 +682,8 @@ function main() {
   };
   writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   process.stdout.write(`report=${outputRelative}\n`);
-  process.stdout.write(`result=${passed ? "PASS" : "FAIL"}\n`);
-  process.exitCode = passed ? 0 : 1;
+  process.stdout.write(`result=${phasePassed ? "PASS" : "FAIL"}\n`);
+  process.exitCode = phasePassed ? 0 : 1;
 }
 
 try {

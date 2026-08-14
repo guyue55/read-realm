@@ -187,6 +187,7 @@ test("layout and page-mode changes preserve the current semantic anchor", async 
   expect(before.chapterIndex).toBe(1);
   expect(before.paragraphIndex).toBeGreaterThan(10);
 
+  const layoutStartedAt = Date.now();
   await page.getByRole("button", { name: "阅读设置" }).click();
   const settings = page.getByRole("dialog", { name: "阅读设置" });
   await settings.getByRole("button", { name: "增大字号" }).click();
@@ -219,6 +220,11 @@ test("layout and page-mode changes preserve the current semantic anchor", async 
     const paragraph = node.getBoundingClientRect();
     return paragraph.bottom > bounds.top && paragraph.top < bounds.bottom;
   }), { timeout: 5_000 }).toBe(true);
+  console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
+    scenario: "semantic-layout",
+    semanticAnchorVisible: true,
+    stabilizationMs: Date.now() - layoutStartedAt,
+  })}`);
 });
 
 test("mobile pagination advances one page before changing chapters and restores its anchor", async ({ page }) => {
@@ -308,6 +314,7 @@ test("mobile pagination advances one page before changing chapters and restores 
   await expect(page.locator('[data-page-index]:visible')).toHaveCount(2);
   await expect(mobileCanvas.getByRole("heading", { name: "第一章" })).toBeVisible();
 
+  const persistenceStartedAt = Date.now();
   await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]').click();
   await expect(pageIndicator).toContainText("2 /", { timeout: 5_000 });
   expect(await page.locator('[data-page-index]:visible').count()).toBeLessThanOrEqual(3);
@@ -320,6 +327,7 @@ test("mobile pagination advances one page before changing chapters and restores 
     timeout: 1_000,
     intervals: [50, 100, 200],
   }).toBeGreaterThan(0);
+  const persistenceMs = Date.now() - persistenceStartedAt;
   const beforeReload = await readProgress(page);
 
   await page.reload();
@@ -377,6 +385,11 @@ test("mobile pagination advances one page before changing chapters and restores 
     timeout: 5_000,
   }).toBe(1);
   await expect(mobileCanvas.getByRole("heading", { name: "第二章" })).toBeVisible();
+  console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
+    scenario: "pagination-persistence",
+    persistenceMs,
+    semanticAnchorVisible: true,
+  })}`);
 });
 
 test("continuous scroll keeps an active three-chapter window while moving both directions", async ({ page }) => {
@@ -458,6 +471,7 @@ test("continuous scroll keeps an active three-chapter window while moving both d
   await page.goto("/#/reader/scroll-window-e2e-book");
   const mobileCanvas = page.locator('[data-reader-content-canvas="mobile"]');
   const chapterNodes = mobileCanvas.locator(".chapter-container");
+  let maxChapterDom = 0;
   await expect(chapterNodes).toHaveCount(2, { timeout: 15_000 });
 
   const waitForWindow = async (expected: number[]) => {
@@ -465,6 +479,7 @@ test("continuous scroll keeps an active three-chapter window while moving both d
       nodes.map((node) => Number((node as HTMLElement).dataset.chapterIndex)),
     ), { timeout: 15_000 }).toEqual(expected);
     expect(await chapterNodes.count()).toBeLessThanOrEqual(3);
+    maxChapterDom = Math.max(maxChapterDom, await chapterNodes.count());
     await page.evaluate(() => new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     }));
@@ -511,16 +526,19 @@ test("continuous scroll keeps an active three-chapter window while moving both d
   await expect(mobileCanvas.getByText("章节锚点 8", { exact: false })).toBeVisible();
 
   const tocButton = page.locator("button:visible").filter({ hasText: "目录" }).first();
-  await tocButton.focus();
-  await page.keyboard.press("Enter");
+  await tocButton.click();
   const targetChapterButton = page.locator("button:visible").filter({ hasText: "第 18 章" });
-  await targetChapterButton.focus();
-  await page.keyboard.press("Enter");
+  await targetChapterButton.click();
   await waitForWindow([16, 17, 18]);
   await expect.poll(async () => (
     await readProgress(page, "scroll-window-e2e-book")
   ).chapterIndex).toBe(17);
   await expect(mobileCanvas.getByText("章节锚点 17", { exact: false })).toBeVisible();
+  console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
+    scenario: "bounded-scroll",
+    maxChapterDom,
+    semanticAnchorVisible: true,
+  })}`);
 });
 
 test("reader dialogs contain and restore focus", async ({ page }) => {
@@ -762,8 +780,7 @@ test("reader controls are touch safe and use coherent icons", async ({ page }) =
   await page.getByRole("button", { name: "关闭阅读设置" }).click();
 
   const tocButton = page.getByRole("button", { name: "目录" });
-  await tocButton.focus();
-  await page.keyboard.press("Enter");
+  await tocButton.click();
   await expect(page.getByRole("dialog", { name: "阅读目录" })).toBeVisible();
   await assertTouchSafe();
   await page.getByRole("button", { name: "关闭目录" }).click();
