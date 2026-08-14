@@ -12,7 +12,7 @@ import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
@@ -92,6 +92,12 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
+  const [mobileChromeInsets, setMobileChromeInsets] = useState({
+    top: 68,
+    bottom: 160,
+    indicator: 156,
+  });
+  const mobileRootRef = useRef<HTMLDivElement>(null);
   const paginationTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   useEffect(() => {
@@ -101,6 +107,44 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     media.addEventListener("change", syncViewport);
     return () => media.removeEventListener("change", syncViewport);
   }, []);
+
+  useLayoutEffect(() => {
+    const root = mobileRootRef.current;
+    if (!root || isDesktopViewport !== false) return;
+    const topBar = root.querySelector<HTMLElement>('[data-reader-toolbar="top"]');
+    const bottomBar = root.querySelector<HTMLElement>('[data-reader-toolbar="bottom"]');
+    if (!topBar || !bottomBar) return;
+
+    const measureChrome = () => {
+      const topHeight = Math.ceil(topBar.getBoundingClientRect().height);
+      const bottomHeight = Math.ceil(bottomBar.getBoundingClientRect().height);
+      const bottomOffset = Number.parseFloat(getComputedStyle(bottomBar).bottom) || 0;
+      const next = {
+        top: topHeight + 12,
+        bottom: bottomHeight + bottomOffset + 10,
+        indicator: bottomHeight + bottomOffset + 4,
+      };
+      setMobileChromeInsets((current) => (
+        current.top === next.top &&
+        current.bottom === next.bottom &&
+        current.indicator === next.indicator
+          ? current
+          : next
+      ));
+    };
+
+    measureChrome();
+    const observer = new ResizeObserver(measureChrome);
+    observer.observe(topBar);
+    observer.observe(bottomBar);
+    window.addEventListener("resize", measureChrome);
+    window.visualViewport?.addEventListener("resize", measureChrome);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measureChrome);
+      window.visualViewport?.removeEventListener("resize", measureChrome);
+    };
+  }, [isDesktopViewport]);
 
   // 🏮 分页模式下将 contentRef 指向 PaginatedReader 内部的 scroll 容器
   useEffect(() => {
@@ -651,11 +695,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         Mobile View Container (md:hidden) 
       */}
       <div
-        className="md:hidden absolute inset-0 flex flex-col w-full h-full"
+        ref={mobileRootRef}
+        className="reader-mobile-root md:hidden absolute inset-0 flex flex-col w-full h-full"
         style={{
           backgroundColor: currentThemeColors.bg,
           color: currentThemeColors.text,
-        }}
+          "--reader-mobile-content-top": `${mobileChromeInsets.top}px`,
+          "--reader-mobile-content-bottom": `${mobileChromeInsets.bottom}px`,
+        } as React.CSSProperties}
       >
         {/* Mobile Top Toolbar Overlay */}
         <ReaderTopBar
@@ -676,12 +723,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         <div
           ref={(node) => setActiveContentRef(node, "mobile")}
           data-reader-content-canvas="mobile"
+          data-page-mode={isPagination ? "pagination" : "scroll"}
           inert={activePanel ? true : undefined}
           tabIndex={-1}
           onClick={handleMobileReaderClick}
           onTouchStart={handleVisibleTouchStart}
           onTouchEnd={handleVisibleTouchEnd}
-          className={`flex-1 relative reader-gpu-accelerated ${
+          className={`reader-mobile-canvas flex-1 relative reader-gpu-accelerated ${
             isPagination
               ? "overflow-y-auto overflow-x-hidden"
               : "overflow-y-auto overflow-x-hidden"
@@ -712,13 +760,16 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 onAnchorChange={savePaginationAnchor}
                 onBoundaryNext={handleNext}
                 onBoundaryPrev={handlePrev}
+                reservedTop={mobileChromeInsets.top}
+                reservedBottom={mobileChromeInsets.bottom}
+                pageIndicatorInset={mobileChromeInsets.indicator}
               />
             ) : null
           ) : isDesktopViewport === false ? (
             renderedChapters.map((ch) => (
               <div
                 key={ch.id}
-                className="chapter-container mx-auto px-6 pt-12 pb-[60px] border-b border-[rgba(80,65,45,0.08)] last:border-b-0"
+                className="chapter-container mx-auto px-6 border-b border-[rgba(80,65,45,0.08)] last:border-b-0"
                 data-chapter-index={ch.index}
                 style={{
                   maxWidth: `${readerTokens.layout.tabletContentMaxWidth}px`,

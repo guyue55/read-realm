@@ -216,6 +216,20 @@ textarea,
     transform: translate3d(0, 0, 0);
   }
 
+  /* Mobile reader chrome uses a stable content safe zone so opening the menu
+     never repaginates or shifts the semantic reading anchor. */
+  .reader-mobile-root {
+    --reader-mobile-content-top: calc(68px + env(safe-area-inset-top));
+    --reader-mobile-content-bottom: calc(160px + env(safe-area-inset-bottom));
+  }
+
+  .reader-mobile-canvas[data-page-mode="scroll"] {
+    padding-top: var(--reader-mobile-content-top);
+    padding-bottom: var(--reader-mobile-content-bottom);
+    scroll-padding-top: var(--reader-mobile-content-top);
+    scroll-padding-bottom: var(--reader-mobile-content-bottom);
+  }
+
   /* 动画期间或移动端特定环境下的阻尼降阶，优化高斯拉屏混合开销 */
   .backdrop-blur-reduced {
     backdrop-filter: blur(8px) !important;

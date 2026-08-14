@@ -38,6 +38,9 @@ export interface PaginatedReaderProps {
     paragraphIndex: number;
     characterOffset: number;
   };
+  reservedTop?: number;
+  reservedBottom?: number;
+  pageIndicatorInset?: number;
 }
 
 /** 暴露给父组件的翻页操作接口 */
@@ -66,6 +69,9 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
     onBoundaryPrev,
     initialPage = 0,
     initialAnchor,
+    reservedTop = 48,
+    reservedBottom = 120,
+    pageIndicatorInset = 16,
   }, ref) {
     const outerRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -80,8 +86,8 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
     const handleScrollRef = useRef<() => void>(() => undefined);
     const [measured, setMeasured] = useState(false);
 
-    const paddingTop = 48;
-    const paddingBottom = 120;
+    const paddingTop = reservedTop;
+    const paddingBottom = reservedBottom;
 
     const style: PaginationStyle = useMemo(() => ({
       fontSize,
@@ -93,7 +99,7 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       paddingBottom,
       maxWidth: readerTokens.layout.desktopContentMaxWidth,
       firstPageReservedHeight: fontSize * 1.67 * lineHeight + 40,
-    }), [fontSize, lineHeight, fontFamily, paragraphSpacing, letterSpacing]);
+    }), [fontSize, lineHeight, fontFamily, paragraphSpacing, letterSpacing, paddingTop, paddingBottom]);
 
     const safeBody = useMemo(() => buildReaderHtml(content), [content]);
     const safeTitle = useMemo(() => escapeReaderHtmlText(title), [title]);
@@ -386,11 +392,13 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
         {totalPages > 1 && measured && (
           <div
-            className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
+            data-page-indicator
+            className={`absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
               isDark
                 ? 'bg-white/10 text-white/70'
                 : 'bg-black/5 text-black/50'
             }`}
+            style={{ bottom: `${pageIndicatorInset}px` }}
           >
             {currentPage + 1} / {totalPages}
           </div>
