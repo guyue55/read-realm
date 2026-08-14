@@ -5,12 +5,12 @@
 - 当前控制修订：REV-0003
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
-- 当前阶段 ID：PHASE-04
-- 当前入口：PHASE-04 / TASK-0404；基于 fresh build 与隔离数据运行阶段级阅读回归、恢复偏差和冷/暖态采样，收束人工量表、阶段报告与独立审查。
-- 最近有效提交：75b6b6b
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/provider-boundary-final.json，SHA-256 `709f392e28db559e303907413d53f061209362864f505748a228ebdc007943d7`，2026-08-14T00:19:02+08:00
-- 当前阻塞：无；PHASE-02/03、GATE-00/01 与 RISK-03 已通过。REV-0003 已批准藏经阁，但 PHASE-04 仍只按阅读会话与体验范围执行；GATE-03 留在 PHASE-05，不提前混入 ReaderSession。
-- 停止原因：无；从 PHASE-04 / TASK-0404 继续，EVID-03/04/05/16/17/25、TASK-0301 原生活体、阶段失败归档与历史 ATTEMPT 均不可覆盖。
+- 当前阶段 ID：PHASE-05
+- 当前入口：PHASE-05 / TASK-0501；先抽离书架查询、操作与同步状态领域服务，消除 LibraryDefault 与页面直接全库扫描，不触碰用户真实数据迁移。
+- 最近有效提交：5f040d2
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/reader-ux-final.json，SHA-256 `f892de2c243840c23e513424a1c4ff90645ba62f0ef4ea2c9b224baf5ad14c84`，2026-08-15T01:43:41+08:00
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01 与 RISK-03 已通过。藏经阁保持为 PHASE-05 独立公共明文域；先执行 TASK-0501/0502，到 TASK-0503 只做 GATE-03 最小纵切，通过前不开放 TASK-0504 扫描/批量/多视图扩张。
+- 停止原因：无；从 PHASE-05 / TASK-0501 继续，EVID-02/03/04/05/07/16/17/25、PHASE-04 失败归档、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -28,6 +28,7 @@
 - RUN-0036：保持执行中；TASK-0402 语义分页子切片通过，入口仍保持 TASK-0402 以闭合连续滚动有界窗口。
 - RUN-0037：保持执行中；TASK-0402 完成，当前入口推进至 TASK-0403。依据：分页与连续滚动实现、系统浏览器回归和独立 READY 审查均闭合。
 - RUN-0038：保持执行中；TASK-0403 完成，当前入口推进至 TASK-0404。依据：实现提交 `268bde1..75b6b6b`、Chromium E2E 11/11、reader-core 48/48、Web 81/81、生产构建、控制包 resume 与最终独立复审 READY；PHASE-04、EVID-02/07 与 Goal 仍未完成。
+- RUN-0039：保持执行中；TASK-0404 与 PHASE-04 完成，PHASE-05 进入执行中，当前入口推进至 TASK-0501。依据：新 A/B 候选、独立终审 PASS、EVID-02/07 FINAL 及二次独立复算；Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -383,3 +384,11 @@
 - 独立复审：首次与二次分别返回 NOT READY，所有 P1 保留定位并经 TDD 修复；最终只读复审对 `9c278c1..75b6b6b` 返回 READY，确认首帧 Escape、焦点归还、分页 fallback 与 11 项回归闭合，无新 P0/P1、验证假绿或本地优先越界。
 - 状态与边界：TASK-0403 完成，PHASE-04 继续执行中；未 push、未部署、未连接 VPS，未触发 GATE-01/02/03 新 ATTEMPT，未生成 FINAL 证据，未完成 PHASE-04 或 Goal，也不外推为长期/时间型结果完成。
 - 下一入口：PHASE-04 / TASK-0404；在 fresh build 与隔离数据上运行阶段级阅读回归、恢复偏差和冷/暖态性能采样，完成四项人工 4/5 终局量表，再写 `reports/phase-04-reader-ux.md` 与 `reviews/phase-04-reader.md`；不提前进入 PHASE-05。
+
+### RUN-0039 · 2026-08-15T01:43:41+08:00 · PHASE-04 FINAL / PHASE-05 启动
+- 封结输入：最终实现 A `b740c04f51e5ab61acd63b6558b51a85c0ac0458`、唯一父为 A 的证据候选 B `6ee594249d768ab20231ddf48162cec08b309f9a`、报告 SHA `9228322c43482bb73e99796411c25f899a3c6e588203f0d8e9e184105c234653`、UX SHA `427313358bc25de881f0b7ac4591769ebce4c49fdf751799fbc2be4cbae337c2` 与独立 PASS review `2b4bbf1`。旧 `NOT_READY` review 由 `9838fda` 保留，未改写其当时结论。
+- 正式复算：`verify-reading-world.mjs --phase 04` 在 clean@A 运行得 10/10 PASS、tracked mutation 0；独立终审未改写报告，另行复算 records 10/10、合同测试 7/7 与统一生产 runner 15/15，desktop 14 + mobile-touch 1 唯一枚举，3104、Chrome、profile 和孤儿进程均无残留。
+- 活体结果：语义重排 1135ms，进度落盘 243ms，书签恢复和已打开阅读器真断网续读通过，连续滚动 DOM 上限 3 章。移动项目显式 `isMobile=true + hasTouch=true`，可信 touch 覆盖滑页、页末换章、进度拖动与抽屉。原生 headed Chrome 在后台期间断开 Playwright，真实经历 `visible -> hidden -> visible`，hidden 期间落盘并在 657ms 内恢复语义锚点。
+- FINAL 证据：clean finalizer `b45f03d` 生成 EVID-02 SHA `e87da8ee3aed4b9466987e9b4eb4b61cdb9467fb912f26e14305805b4b936ccf` 与 EVID-07 SHA `f892de2c243840c23e513424a1c4ff90645ba62f0ef4ea2c9b224baf5ad14c84`，再经独立逐字段复算 PASS。五项 UX 量表均为 4/5。
+- 边界：本轮不声称物理锁屏、页面冻结、移动 OS suspend、Android/iOS 真机矩阵、PWA 真断网冷启、PHASE-08 或长期舒适度完成。未 push、未部署、未连接 VPS，未触发 GATE-03 实验。
+- 状态结论：TASK-0404 与 PHASE-04 完成，Goal 继续执行中。PHASE-05 从 TASK-0501 开始；先抽离书架领域服务，再收敛 TASK-0502 反馈。藏经阁保留为 TASK-0503 的独立 GATE-03 最小纵切；只有通过后才允许 TASK-0504 目录扫描、批量上传、多视图与书架发布扩张，且公共明文域与 PHASE-07 私有同步密文域仍不得共表、共接口或共文案。

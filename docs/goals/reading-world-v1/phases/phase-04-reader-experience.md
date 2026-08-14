@@ -2,7 +2,7 @@
 
 - Goal ID：GOAL-READING-WORLD-V1
 - 阶段 ID：PHASE-04
-- 状态：执行中
+- 状态：完成
 - 阶段目标：交付低干扰、触控友好、滚动/分页一致、刷新/后台/断网后准确恢复的阅读体验。
 - 稳定输入：PHASE-02 进度服务、PHASE-03 稳定章节与备份、reader-core/gesture-core 当前实现。
 - 依赖：PHASE-03 完成。
