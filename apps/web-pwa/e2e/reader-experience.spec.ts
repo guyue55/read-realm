@@ -517,6 +517,16 @@ test("mobile toolbars never cover pagination content", async ({ page }) => {
   }));
   expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight);
   expect(indicatorBox!.y + indicatorBox!.height).toBeLessThanOrEqual(bottomBox!.y);
+
+  await page.locator('[data-reader-content-canvas="mobile"]').click({
+    position: { x: 195, y: 360 },
+  });
+  await expect(page.locator('[data-reader-toolbar][aria-hidden="true"]')).toHaveCount(2);
+  await expect.poll(() => readableRegion.evaluate((node, shownPadding) => {
+    const style = getComputedStyle(node);
+    return Number.parseFloat(style.paddingTop) < shownPadding.top &&
+      Number.parseFloat(style.paddingBottom) < shownPadding.bottom;
+  }, padding)).toBe(true);
 });
 
 test("mobile toolbars never cover scroll content", async ({ page }) => {
@@ -539,6 +549,13 @@ test("mobile toolbars never cover scroll content", async ({ page }) => {
     heading.boundingBox(),
   ]);
   expect(headingBox!.y).toBeGreaterThanOrEqual(topBox!.y + topBox!.height);
+  const visiblePadding = await canvas.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      top: Number.parseFloat(style.paddingTop),
+      bottom: Number.parseFloat(style.paddingBottom),
+    };
+  });
 
   await canvas.evaluate((node) => {
     node.scrollTop = node.scrollHeight;
@@ -552,6 +569,14 @@ test("mobile toolbars never cover scroll content", async ({ page }) => {
     lastParagraph.boundingBox(),
   ]);
   expect(paragraphBox!.y + paragraphBox!.height).toBeLessThanOrEqual(bottomBox!.y);
+
+  await canvas.click({ position: { x: 195, y: 360 } });
+  await expect(page.locator('[data-reader-toolbar][aria-hidden="true"]')).toHaveCount(2);
+  await expect.poll(() => canvas.evaluate((node, shownPadding) => {
+    const style = getComputedStyle(node);
+    return Number.parseFloat(style.paddingTop) < shownPadding.top &&
+      Number.parseFloat(style.paddingBottom) < shownPadding.bottom;
+  }, visiblePadding)).toBe(true);
 });
 
 test("reader controls are touch safe and use coherent icons", async ({ page }) => {
@@ -614,6 +639,162 @@ test("reader controls are touch safe and use coherent icons", async ({ page }) =
   await assertTouchSafe();
 });
 
+test("mobile progress preview commits only after dragging ends", async ({ page }) => {
+  const bookId = "reader-progress-drag-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 4,
+    contentFor: fixtureContentFor,
+  });
+  await page.goto(`/#/reader/${bookId}`);
+  await expect(page.getByRole("heading", { name: "第一章" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "进度" }).click();
+  const dialog = page.getByRole("dialog", { name: "阅读进度" });
+  const range = dialog.getByRole("slider", { name: "拖动阅读进度" });
+  await expect(dialog).toBeVisible();
+  await range.evaluate((input) => {
+    const slider = input as HTMLInputElement;
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )?.set;
+    setValue?.call(slider, "80");
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await expect(dialog).toBeVisible();
+  expect((await readProgress(page, bookId)).chapterIndex).toBe(0);
+
+  await range.dispatchEvent("pointerup");
+  await expect(dialog).toBeHidden();
+  await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex).toBe(3);
+});
+
+test("reader note dialog contains focus and uses touch-safe actions", async ({ page }) => {
+  const bookId = "reader-note-dialog-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 1,
+    contentFor: fixtureContentFor,
+  });
+  await page.goto(`/#/reader/${bookId}`);
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  const paragraph = canvas.locator(".chapter-container p").first();
+  await expect(paragraph).toBeVisible({ timeout: 15_000 });
+  await paragraph.evaluate((node) => {
+    const text = node.firstChild;
+    if (!text) throw new Error("missing reader text node");
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, Math.min(8, text.textContent?.length ?? 0));
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  });
+
+  const noteTrigger = page.getByRole("button", { name: "记笔记" });
+  await expect(noteTrigger).toBeVisible();
+  await noteTrigger.focus();
+  await page.keyboard.press("Enter");
+  const noteDialog = page.getByRole("dialog", { name: "记录读书笔记" });
+  await expect(noteDialog).toBeVisible();
+  await expect(canvas).toHaveAttribute("inert");
+  await expect.poll(() => noteDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  const undersizedActions = await noteDialog.locator("button").evaluateAll((buttons) => (
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      return { width: Math.round(box.width), height: Math.round(box.height) };
+    }).filter(({ width, height }) => width < 44 || height < 44)
+  ));
+  expect(undersizedActions).toEqual([]);
+  await page.keyboard.press("Shift+Tab");
+  await expect.poll(() => noteDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(noteDialog).toBeHidden();
+  await expect(canvas).toBeFocused();
+});
+
+test("desktop reader drawers trap focus, close with Escape, and restore their triggers", async ({ page }) => {
+  const bookId = "reader-desktop-drawers-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "pagination",
+    chapterCount: 2,
+    contentFor: (index) => (
+      `第 ${index + 1} 章开篇锚点 ${"安静阅读的正文。".repeat(900)} 第 ${index + 1} 章收束锚点`
+    ),
+  });
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.route("**/ai/analyze", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ summary: "离线伴读测试" }),
+    });
+  });
+  await page.goto(`/#/reader/${bookId}`);
+
+  const tocTrigger = page.getByRole("button", { name: "展开目录" });
+  await tocTrigger.focus();
+  await page.keyboard.press("Enter");
+  const tocDialog = page.getByRole("dialog", { name: "阅读目录" });
+  await expect(tocDialog).toBeVisible();
+  await expect.poll(async () => tocDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  const paginatedReader = page.locator(
+    '[data-reader-content-canvas="desktop"] [data-current-page]',
+  );
+  const pageBeforeDialogKey = await paginatedReader.getAttribute("data-current-page");
+  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(500);
+  await expect(paginatedReader).toHaveAttribute("data-current-page", pageBeforeDialogKey!);
+  await page.keyboard.press("Escape");
+  await expect(tocDialog).toBeHidden();
+  await expect(tocTrigger).toBeFocused();
+
+  const aiTrigger = page.getByRole("button", { name: "智能阅读助手" });
+  await aiTrigger.focus();
+  await page.keyboard.press("Enter");
+  const aiDialog = page.getByRole("dialog", { name: "伴读" });
+  await expect(aiDialog).toBeVisible();
+  await expect.poll(async () => aiDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  const clearSession = aiDialog.getByRole("button", { name: "清除伴读会话" });
+  await expect(clearSession).toBeVisible();
+  await clearSession.click();
+  const confirmDialog = page.getByRole("dialog", { name: "拂尘扫尘" });
+  await expect(confirmDialog).toBeVisible();
+  await expect.poll(() => confirmDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  const confirmActions = await confirmDialog.locator("button").evaluateAll((buttons) => (
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect();
+      return { width: Math.round(box.width), height: Math.round(box.height) };
+    }).filter(({ width, height }) => width < 44 || height < 44)
+  ));
+  expect(confirmActions).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(confirmDialog).toBeHidden();
+  await expect(aiDialog).toBeVisible();
+  await expect(clearSession).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(aiDialog).toBeHidden();
+  await expect(aiTrigger).toBeFocused();
+});
+
 test("reader layout stays contained across viewports and reduced motion", async ({ page }) => {
   const bookId = "reader-responsive-e2e-book";
   await seedReaderBook(page, {
@@ -642,6 +823,20 @@ test("reader layout stays contained across viewports and reduced motion", async 
       clientWidth: viewport.width,
       scrollWidth: viewport.width,
     });
+
+    if (viewport.width === 844 && viewport.height === 390) {
+      const undersizedControls = await page
+        .locator('[data-reader-toolbar]:visible [data-reader-control]:visible')
+        .evaluateAll((controls) => controls.map((control) => {
+          const box = control.getBoundingClientRect();
+          return {
+            label: control.getAttribute("aria-label") ?? control.textContent?.trim(),
+            width: Math.round(box.width),
+            height: Math.round(box.height),
+          };
+        }).filter(({ width, height }) => width < 44 || height < 44));
+      expect(undersizedControls).toEqual([]);
+    }
 
     const settingsTrigger = page.locator('button[aria-label="阅读设置"]:visible');
     await settingsTrigger.focus();

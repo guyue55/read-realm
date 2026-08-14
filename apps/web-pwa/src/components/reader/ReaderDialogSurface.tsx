@@ -54,7 +54,8 @@ export function ReaderDialogSurface({
     const surface = surfaceRef.current;
     if (!surface) return;
 
-    triggerRef.current = document.activeElement instanceof HTMLElement
+    triggerRef.current = document.activeElement instanceof HTMLElement &&
+      document.activeElement !== document.body
       ? document.activeElement
       : null;
     const focusFrame = requestAnimationFrame(() => {
@@ -65,10 +66,12 @@ export function ReaderDialogSurface({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopPropagation();
         onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
+      event.stopPropagation();
 
       const focusable = getFocusableElements(surface);
       if (focusable.length === 0) {

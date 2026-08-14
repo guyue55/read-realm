@@ -120,7 +120,7 @@ export function ReaderTopBar({
         <button
           onClick={onBack}
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
+          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
         >
           <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} />
           <span className="hidden lg:inline">返回书架</span>
@@ -135,7 +135,7 @@ export function ReaderTopBar({
           }}
           data-icon-only="true"
           data-reader-control
-          className="reader-control-press reader-focus-ring flex items-center justify-center w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
+          className="reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
           title="上一章"
           aria-label="上一章"
         >
@@ -171,7 +171,7 @@ export function ReaderTopBar({
           }}
           data-icon-only="true"
           data-reader-control
-          className="reader-control-press reader-focus-ring flex items-center justify-center w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
+          className="reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
           title="下一章"
           aria-label="下一章"
         >
@@ -184,7 +184,7 @@ export function ReaderTopBar({
           <button
             onClick={onToggleToc}
             data-reader-control
-            className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
+            className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
             title="展开目录"
             aria-label="展开目录"
           >
@@ -195,7 +195,7 @@ export function ReaderTopBar({
         <button
           onClick={onBookmark}
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#678055] hover:text-[#5F7D52] flex items-center gap-2"
+          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#678055] hover:text-[#5F7D52] flex items-center justify-center gap-2"
           title="添加书签"
           aria-label="添加书签"
         >
@@ -206,7 +206,7 @@ export function ReaderTopBar({
           <button
             onClick={onToggleAi}
             data-reader-control
-            className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] flex items-center gap-2"
+            className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] flex items-center justify-center gap-2"
             title="智能阅读助手"
             aria-label="智能阅读助手"
           >
@@ -218,7 +218,7 @@ export function ReaderTopBar({
           onClick={onSettings}
           aria-label="阅读设置"
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
+          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
           title="阅读设置"
         >
           <Settings2 aria-hidden="true" size={18} strokeWidth={1.8} />

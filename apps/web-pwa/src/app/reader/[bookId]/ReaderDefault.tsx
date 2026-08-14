@@ -102,11 +102,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [selectedText, setSelectedText] = useState("");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
+  const [progressPreview, setProgressPreview] = useState(readingProgress);
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
   const [mobileChromeInsets, setMobileChromeInsets] = useState({
     top: 68,
     bottom: 160,
     indicator: 156,
+    immersiveTop: 28,
+    immersiveBottom: 36,
+    immersiveIndicator: 12,
   });
   const mobileRootRef = useRef<HTMLDivElement>(null);
   const paginationTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -119,6 +123,12 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     return () => media.removeEventListener("change", syncViewport);
   }, []);
 
+  useEffect(() => {
+    if (activePanel === "progress") {
+      setProgressPreview(readingProgress);
+    }
+  }, [activePanel, readingProgress]);
+
   useLayoutEffect(() => {
     const root = mobileRootRef.current;
     if (!root || isDesktopViewport !== false) return;
@@ -130,15 +140,23 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       const topHeight = Math.ceil(topBar.getBoundingClientRect().height);
       const bottomHeight = Math.ceil(bottomBar.getBoundingClientRect().height);
       const bottomOffset = Number.parseFloat(getComputedStyle(bottomBar).bottom) || 0;
+      const safeAreaTop = Math.max(0, topHeight - 56);
+      const safeAreaBottom = Math.max(0, bottomOffset - 12);
       const next = {
         top: topHeight + 12,
         bottom: bottomHeight + bottomOffset + 10,
         indicator: bottomHeight + bottomOffset + 4,
+        immersiveTop: 28 + safeAreaTop,
+        immersiveBottom: 36 + safeAreaBottom,
+        immersiveIndicator: 12 + safeAreaBottom,
       };
       setMobileChromeInsets((current) => (
         current.top === next.top &&
         current.bottom === next.bottom &&
-        current.indicator === next.indicator
+        current.indicator === next.indicator &&
+        current.immersiveTop === next.immersiveTop &&
+        current.immersiveBottom === next.immersiveBottom &&
+        current.immersiveIndicator === next.immersiveIndicator
           ? current
           : next
       ));
@@ -278,6 +296,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         setSelectedText("");
       }
     }, 50); // 稍微延迟，等待系统 Selection 更新
+  }, []);
+
+  const closeNoteDialog = useCallback(() => {
+    setShowNoteDialog(false);
+    setUserNoteText("");
+    window.getSelection()?.removeAllRanges();
+    setSelectionRect(null);
   }, []);
 
   // 监听全局划词选区事件
@@ -486,6 +511,21 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
   const isDark = settings.theme === "dark";
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
+  const activeMobileInsets = showMenu
+    ? {
+        top: mobileChromeInsets.top,
+        bottom: mobileChromeInsets.bottom,
+        indicator: mobileChromeInsets.indicator,
+      }
+    : {
+        top: mobileChromeInsets.immersiveTop,
+        bottom: mobileChromeInsets.immersiveBottom,
+        indicator: mobileChromeInsets.immersiveIndicator,
+      };
+  const progressPreviewChapterIndex = Math.min(
+    Math.max(toc.length - 1, 0),
+    Math.max(0, Math.floor((progressPreview / 100) * toc.length)),
+  );
 
   return (
     <main
@@ -567,12 +607,12 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             }}
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
-            backgroundDisabled={Boolean(activePanel)}
+            backgroundDisabled={Boolean(activePanel || showNoteDialog)}
           />
           <div
             ref={(node) => setActiveContentRef(node, "desktop")}
             data-reader-content-canvas="desktop"
-            inert={activePanel ? true : undefined}
+            inert={activePanel === "settings" || showNoteDialog ? true : undefined}
             tabIndex={-1}
             onClick={handleMobileReaderClick}
             className={`flex-1 relative reader-gpu-accelerated ${
@@ -598,9 +638,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             )}
 
             {/* 🏮 左侧绝对定位磨砂 TOC 面板，完美规避 Canvas 多栏排版重绘与抖动 */}
-            <div
-              className={`absolute left-0 top-0 bottom-0 z-40 border-r transition-all duration-300 overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
-                activePanel === "toc" ? "w-[260px] translate-x-0 opacity-100" : "w-0 -translate-x-full opacity-0 border-r-0"
+            <ReaderDialogSurface
+              open={activePanel === "toc" && isDesktopViewport === true}
+              label="阅读目录"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion absolute left-0 top-0 bottom-0 z-40 w-[260px] border-r overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
+                activePanel === "toc" ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 border-r-0"
               }`}
               style={{ borderColor: borderColor }}
             >
@@ -617,12 +661,16 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   onClose={() => setActivePanel(null)}
                 />
               </div>
-            </div>
+            </ReaderDialogSurface>
 
             {/* 🏮 右侧绝对定位磨砂 AI 伴读面板，完美规避 Canvas 多栏排版重绘与抖动 */}
-            <div
-              className={`absolute right-0 top-0 bottom-0 z-40 border-l transition-all duration-300 overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
-                activePanel === "ai" ? "w-[340px] translate-x-0 opacity-100" : "w-0 translate-x-full opacity-0 border-l-0"
+            <ReaderDialogSurface
+              open={activePanel === "ai" && isDesktopViewport === true}
+              label="伴读"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion absolute right-0 top-0 bottom-0 z-40 w-[340px] border-l overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
+                activePanel === "ai" ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 border-l-0"
               }`}
               style={{ borderColor: borderColor }}
             >
@@ -643,7 +691,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   }}
                 />
               </div>
-            </div>
+            </ReaderDialogSurface>
 
             {isPagination ? (
               isDesktopViewport === true ? (
@@ -711,8 +759,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         style={{
           backgroundColor: currentThemeColors.bg,
           color: currentThemeColors.text,
-          "--reader-mobile-content-top": `${mobileChromeInsets.top}px`,
-          "--reader-mobile-content-bottom": `${mobileChromeInsets.bottom}px`,
+          "--reader-mobile-content-top": `${activeMobileInsets.top}px`,
+          "--reader-mobile-content-bottom": `${activeMobileInsets.bottom}px`,
         } as React.CSSProperties}
       >
         {/* Mobile Top Toolbar Overlay */}
@@ -727,7 +775,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
           onBookmark={addBookmark}
           onSettings={() => togglePanel("settings")}
-          backgroundDisabled={Boolean(activePanel)}
+          backgroundDisabled={Boolean(activePanel || showNoteDialog)}
         />
 
         {/* Scrollable / Paginable Content Canvas */}
@@ -735,7 +783,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           ref={(node) => setActiveContentRef(node, "mobile")}
           data-reader-content-canvas="mobile"
           data-page-mode={isPagination ? "pagination" : "scroll"}
-          inert={activePanel ? true : undefined}
+          inert={activePanel || showNoteDialog ? true : undefined}
           tabIndex={-1}
           onClick={handleMobileReaderClick}
           onTouchStart={handleVisibleTouchStart}
@@ -771,9 +819,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 onAnchorChange={savePaginationAnchor}
                 onBoundaryNext={handleNext}
                 onBoundaryPrev={handlePrev}
-                reservedTop={mobileChromeInsets.top}
-                reservedBottom={mobileChromeInsets.bottom}
-                pageIndicatorInset={mobileChromeInsets.indicator}
+                reservedTop={activeMobileInsets.top}
+                reservedBottom={activeMobileInsets.bottom}
+                pageIndicatorInset={activeMobileInsets.indicator}
               />
             ) : null
           ) : isDesktopViewport === false ? (
@@ -828,7 +876,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onSeekProgress={seekToProgress}
           onPrevChapter={handlePrevChapterActive}
           onNextChapter={handleNextChapterActive}
-          backgroundDisabled={Boolean(activePanel)}
+          backgroundDisabled={Boolean(activePanel || showNoteDialog)}
         />
 
         {/* Mobile Settings/Progress Backdrop */}
@@ -922,10 +970,18 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               min={0}
               max={100}
               step={0.1}
-              value={readingProgress}
-              onChange={(event) =>
-                seekToProgress(Number(event.currentTarget.value))
-              }
+              value={progressPreview}
+              onChange={(event) => {
+                setProgressPreview(Number(event.currentTarget.value));
+              }}
+              onPointerUp={(event) => {
+                void seekToProgress(Number(event.currentTarget.value));
+              }}
+              onKeyUp={(event) => {
+                if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) {
+                  void seekToProgress(Number(event.currentTarget.value));
+                }
+              }}
               className="reader-range reader-focus-ring h-11 w-full accent-[#678055]"
             />
             <button
@@ -954,9 +1010,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           <div
             className={`flex justify-between text-sm ${isDark ? "text-[#8F8F8F]" : "text-[#6F665B]"}`}
           >
-            <span>{chapter?.title}</span>
+            <span>{toc[progressPreviewChapterIndex]?.title ?? chapter?.title}</span>
             <span>
-              {Math.round(readingProgress)}% · {(chapter?.index || 0) + 1} /{" "}
+              {Math.round(progressPreview)}% · {progressPreviewChapterIndex + 1} /{" "}
               {toc.length} 章
             </span>
           </div>
@@ -1133,14 +1189,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
       {/* 文人落墨·写笔记宣纸小弹窗 (NoteDialog) */}
       {showNoteDialog && (
-        <div 
+        <ReaderDialogSurface
+          open={showNoteDialog}
+          label="记录读书笔记"
+          onClose={closeNoteDialog}
+          fallbackFocus={() => contentRef.current}
           className="fixed inset-0 z-50 flex sm:items-center sm:justify-center items-end justify-center bg-black/30 backdrop-blur-xs animate-in fade-in duration-200"
-          onClick={() => {
-            setShowNoteDialog(false);
-            setUserNoteText("");
-            window.getSelection()?.removeAllRanges();
-            setSelectionRect(null);
-          }}
+          onClick={closeNoteDialog}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
@@ -1173,13 +1228,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             
             <div className="flex gap-3 justify-end relative z-10">
               <button
-                onClick={() => {
-                  setShowNoteDialog(false);
-                  setUserNoteText("");
-                  window.getSelection()?.removeAllRanges();
-                  setSelectionRect(null);
-                }}
-                className="px-5 py-2.5 bg-[rgba(80,65,45,0.04)] dark:bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(80,65,45,0.08)] dark:hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(80,65,45,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#6F665B] dark:text-[#A89F8F] text-sm font-semibold rounded-full transition-colors font-serif"
+                onClick={closeNoteDialog}
+                data-reader-control
+                className="reader-focus-ring min-h-11 px-5 py-2.5 bg-[rgba(80,65,45,0.04)] dark:bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(80,65,45,0.08)] dark:hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(80,65,45,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#6F665B] dark:text-[#A89F8F] text-sm font-semibold rounded-full transition-colors font-serif"
               >
                 作罢
               </button>
@@ -1194,13 +1245,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   setUserNoteText("");
                   setSelectionRect(null);
                 }}
-                className="px-6 py-2.5 bg-[#678055] dark:bg-[#4E623E] hover:bg-[#4B633C] dark:hover:bg-[#3C4E2E] text-white text-sm font-semibold rounded-full shadow-md transition-colors font-serif"
+                data-reader-control
+                className="reader-focus-ring min-h-11 px-6 py-2.5 bg-[#678055] dark:bg-[#4E623E] hover:bg-[#4B633C] dark:hover:bg-[#3C4E2E] text-white text-sm font-semibold rounded-full shadow-md transition-colors font-serif"
               >
                 落墨保存
               </button>
             </div>
           </div>
-        </div>
+        </ReaderDialogSurface>
       )}
     </main>
   );
