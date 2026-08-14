@@ -44,7 +44,7 @@ export function SettingsSheet({
 
   const containerClasses = isMobileSheet
     ? `flex flex-col pb-[calc(1.2rem+env(safe-area-inset-bottom))] ${bgClass} max-h-[60vh] overflow-y-auto rounded-[24px] shadow-2xl`
-    : `${bgClass} rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full`;
+    : `${bgClass} max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain rounded-[24px] shadow-lg border border-[rgba(80,65,45,0.12)] p-6 max-w-sm w-full`;
 
   return (
     <div className={containerClasses}>

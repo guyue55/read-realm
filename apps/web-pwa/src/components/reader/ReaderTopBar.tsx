@@ -122,7 +122,8 @@ export function ReaderTopBar({
           data-reader-control
           className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
         >
-          <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} /> 返回书架
+          <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} />
+          <span className="hidden lg:inline">返回书架</span>
         </button>
       </div>
       
@@ -178,7 +179,7 @@ export function ReaderTopBar({
         </button>
       </div>
 
-      <div className="flex justify-end gap-5 items-center">
+      <div className="flex justify-end gap-2 lg:gap-4 items-center">
         {onToggleToc && (
           <button
             onClick={onToggleToc}
@@ -187,7 +188,8 @@ export function ReaderTopBar({
             title="展开目录"
             aria-label="展开目录"
           >
-            <List aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.toc}
+            <List aria-hidden="true" size={18} strokeWidth={1.8} />
+            <span className="hidden lg:inline">{strings.reader.toc}</span>
           </button>
         )}
         <button
@@ -197,7 +199,8 @@ export function ReaderTopBar({
           title="添加书签"
           aria-label="添加书签"
         >
-          <Bookmark aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.bookmark}
+          <Bookmark aria-hidden="true" size={18} strokeWidth={1.8} />
+          <span className="hidden lg:inline">{strings.reader.bookmark}</span>
         </button>
         {onToggleAi && (
           <button
@@ -207,7 +210,8 @@ export function ReaderTopBar({
             title="智能阅读助手"
             aria-label="智能阅读助手"
           >
-            <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.aiSummary}
+            <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} />
+            <span className="hidden lg:inline">{strings.reader.aiSummary}</span>
           </button>
         )}
         <button
@@ -217,7 +221,8 @@ export function ReaderTopBar({
           className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
           title="阅读设置"
         >
-          <Settings2 aria-hidden="true" size={18} strokeWidth={1.8} /> 设置
+          <Settings2 aria-hidden="true" size={18} strokeWidth={1.8} />
+          <span className="hidden lg:inline">设置</span>
         </button>
       </div>
     </div>

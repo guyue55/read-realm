@@ -2,18 +2,37 @@ import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+const fixtureContentFor = (index: number) => (
+  `第 ${index + 1} 章开篇锚点 ${"安静阅读的正文。".repeat(240)} 第 ${index + 1} 章收束锚点`
+);
+
+const fixtureTitleFor = (index: number) => (
+  ["第一章", "第二章", "第三章"][index] ?? `第 ${index + 1} 章`
+);
+
 async function seedReaderBook(
   page: Page,
   {
     bookId,
     pageMode,
+    chapterCount,
+    contentFor,
   }: {
     bookId: string;
     pageMode: "scroll" | "pagination";
+    chapterCount: number;
+    contentFor: (index: number) => string;
   },
 ) {
+  const chapters = Array.from({ length: chapterCount }, (_, index) => ({
+    id: `${bookId}-chapter-${index}`,
+    bookId,
+    index,
+    title: fixtureTitleFor(index),
+    content: contentFor(index),
+  }));
   await page.goto("/#/library");
-  await page.evaluate(async ({ targetBookId, targetPageMode }) => {
+  await page.evaluate(async ({ targetBookId, targetPageMode, targetChapters }) => {
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       get: () => false,
@@ -51,21 +70,17 @@ async function seedReaderBook(
           format: "txt",
           status: "reading",
           tags: [],
-          chapterCount: 1,
-          toc: [{ index: 0, title: "第一章" }],
+          chapterCount: targetChapters.length,
+          toc: targetChapters.map(({ index, title }) => ({ index, title })),
           parseStatus: "parsed",
           cacheStatus: "chapters_full",
           sourceAvailability: "full_cached",
           createdAt: now,
           updatedAt: now,
         });
-        transaction.objectStore("chapters").put({
-          id: `${targetBookId}-chapter-0`,
-          bookId: targetBookId,
-          index: 0,
-          title: "第一章",
-          content: `开篇锚点 ${"安静阅读的正文。".repeat(240)} 收束锚点`,
-        });
+        for (const chapter of targetChapters) {
+          transaction.objectStore("chapters").put(chapter);
+        }
         transaction.objectStore("progress").put({
           bookId: targetBookId,
           chapterId: `${targetBookId}-chapter-0`,
@@ -83,7 +98,11 @@ async function seedReaderBook(
     } finally {
       database.close();
     }
-  }, { targetBookId: bookId, targetPageMode: pageMode });
+  }, {
+    targetBookId: bookId,
+    targetPageMode: pageMode,
+    targetChapters: chapters,
+  });
 }
 
 async function readProgress(
@@ -199,7 +218,7 @@ test("mobile pagination advances one page before changing chapters and restores 
   await expect(page.locator('[data-page-index]:visible')).toHaveCount(2);
   await expect(mobileCanvas.getByRole("heading", { name: "第一章" })).toBeVisible();
 
-  await page.locator('button[aria-label="下一页"]:visible').click();
+  await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]').click();
   await expect(pageIndicator).toContainText("2 /", { timeout: 5_000 });
   expect(await page.locator('[data-page-index]:visible').count()).toBeLessThanOrEqual(3);
   await expect.poll(async () => (await readProgress(page)).chapterIndex, {
@@ -243,7 +262,9 @@ test("mobile pagination advances one page before changing chapters and restores 
 
   const visibleIndicator = page.locator('[data-reader-content-canvas="mobile"]')
     .getByText(/\d+ \/ \d+/);
-  const nextPage = page.locator('button[aria-label="下一页"]:visible');
+  const nextPage = page.locator(
+    '[data-reader-toolbar="bottom"] button[aria-label="下一页"]',
+  );
   const parseIndicator = async () => {
     const text = await visibleIndicator.textContent();
     const match = text?.match(/(\d+)\s*\/\s*(\d+)/);
@@ -416,6 +437,8 @@ test("reader dialogs contain and restore focus", async ({ page }) => {
   await seedReaderBook(page, {
     bookId: "reader-dialog-e2e-book",
     pageMode: "scroll",
+    chapterCount: 1,
+    contentFor: fixtureContentFor,
   });
   await page.goto("/#/reader/reader-dialog-e2e-book");
   await expect(page.getByRole("heading", { name: "第一章" })).toBeVisible({
@@ -454,6 +477,8 @@ test("mobile toolbars never cover pagination content", async ({ page }) => {
   await seedReaderBook(page, {
     bookId: "reader-pagination-geometry-e2e-book",
     pageMode: "pagination",
+    chapterCount: 1,
+    contentFor: fixtureContentFor,
   });
   await page.goto("/#/reader/reader-pagination-geometry-e2e-book");
 
@@ -498,6 +523,8 @@ test("mobile toolbars never cover scroll content", async ({ page }) => {
   await seedReaderBook(page, {
     bookId: "reader-scroll-geometry-e2e-book",
     pageMode: "scroll",
+    chapterCount: 1,
+    contentFor: fixtureContentFor,
   });
   await page.goto("/#/reader/reader-scroll-geometry-e2e-book");
 
@@ -531,6 +558,8 @@ test("reader controls are touch safe and use coherent icons", async ({ page }) =
   await seedReaderBook(page, {
     bookId: "reader-controls-e2e-book",
     pageMode: "scroll",
+    chapterCount: 1,
+    contentFor: fixtureContentFor,
   });
   await page.goto("/#/reader/reader-controls-e2e-book");
 
@@ -583,4 +612,66 @@ test("reader controls are touch safe and use coherent icons", async ({ page }) =
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "阅读进度" })).toBeVisible();
   await assertTouchSafe();
+});
+
+test("reader layout stays contained across viewports and reduced motion", async ({ page }) => {
+  const bookId = "reader-responsive-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 2,
+    contentFor: fixtureContentFor,
+  });
+  await page.goto(`/#/reader/${bookId}`);
+
+  const viewports = [
+    { width: 375, height: 812 },
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+    { width: 1024, height: 900 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    const canvas = page.locator('[data-reader-content-canvas]:visible');
+    await expect(canvas).toBeVisible({ timeout: 15_000 });
+    expect(await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))).toEqual({
+      clientWidth: viewport.width,
+      scrollWidth: viewport.width,
+    });
+
+    const settingsTrigger = page.locator('button[aria-label="阅读设置"]:visible');
+    await settingsTrigger.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "阅读设置" });
+    await expect(dialog).toBeVisible();
+    const panel = viewport.width >= 768
+      ? dialog.locator(":scope > div > div").first()
+      : dialog;
+    await expect.poll(async () => {
+      const panelBox = await panel.boundingBox();
+      return Boolean(
+        panelBox &&
+        panelBox.x >= 0 &&
+        panelBox.y >= 0 &&
+        panelBox.x + panelBox.width <= viewport.width &&
+        panelBox.y + panelBox.height <= viewport.height
+      );
+    }).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const settingsTrigger = page.locator('button[aria-label="阅读设置"]:visible');
+  await settingsTrigger.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "阅读设置" });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
 });
