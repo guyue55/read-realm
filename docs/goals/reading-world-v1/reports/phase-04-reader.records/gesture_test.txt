@@ -1,13 +1,13 @@
 $ corepack pnpm --filter @reader/gesture-core test
-started_at=2026-08-14T15:43:09.409Z
-ended_at=2026-08-14T15:43:10.328Z
-duration_ms=919
+started_at=2026-08-14T15:53:03.842Z
+ended_at=2026-08-14T15:53:04.828Z
+duration_ms=986
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
 [stdout]
 
 > @reader/gesture-core@0.1.0 test ./packages/gesture-core
@@ -16,11 +16,11 @@ tracked_status_after=[]
 
  RUN  v1.6.1 ./packages/gesture-core
 
- ✓ src/index.test.ts  (10 tests) 3ms
+ ✓ src/index.test.ts  (10 tests) 4ms
 
  Test Files  1 passed (1)
       Tests  10 passed (10)
-   Start at  23:43:09
-   Duration  321ms (transform 83ms, setup 0ms, collect 80ms, tests 3ms, environment 0ms, prepare 95ms)
+   Start at  23:53:04
+   Duration  363ms (transform 91ms, setup 0ms, collect 88ms, tests 4ms, environment 0ms, prepare 73ms)
 
 [stderr]

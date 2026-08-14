@@ -1,18 +1,18 @@
 $ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/phase-04-reader-run.test.mjs
-started_at=2026-08-14T15:43:37.307Z
-ended_at=2026-08-14T15:43:37.382Z
-duration_ms=75
+started_at=2026-08-14T15:53:38.036Z
+ended_at=2026-08-14T15:53:38.135Z
+duration_ms=99
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
 [stdout]
-✔ parses exactly one JSON line for every registered reader sample (1.021875ms)
-✔ passes only a complete reliable reader run (0.149042ms)
-✔ rejects slow persistence, semantic drift, unbounded DOM and infrastructure leaks (0.107709ms)
-✔ missing, duplicate or failed live tests cannot pass (0.074334ms)
+✔ parses exactly one JSON line for every registered reader sample (1.178917ms)
+✔ passes only a complete reliable reader run (0.16275ms)
+✔ rejects slow persistence, semantic drift, unbounded DOM and infrastructure leaks (0.102916ms)
+✔ missing, duplicate or failed live tests cannot pass (0.073792ms)
 ℹ tests 4
 ℹ suites 0
 ℹ pass 4
@@ -20,6 +20,6 @@ tracked_status_after=[]
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 46.748708
+ℹ duration_ms 57.398792
 
 [stderr]
