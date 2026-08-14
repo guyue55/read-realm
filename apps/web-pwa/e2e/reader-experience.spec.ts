@@ -445,3 +445,80 @@ test("reader dialogs contain and restore focus", async ({ page }) => {
     toolbars.every((toolbar) => !toolbar.contains(document.activeElement))
   ))).toBe(true);
 });
+
+test("mobile toolbars never cover pagination content", async ({ page }) => {
+  await seedReaderBook(page, {
+    bookId: "reader-pagination-geometry-e2e-book",
+    pageMode: "pagination",
+  });
+  await page.goto("/#/reader/reader-pagination-geometry-e2e-book");
+
+  const topBar = page.locator('[data-reader-toolbar="top"]:visible');
+  const bottomBar = page.locator('[data-reader-toolbar="bottom"]:visible');
+  const readableRegion = page.locator(
+    '[data-page-index]:visible .reader-content',
+  ).first();
+  const pageIndicator = page
+    .locator('[data-reader-content-canvas="mobile"]')
+    .getByText(/\d+ \/ \d+/);
+  await expect(readableRegion).toBeVisible({ timeout: 15_000 });
+
+  const [topBox, bottomBox, readableBox, indicatorBox, padding] = await Promise.all([
+    topBar.boundingBox(),
+    bottomBar.boundingBox(),
+    readableRegion.boundingBox(),
+    pageIndicator.boundingBox(),
+    readableRegion.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        top: Number.parseFloat(style.paddingTop),
+        bottom: Number.parseFloat(style.paddingBottom),
+      };
+    }),
+  ]);
+  expect(readableBox!.y + padding.top).toBeGreaterThanOrEqual(
+    topBox!.y + topBox!.height,
+  );
+  expect(readableBox!.y + readableBox!.height - padding.bottom).toBeLessThanOrEqual(
+    bottomBox!.y,
+  );
+  const overflow = await readableRegion.evaluate((node) => ({
+    clientHeight: node.clientHeight,
+    scrollHeight: node.scrollHeight,
+  }));
+  expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight);
+  expect(indicatorBox!.y + indicatorBox!.height).toBeLessThanOrEqual(bottomBox!.y);
+});
+
+test("mobile toolbars never cover scroll content", async ({ page }) => {
+  await seedReaderBook(page, {
+    bookId: "reader-scroll-geometry-e2e-book",
+    pageMode: "scroll",
+  });
+  await page.goto("/#/reader/reader-scroll-geometry-e2e-book");
+
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  const topBar = page.locator('[data-reader-toolbar="top"]:visible');
+  const bottomBar = page.locator('[data-reader-toolbar="bottom"]:visible');
+  const heading = canvas.getByRole("heading", { name: "第一章" });
+  await expect(heading).toBeVisible({ timeout: 15_000 });
+
+  const [topBox, headingBox] = await Promise.all([
+    topBar.boundingBox(),
+    heading.boundingBox(),
+  ]);
+  expect(headingBox!.y).toBeGreaterThanOrEqual(topBox!.y + topBox!.height);
+
+  await canvas.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  await expect.poll(() => canvas.evaluate((node) => (
+    Math.round(node.scrollTop + node.clientHeight) >= Math.round(node.scrollHeight)
+  ))).toBe(true);
+  const lastParagraph = canvas.locator(".chapter-container p").last();
+  const [bottomBox, paragraphBox] = await Promise.all([
+    bottomBar.boundingBox(),
+    lastParagraph.boundingBox(),
+  ]);
+  expect(paragraphBox!.y + paragraphBox!.height).toBeLessThanOrEqual(bottomBox!.y);
+});
