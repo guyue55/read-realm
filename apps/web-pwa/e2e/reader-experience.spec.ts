@@ -473,6 +473,52 @@ test("reader dialogs contain and restore focus", async ({ page }) => {
   ))).toBe(true);
 });
 
+test("mobile drawers fall back to the canvas when their toolbar trigger becomes inert", async ({ page }) => {
+  const bookId = "reader-mobile-drawer-focus-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 2,
+    contentFor: fixtureContentFor,
+  });
+  await page.route("**/ai/analyze", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ summary: "离线伴读测试" }),
+    });
+  });
+  await page.goto(`/#/reader/${bookId}`);
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  await expect(page.getByRole("heading", { name: "第一章" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "伴读" }).click();
+  const aiDialog = page.getByRole("dialog", { name: "伴读" });
+  await expect(aiDialog).toBeVisible();
+  await expect(page.locator(
+    '.reader-mobile-root [data-reader-toolbar][aria-hidden="true"]',
+  )).toHaveCount(2);
+  await page.keyboard.press("Escape");
+  await expect(aiDialog).toBeHidden();
+  await expect(canvas).toBeFocused();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "第一章" })).toBeVisible({
+    timeout: 15_000,
+  });
+  const tocTrigger = page.getByRole("button", { name: "目录" });
+  await tocTrigger.focus();
+  await page.keyboard.press("Enter");
+  const tocDialog = page.getByRole("dialog", { name: "阅读目录" });
+  await expect(tocDialog).toBeVisible();
+  await tocDialog.getByRole("button", { name: /2\s+第二章/ }).click();
+  await expect(tocDialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: "第二章" })).toBeVisible();
+  await expect(canvas).toBeFocused();
+});
+
 test("mobile toolbars never cover pagination content", async ({ page }) => {
   await seedReaderBook(page, {
     bookId: "reader-pagination-geometry-e2e-book",
@@ -678,14 +724,16 @@ test("reader note dialog contains focus and uses touch-safe actions", async ({ p
   const bookId = "reader-note-dialog-e2e-book";
   await seedReaderBook(page, {
     bookId,
-    pageMode: "scroll",
+    pageMode: "pagination",
     chapterCount: 1,
     contentFor: fixtureContentFor,
   });
   await page.goto(`/#/reader/${bookId}`);
   const canvas = page.locator('[data-reader-content-canvas="mobile"]');
-  const paragraph = canvas.locator(".chapter-container p").first();
+  const paginationScroll = canvas.locator("[data-pagination-scroll]");
+  const paragraph = canvas.locator("[data-page-index]:visible p").first();
   await expect(paragraph).toBeVisible({ timeout: 15_000 });
+  await expect(paginationScroll).toHaveAttribute("tabindex", "-1");
   await paragraph.evaluate((node) => {
     const text = node.firstChild;
     if (!text) throw new Error("missing reader text node");
@@ -862,6 +910,9 @@ test("reader layout stays contained across viewports and reduced motion", async 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(
+    '[data-reader-content-canvas="mobile"] .chapter-container',
+  ).first()).toBeVisible();
   const settingsTrigger = page.locator('button[aria-label="阅读设置"]:visible');
   await settingsTrigger.focus();
   await page.keyboard.press("Enter");

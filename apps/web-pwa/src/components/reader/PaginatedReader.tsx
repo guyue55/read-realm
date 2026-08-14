@@ -333,6 +333,8 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
         <div
           ref={scrollRef}
+          data-pagination-scroll
+          tabIndex={-1}
           onScroll={handleScroll}
           className="flex-1 overflow-x-auto overflow-y-hidden"
           style={{
