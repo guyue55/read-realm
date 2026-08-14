@@ -67,3 +67,49 @@ export function resolvePublicLibrarySqliteDbPath(): string {
     'catalog.sqlite',
   );
 }
+
+function containsPath(parent: string, candidate: string): boolean {
+  const relative = path.relative(path.resolve(parent), path.resolve(candidate));
+  return (
+    relative === '' ||
+    (!relative.startsWith('..') && !path.isAbsolute(relative))
+  );
+}
+
+export function assertPublicLibraryStorageIsolation(input: {
+  personalDatabasePath: string;
+  publicDatabasePath: string;
+  personalBlobPath: string;
+  publicBlobPath: string;
+}): void {
+  if (
+    path.resolve(input.personalDatabasePath) ===
+    path.resolve(input.publicDatabasePath)
+  ) {
+    throw new Error('PUBLIC_LIBRARY_DATABASE_MUST_BE_ISOLATED');
+  }
+  if (
+    containsPath(input.personalBlobPath, input.publicBlobPath) ||
+    containsPath(input.publicBlobPath, input.personalBlobPath)
+  ) {
+    throw new Error('PUBLIC_LIBRARY_BLOB_ROOT_MUST_BE_ISOLATED');
+  }
+  if (
+    [input.personalDatabasePath, input.publicDatabasePath].some(
+      (databasePath) =>
+        containsPath(input.personalBlobPath, databasePath) ||
+        containsPath(input.publicBlobPath, databasePath),
+    )
+  ) {
+    throw new Error('PUBLIC_LIBRARY_DATABASE_MUST_NOT_BE_INSIDE_BLOB_ROOT');
+  }
+}
+
+export function assertResolvedPublicLibraryStorageIsolation(): void {
+  assertPublicLibraryStorageIsolation({
+    personalDatabasePath: resolveSqliteDbPath(),
+    publicDatabasePath: resolvePublicLibrarySqliteDbPath(),
+    personalBlobPath: resolveBlobStoragePath(),
+    publicBlobPath: resolvePublicLibraryBlobStoragePath(),
+  });
+}

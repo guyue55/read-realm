@@ -17,9 +17,10 @@ describe("UI design system", () => {
     expect(UI_TOKENS.radius.card).toBe(8);
   });
 
-  it("主导航包含五个真实页面", () => {
+  it("主导航包含六个真实页面", () => {
     expect(APP_NAV_ITEMS.map((item) => item.href)).toEqual([
       "/library",
+      "/public-library",
       "/search",
       "/import",
       "/notes",

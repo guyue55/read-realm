@@ -30,6 +30,11 @@ import {
   parseMigrationGateObservation,
 } from "./gate-migration-run.mjs";
 import { classifyPhase04ReaderRun } from "./phase-04-reader-run.mjs";
+import {
+  classifyPublicLibraryGateRun,
+  parsePublicLibraryGateObservation,
+  phaseFivePublicLibraryChecks,
+} from "./gate-public-library-run.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -376,7 +381,17 @@ function phaseFourChecks() {
   ];
 }
 
-function checksFor(phase, experiment, qualification, migration) {
+function phaseFiveChecks(experiment, qualification, migration) {
+  if (qualification || migration) {
+    throw new Error("PHASE-05 只接受 --experiment EXP-14");
+  }
+  return phaseFivePublicLibraryChecks(experiment, {
+    nodePath: process.execPath,
+    browserChannel: "chrome",
+  });
+}
+
+export function checksFor(phase, experiment, qualification, migration) {
   if (phase === "01") {
     if (experiment || qualification || migration) {
       throw new Error("PHASE-01 不接受实验参数；实验入口从 PHASE-02 开始实现");
@@ -398,6 +413,9 @@ function checksFor(phase, experiment, qualification, migration) {
   if (phase === "04") {
     if (experiment || qualification || migration) throw new Error("PHASE-04 不接受风险门实验参数");
     return phaseFourChecks();
+  }
+  if (phase === "05") {
+    return phaseFiveChecks(experiment, qualification, migration);
   }
   throw new Error(
     `PHASE-${phase} 的检查合同尚未随对应实现阶段落盘；拒绝生成伪证据`,
@@ -550,7 +568,7 @@ function main() {
     };
   }
   let productGate = null;
-  if (args.experiment) {
+  if (args.phase === "02" && args.experiment) {
     const productCheck = results.find((result) => result.id === "GATE_01_VERTICAL_SLICE");
     let observation;
     try {
@@ -577,6 +595,60 @@ function main() {
     });
     productGate = {
       ...classifyProductGateRun({ ...observation, evidenceRecordsValid: recordVerification.valid }),
+      observation,
+      recordVerification,
+    };
+  }
+  let publicLibraryGate = null;
+  if (args.phase === "05") {
+    const publicLibraryCheck = results.find(
+      (result) => result.id === "GATE_03_PUBLIC_LIBRARY_LIVE",
+    );
+    let observation;
+    try {
+      const publicLibraryLog = readFileSync(
+        resolve(repoRoot, publicLibraryCheck.logPath),
+        "utf8",
+      );
+      observation = parsePublicLibraryGateObservation(publicLibraryLog);
+    } catch (error) {
+      observation = {
+        controlRevision: "REV-0003",
+        experiment: args.experiment,
+        listExitCode: 1,
+        listedTestCount: 0,
+        apiBuildExitCode: 1,
+        webBuildExitCode: 1,
+        apiServiceReady: false,
+        webServiceReady: false,
+        testExitCode: publicLibraryCheck?.exitCode ?? 1,
+        apiPortFreeBefore: false,
+        webPortFreeBefore: false,
+        apiPortFreeAfter: false,
+        webPortFreeAfter: false,
+        orphanProcessCount: 1,
+        pathIsolationValid: false,
+        isolatedRootCreated: false,
+        cleanupComplete: false,
+        personalDbSentinelUnchanged: false,
+        personalBlobSentinelUnchanged: false,
+        sentinelSetupError: "PUBLIC_LIBRARY_OBSERVATION_UNAVAILABLE",
+        browserChannel: "chrome",
+        runnerMode: "production",
+        productStageMarkerCount: 0,
+        productStageEntered: false,
+        observationError: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const recordVerification = verifyEvidenceRecords({ checks: results }, (path) => {
+      const absolute = resolve(repoRoot, path);
+      return existsSync(absolute) ? readFileSync(absolute) : null;
+    });
+    publicLibraryGate = {
+      ...classifyPublicLibraryGateRun({
+        ...observation,
+        evidenceRecordsValid: recordVerification.valid,
+      }),
       observation,
       recordVerification,
     };
@@ -637,12 +709,13 @@ function main() {
     (result) => result.exitCode === 0 && !result.trackedWorktreeMutated,
   ) && (!qualification || qualification.classification === "QUALIFIED")
     && (!productGate || productGate.classification === "PASS")
+    && (!publicLibraryGate || publicLibraryGate.classification === "PASS")
     && (!migrationGate || migrationGate.classification === "PASS");
   const phasePassed = passed && (!readerExperience || readerExperience.classification === "PASS");
   const report = {
     schemaVersion: 1,
     goalId: "GOAL-READING-WORLD-V1",
-    controlRevision: args.phase === "01" ? "REV-0001" : args.phase === "04" ? "REV-0003" : "REV-0002",
+    controlRevision: args.phase === "01" ? "REV-0001" : ["04", "05"].includes(args.phase) ? "REV-0003" : "REV-0002",
     phase: args.phase,
     experiment: args.experiment ?? null,
     qualificationExperiment: args.qualification ?? null,
@@ -665,6 +738,7 @@ function main() {
     checks: results,
     qualification,
     productGate,
+    publicLibraryGate,
     migrationGate,
     readerExperience,
     summary: {
@@ -686,9 +760,11 @@ function main() {
   process.exitCode = phasePassed ? 0 : 1;
 }
 
-try {
-  main();
-} catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-  process.exitCode = 2;
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    main();
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  }
 }

@@ -238,7 +238,7 @@ export function AppShell({
 
       <nav
         aria-label="主导航"
-        className="fixed inset-x-2 bottom-[calc(8px+env(safe-area-inset-bottom))] z-50 grid grid-cols-5 gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-raised)] md:hidden"
+        className="fixed inset-x-2 bottom-[calc(8px+env(safe-area-inset-bottom))] z-50 grid grid-cols-6 gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-raised)] md:hidden"
       >
         {APP_NAV_ITEMS.map((item) => {
           const active = isActiveItem(currentView, item);

@@ -10,6 +10,7 @@ export const PRODUCT_LANGUAGE = {
   },
   navigation: {
     library: { label: "书架", plain: "书架" },
+    publicLibrary: { label: "藏经阁", plain: "公共藏书" },
     search: { label: "寻书", plain: "搜索书籍" },
     importBook: { label: "纳书", plain: "导入书籍" },
     notes: { label: "笺注", plain: "笔记与书签" },

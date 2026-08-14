@@ -6,7 +6,8 @@ export type AppView =
   | "settings"
   | "book-detail"
   | "import"
-  | "import-preview";
+  | "import-preview"
+  | "public-library";
 
 export interface RouteState {
   currentView: AppView;
@@ -34,8 +35,15 @@ const APP_VIEWS = new Set<AppView>([
   "book-detail",
   "import",
   "import-preview",
+  "public-library",
 ]);
-const SIMPLE_VIEWS = new Set<AppView>(["search", "notes", "settings", "import"]);
+const SIMPLE_VIEWS = new Set<AppView>([
+  "search",
+  "notes",
+  "settings",
+  "import",
+  "public-library",
+]);
 
 function defaultRouteState(): RouteState {
   return { ...DEFAULT_ROUTE_STATE };

@@ -8,10 +8,10 @@ describe("root view loading", () => {
     expect(source).not.toMatch(/import\s+LibraryPage\s+from/);
     expect(source).not.toMatch(/import\s+ReaderPageSwitch\s+from/);
     expect(source).toContain("dynamic(");
-    expect(source.match(/ssr:\s*false/g)).toHaveLength(8);
+    expect(source.match(/ssr:\s*false/g)).toHaveLength(9);
   });
 
-  it("八个业务视图都有独立动态加载入口", async () => {
+  it("九个业务视图都有独立动态加载入口", async () => {
     const source = await readFile(new URL("./page.tsx", import.meta.url), "utf8");
     const expectedImports = [
       "./library/page",

@@ -64,6 +64,13 @@ const ImportPreviewPage = dynamic(
     ssr: false,
   },
 );
+const PublicLibraryPage = dynamic(
+  () => import("./public-library/page"),
+  {
+    loading: () => <ViewLoading label="正在打开藏经阁" />,
+    ssr: false,
+  },
+);
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -189,6 +196,9 @@ function ActiveView() {
       ) : (
         <ImportPage />
       );
+      break;
+    case "public-library":
+      view = <PublicLibraryPage />;
       break;
     default:
       view = <LibraryPage />;
