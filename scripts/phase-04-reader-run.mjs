@@ -3,6 +3,7 @@ const REQUIRED_SCENARIOS = [
   "pagination-persistence",
   "bounded-scroll",
   "lifecycle-offline",
+  "bookmark-restore",
 ];
 
 export function parsePhase04ReaderSamples(output) {
@@ -22,7 +23,7 @@ export function classifyPhase04ReaderRun(observation) {
   const reasons = [];
   if (!observation.portFreeBefore) reasons.push("PORT_BUSY_BEFORE");
   if (observation.listExitCode !== 0) reasons.push(`LIST_EXIT_${observation.listExitCode}`);
-  if (observation.listedTestCount !== 13) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
+  if (observation.listedTestCount !== 14) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
   if (!observation.serviceReady) reasons.push("SERVICE_NOT_READY");
   if (observation.testExitCode !== 0) reasons.push(`TEST_EXIT_${observation.testExitCode}`);
   if (!observation.portFreeAfter) reasons.push("PORT_BUSY_AFTER");
@@ -42,7 +43,17 @@ export function classifyPhase04ReaderRun(observation) {
   }
 
   const semantic = byScenario.get("semantic-layout")?.[0];
-  if (semantic && semantic.semanticAnchorVisible !== true) reasons.push("SEMANTIC_LAYOUT_NOT_VISIBLE");
+  if (semantic) {
+    if (semantic.semanticAnchorVisible !== true) reasons.push("SEMANTIC_LAYOUT_NOT_VISIBLE");
+    if (semantic.longTaskSupported !== true) reasons.push("LONGTASK_OBSERVER_UNAVAILABLE");
+    if (!Array.isArray(semantic.longTaskDurationsMs)
+      || semantic.longTaskDurationsMs.some((value) => !Number.isFinite(value) || value < 50)) {
+      reasons.push("LONGTASK_SAMPLES_INVALID");
+    }
+    if (!Number.isFinite(semantic.maxLongTaskMs) || semantic.maxLongTaskMs < 0) {
+      reasons.push("LONGTASK_MAX_INVALID");
+    }
+  }
   const persistence = byScenario.get("pagination-persistence")?.[0];
   if (persistence) {
     if (persistence.semanticAnchorVisible !== true) reasons.push("PAGINATION_ANCHOR_NOT_VISIBLE");
@@ -62,6 +73,11 @@ export function classifyPhase04ReaderRun(observation) {
     if (lifecycle.pagehideRestored !== true) reasons.push("PAGEHIDE_RESTORE_NOT_OBSERVED");
     if (lifecycle.offlineObserved !== true) reasons.push("TRUE_OFFLINE_NOT_OBSERVED");
     if (lifecycle.semanticAnchorVisible !== true) reasons.push("LIFECYCLE_ANCHOR_NOT_VISIBLE");
+  }
+  const bookmark = byScenario.get("bookmark-restore")?.[0];
+  if (bookmark) {
+    if (bookmark.persisted !== true) reasons.push("BOOKMARK_NOT_PERSISTED");
+    if (bookmark.semanticAnchorVisible !== true) reasons.push("BOOKMARK_ANCHOR_NOT_VISIBLE");
   }
   return { classification: reasons.length === 0 ? "PASS" : "FAIL", reasons };
 }

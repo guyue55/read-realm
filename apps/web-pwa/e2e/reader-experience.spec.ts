@@ -136,7 +136,57 @@ async function readProgress(
   }, bookId);
 }
 
+async function readBookmarks(page: Page, bookId: string) {
+  return await page.evaluate(async (targetBookId) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("ReaderDatabase");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      return await new Promise<Array<{
+        id: string;
+        chapterIndex: number;
+        paragraphIndex: number;
+        characterOffset: number;
+      }>>((resolve, reject) => {
+        const request = database.transaction("bookmarks", "readonly")
+          .objectStore("bookmarks").index("bookId").getAll(targetBookId);
+        request.onsuccess = () => resolve(request.result.map((bookmark) => ({
+          id: bookmark.id,
+          chapterIndex: bookmark.chapterIndex,
+          paragraphIndex: bookmark.paragraphIndex ?? 0,
+          characterOffset: bookmark.characterOffset ?? 0,
+        })));
+        request.onerror = () => reject(request.error);
+      });
+    } finally {
+      database.close();
+    }
+  }, bookId);
+}
+
+async function installLongTaskProbe(page: Page) {
+  await page.addInitScript(() => {
+    const target = window as unknown as {
+      __phase04LongTaskSupported: boolean;
+      __phase04LongTasks: number[];
+    };
+    target.__phase04LongTaskSupported = PerformanceObserver.supportedEntryTypes
+      .includes("longtask");
+    target.__phase04LongTasks = [];
+    if (!target.__phase04LongTaskSupported) return;
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        target.__phase04LongTasks.push(Math.round(entry.duration * 10) / 10);
+      }
+    });
+    observer.observe({ type: "longtask", buffered: true });
+  });
+}
+
 test("layout and page-mode changes preserve the current semantic anchor", async ({ page }) => {
+  await installLongTaskProbe(page);
   const bookId = "reader-layout-anchor-e2e-book";
   await seedReaderBook(page, {
     bookId,
@@ -164,26 +214,27 @@ test("layout and page-mode changes preserve the current semantic anchor", async 
     const container = node.closest('[data-reader-content-canvas="mobile"]') as HTMLElement;
     const targetRect = node.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
+    const previousBehavior = container.style.scrollBehavior;
+    container.style.scrollBehavior = "auto";
     container.scrollTop += targetRect.top - containerRect.top;
+    requestAnimationFrame(() => {
+      container.style.scrollBehavior = previousBehavior;
+    });
   });
   await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex, {
     timeout: 5_000,
   }).toBe(1);
   await page.waitForTimeout(750);
-  const readVisibleAnchor = () => canvas.evaluate((container) => {
-    const bounds = container.getBoundingClientRect();
-    const readingLine = bounds.top + Math.min(120, Math.max(12, bounds.height * 0.12));
-    const paragraph = Array.from(container.querySelectorAll("p[data-idx]")).find((node) => {
-      const rect = node.getBoundingClientRect();
-      return rect.right > bounds.left && rect.left < bounds.right && rect.bottom > readingLine;
-    });
-    const chapter = paragraph?.closest("[data-chapter-index]") as HTMLElement | null;
-    return {
-      chapterIndex: Number(chapter?.dataset.chapterIndex ?? -1),
-      paragraphIndex: Number(paragraph?.getAttribute("data-idx") ?? -1),
-    };
-  });
-  const before = await readVisibleAnchor();
+  // Capture the reader's own semantic position algorithm immediately before
+  // reflow. This avoids a second, test-only visibility heuristic and exercises
+  // the same paragraph/character contract used by settings and bookmarks.
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "书签", exact: true })
+    .click();
+  await expect.poll(async () => (await readBookmarks(page, bookId)).length, {
+    timeout: 5_000,
+  }).toBe(1);
+  const [before] = await readBookmarks(page, bookId);
   expect(before.chapterIndex).toBe(1);
   expect(before.paragraphIndex).toBeGreaterThan(10);
 
@@ -198,6 +249,10 @@ test("layout and page-mode changes preserve the current semantic anchor", async 
   await expect(paginationState).toHaveAttribute("data-anchor-restored", "true", {
     timeout: 15_000,
   });
+  await expect(paginationState).toHaveAttribute(
+    "data-anchor-paragraph",
+    String(before.paragraphIndex),
+  );
   await expect(canvas.locator(
     `[data-page-index]:visible p[data-idx="${before.paragraphIndex}"]`,
   )).toBeVisible({ timeout: 15_000 });
@@ -220,10 +275,23 @@ test("layout and page-mode changes preserve the current semantic anchor", async 
     const paragraph = node.getBoundingClientRect();
     return paragraph.bottom > bounds.top && paragraph.top < bounds.bottom;
   }), { timeout: 5_000 }).toBe(true);
+  const longTasks = await page.evaluate(() => {
+    const target = window as unknown as {
+      __phase04LongTaskSupported?: boolean;
+      __phase04LongTasks?: number[];
+    };
+    return {
+      supported: target.__phase04LongTaskSupported === true,
+      durationsMs: target.__phase04LongTasks ?? [],
+    };
+  });
   console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
     scenario: "semantic-layout",
     semanticAnchorVisible: true,
     stabilizationMs: Date.now() - layoutStartedAt,
+    longTaskSupported: longTasks.supported,
+    longTaskDurationsMs: longTasks.durationsMs,
+    maxLongTaskMs: Math.max(0, ...longTasks.durationsMs),
   })}`);
 });
 
@@ -432,6 +500,80 @@ test("pagehide flush and true offline continuation preserve progress", async ({ 
     scenario: "lifecycle-offline",
     pagehideRestored: true,
     offlineObserved: true,
+    semanticAnchorVisible: true,
+  })}`);
+});
+
+test("pagination bookmark survives navigation and returns to its semantic anchor", async ({ page }) => {
+  const bookId = "reader-bookmark-restore-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "pagination",
+    chapterCount: 3,
+    contentFor: (chapterIndex) => Array.from({ length: 80 }, (_, paragraphIndex) => (
+      `<p>BOOKMARK-C${chapterIndex}-P${paragraphIndex}-BEGIN ${"书签语义正文".repeat(18)} BOOKMARK-C${chapterIndex}-P${paragraphIndex}-END</p>`
+    )).join(""),
+  });
+  await page.goto(`/#/reader/${bookId}`);
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  const indicator = canvas.getByText(/\d+\s*\/\s*\d+/);
+  await expect(indicator).toContainText("1 /", { timeout: 15_000 });
+  const nextPage = page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]');
+  for (let pageIndex = 2; pageIndex <= 4; pageIndex += 1) {
+    await nextPage.click();
+    await expect.poll(async () => Number((await indicator.textContent())?.match(/^(\d+)/)?.[1] ?? 0), {
+      timeout: 5_000,
+    }).toBe(pageIndex);
+  }
+
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "书签", exact: true })
+    .click();
+  await expect.poll(async () => (await readBookmarks(page, bookId)).length, {
+    timeout: 5_000,
+  }).toBe(1);
+  const [bookmark] = await readBookmarks(page, bookId);
+  expect(bookmark.chapterIndex).toBe(0);
+  expect(bookmark.paragraphIndex).toBeGreaterThan(0);
+  expect(bookmark.characterOffset).toBeGreaterThanOrEqual(0);
+
+  await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一章"]').click();
+  await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex, {
+    timeout: 5_000,
+  }).toBe(1);
+  await page.reload();
+  await expect(canvas.getByRole("heading", { name: "第二章" })).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "目录", exact: true })
+    .click();
+  const drawer = page.getByRole("dialog", { name: "阅读目录" });
+  await drawer.getByRole("button", { name: "书签", exact: true }).click();
+  await drawer.getByRole("button", { name: /\u7b2c\u4e00\u7ae0/ }).click();
+
+  await expect.poll(async () => await readProgress(page, bookId), {
+    timeout: 15_000,
+  }).toEqual({
+    chapterIndex: bookmark.chapterIndex,
+    paragraphIndex: bookmark.paragraphIndex,
+    characterOffset: bookmark.characterOffset,
+  });
+  await expect(canvas.locator('[data-anchor-page]')).toHaveAttribute(
+    "data-anchor-restored",
+    "true",
+    { timeout: 15_000 },
+  );
+  await expect.poll(async () => canvas.locator('[data-page-index]:visible').evaluateAll(
+    (nodes, anchor) => nodes.some((node) => {
+      const start = Number((node as HTMLElement).dataset.startCharacter ?? 0);
+      const end = Number((node as HTMLElement).dataset.endCharacter ?? 0);
+      return start <= anchor && anchor < end;
+    }),
+    bookmark.characterOffset,
+  ), { timeout: 15_000 }).toBe(true);
+  console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
+    scenario: "bookmark-restore",
+    persisted: true,
     semanticAnchorVisible: true,
   })}`);
 });

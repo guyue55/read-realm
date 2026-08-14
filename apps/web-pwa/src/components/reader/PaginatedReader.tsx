@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   paginateContentAdaptive,
   getCurrentPageIndex,
@@ -81,8 +81,13 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
     const lastReportedAnchorRef = useRef<string | null>(null);
     const anchorRestoredRef = useRef(false);
     const suppressScrollReportRef = useRef(false);
-    const restoreTargetLeftRef = useRef(0);
-    const handleScrollRef = useRef<() => void>(() => undefined);
+    const restoreFrameRef = useRef(0);
+    const pendingRestoreRef = useRef<{
+      pageIndex: number;
+      scrollLeft: number;
+      previousScrollBehavior: string;
+    } | null>(null);
+    const [restoreEpoch, setRestoreEpoch] = useState(0);
     const [measured, setMeasured] = useState(false);
 
     const paddingTop = reservedTop;
@@ -191,10 +196,11 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
       const pageIdx = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
       if (!anchorRestoredRef.current) return;
-      if (suppressScrollReportRef.current) {
-        if (Math.abs(container.scrollLeft - restoreTargetLeftRef.current) <= 1) return;
-        suppressScrollReportRef.current = false;
-      }
+      // Pagination windowing mounts only currentPage ± 1. During semantic
+      // restoration the browser can briefly snap to one of the old mounted pages
+      // before React commits the target window. That is an internal reflow, not a
+      // user turn, so it must never replace the retained semantic anchor.
+      if (suppressScrollReportRef.current) return;
       const page = pages[pageIdx];
       if (page) {
         const anchor = {
@@ -213,8 +219,6 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
         onPageChange?.(pageIdx, totalPages);
       }
     }, [containerWidth, totalPages, currentPage, onPageChange, onAnchorChange, pages]);
-    handleScrollRef.current = handleScroll;
-
     // 键盘翻页只在正文交互层生效，不穿透到已打开的模态面板后方。
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -274,11 +278,14 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       const targetLeft = targetPage * (containerWidth + PAGE_GAP);
       anchorRestoredRef.current = false;
       suppressScrollReportRef.current = true;
-      restoreTargetLeftRef.current = targetLeft;
       const previousScrollBehavior = container.style.scrollBehavior;
-      // 恢复必须是原子定位；若沿用 smooth，中间帧会被误认为用户回到前一页。
-      container.style.scrollBehavior = 'auto';
-      container.scrollLeft = targetLeft;
+      // Commit the target window first. The target page may not exist in the DOM
+      // while the previous currentPage window is still mounted.
+      pendingRestoreRef.current = {
+        pageIndex: targetPage,
+        scrollLeft: targetLeft,
+        previousScrollBehavior,
+      };
       setCurrentPage(targetPage);
       const page = pages[targetPage];
       if (page) {
@@ -292,19 +299,34 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       }
       anchorRestoredRef.current = true;
       onPageChange?.(targetPage, totalPages);
-      const firstFrame = requestAnimationFrame(() => {
-        container.style.scrollBehavior = previousScrollBehavior;
-        suppressScrollReportRef.current = false;
-        const currentLeft = scrollRef.current?.scrollLeft ?? targetLeft;
-        if (Math.abs(currentLeft - targetLeft) > 1) {
-          handleScrollRef.current();
-        }
-      });
-      return () => {
-        cancelAnimationFrame(firstFrame);
-        container.style.scrollBehavior = previousScrollBehavior;
-      };
+      setRestoreEpoch((value) => value + 1);
     }, [initialAnchor, initialPage, containerWidth, pages, totalPages, onPageChange]);
+
+    useLayoutEffect(() => {
+      const pending = pendingRestoreRef.current;
+      const container = scrollRef.current;
+      if (!pending || !container || currentPage !== pending.pageIndex) return;
+
+      // The restore epoch guarantees this runs after React has mounted the
+      // target page window, including when the target page index did not change.
+      container.style.scrollBehavior = 'auto';
+      container.scrollLeft = pending.scrollLeft;
+      const firstFrame = requestAnimationFrame(() => {
+        container.scrollLeft = pending.scrollLeft;
+        const secondFrame = requestAnimationFrame(() => {
+          if (pendingRestoreRef.current !== pending) return;
+          if (Math.abs(container.scrollLeft - pending.scrollLeft) > 1) {
+            container.scrollLeft = pending.scrollLeft;
+          }
+          container.style.scrollBehavior = pending.previousScrollBehavior;
+          pendingRestoreRef.current = null;
+          suppressScrollReportRef.current = false;
+        });
+        restoreFrameRef.current = secondFrame;
+      });
+      restoreFrameRef.current = firstFrame;
+      return () => cancelAnimationFrame(restoreFrameRef.current);
+    }, [containerWidth, currentPage, restoreEpoch]);
 
     const pageWidth = containerWidth;
     const anchorPage = initialAnchor
