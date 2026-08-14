@@ -1,7 +1,7 @@
 $ corepack pnpm --filter @reader/reader-core test
-started_at=2026-08-14T17:27:02.497Z
-ended_at=2026-08-14T17:27:03.136Z
-duration_ms=639
+started_at=2026-08-14T16:37:04.938Z
+ended_at=2026-08-14T16:37:05.636Z
+duration_ms=698
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -19,7 +19,7 @@ tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.js
 
  Test Files  5 passed (5)
       Tests  48 passed (48)
-   Start at  01:27:02
-   Duration  223ms (transform 194ms, setup 0ms, import 287ms, tests 34ms, environment 0ms)
+   Start at  00:37:05
+   Duration  220ms (transform 193ms, setup 0ms, import 288ms, tests 35ms, environment 0ms)
 
 [stderr]

@@ -1,7 +1,7 @@
 $ corepack pnpm --filter @reader/gesture-core test
-started_at=2026-08-14T17:27:03.214Z
-ended_at=2026-08-14T17:27:03.981Z
-duration_ms=767
+started_at=2026-08-14T16:37:05.710Z
+ended_at=2026-08-14T16:37:06.562Z
+duration_ms=852
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -20,7 +20,7 @@ tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.js
 
  Test Files  1 passed (1)
       Tests  10 passed (10)
-   Start at  01:27:03
-   Duration  268ms (transform 63ms, setup 1ms, collect 61ms, tests 2ms, environment 0ms, prepare 63ms)
+   Start at  00:37:06
+   Duration  265ms (transform 58ms, setup 0ms, collect 57ms, tests 2ms, environment 0ms, prepare 72ms)
 
 [stderr]

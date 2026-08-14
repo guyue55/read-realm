@@ -6,12 +6,12 @@
   "experiment": null,
   "qualificationExperiment": null,
   "migrationRisk": null,
-  "startedAt": "2026-08-14T17:27:02.399Z",
-  "endedAt": "2026-08-14T17:28:30.584Z",
-  "archivedPreviousReport": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03",
+  "startedAt": "2026-08-14T16:37:04.827Z",
+  "endedAt": "2026-08-14T16:38:26.587Z",
+  "archivedPreviousReport": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02",
   "repository": {
     "root": ".",
-    "head": "b740c04f51e5ab61acd63b6558b51a85c0ac0458",
+    "head": "fb4adefaf7e182540d10799aa11ee5bae0337625",
     "branch": "codex/deep-reading-experience-audit",
     "statusPorcelain": [
       "D docs/goals/reading-world-v1/reports/phase-04-reader.json",
@@ -25,17 +25,17 @@
       " M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt",
       " M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
       " M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.json",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/gesture_test.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/patch_whitespace.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_experience_live.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_run_contract.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_test.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/storage_test.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_lint.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_test.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_typecheck.txt",
-      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/workspace_build.txt"
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.json",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/gesture_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/patch_whitespace.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/reader_experience_live.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/reader_run_contract.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/reader_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/storage_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/web_lint.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/web_test.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/web_typecheck.txt",
+      "?? docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-02/phase-04-reader.records/workspace_build.txt"
     ]
   },
   "runtime": {
@@ -47,9 +47,9 @@
     {
       "id": "PATCH_WHITESPACE",
       "command": "git diff --check",
-      "startedAt": "2026-08-14T17:27:02.424Z",
-      "endedAt": "2026-08-14T17:27:02.431Z",
-      "durationMs": 7,
+      "startedAt": "2026-08-14T16:37:04.854Z",
+      "endedAt": "2026-08-14T16:37:04.863Z",
+      "durationMs": 9,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -94,15 +94,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt",
-      "logSha256": "7757ae6c673f5e32c39f81a48cba5f7ec9b82a6409b0e50e60fcd14ef712d74c"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/patch_whitespace.txt",
+      "logSha256": "80e9ddb2fd264114978a177d1468c20743d120f792a5b6e517485d3e7f91b6a7"
     },
     {
       "id": "READER_TEST",
       "command": "corepack pnpm --filter @reader/reader-core test",
-      "startedAt": "2026-08-14T17:27:02.497Z",
-      "endedAt": "2026-08-14T17:27:03.136Z",
-      "durationMs": 639,
+      "startedAt": "2026-08-14T16:37:04.938Z",
+      "endedAt": "2026-08-14T16:37:05.636Z",
+      "durationMs": 698,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -147,15 +147,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt",
-      "logSha256": "50ccb752f8fe404e23d94d1179643e5ee00d900b9755a71e57222238fdf639e8"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_test.txt",
+      "logSha256": "fc81f88bc0874a9146b4f44ee18428c50501aa879b7a0f08aeacf7ff2790dcef"
     },
     {
       "id": "GESTURE_TEST",
       "command": "corepack pnpm --filter @reader/gesture-core test",
-      "startedAt": "2026-08-14T17:27:03.214Z",
-      "endedAt": "2026-08-14T17:27:03.981Z",
-      "durationMs": 767,
+      "startedAt": "2026-08-14T16:37:05.710Z",
+      "endedAt": "2026-08-14T16:37:06.562Z",
+      "durationMs": 852,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -200,15 +200,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt",
-      "logSha256": "a3636b6d713168b4f05e8918316d049ed848396fd365d7160d3b9f487b2f007f"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/gesture_test.txt",
+      "logSha256": "08b5320675c6d2b8c00e67c4004d3be4de5bb737a07a08224fcd7787790c17d8"
     },
     {
       "id": "STORAGE_TEST",
       "command": "corepack pnpm --filter @reader/storage-core test",
-      "startedAt": "2026-08-14T17:27:04.050Z",
-      "endedAt": "2026-08-14T17:27:05.014Z",
-      "durationMs": 964,
+      "startedAt": "2026-08-14T16:37:06.638Z",
+      "endedAt": "2026-08-14T16:37:07.582Z",
+      "durationMs": 944,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -253,15 +253,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt",
-      "logSha256": "93378076cd220638496c7d54ccf232043656bfe94635a0bc671c5b5ec3c54c7c"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/storage_test.txt",
+      "logSha256": "4136ea97295d036ebbbc8e183fe216f1be19ece72bdf606163414aaa7e153424"
     },
     {
       "id": "WEB_TEST",
       "command": "corepack pnpm --filter web-pwa test",
-      "startedAt": "2026-08-14T17:27:05.080Z",
-      "endedAt": "2026-08-14T17:27:06.597Z",
-      "durationMs": 1517,
+      "startedAt": "2026-08-14T16:37:07.653Z",
+      "endedAt": "2026-08-14T16:37:09.291Z",
+      "durationMs": 1638,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -306,15 +306,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt",
-      "logSha256": "4df15b20251fb9ad830ef18d807fbc50fe51784ce6ceebdb76a3a0b16dbd3e22"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_test.txt",
+      "logSha256": "8901db853d11cc48c3a4bfc1dae3bb7db5a057b247b9749cd8a4829af1f75244"
     },
     {
       "id": "WEB_LINT",
       "command": "corepack pnpm --filter web-pwa lint",
-      "startedAt": "2026-08-14T17:27:06.672Z",
-      "endedAt": "2026-08-14T17:27:09.023Z",
-      "durationMs": 2351,
+      "startedAt": "2026-08-14T16:37:09.370Z",
+      "endedAt": "2026-08-14T16:37:12.024Z",
+      "durationMs": 2654,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -359,15 +359,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt",
-      "logSha256": "47b1e67ed223209a1df2552e84ed5e674310fc9c012a1f566355d8f6a5153d35"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_lint.txt",
+      "logSha256": "3b2dbcfc8056698d991a175ccf634cec77d74273e25a1332f6fb1875096dfb28"
     },
     {
       "id": "WEB_TYPECHECK",
       "command": "corepack pnpm --filter web-pwa exec tsc --noEmit",
-      "startedAt": "2026-08-14T17:27:09.094Z",
-      "endedAt": "2026-08-14T17:27:10.392Z",
-      "durationMs": 1298,
+      "startedAt": "2026-08-14T16:37:12.094Z",
+      "endedAt": "2026-08-14T16:37:14.367Z",
+      "durationMs": 2273,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -412,15 +412,15 @@
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
-      "logSha256": "538904e2710c4272a476e4af74653912aec00fd3b45e3ea5d7684e0673be9e25"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/web_typecheck.txt",
+      "logSha256": "3cf0d993d0451677e328f38537467739f34419ef143f24efaa7ba8013d959eb8"
     },
     {
       "id": "WORKSPACE_BUILD",
       "command": "corepack pnpm build",
-      "startedAt": "2026-08-14T17:27:10.457Z",
-      "endedAt": "2026-08-14T17:27:29.193Z",
-      "durationMs": 18736,
+      "startedAt": "2026-08-14T16:37:14.448Z",
+      "endedAt": "2026-08-14T16:37:34.481Z",
+      "durationMs": 20033,
       "exitCode": 0,
       "signal": null,
       "environment": {
@@ -467,15 +467,15 @@
         " M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt",
-      "logSha256": "ef0e8dcb47272389a9d477e22c3a6aa7b67f725c729635181bce16d601af9e94"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/workspace_build.txt",
+      "logSha256": "2221f8d61ac99fb0b2f46570536082abd1c30d40042bded7667856f5c533494f"
     },
     {
       "id": "READER_RUN_CONTRACT",
       "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/phase-04-reader-run.test.mjs",
-      "startedAt": "2026-08-14T17:27:29.262Z",
-      "endedAt": "2026-08-14T17:27:29.333Z",
-      "durationMs": 71,
+      "startedAt": "2026-08-14T16:37:34.555Z",
+      "endedAt": "2026-08-14T16:37:34.702Z",
+      "durationMs": 147,
       "exitCode": 0,
       "signal": null,
       "environment": {},
@@ -520,15 +520,15 @@
         " M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt",
-      "logSha256": "5102c5453fc27f830f46d3c0989efd0a177cb9615037af7e234e34e03d270329"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_run_contract.txt",
+      "logSha256": "c84f9971ffe077d6adef88648b717b5ba0ae608392fffd36ca5a98a0cc0c83dd"
     },
     {
       "id": "READER_EXPERIENCE_LIVE",
       "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-phase-04-reader-experience.mjs",
-      "startedAt": "2026-08-14T17:27:29.402Z",
-      "endedAt": "2026-08-14T17:28:30.392Z",
-      "durationMs": 60990,
+      "startedAt": "2026-08-14T16:37:34.815Z",
+      "endedAt": "2026-08-14T16:38:26.362Z",
+      "durationMs": 51547,
       "exitCode": 0,
       "signal": null,
       "environment": {
@@ -576,8 +576,8 @@
         " M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt",
         " M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"
       ],
-      "logPath": "docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt",
-      "logSha256": "484422565c1dba00baafa0a5def7d6f4f1593ae3e39e7b7a31e9477d2b5e186e"
+      "logPath": "docs/goals/reading-world-v1/reports/history/phase-04-reader-attempt-03/phase-04-reader.records/reader_experience_live.txt",
+      "logSha256": "acd89bd44610ff9df16df579ffa16e7960cabf988f2400ea8d74a5648c8a53b4"
     }
   ],
   "qualification": null,
@@ -590,15 +590,9 @@
       "classification": "PASS",
       "reasons": [],
       "listExitCode": 0,
-      "listedTestCount": 15,
-      "listedTestCountsByProject": {
-        "desktop": 14,
-        "mobile-touch": 1
-      },
-      "listedTestIdsUnique": true,
+      "listedTestCount": 14,
       "serviceReady": true,
       "testExitCode": 0,
-      "nativeBackgroundExitCode": 0,
       "portFreeBefore": true,
       "portFreeAfter": true,
       "orphanProcessCount": 0,
@@ -606,14 +600,14 @@
         {
           "scenario": "semantic-layout",
           "semanticAnchorVisible": true,
-          "stabilizationMs": 1135,
+          "stabilizationMs": 1275,
           "longTaskSupported": true,
           "longTaskDurationsMs": [],
           "maxLongTaskMs": 0
         },
         {
           "scenario": "pagination-persistence",
-          "persistenceMs": 243,
+          "persistenceMs": 252,
           "semanticAnchorVisible": true
         },
         {
@@ -631,41 +625,6 @@
           "scenario": "bounded-scroll",
           "maxChapterDom": 3,
           "semanticAnchorVisible": true
-        },
-        {
-          "scenario": "mobile-touch",
-          "projectName": "mobile-touch",
-          "isMobile": true,
-          "hasTouch": true,
-          "maxTouchPoints": 1,
-          "coarsePointer": true,
-          "trustedTouchObserved": true,
-          "paginationSwipeObserved": true,
-          "drawerTapObserved": true,
-          "progressDragObserved": true,
-          "chapterBoundaryObserved": true
-        },
-        {
-          "scenario": "native-background",
-          "platform": "darwin",
-          "detachedDuringBackground": true,
-          "windowStateSequence": [
-            "normal",
-            "minimized",
-            "normal"
-          ],
-          "visibilitySequence": [
-            "visible",
-            "hidden",
-            "visible"
-          ],
-          "progressFlushedWhileHidden": true,
-          "semanticAnchorVisible": true,
-          "restoreMs": 657,
-          "hiddenObservedAfterMs": 627,
-          "chapterIndex": 0,
-          "paragraphIndex": 0,
-          "characterOffset": 320
         }
       ]
     }
