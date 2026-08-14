@@ -22,6 +22,7 @@ export const PublicLibraryListQuerySchema = z.object({
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES).optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   pageSize: z.coerce.number().int().positive().max(48).optional().default(24),
+  snapshotRevision: z.coerce.number().int().nonnegative().optional(),
 });
 
 export type PublicLibraryUpload = z.infer<typeof PublicLibraryUploadSchema>;

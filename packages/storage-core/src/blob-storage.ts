@@ -1,4 +1,5 @@
-import { writeFile, readFile, mkdir, unlink } from "fs/promises";
+import { link, open, readFile, mkdir, unlink } from "fs/promises";
+import { randomUUID } from "crypto";
 import { dirname, resolve } from "path";
 
 const SAFE_BLOB_KEY_PATTERN = /^[a-f0-9]{64}$/i;
@@ -24,7 +25,25 @@ export class LocalFileBlobStorage {
   async putObject(key: string, data: string | Buffer): Promise<void> {
     const fullPath = this.getSafePath(key);
     await mkdir(dirname(fullPath), { recursive: true });
-    await writeFile(fullPath, data);
+    const temporaryPath = `${fullPath}.${randomUUID()}.tmp`;
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
+    try {
+      handle = await open(temporaryPath, "wx");
+      await handle.writeFile(data);
+      await handle.sync();
+      await handle.close();
+      handle = undefined;
+      try {
+        await link(temporaryPath, fullPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      }
+    } finally {
+      await handle?.close().catch(() => undefined);
+      await unlink(temporaryPath).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error;
+      });
+    }
   }
 
   async getObject(key: string): Promise<Buffer> {

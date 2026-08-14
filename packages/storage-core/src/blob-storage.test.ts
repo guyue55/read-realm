@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { LocalFileBlobStorage } from "./blob-storage";
-import { rm, mkdtemp } from "fs/promises";
+import { readdir, rm, mkdtemp } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { tmpdir } from "os";
@@ -49,5 +49,21 @@ describe("LocalFileBlobStorage", () => {
     await expect(storage.getObject("test/file.txt")).rejects.toThrow(
       "INVALID_BLOB_KEY",
     );
+  });
+
+  it("publishes one complete object under concurrent put-if-absent writes", async () => {
+    const storage = new LocalFileBlobStorage(testDir);
+    const key = "c".repeat(64);
+    const candidates = [Buffer.alloc(1024 * 64, 7), Buffer.alloc(1024 * 64, 9)];
+
+    await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        storage.putObject(key, candidates[index % candidates.length]!),
+      ),
+    );
+
+    const stored = await storage.getObject(key);
+    expect(candidates.some((candidate) => candidate.equals(stored))).toBe(true);
+    expect(await readdir(testDir)).toEqual([key]);
   });
 });
