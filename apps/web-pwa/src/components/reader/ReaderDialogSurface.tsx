@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  useEffect,
+  useLayoutEffect,
   useRef,
   type HTMLAttributes,
   type ReactNode,
@@ -22,6 +22,18 @@ function getFocusableElements(root: HTMLElement): HTMLElement[] {
       element.getClientRects().length > 0 &&
       element.getAttribute("aria-hidden") !== "true"
     ));
+}
+
+function focusIfAvailable(element: HTMLElement | null): boolean {
+  if (
+    !element?.isConnected ||
+    element.getClientRects().length === 0 ||
+    element.closest('[inert], [aria-hidden="true"]')
+  ) {
+    return false;
+  }
+  element.focus({ preventScroll: true });
+  return document.activeElement === element;
 }
 
 export interface ReaderDialogSurfaceProps
@@ -49,7 +61,7 @@ export function ReaderDialogSurface({
   onCloseRef.current = onClose;
   fallbackFocusRef.current = fallbackFocus;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const surface = surfaceRef.current;
     if (!surface) return;
@@ -64,6 +76,11 @@ export function ReaderDialogSurface({
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      const openDialogs = document.querySelectorAll<HTMLElement>(
+        '[role="dialog"][aria-modal="true"]',
+      );
+      if (openDialogs.item(openDialogs.length - 1) !== surface) return;
+
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -81,6 +98,11 @@ export function ReaderDialogSurface({
       }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
+      if (!surface.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -90,17 +112,14 @@ export function ReaderDialogSurface({
       }
     };
 
-    surface.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       cancelAnimationFrame(focusFrame);
-      surface.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown, true);
       const trigger = triggerRef.current;
       requestAnimationFrame(() => {
-        if (trigger?.isConnected) {
-          trigger.focus();
-          return;
-        }
-        fallbackFocusRef.current()?.focus();
+        if (focusIfAvailable(trigger)) return;
+        focusIfAvailable(fallbackFocusRef.current());
       });
     };
   }, [open]);
