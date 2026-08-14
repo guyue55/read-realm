@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0003",
+  "phaseId": "PHASE-04",
+  "evidenceId": "EVID-07",
+  "requirementId": "REQ-06",
+  "result": "PASS",
+  "generatedAt": "2026-08-14T17:43:41.600Z",
+  "evidenceCommit": "b45f03dd4fefa1064bbe91878a49ade4a916ee84",
+  "sourceReport": {
+    "path": "docs/goals/reading-world-v1/reports/phase-04-reader.json",
+    "sha256": "9228322c43482bb73e99796411c25f899a3c6e588203f0d8e9e184105c234653",
+    "implementationHead": "b740c04f51e5ab61acd63b6558b51a85c0ac0458",
+    "candidateHead": "6ee594249d768ab20231ddf48162cec08b309f9a",
+    "passedCheckCount": 10,
+    "verifiedRecordCount": 10,
+    "requiredChecks": [
+      "GESTURE_TEST",
+      "WEB_TEST",
+      "WEB_LINT",
+      "WEB_TYPECHECK",
+      "READER_RUN_CONTRACT",
+      "READER_EXPERIENCE_LIVE"
+    ]
+  },
+  "sourceUx": {
+    "path": "docs/goals/reading-world-v1/reports/phase-04-reader-ux.md",
+    "sha256": "427313358bc25de881f0b7ac4591769ebce4c49fdf751799fbc2be4cbae337c2"
+  },
+  "sourceReview": {
+    "path": "docs/goals/reading-world-v1/reviews/phase-04-reader.md",
+    "sha256": "ba09b8b4a094b6a8e3bc1feee98960fd7f6a597c3e0b7306c92bbc58c6a63559",
+    "conclusion": "PASS"
+  },
+  "verifiedOutcomes": {
+    "mobileProject": "mobile-touch",
+    "isMobile": true,
+    "hasTouch": true,
+    "trustedTouchObserved": true,
+    "paginationSwipeObserved": true,
+    "progressDragObserved": true,
+    "chapterBoundaryObserved": true,
+    "backgroundWindowStateSequence": [
+      "normal",
+      "minimized",
+      "normal"
+    ],
+    "backgroundVisibilitySequence": [
+      "visible",
+      "hidden",
+      "visible"
+    ],
+    "detachedDuringBackground": true,
+    "progressFlushedWhileHidden": true,
+    "backgroundSemanticAnchorVisible": true,
+    "backgroundRestoreMs": 657,
+    "uxScores": {
+      "舒适": 4,
+      "低干扰": 4,
+      "状态清晰": 4,
+      "恢复可信": 4,
+      "单手易用": 4
+    }
+  },
+  "boundary": "证明 PHASE-04 的 Chromium 可信移动触控纵切、macOS headed Chrome 真实 Page Visibility 后台恢复与五项人工量表；不声称物理锁屏、页面冻结、移动 OS suspend、Android/iOS 真机矩阵、PHASE-08 或 Goal 完成。"
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0003",
+  "phaseId": "PHASE-04",
+  "evidenceId": "EVID-02",
+  "requirementId": "REQ-01",
+  "result": "PASS",
+  "generatedAt": "2026-08-14T17:43:41.600Z",
+  "evidenceCommit": "b45f03dd4fefa1064bbe91878a49ade4a916ee84",
+  "sourceReport": {
+    "path": "docs/goals/reading-world-v1/reports/phase-04-reader.json",
+    "sha256": "9228322c43482bb73e99796411c25f899a3c6e588203f0d8e9e184105c234653",
+    "implementationHead": "b740c04f51e5ab61acd63b6558b51a85c0ac0458",
+    "candidateHead": "6ee594249d768ab20231ddf48162cec08b309f9a",
+    "passedCheckCount": 10,
+    "verifiedRecordCount": 10,
+    "requiredChecks": [
+      "READER_TEST",
+      "STORAGE_TEST",
+      "WEB_TEST",
+      "WORKSPACE_BUILD",
+      "READER_EXPERIENCE_LIVE"
+    ]
+  },
+  "sourceUx": {
+    "path": "docs/goals/reading-world-v1/reports/phase-04-reader-ux.md",
+    "sha256": "427313358bc25de881f0b7ac4591769ebce4c49fdf751799fbc2be4cbae337c2"
+  },
+  "sourceReview": {
+    "path": "docs/goals/reading-world-v1/reviews/phase-04-reader.md",
+    "sha256": "ba09b8b4a094b6a8e3bc1feee98960fd7f6a597c3e0b7306c92bbc58c6a63559",
+    "conclusion": "PASS"
+  },
+  "verifiedOutcomes": {
+    "semanticAnchorVisible": true,
+    "stabilizationMs": 1135,
+    "progressPersistenceMs": 243,
+    "progressWithinOneSecond": true,
+    "pagehideRestored": true,
+    "warmOfflineReading": true,
+    "bookmarkPersistedAndRestored": true,
+    "boundedScrollMaxChapterDom": 3
+  },
+  "boundary": "证明 PHASE-04 已打开且正文已缓存的本地阅读、语义定位、分页/滚动、书签和恢复；不证明 PWA 断网冷启、导入容量、多端同步、真机矩阵或 Goal 完成。"
+}
