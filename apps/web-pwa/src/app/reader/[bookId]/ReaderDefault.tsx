@@ -14,6 +14,17 @@ import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
 import { GestureRecognizer } from "@reader/gesture-core";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Copy,
+  PenLine,
+  RotateCcw,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 function isInteractiveReaderTarget(target: EventTarget | null) {
   return (
@@ -834,7 +845,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           label="阅读设置"
           onClose={() => setActivePanel(null)}
           fallbackFocus={() => contentRef.current}
-          className="fixed bottom-3 inset-x-3 bg-transparent z-50 physics-spring reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
+          className="reader-panel-motion fixed bottom-3 inset-x-3 bg-transparent z-50 reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
           style={{
             transform: activePanel === "settings" ? "translateY(0)" : "translateY(calc(100% + 24px))"
           }}
@@ -860,7 +871,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           label="阅读进度"
           onClose={() => setActivePanel(null)}
           fallbackFocus={() => contentRef.current}
-          className={`fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl physics-spring reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
+          className={`reader-panel-motion fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
           style={{
             transform: activePanel === "progress" ? "translateY(0)" : "translateY(calc(100% + 24px))"
           }}
@@ -874,12 +885,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             <button
               aria-label="关闭阅读进度"
               onClick={() => setActivePanel(null)}
-              className={`${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"} p-1 rounded-full`}
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-xl ${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"}`}
             >
-              ✕
+              <X aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
           </div>
-          <div className="grid grid-cols-[40px_36px_minmax(0,1fr)_36px_40px] items-center gap-2">
+          <div className="grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px] items-center gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -887,18 +900,24 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               }}
               title="上一章"
               aria-label="上一章"
-              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xs font-bold transition-all active:scale-90`}
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
             >
-              ⏮
+              <ChevronsLeft aria-hidden="true" size={19} strokeWidth={1.8} />
             </button>
             <button
               onClick={handleVisiblePagePrev}
-              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xl`}
+              aria-label="上一页"
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
             >
-              ‹
+              <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
             <input
               aria-label="拖动阅读进度"
+              data-reader-control
               type="range"
               min={0}
               max={100}
@@ -907,13 +926,16 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               onChange={(event) =>
                 seekToProgress(Number(event.currentTarget.value))
               }
-              className="w-full accent-[#678055]"
+              className="reader-range reader-focus-ring h-11 w-full accent-[#678055]"
             />
             <button
               onClick={handleVisiblePageNext}
-              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xl`}
+              aria-label="下一页"
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
             >
-              ›
+              <ChevronRight aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
             <button
               onClick={(e) => {
@@ -922,9 +944,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               }}
               title="下一章"
               aria-label="下一章"
-              className={`${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"} h-9 rounded-full text-xs font-bold transition-all active:scale-90`}
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
             >
-              ⏭
+              <ChevronsRight aria-hidden="true" size={19} strokeWidth={1.8} />
             </button>
           </div>
           <div
@@ -941,12 +965,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               onClick={() => {
                 void rollbackProgress();
               }}
-              className={`w-full py-2.5 rounded-full text-xs font-semibold tracking-wider transition-all active:scale-[0.98] border ${
+              data-reader-control
+              className={`reader-control-press reader-focus-ring min-h-11 w-full rounded-full px-4 text-xs font-semibold tracking-wider border flex items-center justify-center gap-2 ${
                 isDark
                   ? "bg-[#678055]/20 hover:bg-[#678055]/30 border-[#678055]/40 text-[#EEF2E9]"
                   : "bg-[#678055] hover:bg-[#556b46] border-[#678055] text-white shadow-[0_4px_12px_rgba(103,128,85,0.2)]"
               }`}
             >
+              <RotateCcw aria-hidden="true" size={18} strokeWidth={1.8} />
               {strings.sync.progressRollbackBtn}
             </button>
           </div>
@@ -967,7 +993,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         label="阅读目录"
         onClose={() => setActivePanel(null)}
         fallbackFocus={() => contentRef.current}
-        className="fixed inset-y-0 left-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
+        className="reader-panel-motion fixed inset-y-0 left-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
           transform: activePanel === "toc" ? "translateX(0)" : "translateX(-100%)"
@@ -992,7 +1018,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         label="伴读"
         onClose={() => setActivePanel(null)}
         fallbackFocus={() => contentRef.current}
-        className="fixed inset-y-0 right-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
+        className="reader-panel-motion fixed inset-y-0 right-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
           transform: activePanel === "ai" ? "translateX(0)" : "translateX(100%)"
@@ -1047,9 +1073,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in zoom-in-95 duration-200">
           <button
             onClick={() => handleNext()}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold border backdrop-blur-md transition-all active:scale-95 border-[#678055]/30 bg-[rgba(238,242,233,0.92)] text-[#678055] dark:border-[#EEF2E9]/20 dark:bg-[rgba(45,45,45,0.92)] dark:text-[#EEF2E9] shadow-[0_8px_30px_rgba(103,128,85,0.15)]"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-full border border-[#678055]/30 bg-[rgba(238,242,233,0.92)] px-5 text-xs font-bold text-[#678055] shadow-[0_8px_30px_rgba(103,128,85,0.15)] backdrop-blur-md dark:border-[#EEF2E9]/20 dark:bg-[rgba(45,45,45,0.92)] dark:text-[#EEF2E9]"
           >
-            ✨ {autoFlipCountdown.toFixed(1)}s 后自动切到下一章... [立即跳转]
+            <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} />
+            {autoFlipCountdown.toFixed(1)}s 后自动切到下一章... [立即跳转]
           </button>
         </div>
       )}
@@ -1067,9 +1095,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         >
           <button
             onClick={() => setShowNoteDialog(true)}
-            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
           >
-            ✍️ 记笔记
+            <PenLine aria-hidden="true" size={17} strokeWidth={1.8} /> 记笔记
           </button>
           <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
           <button
@@ -1081,9 +1110,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               window.getSelection()?.removeAllRanges();
               setSelectionRect(null);
             }}
-            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
           >
-            ✨ AI伴读
+            <Sparkles aria-hidden="true" size={17} strokeWidth={1.8} /> AI伴读
           </button>
           <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
           <button
@@ -1093,9 +1123,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               window.getSelection()?.removeAllRanges();
               setSelectionRect(null);
             }}
-            className="text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A] transition-colors py-1 flex items-center gap-1.5 active:scale-95"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
           >
-            📖 复制
+            <Copy aria-hidden="true" size={17} strokeWidth={1.8} /> 复制
           </button>
         </div>
       )}

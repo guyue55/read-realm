@@ -1,6 +1,15 @@
 import React from "react";
 import { strings } from "@/lib/i18n";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import {
+  ArrowLeft,
+  Bookmark,
+  ChevronsLeft,
+  ChevronsRight,
+  List,
+  Settings2,
+  Sparkles,
+} from "lucide-react";
 
 export interface ReaderTopBarProps {
   title: string;
@@ -54,7 +63,7 @@ export function ReaderTopBar({
         aria-hidden={!isVisible}
         data-reader-toolbar="top"
         inert={!isVisible || backgroundDisabled ? true : undefined}
-        className={`fixed top-0 inset-x-0 pt-[env(safe-area-inset-top)] pb-0 min-h-[calc(3.5rem+env(safe-area-inset-top))] ${bgClass} shadow-sm z-20 flex items-center px-4 physics-spring border-b ${borderClass} ${
+        className={`fixed top-0 inset-x-0 pt-[env(safe-area-inset-top)] pb-0 min-h-[calc(3.5rem+env(safe-area-inset-top))] ${bgClass} shadow-sm z-20 flex items-center px-4 reader-panel-motion border-b ${borderClass} ${
           isVisible
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "-translate-y-full opacity-0 pointer-events-none"
@@ -63,9 +72,11 @@ export function ReaderTopBar({
         <button
           onClick={onBack}
           aria-label="返回书架"
-          className={`mr-4 min-w-[44px] min-h-[44px] flex items-center justify-center text-base font-medium ${iconColor} active:scale-95`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring mr-4 min-w-11 min-h-11 flex items-center justify-center rounded-xl ${iconColor}`}
         >
-          ←
+          <ArrowLeft aria-hidden="true" size={20} strokeWidth={1.8} />
         </button>
         <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2">
           <span
@@ -87,9 +98,11 @@ export function ReaderTopBar({
         <button
           onClick={onSettings}
           aria-label="阅读设置"
-          className={`ml-4 min-w-[44px] min-h-[44px] flex items-center justify-center text-base font-medium ${iconColor} active:scale-95`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring ml-4 min-w-11 min-h-11 flex items-center justify-center rounded-xl ${iconColor}`}
         >
-          ⚙
+          <Settings2 aria-hidden="true" size={20} strokeWidth={1.8} />
         </button>
       </div>
     );
@@ -106,9 +119,10 @@ export function ReaderTopBar({
       <div className="flex justify-start">
         <button
           onClick={onBack}
-          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center gap-1"
+          data-reader-control
+          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
         >
-          ← 返回书架
+          <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} /> 返回书架
         </button>
       </div>
       
@@ -118,11 +132,13 @@ export function ReaderTopBar({
             e.stopPropagation();
             onPrevChapter?.();
           }}
-          className="group flex items-center justify-center w-8 h-8 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[12px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          data-icon-only="true"
+          data-reader-control
+          className="reader-control-press reader-focus-ring flex items-center justify-center w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
           title="上一章"
           aria-label="上一章"
         >
-          <span className="transition-transform duration-200 ease-out group-hover:-translate-x-0.5">⏮</span>
+          <ChevronsLeft aria-hidden="true" size={18} strokeWidth={1.8} />
         </button>
         
         <div className="flex items-center gap-2.5">
@@ -152,11 +168,13 @@ export function ReaderTopBar({
             e.stopPropagation();
             onNextChapter?.();
           }}
-          className="group flex items-center justify-center w-8 h-8 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] active:scale-95 transition-all rounded-full text-[12px] font-bold text-[#6F665B] hover:text-[#5F7D52]"
+          data-icon-only="true"
+          data-reader-control
+          className="reader-control-press reader-focus-ring flex items-center justify-center w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
           title="下一章"
           aria-label="下一章"
         >
-          <span className="transition-transform duration-200 ease-out group-hover:translate-x-0.5">⏭</span>
+          <ChevronsRight aria-hidden="true" size={18} strokeWidth={1.8} />
         </button>
       </div>
 
@@ -164,37 +182,42 @@ export function ReaderTopBar({
         {onToggleToc && (
           <button
             onClick={onToggleToc}
-            className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center gap-1"
+            data-reader-control
+            className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
             title="展开目录"
             aria-label="展开目录"
           >
-            ☰ {strings.reader.toc}
+            <List aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.toc}
           </button>
         )}
         <button
           onClick={onBookmark}
-          className="text-sm font-medium text-[#678055] hover:text-[#5F7D52] transition-colors active:scale-95"
+          data-reader-control
+          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#678055] hover:text-[#5F7D52] flex items-center gap-2"
           title="添加书签"
           aria-label="添加书签"
         >
-          + {strings.reader.bookmark}
+          <Bookmark aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.bookmark}
         </button>
         {onToggleAi && (
           <button
             onClick={onToggleAi}
-            className="text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] transition-colors active:scale-95 flex items-center gap-1"
+            data-reader-control
+            className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] flex items-center gap-2"
             title="智能阅读助手"
             aria-label="智能阅读助手"
           >
-            ✨ {strings.reader.aiSummary}
+            <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} /> {strings.reader.aiSummary}
           </button>
         )}
         <button
           onClick={onSettings}
-          className="text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] transition-colors active:scale-95 flex items-center"
+          aria-label="阅读设置"
+          data-reader-control
+          className="reader-control-press reader-focus-ring min-h-11 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center gap-2"
           title="阅读设置"
         >
-          ⚙ 设置
+          <Settings2 aria-hidden="true" size={18} strokeWidth={1.8} /> 设置
         </button>
       </div>
     </div>

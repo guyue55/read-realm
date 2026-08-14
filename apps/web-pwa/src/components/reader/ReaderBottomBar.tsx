@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { strings } from "@/lib/i18n";
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Gauge,
+  List,
+  Moon,
+  Settings2,
+  Sparkles,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface ReaderBottomBarProps {
   onToggleToc: () => void;
@@ -56,40 +70,45 @@ export function ReaderBottomBar({
     ? "bg-[rgba(216,210,198,0.1)] text-[#D8D2C6]"
     : "bg-[#EEF2E9] text-[#5F7D52]";
 
-  const actions = [
+  const actions: Array<{
+    label: string;
+    icon: LucideIcon;
+    active: boolean;
+    onClick: () => void;
+  }> = [
     {
       label: strings.reader.toc,
-      glyph: "☰",
+      icon: List,
       active: activePanel === "toc",
       onClick: onToggleToc,
     },
     {
       label: strings.reader.bookmark,
-      glyph: "☆",
+      icon: Bookmark,
       active: false,
       onClick: onBookmark,
     },
     {
       label: strings.reader.progress,
-      glyph: "◷",
+      icon: Gauge,
       active: activePanel === "progress",
       onClick: onToggleProgress,
     },
     {
       label: "伴读",
-      glyph: "✨",
+      icon: Sparkles,
       active: activePanel === "ai",
       onClick: onToggleAi,
     },
     {
       label: strings.reader.settings,
-      glyph: "⚙",
+      icon: Settings2,
       active: activePanel === "settings",
       onClick: onToggleSettings,
     },
     {
       label: strings.reader.nightMode,
-      glyph: "☾",
+      icon: isDark ? Sun : Moon,
       active: false,
       onClick: onToggleNightMode,
     },
@@ -101,36 +120,41 @@ export function ReaderBottomBar({
       data-reader-toolbar="bottom"
       inert={!isVisible || backgroundDisabled ? true : undefined}
       style={{ willChange: "transform" }}
-      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl physics-spring sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
+      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl reader-panel-motion sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-6 opacity-0 pointer-events-none"
       }`}
     >
-      <div className="mb-3 grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px_42px] items-center gap-1.5">
+      <div className="mb-3 grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px_42px] items-center gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onPrevChapter?.();
           }}
-          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
           title="上一章"
           aria-label="上一章"
         >
-          ⏮
+          <ChevronsLeft aria-hidden="true" size={19} strokeWidth={1.8} />
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onPagePrev();
           }}
-          className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="上一页"
         >
-          ‹
+          <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.8} />
         </button>
         <input
           aria-label="拖动阅读进度"
+          data-reader-control
           type="range"
           min={0}
           max={100}
@@ -154,52 +178,60 @@ export function ReaderBottomBar({
               onSeekProgress(tempProgress);
             }
           }}
-          className="h-6 w-full accent-[#5F7D52]"
+          className="reader-range reader-focus-ring h-11 w-full accent-[#5F7D52]"
         />
         <button
           onClick={(e) => {
             e.stopPropagation();
             onPageNext();
           }}
-          className={`flex h-11 w-11 items-center justify-center rounded-full text-xl font-semibold transition-colors ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${mutedClass} hover:bg-[rgba(80,65,45,0.06)]`}
           aria-label="下一页"
         >
-          ›
+          <ChevronRight aria-hidden="true" size={20} strokeWidth={1.8} />
         </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onNextChapter?.();
           }}
-          className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-90 ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
+          data-icon-only="true"
+          data-reader-control
+          className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${mutedClass} hover:bg-[rgba(80,65,45,0.08)] hover:text-[#5F7D52]`}
           title="下一章"
           aria-label="下一章"
         >
-          ⏭
+          <ChevronsRight aria-hidden="true" size={19} strokeWidth={1.8} />
         </button>
         <span className={`text-right text-xs font-semibold ${mutedClass}`}>
           {Math.round(tempProgress)}%
         </span>
       </div>
 
-      <div className="grid grid-cols-6 gap-1">
-        {actions.map((action) => (
+      <div className="grid grid-cols-6 gap-2">
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
           <button
             key={action.label}
             onClick={action.onClick}
             aria-pressed={action.active}
-            className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold transition-all active:scale-95 ${
+            data-reader-control
+            className={`reader-control-press reader-focus-ring flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold ${
               action.active
                 ? activeClass
                 : `${mutedClass} hover:bg-[rgba(80,65,45,0.05)]`
             }`}
           >
             <span className="flex h-5 min-w-5 items-center justify-center text-sm font-bold">
-              {action.glyph}
+              <Icon aria-hidden="true" size={19} strokeWidth={1.8} />
             </span>
             <span className="max-w-full truncate">{action.label}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

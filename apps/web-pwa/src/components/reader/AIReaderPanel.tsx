@@ -1,7 +1,16 @@
 import React from "react";
 import { strings } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { BookOpenText, ListTree, Network, Tags } from "lucide-react";
+import {
+  BookOpenText,
+  ListTree,
+  Network,
+  Send,
+  Sparkles,
+  Tags,
+  Trash2,
+  X,
+} from "lucide-react";
 import type { AIReadingIntent } from "@reader/shared-types";
 
 export interface AIReaderPanelProps {
@@ -64,7 +73,8 @@ export function AIReaderPanel({
 
       <div className="p-4 border-b border-[rgba(80,65,45,0.12)] flex items-center justify-between bg-[rgba(80,65,45,0.04)] pt-[calc(1rem+env(safe-area-inset-top))]">
         <h2 className="font-bold text-[#9A6A3A] flex items-center">
-          <span className="mr-2">✨</span> {strings.reader.aiAssistant}
+          <Sparkles aria-hidden="true" className="mr-2" size={19} strokeWidth={1.8} />
+          {strings.reader.aiAssistant}
         </h2>
         <div className="flex items-center gap-2">
           {onClearSession && aiSummary && (
@@ -73,19 +83,24 @@ export function AIReaderPanel({
                 e.stopPropagation();
                 setConfirmOpen(true);
               }}
+              aria-label="清除伴读会话"
               title="拂尘扫尘"
-              className="text-[#6F665B] hover:text-[#9A6A3A] transition-all flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] hover:rotate-6 active:scale-95 bg-[rgba(80,65,45,0.02)]"
+              data-reader-control
+              className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl border border-[rgba(80,65,45,0.12)] bg-[rgba(80,65,45,0.02)] px-3 text-xs text-[#6F665B] hover:border-[#9A6A3A] hover:text-[#9A6A3A]"
             >
-              <span className="text-sm">🧹</span>
+              <Trash2 aria-hidden="true" size={18} strokeWidth={1.8} />
               <span className="hidden sm:inline">拂尘</span>
             </button>
           )}
           {isMobileDrawer && onClose && (
             <button
               onClick={onClose}
-              className="text-[#6F665B] p-1 hover:text-inherit"
+              aria-label="关闭伴读"
+              data-icon-only="true"
+              data-reader-control
+              className="reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-xl text-[#6F665B] hover:text-inherit"
             >
-              ✕
+              <X aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
           )}
         </div>
@@ -135,7 +150,8 @@ export function AIReaderPanel({
                 key={intent}
                 onClick={() => onIntent?.(intent)}
                 disabled={isAiLoading}
-                className={`${bubbleBg} flex min-h-11 items-center gap-2 rounded-md border border-[rgba(80,65,45,0.12)] p-3 text-left text-sm text-inherit transition-colors hover:border-[#9A6A3A] disabled:opacity-50`}
+                data-reader-control
+                className={`${bubbleBg} reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-[10px] border border-[rgba(80,65,45,0.12)] p-3 text-left text-sm text-inherit hover:border-[#9A6A3A] disabled:opacity-50`}
               >
                 <Icon aria-hidden="true" size={16} />
                 {label}
@@ -145,13 +161,15 @@ export function AIReaderPanel({
           <div className="mt-3 grid grid-cols-1 gap-2">
             <button
               onClick={() => onAsk?.(strings.reader.questionCharacters)}
-              className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
+              data-reader-control
+              className={`reader-control-press reader-focus-ring min-h-11 text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-[10px] text-inherit shadow-sm`}
             >
               {strings.reader.questionCharacters}
             </button>
             <button
               onClick={() => onAsk?.(strings.reader.questionPlots)}
-              className={`text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-lg text-inherit transition-colors shadow-sm`}
+              data-reader-control
+              className={`reader-control-press reader-focus-ring min-h-11 text-left p-3 text-sm ${bubbleBg} border border-[rgba(80,65,45,0.12)] hover:border-[#9A6A3A] rounded-[10px] text-inherit shadow-sm`}
             >
               {strings.reader.questionPlots}
             </button>
@@ -162,7 +180,7 @@ export function AIReaderPanel({
       {/* 底部聊天框容器：若是移动端则加上 pb-24 以避开大拇指悬浮胶囊 */}
       <div className={`p-4 border-t border-[rgba(80,65,45,0.12)] bg-transparent ${isMobileDrawer ? "pb-24" : "pb-[calc(1rem+env(safe-area-inset-bottom))]"}`}>
         <div
-          className={`flex items-center ${bubbleBg} border border-[rgba(80,65,45,0.12)] rounded-full px-4 py-2 shadow-sm focus-within:border-[#9A6A3A] transition-colors`}
+          className={`flex min-h-11 items-center ${bubbleBg} border border-[rgba(80,65,45,0.12)] rounded-full pl-4 pr-1 shadow-sm focus-within:border-[#9A6A3A] transition-colors`}
         >
           <input
             type="text"
@@ -184,9 +202,11 @@ export function AIReaderPanel({
                 setAiInput?.("");
               }
             }}
-            className="ml-2 text-[#9A6A3A] font-bold text-sm hover:opacity-80 active:scale-95 transition-all"
+            aria-label={strings.reader.send}
+            data-reader-control
+            className="reader-control-press reader-focus-ring ml-2 flex h-11 min-w-11 items-center justify-center rounded-full text-[#9A6A3A]"
           >
-            {strings.reader.send}
+            <Send aria-hidden="true" size={18} strokeWidth={1.8} />
           </button>
         </div>
       </div>
@@ -199,9 +219,10 @@ export function AIReaderPanel({
               e.stopPropagation();
               onClose();
             }}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold backdrop-blur-md transition-all active:scale-95 border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] text-[#2F2A24] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF] shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:opacity-100"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] px-5 text-xs font-bold text-[#2F2A24] shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-md dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF]"
           >
-            ✕ 收起助手
+            <X aria-hidden="true" size={18} strokeWidth={1.8} /> 收起助手
           </button>
         </div>
       )}

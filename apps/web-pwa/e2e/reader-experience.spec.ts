@@ -14,6 +14,10 @@ async function seedReaderBook(
 ) {
   await page.goto("/#/library");
   await page.evaluate(async ({ targetBookId, targetPageMode }) => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
     localStorage.setItem("reader-settings", JSON.stringify({
       fontFamily: "kaiti",
       fontSize: 18,
@@ -521,4 +525,62 @@ test("mobile toolbars never cover scroll content", async ({ page }) => {
     lastParagraph.boundingBox(),
   ]);
   expect(paragraphBox!.y + paragraphBox!.height).toBeLessThanOrEqual(bottomBox!.y);
+});
+
+test("reader controls are touch safe and use coherent icons", async ({ page }) => {
+  await seedReaderBook(page, {
+    bookId: "reader-controls-e2e-book",
+    pageMode: "scroll",
+  });
+  await page.goto("/#/reader/reader-controls-e2e-book");
+
+  const assertTouchSafe = async () => {
+    const controls = page.locator('[data-reader-control]:visible');
+    await expect.poll(() => controls.count()).toBeGreaterThan(0);
+    const boxes = await controls.evaluateAll((nodes) => nodes.map((node) => {
+      const box = node.getBoundingClientRect();
+      return {
+        label: node.getAttribute("aria-label") ?? node.textContent?.trim(),
+        width: box.width,
+        height: box.height,
+      };
+    }));
+    expect(boxes.filter((box) => (
+      Math.round(box.width) < 44 || Math.round(box.height) < 44
+    ))).toEqual([]);
+  };
+
+  await expect(page.locator('[data-reader-toolbar="bottom"]:visible')).toBeVisible({
+    timeout: 15_000,
+  });
+  await assertTouchSafe();
+
+  const toolbarText = await page.locator('[data-reader-toolbar]:visible').allTextContents();
+  expect(toolbarText.join(" ")).not.toMatch(/[✨⚙☾⏮⏭◷☰☆]/u);
+  const iconOnlyButtons = page.locator('button[data-icon-only="true"]:visible');
+  await expect.poll(() => iconOnlyButtons.count()).toBeGreaterThan(0);
+  const unnamedIconButtons = await iconOnlyButtons.evaluateAll((buttons) => (
+    buttons.filter((button) => !button.getAttribute("aria-label")?.trim()).length
+  ));
+  expect(unnamedIconButtons).toBe(0);
+
+  const settingsButton = page.getByRole("button", { name: "阅读设置" }).first();
+  await settingsButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "阅读设置" })).toBeVisible();
+  await assertTouchSafe();
+  await page.getByRole("button", { name: "关闭阅读设置" }).click();
+
+  const tocButton = page.getByRole("button", { name: "目录" });
+  await tocButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "阅读目录" })).toBeVisible();
+  await assertTouchSafe();
+  await page.getByRole("button", { name: "关闭目录" }).click();
+
+  const progressButton = page.getByRole("button", { name: "进度" });
+  await progressButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "阅读进度" })).toBeVisible();
+  await assertTouchSafe();
 });

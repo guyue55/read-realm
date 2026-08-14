@@ -230,6 +230,74 @@ textarea,
     scroll-padding-bottom: var(--reader-mobile-content-bottom);
   }
 
+  .reader-panel-motion {
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms ease-out;
+  }
+
+  .reader-control-press {
+    transition: color 160ms ease, background-color 160ms ease,
+      border-color 160ms ease, opacity 160ms ease;
+  }
+
+  .reader-control-press:active {
+    opacity: 0.72;
+  }
+
+  .reader-focus-ring {
+    outline: none;
+  }
+
+  .reader-focus-ring:focus-visible {
+    outline: 2px solid #678055;
+    outline-offset: 2px;
+  }
+
+  .reader-range {
+    appearance: none;
+    background: transparent;
+  }
+
+  .reader-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(80, 65, 45, 0.16);
+  }
+
+  .reader-range::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    appearance: none;
+    border: 2px solid rgba(255, 252, 245, 0.96);
+    border-radius: 999px;
+    background: #678055;
+    box-shadow: 0 2px 8px rgba(47, 42, 36, 0.18);
+  }
+
+  .reader-range::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(80, 65, 45, 0.16);
+  }
+
+  .reader-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 252, 245, 0.96);
+    border-radius: 999px;
+    background: #678055;
+    box-shadow: 0 2px 8px rgba(47, 42, 36, 0.18);
+  }
+
+  .reader-range-dark::-webkit-slider-runnable-track {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .reader-range-dark::-moz-range-track {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
   /* 动画期间或移动端特定环境下的阻尼降阶，优化高斯拉屏混合开销 */
   .backdrop-blur-reduced {
     backdrop-filter: blur(8px) !important;

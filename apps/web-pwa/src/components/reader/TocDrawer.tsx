@@ -2,6 +2,7 @@ import React from "react";
 import type { Bookmark } from "@reader/shared-types";
 import { strings } from "@/lib/i18n";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
+import { X } from "lucide-react";
 
 export interface TocDrawerProps {
   toc: { index: number; title: string; content?: string }[];
@@ -59,7 +60,8 @@ export function TocDrawer({
         <div className="flex p-2">
           <button
             onClick={() => setActiveTab("toc")}
-            className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${
+            data-reader-control
+            className={`reader-control-press reader-focus-ring flex-1 min-h-11 px-2 text-sm font-bold border-b-2 ${
               activeTab === "toc"
                 ? "border-[#678055] text-[#678055]"
                 : "border-transparent text-[#6F665B]"
@@ -69,7 +71,8 @@ export function TocDrawer({
           </button>
           <button
             onClick={() => setActiveTab("bookmarks")}
-            className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${
+            data-reader-control
+            className={`reader-control-press reader-focus-ring flex-1 min-h-11 px-2 text-sm font-bold border-b-2 ${
               activeTab === "bookmarks"
                 ? "border-[#678055] text-[#678055]"
                 : "border-transparent text-[#6F665B]"
@@ -81,9 +84,11 @@ export function TocDrawer({
             <button
               aria-label="关闭目录"
               onClick={onClose}
-              className="px-2 text-[#6F665B]"
+              data-icon-only="true"
+              data-reader-control
+              className="reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-xl text-[#6F665B]"
             >
-              ✕
+              <X aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
           )}
         </div>
@@ -107,7 +112,8 @@ export function TocDrawer({
                 <button
                   key={item.index}
                   onClick={() => onJumpToChapter(item.index)}
-                  className={`w-full text-left px-4 py-3 border-b border-[rgba(80,65,45,0.04)] flex items-center hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)] ${
+                  data-reader-control
+                  className={`reader-control-press reader-focus-ring min-h-11 w-full text-left px-4 py-3 border-b border-[rgba(80,65,45,0.04)] flex items-center hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)] ${
                     currentChapterIndex === item.index
                       ? "text-[#678055] font-bold"
                       : "text-inherit"
@@ -150,7 +156,8 @@ export function TocDrawer({
                   <button
                     key={bookmark.id}
                     onClick={() => onJumpToBookmark(bookmark)}
-                    className="w-full text-left px-4 py-4 border-b border-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)]"
+                    data-reader-control
+                    className="reader-control-press reader-focus-ring min-h-11 w-full text-left px-4 py-4 border-b border-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.04)] active:bg-[rgba(80,65,45,0.08)]"
                   >
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-sm font-bold text-inherit truncate flex-1 mr-2">
@@ -185,9 +192,10 @@ export function TocDrawer({
               e.stopPropagation();
               onClose();
             }}
-            className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold backdrop-blur-md transition-all active:scale-95 border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] text-[#2F2A24] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF] shadow-[0_8px_24px_rgba(0,0,0,0.16)] hover:opacity-100"
+            data-reader-control
+            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 px-5 rounded-full text-xs font-bold backdrop-blur-md border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] text-[#2F2A24] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF] shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
           >
-            ✕ 收起目录
+            <X aria-hidden="true" size={18} strokeWidth={1.8} /> 收起目录
           </button>
         </div>
       )}
