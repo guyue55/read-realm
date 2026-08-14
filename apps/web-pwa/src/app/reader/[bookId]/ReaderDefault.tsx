@@ -9,6 +9,7 @@ import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { ReaderContent } from "@/components/reader/ReaderContent";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
+import { ReaderProgressRange } from "@/components/reader/ReaderProgressRange";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -963,24 +964,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             >
               <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
-            <input
-              aria-label="拖动阅读进度"
-              data-reader-control
-              type="range"
-              min={0}
-              max={100}
-              step={0.1}
+            <ReaderProgressRange
               value={progressPreview}
-              onChange={(event) => {
-                setProgressPreview(Number(event.currentTarget.value));
+              onPreview={(value) => {
+                setProgressPreview(value);
               }}
-              onPointerUp={(event) => {
-                void seekToProgress(Number(event.currentTarget.value));
-              }}
-              onKeyUp={(event) => {
-                if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) {
-                  void seekToProgress(Number(event.currentTarget.value));
-                }
+              onCommit={(value) => {
+                void seekToProgress(value);
               }}
               className="reader-range reader-focus-ring h-11 w-full accent-[#678055]"
             />

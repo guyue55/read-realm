@@ -19,13 +19,39 @@ const samples = [
   { scenario: "bounded-scroll", maxChapterDom: 3, semanticAnchorVisible: true },
   { scenario: "lifecycle-offline", pagehideRestored: true, offlineObserved: true, semanticAnchorVisible: true },
   { scenario: "bookmark-restore", persisted: true, semanticAnchorVisible: true },
+  {
+    scenario: "mobile-touch",
+    projectName: "mobile-touch",
+    isMobile: true,
+    hasTouch: true,
+    maxTouchPoints: 1,
+    coarsePointer: true,
+    trustedTouchObserved: true,
+    paginationSwipeObserved: true,
+    drawerTapObserved: true,
+    progressDragObserved: true,
+    chapterBoundaryObserved: true,
+  },
+  {
+    scenario: "native-background",
+    platform: "darwin",
+    detachedDuringBackground: true,
+    windowStateSequence: ["normal", "minimized", "normal"],
+    visibilitySequence: ["visible", "hidden", "visible"],
+    progressFlushedWhileHidden: true,
+    semanticAnchorVisible: true,
+    restoreMs: 680,
+  },
 ];
 
 const reliable = {
   listExitCode: 0,
-  listedTestCount: 14,
+  listedTestCount: 15,
+  listedTestCountsByProject: { desktop: 14, "mobile-touch": 1 },
+  listedTestIdsUnique: true,
   serviceReady: true,
   testExitCode: 0,
+  nativeBackgroundExitCode: 0,
   portFreeBefore: true,
   portFreeAfter: true,
   orphanProcessCount: 0,
@@ -60,6 +86,8 @@ test("rejects slow persistence, semantic drift, unbounded DOM and infrastructure
       { ...samples[2], maxChapterDom: 4 },
       samples[3],
       samples[4],
+      samples[5],
+      samples[6],
     ],
   });
   assert.equal(result.classification, "FAIL");
@@ -78,4 +106,69 @@ test("missing, duplicate or failed live tests cannot pass", () => {
     testExitCode: 1,
     samples: [...samples, samples[0]],
   }).classification, "FAIL");
+});
+
+test("rejects viewport-only mobile claims and incomplete touch journeys", () => {
+  const result = classifyPhase04ReaderRun({
+    ...reliable,
+    samples: [
+      ...samples.slice(0, 5),
+      {
+        ...samples[5],
+        isMobile: false,
+        hasTouch: false,
+        trustedTouchObserved: false,
+        progressDragObserved: false,
+      },
+      samples[6],
+    ],
+  });
+  assert.equal(result.classification, "FAIL");
+  assert.deepEqual(result.reasons, [
+    "MOBILE_CONTEXT_NOT_EMULATED",
+    "TOUCH_CONTEXT_NOT_EMULATED",
+    "TRUSTED_TOUCH_NOT_OBSERVED",
+    "TOUCH_PROGRESS_DRAG_NOT_OBSERVED",
+  ]);
+});
+
+test("rejects duplicate or misrouted project enumeration", () => {
+  const result = classifyPhase04ReaderRun({
+    ...reliable,
+    listedTestCountsByProject: { desktop: 15, "mobile-touch": 0 },
+    listedTestIdsUnique: false,
+  });
+  assert.equal(result.classification, "FAIL");
+  assert.deepEqual(result.reasons, [
+    "DESKTOP_TEST_COUNT_15",
+    "MOBILE_TOUCH_TEST_COUNT_0",
+    "LISTED_TEST_IDS_NOT_UNIQUE",
+  ]);
+});
+
+test("rejects synthetic or incomplete native background recovery", () => {
+  const result = classifyPhase04ReaderRun({
+    ...reliable,
+    nativeBackgroundExitCode: 1,
+    samples: [
+      ...samples.slice(0, -1),
+      {
+        ...samples.at(-1),
+        detachedDuringBackground: false,
+        visibilitySequence: ["visible", "visible"],
+        progressFlushedWhileHidden: false,
+        semanticAnchorVisible: false,
+        restoreMs: 2001,
+      },
+    ],
+  });
+  assert.equal(result.classification, "FAIL");
+  assert.deepEqual(result.reasons, [
+    "NATIVE_BACKGROUND_EXIT_1",
+    "BACKGROUND_NOT_DETACHED",
+    "VISIBILITY_SEQUENCE_INVALID",
+    "BACKGROUND_PROGRESS_NOT_FLUSHED",
+    "BACKGROUND_ANCHOR_NOT_VISIBLE",
+    "BACKGROUND_RESTORE_2001MS",
+  ]);
 });

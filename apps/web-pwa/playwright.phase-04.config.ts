@@ -13,8 +13,16 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{
-    name: `chromium-${channel}`,
-    use: { ...devices["Desktop Chrome"], channel },
-  }],
+  projects: [
+    {
+      name: "desktop",
+      testMatch: /reader-experience\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], channel },
+    },
+    {
+      name: "mobile-touch",
+      testMatch: /reader-touch\.spec\.ts/,
+      use: { ...devices["Pixel 5"], channel },
+    },
+  ],
 });
