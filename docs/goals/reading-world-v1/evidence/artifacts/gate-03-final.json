@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0003",
+  "gateId": "GATE-03",
+  "result": "PASS",
+  "generatedAt": "2026-08-14T22:25:33.606Z",
+  "evidenceCommit": "cf1f061bb16b2333a1a6469719e34dc22aad1353",
+  "sourceAttempt": {
+    "path": "docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json",
+    "sha256": "26a01e211b095327a253e0524891792883103a04da95ae54097e445a89a0be55",
+    "implementationHead": "3f3703672ccddb08841dde850662eda0c07c17ab",
+    "experiment": "EXP-14"
+  },
+  "preservedHistory": {
+    "path": "docs/goals/reading-world-v1/evidence/artifacts/history/gate-03-attempt-01-attempt-01/gate-03-attempt-01.json",
+    "sha256": "272d422cf9d48e5294cc46e1ff7c37795225847a844b5030e97e5229d98ba769",
+    "implementationHead": "d0dbd7337970b66a78694f2e6660e7cc675c55d5",
+    "originalEvidenceCommit": "a3da1455a583bdb6ea2d26db1179a198f7c042b8",
+    "classification": "VALIDATOR_INDETERMINATE",
+    "reasons": [
+      "API_SERVICE_NOT_READY",
+      "WEB_SERVICE_NOT_READY",
+      "PRODUCT_STAGE_MARKER_COUNT_0"
+    ],
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 11,
+      "failures": []
+    },
+    "productFailureCount": 0
+  },
+  "verifiedOutcomes": {
+    "discoverablePublicLibrary": true,
+    "explicitNonDefaultMaintenanceCredential": true,
+    "invalidCredentialsRejected": true,
+    "anonymousCatalog": true,
+    "categorySearchAndPagination": true,
+    "immutableFullPackage": true,
+    "newLocalIds": true,
+    "atomicLocalCommit": true,
+    "trueOfflineAfterJoin": true,
+    "personalFactsUnchanged": true,
+    "personalDatabaseSentinelUnchanged": true,
+    "personalBlobSentinelUnchanged": true,
+    "isolatedStoragePaths": true,
+    "productionServers": true,
+    "systemChrome": true,
+    "listedTestCount": 1,
+    "productStageMarkerCount": 1,
+    "apiPortFreeBefore": true,
+    "webPortFreeBefore": true,
+    "apiPortFreeAfter": true,
+    "webPortFreeAfter": true,
+    "orphanProcessCount": 0,
+    "cleanupComplete": true,
+    "strategy": {
+      "fixture": "fixed-legal-two-chapter-txt",
+      "maintenanceCredential": "x-public-library-maintenance-key",
+      "anonymousCatalog": true,
+      "immutableFullPackage": true,
+      "newLocalIds": true,
+      "atomicLocalCommit": true,
+      "trueOfflineAfterJoin": true,
+      "personalSyncSentinel": true,
+      "isolatedPersonalDatabase": true,
+      "isolatedPublicDatabase": true,
+      "isolatedBlobRoots": true,
+      "productionServers": true,
+      "systemChrome": true,
+      "explicitProcessGroups": true,
+      "cleanupIsolatedRoot": true
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 11,
+      "failures": []
+    }
+  },
+  "boundary": "仅证明 PHASE-05 / TASK-0503 的 GATE-03 最小公共藏书纵向切片；不证明 TASK-0504~0506、PHASE-05 整体及 PHASE-06~09、VPS 部署或 Goal 完成。"
+}
