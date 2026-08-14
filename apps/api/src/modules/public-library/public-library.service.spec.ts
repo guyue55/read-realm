@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   ServiceUnavailableException,
@@ -16,6 +17,7 @@ const input = {
 describe('PublicLibraryService maintenance boundary', () => {
   const repository = {
     publishTxt: jest.fn(() => Promise.resolve({ id: 'public-1' })),
+    publishCandidate: jest.fn(() => Promise.resolve({ id: 'public-file' })),
     list: jest.fn(),
     getPackage: jest.fn(),
   };
@@ -35,6 +37,14 @@ describe('PublicLibraryService maintenance boundary', () => {
       expect(repository.publishTxt).not.toHaveBeenCalled();
     },
   );
+
+  it('rejects a same-character-count key with a different UTF-8 byte length', async () => {
+    const service = new PublicLibraryService(repository as never, '藏');
+    await expect(service.publish('x', input)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(repository.publishTxt).not.toHaveBeenCalled();
+  });
 
   it('closes writes when the instance maintenance key is not configured', async () => {
     const service = new PublicLibraryService(repository as never, '');
@@ -69,6 +79,105 @@ describe('PublicLibraryService maintenance boundary', () => {
       existingBookId: 'public-existing',
     });
   });
+
+  it('adapts one verified TXT upload into the canonical publisher', async () => {
+    const service = new PublicLibraryService(
+      repository as never,
+      'configured-key',
+    );
+    const content = Buffer.from('第一章 起点\n浏览器正文');
+    await expect(
+      service.publishFile(
+        'configured-key',
+        { category: '经典', rightsConfirmed: true },
+        {
+          originalname: '浏览器直传.txt',
+          mimetype: 'text/plain',
+          size: content.length,
+          buffer: content,
+        },
+      ),
+    ).resolves.toEqual({ id: 'public-file' });
+    expect(repository.publishCandidate).toHaveBeenCalledWith({
+      title: '浏览器直传',
+      author: undefined,
+      description: undefined,
+      category: '经典',
+      source: {
+        kind: 'browser_file',
+        scope: 'direct-upload',
+        relativePath: '浏览器直传.txt',
+        bytes: content,
+      },
+      chapters: [{ index: 0, title: '第一章 起点', content: '浏览器正文' }],
+      wordCount: 5,
+    });
+  });
+
+  it('rejects malformed file facts before the canonical publisher', async () => {
+    const service = new PublicLibraryService(
+      repository as never,
+      'configured-key',
+    );
+    await expect(
+      service.publishFile(
+        'configured-key',
+        { category: '经典', rightsConfirmed: true },
+        {
+          originalname: 'broken.txt',
+          mimetype: 'text/plain',
+          size: 3,
+          buffer: Buffer.from('x'),
+        },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.publishCandidate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a TXT whose first explicit chapter has no body', async () => {
+    const service = new PublicLibraryService(
+      repository as never,
+      'configured-key',
+    );
+    const content = Buffer.from('第一章\n第二章\n正文');
+    await expect(
+      service.publishFile(
+        'configured-key',
+        { category: '经典', rightsConfirmed: true },
+        {
+          originalname: 'empty-first.txt',
+          mimetype: 'text/plain',
+          size: content.length,
+          buffer: content,
+        },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.publishCandidate).not.toHaveBeenCalled();
+  });
+
+  it.each(['../escape.txt', '   .txt', 'line\nbreak.txt'])(
+    'rejects unsafe filename %p even if transport sanitization is bypassed',
+    async (originalname) => {
+      const service = new PublicLibraryService(
+        repository as never,
+        'configured-key',
+      );
+      const content = Buffer.from('完整正文');
+      await expect(
+        service.publishFile(
+          'configured-key',
+          { category: '经典', rightsConfirmed: true },
+          {
+            originalname,
+            mimetype: 'text/plain',
+            size: content.length,
+            buffer: content,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repository.publishCandidate).not.toHaveBeenCalled();
+    },
+  );
 
   it('maps a stale catalog revision to an explicit restart response', async () => {
     repository.list.mockRejectedValueOnce(

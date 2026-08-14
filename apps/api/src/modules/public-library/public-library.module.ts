@@ -9,6 +9,7 @@ import {
   resolvePublicLibrarySqliteDbPath,
 } from '../../common/blob-storage-path';
 import { PublicLibraryController } from './public-library.controller';
+import { PublicLibraryMaintenanceGuard } from './public-library-maintenance.guard';
 import {
   preparePublicLibraryDatabase,
   PublicLibraryRepository,
@@ -23,6 +24,7 @@ export const PUBLIC_LIBRARY_BLOB_STORAGE = Symbol(
 @Module({
   controllers: [PublicLibraryController],
   providers: [
+    PublicLibraryMaintenanceGuard,
     {
       provide: PUBLIC_LIBRARY_DB,
       useFactory: async () => {

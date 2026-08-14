@@ -22,6 +22,7 @@ export function parseTxtBook(
   let currentChapterTitle = "前言";
   let currentChapterLines: string[] = [];
   let chapterIndex = 0;
+  let hasExplicitChapterTitle = false;
   // 跟踪段落间的空行数量，保留原始排版呼吸感
   let pendingBlankLines = 0;
 
@@ -37,7 +38,11 @@ export function parseTxtBook(
     const trimmed = line.trim();
 
     // 章节标题检测：trimmed 长度 ≤ 100 且匹配章节正则
-    if (trimmed.length > 0 && trimmed.length <= 100 && chapterRegex.test(trimmed)) {
+    if (
+      trimmed.length > 0 &&
+      trimmed.length <= 100 &&
+      chapterRegex.test(trimmed)
+    ) {
       // 保存上一章（如有内容或非首章）
       if (currentChapterLines.length > 0) {
         chapters.push({
@@ -45,7 +50,7 @@ export function parseTxtBook(
           title: currentChapterTitle.trim(),
           content: currentChapterLines.join("\n").trim(),
         });
-      } else if (chapterIndex > 0) {
+      } else if (hasExplicitChapterTitle) {
         // 上一章仅有标题无正文（如作者占位的空章），仍保留
         chapters.push({
           index: chapterIndex++,
@@ -54,6 +59,7 @@ export function parseTxtBook(
         });
       }
       currentChapterTitle = trimmed;
+      hasExplicitChapterTitle = true;
       currentChapterLines = [];
       pendingBlankLines = 0;
     } else {
@@ -72,7 +78,11 @@ export function parseTxtBook(
   }
 
   // Push final chapter
-  if (currentChapterLines.length > 0 || chapterIndex === 0) {
+  if (
+    currentChapterLines.length > 0 ||
+    hasExplicitChapterTitle ||
+    chapters.length === 0
+  ) {
     chapters.push({
       index: chapterIndex,
       title: currentChapterTitle.trim(),
