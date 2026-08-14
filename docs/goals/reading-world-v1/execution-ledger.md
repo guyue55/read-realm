@@ -7,7 +7,7 @@
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
 - 当前入口：PHASE-05 / TASK-0503；只实现 GATE-03 最小纵切：独立公共馆藏存储/API、显式非默认密钥上传、匿名分页浏览、复制加入本地与真断网阅读，通过前隐藏扩张入口。
-- 最近有效提交：bda528a
+- 最近有效提交：d0dbd73
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/reader-ux-final.json，SHA-256 `f892de2c243840c23e513424a1c4ff90645ba62f0ef4ea2c9b224baf5ad14c84`，2026-08-15T01:43:41+08:00
 - 当前阻塞：无；PHASE-02/03/04、GATE-00/01 与 RISK-03 已通过，TASK-0501/0502 已完成。藏经阁保持为 PHASE-05 独立公共明文域；TASK-0503 只做 GATE-03 最小纵切，通过前不开放 TASK-0504 扫描/批量/多视图扩张。
 - 停止原因：无；从 PHASE-05 / TASK-0503 继续，EVID-02/03/04/05/07/16/17/25、PHASE-04 失败归档、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
@@ -31,6 +31,7 @@
 - RUN-0039：保持执行中；TASK-0404 与 PHASE-04 完成，PHASE-05 进入执行中，当前入口推进至 TASK-0501。依据：新 A/B 候选、独立终审 PASS、EVID-02/07 FINAL 及二次独立复算；Goal 仍未完成。
 - RUN-0040：保持执行中；TASK-0501 完成，当前入口推进至 TASK-0502。依据：书架查询/原子命令/恢复真相/48 项有界窗口/个人同步分层四个提交 `91a39d8..eeff7cb`，500 书/500 书箧、个人同步、storage/Web 定向门禁与独立整任务审查 READY；PHASE-05、EVID-06/14/23/55/56/57 与 Goal 仍未完成。
 - RUN-0041：保持执行中；TASK-0502 完成，当前入口推进至 TASK-0503。依据：实现提交 `bda528a`，搜索/笔记/设置/危险维护操作真实反馈、原子读写与私有搜索 200 条上界闭合；全量单测、生产构建、12 条系统 Chrome 旅程和独立终审 READY。GATE-03、TASK-0503/0504/0505/0506、PHASE-05 与 Goal 仍未完成。
+- RUN-0042：保持执行中；TASK-0503 实现候选已提交 `d0dbd73`，首次正式 EXP-14 在 clean 候选上归类 `VALIDATOR_INDETERMINATE`。依据：EVID-59 的 11/11 records SHA 匹配，10/11 checks 通过，个人事实源哨兵、端口、进程与清理均闭合；生产 API 因未显式声明直接运行时依赖 `express` 而未启动，未进入产品断言阶段。EXP-14 产品/设计失败计数为 0，修复验证器后仍重放 EXP-14，不转 EXP-15，GATE-03 未通过。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -414,3 +415,11 @@
 - 安全与诚实边界：34 个改动文件同源启发式预检为 27 Green、7 Yellow、0 Red；Yellow 逐项确认为本地测试 URL、SVG namespace、Dexie/IndexedDB `open()` 与无效测试域名，不含密钥或个人绝对路径。全仓 scanner 仍因 PHASE-01 已登记的 `.DS_Store`、`.vscode`、历史绝对路径、生成壳资源、字体/图标二进制与环境变量规则误报为 Red，不声称全仓安全通过。
 - 独立复审：首次审查保留 5 项 P1，后续轮次继续发现 indexed file 残留、搜索跨上下文覆盖与 500 条结果上界缺口；最终最新树复算 READY，P0=0、P1=0，确认 `already_local` 未破坏既有个人同步恢复。
 - 状态与下一入口：TASK-0502 完成；PHASE-05、EVID-06/14/23/55/56/57 与 Goal 继续执行中。下一入口为 TASK-0503/GATE-03，仅做独立公共明文域最小纵切；未通过前不实现目录扫描、批量上传、多视图或个人书架发布扩张。
+
+### RUN-0042 · 2026-08-15T06:02:58+08:00 · PHASE-05 / TASK-0503 首次 GATE-03 正式重放不可判定
+- 本轮边界：仅提交 GATE-03 最小纵切与正式验证器；仍未开放目录扫描、批量上传、多视图、个人书架发布或 VPS 部署，公共域未复用个人 `/books`、`x-share-token`、个人 DB/Blob 或同步任务。
+- 实现候选：后端独立公共 SQLite、Blob、API 与维护凭据为 `10d635a`；前端匿名浏览、分类/检索/分页、整本校验后新 ID 原子加入、真断网阅读、存储路径 fail-closed 与正式 runner 为 `d0dbd73`。独立业务终审仅放行候选提交，不代表 GATE-03 通过。
+- 正式结果：clean@`d0dbd7337970b66a78694f2e6660e7cc675c55d5` 执行 EVID-59，API/Web 测试、非写入 lint、类型、构建与合同共 10/10 通过，live exit 1；报告 SHA-256 `8752655f4cbfc19132ba2ea9e349bcc3d63b3e36094b577947110ebcc1659471`，11/11 records 实际 SHA 匹配，tracked mutation 0。
+- 分类与原因：外层与独立复算均为 `VALIDATOR_INDETERMINATE / API_SERVICE_NOT_READY / WEB_SERVICE_NOT_READY / PRODUCT_STAGE_MARKER_COUNT_0`。`apps/api/src/main.ts` 直接 import/use `express`，但 API workspace 未将其声明为直接生产依赖，`node dist/main.js` 在 pnpm 严格隔离下启动前失败。这是生产装配/验证器事实，尚未进入产品断言阶段。
+- 副作用复算：个人 DB 哨兵前后同 SHA `f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638`，个人 Blob 哨兵前后同 SHA `ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d`；3100/4100 前后空闲，孤儿进程 0，隔离根已清理。
+- 计数与下一入口：该结果不计 EXP-14 产品/设计失败，当前计数 0/3；不转 EXP-15，不触发熔断。下一入口是显式声明 API 直接生产依赖，先提交 EVID-59 原始失败证据，再在 clean 工作树上以同一命令重放 EXP-14；归档机制必须保留本轮 report/records，禁止手工覆盖。
