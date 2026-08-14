@@ -8,6 +8,7 @@ import { SearchModule } from './modules/search/search.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { FolderModule } from './modules/folder/folder.module';
+import { PublicLibraryModule } from './modules/public-library/public-library.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FolderModule } from './modules/folder/folder.module';
     AiModule,
     ImportsModule,
     FolderModule,
+    PublicLibraryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

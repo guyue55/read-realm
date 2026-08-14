@@ -45,3 +45,25 @@ export function resolveSqliteDbPath(): string {
     return path.resolve(process.cwd(), '../../data/app.sqlite');
   }
 }
+
+export function resolvePublicLibraryBlobStoragePath(): string {
+  const fromEnv = process.env.READER_PUBLIC_LIBRARY_BLOB_STORAGE_PATH;
+  if (fromEnv?.trim()) return path.resolve(fromEnv);
+  return path.join(
+    path.resolve(__dirname, '../../../..'),
+    'data',
+    'public-library',
+    'objects',
+  );
+}
+
+export function resolvePublicLibrarySqliteDbPath(): string {
+  const fromEnv = process.env.READER_PUBLIC_LIBRARY_DB_PATH;
+  if (fromEnv?.trim()) return path.resolve(fromEnv);
+  return path.join(
+    path.resolve(__dirname, '../../../..'),
+    'data',
+    'public-library',
+    'catalog.sqlite',
+  );
+}
