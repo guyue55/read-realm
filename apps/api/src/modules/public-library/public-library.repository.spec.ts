@@ -67,4 +67,29 @@ describe('PublicLibraryRepository', () => {
       totalPages: 1,
     });
   });
+
+  it('does not expose a directory row when the immutable blob write fails', async () => {
+    const failingRepository = new PublicLibraryRepository(
+      client,
+      {
+        putObject: jest.fn(() =>
+          Promise.reject(new Error('INJECTED_PUBLIC_BLOB_FAILURE')),
+        ),
+        getObject: jest.fn(),
+      } as never,
+      () => '2026-08-15T00:00:00.000Z',
+    );
+
+    await expect(
+      failingRepository.publishTxt({
+        title: '不得半可见',
+        category: '其他',
+        content: '完整正文',
+        rightsConfirmed: true,
+      }),
+    ).rejects.toThrow('INJECTED_PUBLIC_BLOB_FAILURE');
+    await expect(
+      repository.list({ q: '不得半可见', page: 1, pageSize: 24 }),
+    ).resolves.toMatchObject({ total: 0, items: [] });
+  });
 });

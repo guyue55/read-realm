@@ -34,6 +34,10 @@ export default defineConfig({
         CORS_ORIGIN: "http://127.0.0.1:3100",
         READER_SQLITE_DB_PATH: "../../.tmp/e2e/reader.sqlite",
         READER_BLOB_STORAGE_PATH: "../../.tmp/e2e/blobs",
+        READER_PUBLIC_LIBRARY_DB_PATH: "../../.tmp/e2e/public-library.sqlite",
+        READER_PUBLIC_LIBRARY_BLOB_STORAGE_PATH:
+          "../../.tmp/e2e/public-library-objects",
+        READER_PUBLIC_LIBRARY_MAINTENANCE_KEY: "gate-03-fixture-key",
       },
     },
     {

@@ -1,5 +1,12 @@
 import type { LucideIcon } from "lucide-react";
-import { FileUp, Library, NotebookPen, Search, Settings } from "lucide-react";
+import {
+  BookMarked,
+  FileUp,
+  Library,
+  NotebookPen,
+  Search,
+  Settings,
+} from "lucide-react";
 import { PRODUCT_LANGUAGE, type ProductTerm } from "@/lib/product-language";
 import type { AppView } from "@/lib/navigation-state";
 
@@ -16,6 +23,12 @@ export const APP_NAV_ITEMS: readonly AppNavItem[] = [
     icon: Library,
     term: PRODUCT_LANGUAGE.navigation.library,
     view: "library",
+  },
+  {
+    href: "/public-library",
+    icon: BookMarked,
+    term: PRODUCT_LANGUAGE.navigation.publicLibrary,
+    view: "public-library",
   },
   {
     href: "/search",

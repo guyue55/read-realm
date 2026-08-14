@@ -4,6 +4,7 @@ import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
+  assertResolvedPublicLibraryStorageIsolation,
   resolvePublicLibraryBlobStoragePath,
   resolvePublicLibrarySqliteDbPath,
 } from '../../common/blob-storage-path';
@@ -25,6 +26,7 @@ export const PUBLIC_LIBRARY_BLOB_STORAGE = Symbol(
     {
       provide: PUBLIC_LIBRARY_DB,
       useFactory: async () => {
+        assertResolvedPublicLibraryStorageIsolation();
         const databasePath = resolvePublicLibrarySqliteDbPath();
         mkdirSync(dirname(databasePath), { recursive: true });
         const client = createClient({ url: `file:${databasePath}` });
@@ -34,8 +36,10 @@ export const PUBLIC_LIBRARY_BLOB_STORAGE = Symbol(
     },
     {
       provide: PUBLIC_LIBRARY_BLOB_STORAGE,
-      useFactory: () =>
-        new LocalFileBlobStorage(resolvePublicLibraryBlobStoragePath()),
+      useFactory: () => {
+        assertResolvedPublicLibraryStorageIsolation();
+        return new LocalFileBlobStorage(resolvePublicLibraryBlobStoragePath());
+      },
     },
     {
       provide: PublicLibraryRepository,
