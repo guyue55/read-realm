@@ -4,8 +4,7 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, us
 import {
   paginateContentAdaptive,
   getCurrentPageIndex,
-  getNextPageScrollLeft,
-  getPrevPageScrollLeft,
+  getPageScrollLeft,
   findPageIndexForAnchor,
   getPaginationSpacerWidth,
   renderPaginationPage,
@@ -129,23 +128,23 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
       nextPage: () => {
         const container = scrollRef.current;
         if (!container || containerWidth <= 0 || totalPages <= 1) return false;
-        const current = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+        const current = currentPage;
         if (current >= totalPages - 1) return false;
-        const next = getNextPageScrollLeft(container.scrollLeft, containerWidth, totalPages);
+        const next = getPageScrollLeft(current + 1, containerWidth);
         container.scrollTo({ left: next, behavior: 'smooth' });
         return true;
       },
       prevPage: () => {
         const container = scrollRef.current;
         if (!container || containerWidth <= 0) return false;
-        const current = getCurrentPageIndex(container.scrollLeft, containerWidth, Number.MAX_SAFE_INTEGER);
+        const current = currentPage;
         if (current <= 0) return false;
-        const prev = getPrevPageScrollLeft(container.scrollLeft, containerWidth);
+        const prev = getPageScrollLeft(current - 1, containerWidth);
         container.scrollTo({ left: prev, behavior: 'smooth' });
         return true;
       },
       getScrollContainer: () => scrollRef.current,
-    }), [containerWidth, totalPages]);
+    }), [containerWidth, currentPage, totalPages]);
 
     useEffect(() => {
       const el = outerRef.current;
@@ -237,28 +236,28 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
 
         if (e.key === 'ArrowRight' || e.key === 'PageDown') {
           e.preventDefault();
-          const current = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+          const current = currentPage;
           if (current >= totalPages - 1) {
             void onBoundaryNext?.();
             return;
           }
-          const next = getNextPageScrollLeft(container.scrollLeft, containerWidth, totalPages);
+          const next = getPageScrollLeft(current + 1, containerWidth);
           container.scrollTo({ left: next, behavior: 'smooth' });
         } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
           e.preventDefault();
-          const current = getCurrentPageIndex(container.scrollLeft, containerWidth, totalPages);
+          const current = currentPage;
           if (current <= 0) {
             void onBoundaryPrev?.();
             return;
           }
-          const prev = getPrevPageScrollLeft(container.scrollLeft, containerWidth);
+          const prev = getPageScrollLeft(current - 1, containerWidth);
           container.scrollTo({ left: prev, behavior: 'smooth' });
         }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [containerWidth, totalPages, onBoundaryNext, onBoundaryPrev]);
+    }, [containerWidth, currentPage, totalPages, onBoundaryNext, onBoundaryPrev]);
 
     useEffect(() => {
       const container = scrollRef.current;

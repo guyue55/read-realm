@@ -217,17 +217,6 @@ function getReaderPaginationStep(container: HTMLDivElement): number {
   return container.clientWidth + PAGE_GAP;
 }
 
-function getContainerOffsetRatio(
-  container: HTMLDivElement,
-  pageMode: "scroll" | "pagination",
-) {
-  if (pageMode === "scroll") {
-    return container.scrollTop / (container.scrollHeight - container.clientHeight || 1);
-  }
-
-  return container.scrollLeft / (container.scrollWidth - container.clientWidth || 1);
-}
-
 function getRenderedChapterElement(
   container: HTMLDivElement | null,
   chapterIndex: number,
@@ -638,6 +627,21 @@ export function useReader(bookId: string) {
     contentPreview?: string;
     onSettled?: (finalOffset: number, maxOffset: number) => void | Promise<void>;
   } | null>(null);
+  const semanticLayoutAnchorRef = useRef<{
+    chapterIndex: number;
+    paragraphIndex: number;
+    characterOffset: number;
+  } | null>(null);
+  const latestSemanticAnchorRef = useRef<{
+    chapterIndex: number;
+    paragraphIndex: number;
+    characterOffset: number;
+  } | null>(null);
+  const panelSemanticAnchorRef = useRef<{
+    chapterIndex: number;
+    paragraphIndex: number;
+    characterOffset: number;
+  } | null>(null);
 
   renderedChaptersRef.current = renderedChapters;
 
@@ -648,6 +652,11 @@ export function useReader(bookId: string) {
     scrollWindowReflowRef.current = false;
     scrollWindowReflowTargetRef.current = null;
     renderedChaptersRef.current = [nextChapter];
+    latestSemanticAnchorRef.current = {
+      chapterIndex: nextChapter.index,
+      paragraphIndex: 0,
+      characterOffset: 0,
+    };
     setRenderedChapters([nextChapter]);
   }, []);
 
@@ -1024,13 +1033,6 @@ export function useReader(bookId: string) {
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  const togglePanel = useCallback(
-    (panel: "toc" | "progress" | "ai" | "settings") => {
-      setActivePanel((prev) => (prev === panel ? null : panel));
-    },
-    [],
-  );
-
   const appendBookmarkToSession = useCallback((bookmark: Bookmark) => {
     const nextBookmarks = [...bookmarksRef.current, bookmark];
     bookmarksRef.current = nextBookmarks;
@@ -1073,17 +1075,20 @@ export function useReader(bookId: string) {
     if (!container) return { paragraphIndex: 0, characterOffset: 0 };
 
     const rect = container.getBoundingClientRect();
-    // Try points in a grid starting from top-left padding to find the first visible paragraph
-    const x = rect.left + 48;
+    // Resolve from reader-owned geometry instead of elementFromPoint. Overlaid settings,
+    // progress and note surfaces may cover the reading line while the semantic anchor
+    // still belongs to the unchanged paragraph underneath.
+    const readingLine = rect.top + Math.min(120, Math.max(12, rect.height * 0.12));
+    const paragraphs = Array.from(container.querySelectorAll("p[data-idx]"));
     let targetP: Element | null = null;
     let paragraphIndex = 0;
     let characterOffset = 0;
 
-    for (let yOffset = 12; yOffset < rect.height; yOffset += 24) {
-      const el = document.elementFromPoint(x, rect.top + yOffset);
-      const p = el?.closest("p[data-idx]");
-      if (p) {
-        targetP = p;
+    for (const paragraph of paragraphs) {
+      const paragraphRect = paragraph.getBoundingClientRect();
+      const intersectsHorizontally = paragraphRect.right > rect.left && paragraphRect.left < rect.right;
+      if (intersectsHorizontally && paragraphRect.bottom > readingLine) {
+        targetP = paragraph;
         break;
       }
     }
@@ -1100,7 +1105,7 @@ export function useReader(bookId: string) {
       
       const isScroll = settings.pageMode === "scroll";
       if (isScroll) {
-        const dY = rect.top - pRect.top;
+        const dY = readingLine - pRect.top;
         if (dY > 0 && pRect.height > 0) {
           const ratio = dY / pRect.height;
           characterOffset += Math.floor(ratio * text.length);
@@ -1115,6 +1120,24 @@ export function useReader(bookId: string) {
     }
     return { paragraphIndex, characterOffset };
   }, [settings.pageMode]);
+
+  const togglePanel = useCallback(
+    (panel: "toc" | "progress" | "ai" | "settings") => {
+      if (activePanel === panel) {
+        panelSemanticAnchorRef.current = null;
+        setActivePanel(null);
+        return;
+      }
+      if (chapter) {
+        panelSemanticAnchorRef.current = {
+          chapterIndex: chapter.index,
+          ...getPrecisePosition(),
+        };
+      }
+      setActivePanel(panel);
+    },
+    [activePanel, chapter, getPrecisePosition],
+  );
 
   const scrollToOffsetRatio = useCallback(
     (ratio: number) => {
@@ -1154,6 +1177,9 @@ export function useReader(bookId: string) {
 
     const handleScroll = () => {
       if (!isPositionRestoredRef.current) return;
+      // Reader-owned overlays may trigger layout/scroll events while covering the
+      // reading line. They are configuration interactions, not reading progress.
+      if (activePanel) return;
       if (scrollWindowReflowRef.current) {
         const target = scrollWindowReflowTargetRef.current;
         // DOM commit 到 layout effect 之间尚未建立补偿目标，这段只能是内部重排事件。
@@ -1233,6 +1259,13 @@ export function useReader(bookId: string) {
             toc.length,
           )
         : null;
+      if (semanticProgress) {
+        latestSemanticAnchorRef.current = {
+          chapterIndex: semanticProgress.chapterIndex,
+          paragraphIndex: semanticProgress.paragraphIndex ?? 0,
+          characterOffset: semanticProgress.characterOffset ?? 0,
+        };
+      }
 
       // 触底自动切章逻辑监控
       if (settings.pageMode === "scroll" && settings.autoFlipAtBottom && activeChapterIndex < toc.length - 1) {
@@ -1305,6 +1338,7 @@ export function useReader(bookId: string) {
     buildReadingProgress,
     ensureScrollChapterWindow,
     engine,
+    activePanel,
   ]);
 
   // 组件退出时立即发起剩余进度的持久化，不会提前清除失败值。
@@ -1799,6 +1833,7 @@ export function useReader(bookId: string) {
         }
         return { chapterIndex: chapter.index, ...anchor };
       });
+      latestSemanticAnchorRef.current = { chapterIndex: chapter.index, ...anchor };
       const semanticProgress = session.trackPosition(
         chapter,
         {
@@ -2537,14 +2572,55 @@ ${data.answer || "未能生成回答。"}`;
   }, [chapter, bookId, showToast]);
 
 
+  const prepareSemanticLayoutRestore = useCallback(
+    (targetMode: "scroll" | "pagination") => {
+      if (!chapter) return;
+      const retained = semanticLayoutAnchorRef.current;
+      const panelAnchor = panelSemanticAnchorRef.current;
+      const latest = latestSemanticAnchorRef.current;
+      const anchor = retained ?? panelAnchor ?? latest ?? {
+        chapterIndex: chapter.index,
+        ...getPrecisePosition(),
+      };
+      if (anchor.chapterIndex !== chapter.index) {
+        const anchoredChapter = renderedChaptersRef.current.find(
+          (candidate) => candidate.index === anchor.chapterIndex,
+        );
+        if (anchoredChapter) {
+          engine?.hydrateChapter(anchoredChapter);
+          setChapter(anchoredChapter);
+        }
+      }
+      if (targetMode === "pagination") {
+        // PaginatedReader owns semantic page restoration. A second parent-level
+        // scrollIntoView would emit a page-start anchor and overwrite the exact
+        // character selected before the mode change.
+        pendingScrollRestoreRef.current = null;
+        semanticLayoutAnchorRef.current = null;
+        setPaginationAnchor(anchor);
+        setIsPositionRestored(true);
+        return;
+      }
+      semanticLayoutAnchorRef.current = anchor;
+      pendingScrollRestoreRef.current = {
+        offset: 0,
+        paragraphIndex: anchor.paragraphIndex,
+        characterOffset: anchor.characterOffset,
+        onSettled: () => {
+          if (semanticLayoutAnchorRef.current === anchor) {
+            semanticLayoutAnchorRef.current = null;
+          }
+        },
+      };
+      setIsPositionRestored(false);
+    },
+    [chapter, engine, getPrecisePosition, setIsPositionRestored],
+  );
+
   const updateFontSize = useCallback(
     (delta: number) => {
-      const container = contentRef.current;
-      let percentage = 0;
-      if (container && settings.pageMode === "scroll") {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-        pendingScrollRestoreRef.current = { ratio: percentage };
-        setIsPositionRestored(false);
+      if (settings.pageMode === "scroll") {
+        prepareSemanticLayoutRestore("scroll");
       }
 
       const newSize = Math.max(
@@ -2554,7 +2630,7 @@ ${data.answer || "未能生成回答。"}`;
       applySettings({ fontSize: newSize });
 
     },
-    [applySettings, settings.pageMode, setIsPositionRestored],
+    [applySettings, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updateTheme = useCallback(
@@ -2566,84 +2642,61 @@ ${data.answer || "未能生成回答。"}`;
 
   const updateFontFamily = useCallback(
     (fontFamily: "kaiti" | "songti" | "heiti") => {
-      const container = contentRef.current;
-      let percentage = 0;
-      if (container && settings.pageMode === "scroll") {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-        pendingScrollRestoreRef.current = { ratio: percentage };
-        setIsPositionRestored(false);
+      if (settings.pageMode === "scroll") {
+        prepareSemanticLayoutRestore("scroll");
       }
 
       applySettings({ fontFamily });
 
     },
-    [applySettings, settings.pageMode, setIsPositionRestored],
+    [applySettings, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updatePageMode = useCallback(
     (mode: "scroll" | "pagination") => {
       if (!chapter) return;
       if (mode === settings.pageMode) return;
-      let percentage = 0;
-      const container = contentRef.current;
-      if (container) {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-      }
-
-      pendingScrollRestoreRef.current = { ratio: percentage };
-      setIsPositionRestored(false);
+      prepareSemanticLayoutRestore(mode);
 
       applySettings({ pageMode: mode });
     },
-    [applySettings, chapter, settings.pageMode, setIsPositionRestored],
+    [applySettings, chapter, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updateParagraphSpacing = useCallback(
     (spacing: number) => {
-      const container = contentRef.current;
-      let percentage = 0;
-      if (container && settings.pageMode === "scroll") {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-        pendingScrollRestoreRef.current = { ratio: percentage };
-        setIsPositionRestored(false);
+      if (settings.pageMode === "scroll") {
+        prepareSemanticLayoutRestore("scroll");
       }
 
       applySettings({ paragraphSpacing: spacing });
 
     },
-    [applySettings, settings.pageMode, setIsPositionRestored],
+    [applySettings, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updateLetterSpacing = useCallback(
     (spacing: number) => {
-      const container = contentRef.current;
-      let percentage = 0;
-      if (container && settings.pageMode === "scroll") {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-        pendingScrollRestoreRef.current = { ratio: percentage };
-        setIsPositionRestored(false);
+      if (settings.pageMode === "scroll") {
+        prepareSemanticLayoutRestore("scroll");
       }
 
       applySettings({ letterSpacing: spacing });
 
     },
-    [applySettings, settings.pageMode, setIsPositionRestored],
+    [applySettings, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updateLineHeight = useCallback(
     (height: number) => {
-      const container = contentRef.current;
-      let percentage = 0;
-      if (container && settings.pageMode === "scroll") {
-        percentage = getContainerOffsetRatio(container, settings.pageMode);
-        pendingScrollRestoreRef.current = { ratio: percentage };
-        setIsPositionRestored(false);
+      if (settings.pageMode === "scroll") {
+        prepareSemanticLayoutRestore("scroll");
       }
 
       applySettings({ lineHeight: height });
 
     },
-    [applySettings, settings.pageMode, setIsPositionRestored],
+    [applySettings, prepareSemanticLayoutRestore, settings.pageMode],
   );
 
   const updateAutoFlipAtBottom = useCallback(
