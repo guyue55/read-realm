@@ -205,6 +205,9 @@ importers:
       eslint-config-next:
         specifier: 15.5.20
         version: 15.5.20(eslint@8.57.1)(typescript@5.9.3)
+      fake-indexeddb:
+        specifier: ^6.2.4
+        version: 6.2.5
       postcss:
         specifier: 8.5.16
         version: 8.5.16

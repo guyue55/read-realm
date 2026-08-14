@@ -2,6 +2,7 @@ import {
   BookSchema,
   BookmarkSchema,
   ReadingProgressSchema,
+  createId,
   type Book,
   type Bookmark,
   type ReadingProgress,
@@ -9,10 +10,14 @@ import {
 
 export const META_SHELF_BACKUP_KEY = "read_realm_meta_shelf_backup";
 export const META_SHELF_RECOVERY_GAP_KEY = "read_realm_meta_shelf_recovery_gap";
+export const META_SHELF_EMPTY_ACK_KEY = "read_realm_meta_shelf_empty_ack";
+export const META_SHELF_NATIVE_BACKUP_ID_KEY =
+  "read_realm_meta_shelf_native_backup_id";
 export const MAX_BROWSER_BACKUP_BOOKS = 100;
 export const MAX_BROWSER_BACKUP_BOOKMARKS = 500;
 
 export interface MetaShelfBackup {
+  backupId: string;
   books: Book[];
   progress: ReadingProgress[];
   bookmarks: Bookmark[];
@@ -95,6 +100,7 @@ export function buildBrowserMetaShelfBackup({
   const allowedBookIds = new Set(books.map((book) => book.id));
 
   return {
+    backupId: createId(),
     books,
     progress: inputProgress.filter((item) => allowedBookIds.has(item.bookId)),
     bookmarks: inputBookmarks
@@ -111,6 +117,89 @@ export function readMetaShelfRecoveryGap(storage: Pick<Storage, "getItem">): num
   if (raw === null) return 0;
   const parsed = Number(raw);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function legacyBackupIdentity(serialized: string): string {
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let index = 0; index < serialized.length; index += 1) {
+    const code = serialized.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193) >>> 0;
+    second = Math.imul(second ^ code, 0x85ebca6b) >>> 0;
+  }
+  return `legacy:${first.toString(16).padStart(8, "0")}${second
+    .toString(16)
+    .padStart(8, "0")}`;
+}
+
+export function getMetaShelfBackupIdentity(serialized: string): string {
+  const backup = parseMetaShelfBackup(serialized);
+  return `id:${backup.backupId}`;
+}
+
+export function createEmptyShelfAcknowledgement(
+  storage: Pick<Storage, "getItem">,
+  acknowledgedAt: string,
+): string {
+  const currentBackup = storage.getItem(META_SHELF_BACKUP_KEY);
+  const identities = new Set<string>();
+  if (currentBackup !== null) {
+    identities.add(getMetaShelfBackupIdentity(currentBackup));
+  }
+  const nativeIdentity = storage.getItem(META_SHELF_NATIVE_BACKUP_ID_KEY);
+  if (nativeIdentity) identities.add(nativeIdentity);
+  return JSON.stringify({
+    acknowledgedAt,
+    supersededBackupIdentities: [...identities],
+  });
+}
+
+export function hasAcknowledgedEmptyShelf(
+  storage: Pick<Storage, "getItem">,
+): boolean {
+  return isMetaShelfBackupAcknowledgedEmpty(
+    storage,
+    storage.getItem(META_SHELF_BACKUP_KEY),
+  );
+}
+
+export function isMetaShelfBackupAcknowledgedEmpty(
+  storage: Pick<Storage, "getItem">,
+  serializedBackup: string | null,
+): boolean {
+  const raw = storage.getItem(META_SHELF_EMPTY_ACK_KEY);
+  if (raw === null) return false;
+  try {
+    const candidate = JSON.parse(raw) as Record<string, unknown>;
+    if (
+      typeof candidate.acknowledgedAt !== "string" ||
+      Number.isNaN(Date.parse(candidate.acknowledgedAt))
+    ) {
+      return false;
+    }
+    const expectedIdentities = Array.isArray(
+      candidate.supersededBackupIdentities,
+    )
+      ? candidate.supersededBackupIdentities.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : typeof candidate.supersededBackupIdentity === "string"
+        ? [candidate.supersededBackupIdentity]
+        : [];
+    if (serializedBackup === null) return expectedIdentities.length === 0;
+    const candidateIdentity = getMetaShelfBackupIdentity(serializedBackup);
+    if (expectedIdentities.includes(candidateIdentity)) return true;
+    if (candidateIdentity.startsWith("id:legacy:")) {
+      const legacyBackup = parseMetaShelfBackup(serializedBackup);
+      return (
+        Date.parse(legacyBackup.backupTime) <=
+        Date.parse(candidate.acknowledgedAt)
+      );
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function getMetaShelfBackupCompleteness(
@@ -183,6 +272,10 @@ export function parseMetaShelfBackup(serialized: string): MetaShelfBackup {
     throw new Error("META_SHELF_BACKUP_COUNT_MISMATCH");
   }
   return {
+    backupId:
+      typeof candidate.backupId === "string" && candidate.backupId.length > 0
+        ? candidate.backupId
+        : legacyBackupIdentity(serialized),
     books,
     progress,
     bookmarks,

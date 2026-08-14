@@ -14,9 +14,15 @@ import {
 } from "./dexie-migration-backup.js";
 import {
   META_SHELF_BACKUP_KEY,
+  META_SHELF_EMPTY_ACK_KEY,
+  META_SHELF_NATIVE_BACKUP_ID_KEY,
   META_SHELF_RECOVERY_GAP_KEY,
   buildBrowserMetaShelfBackup,
+  createEmptyShelfAcknowledgement,
+  getMetaShelfBackupIdentity,
   getMetaShelfBackupCompleteness,
+  hasAcknowledgedEmptyShelf,
+  isMetaShelfBackupAcknowledgedEmpty,
   parseMetaShelfBackup,
   readMetaShelfRecoveryGap,
   writeBrowserMetaShelfBackup,
@@ -249,14 +255,76 @@ export function setTransactionWriting(active: boolean) {
  */
 export async function executeSafeWriteTransaction<T>(
   tables: any[],
-  runner: () => Promise<T>
+  runner: () => Promise<T>,
+  options: {
+    acknowledgeEmptyShelfOnCommit?: boolean | ((result: T) => boolean);
+  } = {},
 ): Promise<T> {
   setTransactionWriting(true);
   let result: T;
+  let previousEmptyAck: string | null = null;
+  let previousRecoveryGap: string | null = null;
+  let emptyAckArmed = false;
   try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      previousEmptyAck = window.localStorage.getItem(
+        META_SHELF_EMPTY_ACK_KEY,
+      );
+      previousRecoveryGap = window.localStorage.getItem(
+        META_SHELF_RECOVERY_GAP_KEY,
+      );
+    }
     result = await db.transaction("rw", tables, async () => {
-      return await runner();
+      const transactionResult = await runner();
+      const shouldAcknowledgeEmptyShelf =
+        typeof options.acknowledgeEmptyShelfOnCommit === "function"
+          ? options.acknowledgeEmptyShelfOnCommit(transactionResult)
+          : options.acknowledgeEmptyShelfOnCommit === true;
+      if (
+        shouldAcknowledgeEmptyShelf &&
+        typeof window !== "undefined" &&
+        window.localStorage &&
+        (await db.books.count()) === 0
+      ) {
+        const acknowledgedAt = new Date().toISOString();
+        const acknowledgement = createEmptyShelfAcknowledgement(
+          window.localStorage,
+          acknowledgedAt,
+        );
+        window.localStorage.setItem(
+          META_SHELF_EMPTY_ACK_KEY,
+          acknowledgement,
+        );
+        emptyAckArmed = true;
+        if (
+          window.localStorage.getItem(META_SHELF_EMPTY_ACK_KEY) !==
+          acknowledgement
+        ) {
+          throw new Error("META_SHELF_EMPTY_ACK_READBACK_MISMATCH");
+        }
+        window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+      }
+      return transactionResult;
     });
+  } catch (error) {
+    if (emptyAckArmed && typeof window !== "undefined" && window.localStorage) {
+      try {
+        if (previousEmptyAck === null) {
+          window.localStorage.removeItem(META_SHELF_EMPTY_ACK_KEY);
+        } else {
+          window.localStorage.setItem(META_SHELF_EMPTY_ACK_KEY, previousEmptyAck);
+        }
+        if (previousRecoveryGap === null) {
+          window.localStorage.removeItem(META_SHELF_RECOVERY_GAP_KEY);
+        } else {
+          window.localStorage.setItem(
+            META_SHELF_RECOVERY_GAP_KEY,
+            previousRecoveryGap,
+          );
+        }
+      } catch {}
+    }
+    throw error;
   } finally {
     setTransactionWriting(false);
   }
@@ -300,7 +368,7 @@ async function performMetadataBackup(
     
     // 如果没有任何藏书，不进行覆盖式空备份以防恶意抹除
     if (originalBooks.length === 0) {
-      console.log("[Storage] 书架暂无典籍，跳过镜像双轨备份。");
+      console.log("[Storage] 书架暂无典籍，跳过覆盖旧恢复点。");
       return { status: "skipped", storedBookCount: 0, expectedBookCount: 0 };
     }
 
@@ -329,8 +397,16 @@ async function performMetadataBackup(
       // The wall clock may have moved backwards or another context may have
       // completed a newer snapshot. Do not let this older candidate replace
       // either browser or native recovery media.
+      if (!hasAcknowledgedEmptyShelf(window.localStorage)) {
+        try {
+          window.localStorage.removeItem(META_SHELF_EMPTY_ACK_KEY);
+        } catch {}
+      }
       return browserResult;
     } else {
+      try {
+        window.localStorage.removeItem(META_SHELF_EMPTY_ACK_KEY);
+      } catch {}
       console.log(`[Storage] 双轨冗余：元数据（最新活跃 ${backupData.books.length} 本书）归档至 localStorage。`);
     }
 
@@ -341,6 +417,7 @@ async function performMetadataBackup(
       try {
         const { Filesystem, Directory } = cap.Plugins;
         const fullBackup: MetaShelfBackup = {
+          backupId: backupData.backupId,
           books: originalBooks,
           progress: fullProgress,
           bookmarks: fullBookmarks,
@@ -356,6 +433,17 @@ async function performMetadataBackup(
           encoding: "utf8",
           recursive: true,
         });
+        const identity = `id:${backupData.backupId}`;
+        window.localStorage.setItem(
+          META_SHELF_NATIVE_BACKUP_ID_KEY,
+          identity,
+        );
+        if (
+          window.localStorage.getItem(META_SHELF_NATIVE_BACKUP_ID_KEY) !==
+          identity
+        ) {
+          throw new Error("META_SHELF_NATIVE_GENERATION_READBACK_MISMATCH");
+        }
         nativeFullBackupSucceeded = true;
         console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Capacitor 原生物理沙盒 (Documents/read_realm_backup/meta_shelf.json)");
       } catch (err) {
@@ -367,6 +455,7 @@ async function performMetadataBackup(
       try {
         const { writeTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
         const fullBackup: MetaShelfBackup = {
+          backupId: backupData.backupId,
           books: originalBooks,
           progress: fullProgress,
           bookmarks: fullBookmarks,
@@ -378,6 +467,17 @@ async function performMetadataBackup(
         await writeTextFile("read_realm_backup/meta_shelf.json", fullSerialized, {
           dir: BaseDirectory.AppLocalData,
         });
+        const identity = `id:${backupData.backupId}`;
+        window.localStorage.setItem(
+          META_SHELF_NATIVE_BACKUP_ID_KEY,
+          identity,
+        );
+        if (
+          window.localStorage.getItem(META_SHELF_NATIVE_BACKUP_ID_KEY) !==
+          identity
+        ) {
+          throw new Error("META_SHELF_NATIVE_GENERATION_READBACK_MISMATCH");
+        }
         nativeFullBackupSucceeded = true;
         console.log("[Storage] 双轨冗余：全量元数据已成功篆刻至 Tauri 原生物理沙盒 (AppLocalData/read_realm_backup/meta_shelf.json)");
       } catch (err) {
@@ -453,6 +553,9 @@ export async function checkAndRestoreFromBackup(): Promise<MetadataRestoreResult
   try {
     const booksCount = await db.books.count();
     if (booksCount > 0) {
+      try {
+        window.localStorage.removeItem(META_SHELF_EMPTY_ACK_KEY);
+      } catch {}
       const expectedBookCount = readMetaShelfRecoveryGap(window.localStorage);
       if (expectedBookCount > booksCount) {
         return {
@@ -471,8 +574,8 @@ export async function checkAndRestoreFromBackup(): Promise<MetadataRestoreResult
       return { status: "not_needed", restoredBookCount: 0, expectedBookCount: booksCount, source: null };
     }
 
-    let backupStr: string | null = null;
-    let source: MetadataRestoreResult["source"] = null;
+    let nativeBackupStr: string | null = null;
+    let nativeSource: MetadataRestoreResult["source"] = null;
 
     // 1. 尝试从 Capacitor 物理沙盒读取
     const cap = (window as any).Capacitor;
@@ -484,8 +587,8 @@ export async function checkAndRestoreFromBackup(): Promise<MetadataRestoreResult
           directory: Directory.Documents,
           encoding: "utf8",
         });
-        backupStr = result.data;
-        source = "capacitor";
+        nativeBackupStr = result.data;
+        nativeSource = "capacitor";
         console.log("[Storage] 成功从 Capacitor 物理沙盒起封备份文卷。");
       } catch (e) {
         console.warn("[Storage] Capacitor 沙盒读取失败，降级寻求本地存储:", e);
@@ -495,23 +598,96 @@ export async function checkAndRestoreFromBackup(): Promise<MetadataRestoreResult
     else if ((window as any).__TAURI__?.fs) {
       try {
         const { readTextFile, BaseDirectory } = (window as any).__TAURI__.fs;
-        backupStr = await readTextFile("read_realm_backup/meta_shelf.json", {
+        nativeBackupStr = await readTextFile("read_realm_backup/meta_shelf.json", {
           dir: BaseDirectory.AppLocalData,
         });
-        source = "tauri";
+        nativeSource = "tauri";
         console.log("[Storage] 成功从 Tauri 物理沙盒起封备份文卷。");
       } catch (e) {
         console.warn("[Storage] Tauri 沙盒读取失败，降级寻求本地存储:", e);
       }
     }
 
-    // 3. 降级：从 localStorage 恢复
-    if (!backupStr) {
-      backupStr = window.localStorage.getItem(META_SHELF_BACKUP_KEY);
-      if (backupStr) source = "browser";
+    if (nativeBackupStr) {
+      try {
+        const rawNative = JSON.parse(nativeBackupStr) as Record<string, unknown>;
+        if (typeof rawNative.backupId === "string") {
+          const trackedNativeIdentity = window.localStorage.getItem(
+            META_SHELF_NATIVE_BACKUP_ID_KEY,
+          );
+          if (
+            trackedNativeIdentity !==
+            getMetaShelfBackupIdentity(nativeBackupStr)
+          ) {
+            console.warn("[Storage] 忽略未登记或不完整的原生备份代际。");
+            nativeBackupStr = null;
+            nativeSource = null;
+          }
+        }
+      } catch (error) {
+        console.warn("[Storage] 原生备份无法校验，将尝试浏览器恢复点。", error);
+        nativeBackupStr = null;
+        nativeSource = null;
+      }
     }
 
+    const browserBackupStr = window.localStorage.getItem(
+      META_SHELF_BACKUP_KEY,
+    );
+    const candidates = [
+      ...(nativeBackupStr && nativeSource
+        ? [{ serialized: nativeBackupStr, source: nativeSource }]
+        : []),
+      ...(browserBackupStr
+        ? [{ serialized: browserBackupStr, source: "browser" as const }]
+        : []),
+    ];
+    const recoverableCandidates = candidates
+      .filter(
+        (candidate) =>
+          !isMetaShelfBackupAcknowledgedEmpty(
+            window.localStorage,
+            candidate.serialized,
+          ),
+      )
+      .sort((left, right) => {
+        const leftBackup = parseMetaShelfBackup(left.serialized);
+        const rightBackup = parseMetaShelfBackup(right.serialized);
+        const timeDifference =
+          Date.parse(rightBackup.backupTime) - Date.parse(leftBackup.backupTime);
+        if (timeDifference !== 0) return timeDifference;
+        if (leftBackup.backupId === rightBackup.backupId) {
+          return Number(leftBackup.isPartial) - Number(rightBackup.isPartial);
+        }
+        return left.source === "browser" ? -1 : 1;
+      });
+
+    if (
+      recoverableCandidates.length === 0 &&
+      (candidates.length > 0 ||
+        isMetaShelfBackupAcknowledgedEmpty(window.localStorage, null))
+    ) {
+      return {
+        status: "not_needed",
+        restoredBookCount: 0,
+        expectedBookCount: 0,
+        source: null,
+      };
+    }
+
+    const selectedCandidate = recoverableCandidates[0];
+    const backupStr = selectedCandidate?.serialized ?? null;
+    const source = selectedCandidate?.source ?? null;
     if (!backupStr) {
+      const concurrentBookCount = await db.books.count();
+      if (concurrentBookCount > 0) {
+        return {
+          status: "not_needed",
+          restoredBookCount: 0,
+          expectedBookCount: concurrentBookCount,
+          source: null,
+        };
+      }
       return { status: "not_found", restoredBookCount: 0, expectedBookCount: 0, source: null };
     }
 

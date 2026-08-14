@@ -24,4 +24,13 @@ describe("library truth contract", () => {
     expect(source).not.toContain('db.chapters.orderBy("bookId").uniqueKeys()');
     expect(source).not.toContain("db.bookmarks.count()");
   });
+
+  it("routes core local shelf mutations through the command boundary", () => {
+    expect(source).toContain("libraryCommandService.moveBook");
+    expect(source).toContain("libraryCommandService.createFolderAndMove");
+    expect(source).toContain("libraryCommandService.dissolveFolder");
+    expect(source).toContain("libraryCommandService.removeBook");
+    expect(source).toContain("libraryCommandService.offloadBook");
+    expect(source).not.toContain("await db.libraryFolders.add(");
+  });
 });
