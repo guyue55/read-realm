@@ -8,6 +8,7 @@ import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
 import { ReaderContent } from "@/components/reader/ReaderContent";
+import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -511,10 +512,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             }}
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
+            backgroundDisabled={Boolean(activePanel)}
           />
           <div
             ref={(node) => setActiveContentRef(node, "desktop")}
             data-reader-content-canvas="desktop"
+            inert={activePanel ? true : undefined}
+            tabIndex={-1}
             onClick={handleMobileReaderClick}
             className={`flex-1 relative reader-gpu-accelerated ${
               isPagination
@@ -665,12 +669,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
           onBookmark={addBookmark}
           onSettings={() => togglePanel("settings")}
+          backgroundDisabled={Boolean(activePanel)}
         />
 
         {/* Scrollable / Paginable Content Canvas */}
         <div
           ref={(node) => setActiveContentRef(node, "mobile")}
           data-reader-content-canvas="mobile"
+          inert={activePanel ? true : undefined}
+          tabIndex={-1}
           onClick={handleMobileReaderClick}
           onTouchStart={handleVisibleTouchStart}
           onTouchEnd={handleVisibleTouchEnd}
@@ -759,6 +766,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           onSeekProgress={seekToProgress}
           onPrevChapter={handlePrevChapterActive}
           onNextChapter={handleNextChapterActive}
+          backgroundDisabled={Boolean(activePanel)}
         />
 
         {/* Mobile Settings/Progress Backdrop */}
@@ -770,9 +778,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         )}
 
         {/* Settings Sheet */}
-        <div
-          inert={activePanel !== "settings" ? true : undefined}
-          aria-hidden={activePanel !== "settings"}
+        <ReaderDialogSurface
+          open={activePanel === "settings" && isDesktopViewport === false}
+          label="阅读设置"
+          onClose={() => setActivePanel(null)}
+          fallbackFocus={() => contentRef.current}
           className="fixed bottom-3 inset-x-3 bg-transparent z-50 physics-spring reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
           style={{
             transform: activePanel === "settings" ? "translateY(0)" : "translateY(calc(100% + 24px))"
@@ -791,12 +801,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             isMobileSheet={true}
             onClose={() => setActivePanel(null)}
           />
-        </div>
+        </ReaderDialogSurface>
 
         {/* Progress Sheet */}
-        <div
-          inert={activePanel !== "progress" ? true : undefined}
-          aria-hidden={activePanel !== "progress"}
+        <ReaderDialogSurface
+          open={activePanel === "progress" && isDesktopViewport === false}
+          label="阅读进度"
+          onClose={() => setActivePanel(null)}
+          fallbackFocus={() => contentRef.current}
           className={`fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl physics-spring reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
           style={{
             transform: activePanel === "progress" ? "translateY(0)" : "translateY(calc(100% + 24px))"
@@ -809,6 +821,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               阅读进度
             </h3>
             <button
+              aria-label="关闭阅读进度"
               onClick={() => setActivePanel(null)}
               className={`${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"} p-1 rounded-full`}
             >
@@ -886,7 +899,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               {strings.sync.progressRollbackBtn}
             </button>
           </div>
-        </div>
+        </ReaderDialogSurface>
       </div>
 
       {/* Shared Drawers (TOC & AI) and Backdrop for both Mobile and Desktop */}
@@ -898,9 +911,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       )}
 
       {/* TOC Drawer (Shared) */}
-      <div
-        inert={activePanel !== "toc" ? true : undefined}
-        aria-hidden={activePanel !== "toc"}
+      <ReaderDialogSurface
+        open={activePanel === "toc" && isDesktopViewport === false}
+        label="阅读目录"
+        onClose={() => setActivePanel(null)}
+        fallbackFocus={() => contentRef.current}
         className="fixed inset-y-0 left-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
@@ -918,12 +933,14 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           isMobileDrawer={true}
           onClose={() => setActivePanel(null)}
         />
-      </div>
+      </ReaderDialogSurface>
 
       {/* AI Drawer (Shared) */}
-      <div
-        inert={activePanel !== "ai" ? true : undefined}
-        aria-hidden={activePanel !== "ai"}
+      <ReaderDialogSurface
+        open={activePanel === "ai" && isDesktopViewport === false}
+        label="伴读"
+        onClose={() => setActivePanel(null)}
+        fallbackFocus={() => contentRef.current}
         className="fixed inset-y-0 right-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl physics-spring reader-gpu-accelerated md:hidden"
         style={{
           backgroundColor: currentThemeColors.bg,
@@ -945,11 +962,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             setAiInput("");
           }}
         />
-      </div>
+      </ReaderDialogSurface>
 
       {/* Desktop Settings Modal Overlay */}
       {activePanel === "settings" && (
-        <div
+        <ReaderDialogSurface
+          open={isDesktopViewport === true}
+          label="阅读设置"
+          onClose={() => setActivePanel(null)}
+          fallbackFocus={() => contentRef.current}
           className="hidden md:flex fixed inset-0 z-50 bg-black/20 items-center justify-center"
           onClick={() => setActivePanel(null)}
         >
@@ -967,7 +988,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               isMobileSheet={false}
             />
           </div>
-        </div>
+        </ReaderDialogSurface>
       )}
 
       {/* 磨砂玻璃自适应自动换章倒计时胶囊 */}

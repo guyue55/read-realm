@@ -17,6 +17,7 @@ export interface ReaderTopBarProps {
   progress?: number;
   currentChapterIndex?: number;
   totalChapters?: number;
+  backgroundDisabled?: boolean;
 }
 
 export function ReaderTopBar({
@@ -34,6 +35,7 @@ export function ReaderTopBar({
   progress,
   currentChapterIndex,
   totalChapters,
+  backgroundDisabled = false,
 }: ReaderTopBarProps) {
   const isOnline = useOnlineStatus();
   // Mobile Top Bar (Overlay)
@@ -49,6 +51,9 @@ export function ReaderTopBar({
 
     return (
       <div
+        aria-hidden={!isVisible}
+        data-reader-toolbar="top"
+        inert={!isVisible || backgroundDisabled ? true : undefined}
         className={`fixed top-0 inset-x-0 pt-[env(safe-area-inset-top)] pb-0 min-h-[calc(3.5rem+env(safe-area-inset-top))] ${bgClass} shadow-sm z-20 flex items-center px-4 physics-spring border-b ${borderClass} ${
           isVisible
             ? "translate-y-0 opacity-100 pointer-events-auto"
@@ -92,7 +97,12 @@ export function ReaderTopBar({
 
   // Desktop Weak Toolbar (Always visible but unobtrusive)
   return (
-    <div className="grid grid-cols-3 items-center px-6 py-3 border-b border-[rgba(80,65,45,0.12)] bg-transparent">
+    <div
+      aria-hidden={backgroundDisabled || undefined}
+      data-reader-toolbar="top"
+      inert={backgroundDisabled ? true : undefined}
+      className="grid grid-cols-3 items-center px-6 py-3 border-b border-[rgba(80,65,45,0.12)] bg-transparent"
+    >
       <div className="flex justify-start">
         <button
           onClick={onBack}

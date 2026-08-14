@@ -17,6 +17,7 @@ export interface ReaderBottomBarProps {
   progress?: number;
   onPrevChapter?: () => void;
   onNextChapter?: () => void;
+  backgroundDisabled?: boolean;
 }
 
 export function ReaderBottomBar({
@@ -35,6 +36,7 @@ export function ReaderBottomBar({
   progress = 0,
   onPrevChapter,
   onNextChapter,
+  backgroundDisabled = false,
 }: ReaderBottomBarProps) {
   const safeProgress = Math.max(0, Math.min(100, progress));
 
@@ -95,6 +97,9 @@ export function ReaderBottomBar({
 
   return (
     <div
+      aria-hidden={!isVisible}
+      data-reader-toolbar="bottom"
+      inert={!isVisible || backgroundDisabled ? true : undefined}
       style={{ willChange: "transform" }}
       className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl physics-spring sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
         isVisible

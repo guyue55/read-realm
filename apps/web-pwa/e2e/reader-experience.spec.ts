@@ -1,6 +1,86 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
+
+async function seedReaderBook(
+  page: Page,
+  {
+    bookId,
+    pageMode,
+  }: {
+    bookId: string;
+    pageMode: "scroll" | "pagination";
+  },
+) {
+  await page.goto("/#/library");
+  await page.evaluate(async ({ targetBookId, targetPageMode }) => {
+    localStorage.setItem("reader-settings", JSON.stringify({
+      fontFamily: "kaiti",
+      fontSize: 18,
+      lineHeight: 1.7,
+      theme: "paper",
+      pageMode: targetPageMode,
+      uiMode: "default",
+      paragraphSpacing: 16,
+      letterSpacing: 0.03,
+      autoFlipAtBottom: false,
+    }));
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("ReaderDatabase");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction(
+          ["books", "chapters", "progress", "bookmarks"],
+          "readwrite",
+        );
+        for (const name of ["books", "chapters", "progress", "bookmarks"]) {
+          transaction.objectStore(name).clear();
+        }
+        const now = "2026-08-14T12:00:00.000Z";
+        transaction.objectStore("books").put({
+          id: targetBookId,
+          title: "移动阅读打磨纵切",
+          sourceType: "upload",
+          format: "txt",
+          status: "reading",
+          tags: [],
+          chapterCount: 1,
+          toc: [{ index: 0, title: "第一章" }],
+          parseStatus: "parsed",
+          cacheStatus: "chapters_full",
+          sourceAvailability: "full_cached",
+          createdAt: now,
+          updatedAt: now,
+        });
+        transaction.objectStore("chapters").put({
+          id: `${targetBookId}-chapter-0`,
+          bookId: targetBookId,
+          index: 0,
+          title: "第一章",
+          content: `开篇锚点 ${"安静阅读的正文。".repeat(240)} 收束锚点`,
+        });
+        transaction.objectStore("progress").put({
+          bookId: targetBookId,
+          chapterId: `${targetBookId}-chapter-0`,
+          chapterIndex: 0,
+          offset: 0,
+          paragraphIndex: 0,
+          characterOffset: 0,
+          percentage: 0,
+          updatedAt: now,
+        });
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally {
+      database.close();
+    }
+  }, { targetBookId: bookId, targetPageMode: pageMode });
+}
 
 async function readProgress(
   page: import("@playwright/test").Page,
@@ -326,4 +406,42 @@ test("continuous scroll keeps an active three-chapter window while moving both d
     await readProgress(page, "scroll-window-e2e-book")
   ).chapterIndex).toBe(17);
   await expect(mobileCanvas.getByText("章节锚点 17", { exact: false })).toBeVisible();
+});
+
+test("reader dialogs contain and restore focus", async ({ page }) => {
+  await seedReaderBook(page, {
+    bookId: "reader-dialog-e2e-book",
+    pageMode: "scroll",
+  });
+  await page.goto("/#/reader/reader-dialog-e2e-book");
+  await expect(page.getByRole("heading", { name: "第一章" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const settingsTrigger = page.locator('button[aria-label="阅读设置"]:visible');
+  await settingsTrigger.focus();
+  await page.keyboard.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "阅读设置" });
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => dialog.evaluate((node) => (
+    node.contains(document.activeElement)
+  ))).toBe(true);
+
+  await page.keyboard.press("Shift+Tab");
+  await expect.poll(() => dialog.evaluate((node) => (
+    node.contains(document.activeElement)
+  ))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(settingsTrigger).toBeFocused();
+
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  await canvas.click({ position: { x: 190, y: 350 } });
+  const hiddenToolbars = page.locator('[data-reader-toolbar][aria-hidden="true"]');
+  await expect(hiddenToolbars).toHaveCount(2);
+  await page.keyboard.press("Tab");
+  await expect.poll(async () => hiddenToolbars.evaluateAll((toolbars) => (
+    toolbars.every((toolbar) => !toolbar.contains(document.activeElement))
+  ))).toBe(true);
 });
