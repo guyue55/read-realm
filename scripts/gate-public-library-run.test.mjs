@@ -2,11 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildPublicLibraryGateFinal,
+  canonicalizePublicLibraryGateReportForArchive,
   classifyPublicLibraryGateRun,
   countPublicLibraryProductStageMarkers,
   parsePublicLibraryGateObservation,
   phaseFivePublicLibraryChecks,
+  publicLibraryGateRecordSpecs,
   publicLibraryExperimentStrategy,
+  validatePublicLibraryEvidenceCommitChain,
+  validatePublicLibraryGateEvidenceShape,
+  validatePublicLibraryHistoryRecordBytes,
   validatePublicLibraryIsolationPaths,
 } from "./gate-public-library-run.mjs";
 
@@ -254,6 +260,237 @@ test("隔离布局要求个人/公共数据库与 Blob 根都在临时根内且�
       publicDatabase: `${root}/public/catalog.sqlite`,
       publicBlobRoot: `${root}/public/objects`,
     }),
+    false,
+  );
+});
+
+test("GATE-03 FINAL 只接受已提交的 PASS EXP-14 并绑定不可判定历史", () => {
+  const recordsRoot =
+    "docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records";
+  const attempt = {
+    goalId: "GOAL-READING-WORLD-V1",
+    controlRevision: "REV-0003",
+    experiment: "EXP-14",
+    repository: { head: "a".repeat(40) },
+    summary: {
+      passed: true,
+      passedCount: 11,
+      failedCount: 0,
+      trackedMutationCount: 0,
+    },
+    checks: publicLibraryGateRecordSpecs().map(({ id, file }) => ({
+      id,
+      exitCode: 0,
+      trackedWorktreeMutated: false,
+      logPath: `${recordsRoot}/${file}`,
+      logSha256: "f".repeat(64),
+    })),
+    publicLibraryGate: {
+      classification: "PASS",
+      reasons: [],
+      recordVerification: { valid: true, checkedCount: 11, failures: [] },
+      observation: {
+        ...reliableRun,
+        strategy: publicLibraryExperimentStrategy("EXP-14"),
+      },
+    },
+  };
+  const history = {
+    path: "evidence/history/gate-03-attempt-01.json",
+    sha256: "b".repeat(64),
+    implementationHead: "c".repeat(40),
+    originalEvidenceCommit: "1".repeat(40),
+    classification: "VALIDATOR_INDETERMINATE",
+    reasons: [
+      "API_SERVICE_NOT_READY",
+      "WEB_SERVICE_NOT_READY",
+      "PRODUCT_STAGE_MARKER_COUNT_0",
+    ],
+    recordVerification: { valid: true, checkedCount: 11, failures: [] },
+    productFailureCount: 0,
+  };
+  const final = buildPublicLibraryGateFinal({
+    attempt,
+    attemptPath: "evidence/gate-03-attempt-01.json",
+    attemptSha256: "d".repeat(64),
+    evidenceCommit: "e".repeat(40),
+    history,
+    recordVerification: { valid: true, checkedCount: 11, failures: [] },
+    generatedAt: "2026-08-15T07:00:00+08:00",
+  });
+
+  assert.equal(final.gateId, "GATE-03");
+  assert.equal(final.result, "PASS");
+  assert.equal(final.sourceAttempt.experiment, "EXP-14");
+  assert.equal(final.verifiedOutcomes.trueOfflineAfterJoin, true);
+  assert.equal(final.verifiedOutcomes.personalFactsUnchanged, true);
+  assert.equal(
+    final.preservedHistory.classification,
+    "VALIDATOR_INDETERMINATE",
+  );
+  assert.match(final.boundary, /TASK-0503/);
+  assert.match(final.boundary, /不证明 TASK-0504/);
+
+  assert.throws(
+    () =>
+      buildPublicLibraryGateFinal({
+        attempt: { ...attempt, experiment: "EXP-15" },
+        attemptPath: "evidence/gate-03-attempt-01.json",
+        attemptSha256: "d".repeat(64),
+        evidenceCommit: "e".repeat(40),
+        history,
+        recordVerification: { valid: true, checkedCount: 11, failures: [] },
+        generatedAt: "2026-08-15T07:00:00+08:00",
+      }),
+    /PUBLIC_LIBRARY_GATE_FINAL_SOURCE_NOT_PASSING/,
+  );
+  assert.throws(
+    () =>
+      buildPublicLibraryGateFinal({
+        attempt,
+        attemptPath: "evidence/gate-03-attempt-01.json",
+        attemptSha256: "d".repeat(64),
+        evidenceCommit: "e".repeat(40),
+        history: { ...history, classification: "PRODUCT_FAILURE" },
+        recordVerification: { valid: true, checkedCount: 11, failures: [] },
+        generatedAt: "2026-08-15T07:00:00+08:00",
+      }),
+    /PUBLIC_LIBRARY_GATE_FINAL_HISTORY_INVALID/,
+  );
+  assert.throws(
+    () =>
+      buildPublicLibraryGateFinal({
+        attempt: { ...attempt, checks: attempt.checks.slice(1) },
+        attemptPath: "evidence/gate-03-attempt-01.json",
+        attemptSha256: "d".repeat(64),
+        evidenceCommit: "e".repeat(40),
+        history,
+        recordVerification: { valid: true, checkedCount: 11, failures: [] },
+        generatedAt: "2026-08-15T07:00:00+08:00",
+      }),
+    /PUBLIC_LIBRARY_GATE_FINAL_SOURCE_NOT_PASSING/,
+  );
+});
+
+test("GATE-03 evidence shape 拒绝缺项、错误 ID、外部路径、失败和 mutation", () => {
+  const recordsRoot =
+    "docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records";
+  const checks = publicLibraryGateRecordSpecs().map(({ id, file }) => ({
+    id,
+    exitCode: 0,
+    trackedWorktreeMutated: false,
+    logPath: `${recordsRoot}/${file}`,
+    logSha256: "a".repeat(64),
+  }));
+  assert.equal(
+    validatePublicLibraryGateEvidenceShape(
+      { checks },
+      { recordsRoot, requirePassing: true },
+    ),
+    true,
+  );
+  for (const invalidChecks of [
+    checks.slice(1),
+    checks.map((check, index) =>
+      index === 0 ? { ...check, id: "WRONG" } : check,
+    ),
+    checks.map((check, index) =>
+      index === 0 ? { ...check, logPath: "/tmp/forged.txt" } : check,
+    ),
+    checks.map((check, index) =>
+      index === 0 ? { ...check, exitCode: 1 } : check,
+    ),
+    checks.map((check, index) =>
+      index === 0 ? { ...check, trackedWorktreeMutated: true } : check,
+    ),
+  ]) {
+    assert.equal(
+      validatePublicLibraryGateEvidenceShape(
+        { checks: invalidChecks },
+        { recordsRoot, requirePassing: true },
+      ),
+      false,
+    );
+  }
+});
+
+test("历史报告只允许 records 根变化，提交链必须逐段有序", () => {
+  const report = {
+    summary: { passed: false },
+    checks: publicLibraryGateRecordSpecs().map(({ id, file }) => ({
+      id,
+      logPath: `current/${file}`,
+      logSha256: "a".repeat(64),
+    })),
+  };
+  const archived = {
+    ...report,
+    checks: report.checks.map((check) => ({
+      ...check,
+      logPath: `history/${check.logPath.split("/").at(-1)}`,
+    })),
+  };
+  assert.deepEqual(
+    canonicalizePublicLibraryGateReportForArchive(report),
+    canonicalizePublicLibraryGateReportForArchive(archived),
+  );
+  assert.notDeepEqual(
+    canonicalizePublicLibraryGateReportForArchive(report),
+    canonicalizePublicLibraryGateReportForArchive({
+      ...archived,
+      summary: { passed: true },
+    }),
+  );
+
+  const commits = [
+    "a".repeat(40),
+    "b".repeat(40),
+    "c".repeat(40),
+    "d".repeat(40),
+  ];
+  const edges = new Set([
+    `${commits[0]}:${commits[1]}`,
+    `${commits[1]}:${commits[2]}`,
+    `${commits[2]}:${commits[3]}`,
+  ]);
+  assert.equal(
+    validatePublicLibraryEvidenceCommitChain(commits, (older, newer) =>
+      edges.has(`${older}:${newer}`),
+    ),
+    true,
+  );
+  assert.equal(
+    validatePublicLibraryEvidenceCommitChain(
+      [commits[0], commits[2], commits[1], commits[3]],
+      (older, newer) => edges.has(`${older}:${newer}`),
+    ),
+    false,
+  );
+  assert.equal(
+    validatePublicLibraryEvidenceCommitChain(
+      [commits[0], commits[1], commits[1], commits[3]],
+      () => true,
+    ),
+    false,
+  );
+
+  const originalRecords = new Map(
+    publicLibraryGateRecordSpecs().map(({ file }) => [file, Buffer.from(file)]),
+  );
+  const archivedRecords = new Map(originalRecords);
+  assert.equal(
+    validatePublicLibraryHistoryRecordBytes(
+      (file) => originalRecords.get(file),
+      (file) => archivedRecords.get(file),
+    ),
+    true,
+  );
+  archivedRecords.set("web_test.txt", Buffer.from("tampered"));
+  assert.equal(
+    validatePublicLibraryHistoryRecordBytes(
+      (file) => originalRecords.get(file),
+      (file) => archivedRecords.get(file),
+    ),
     false,
   );
 });
