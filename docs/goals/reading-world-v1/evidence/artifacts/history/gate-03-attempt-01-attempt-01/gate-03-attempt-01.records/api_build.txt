@@ -1,0 +1,16 @@
+$ corepack pnpm --filter api build
+started_at=2026-08-14T22:02:03.561Z
+ended_at=2026-08-14T22:02:05.985Z
+duration_ms=2424
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+> api@0.0.1 build ./apps/api
+> nest build
+
+[stderr]

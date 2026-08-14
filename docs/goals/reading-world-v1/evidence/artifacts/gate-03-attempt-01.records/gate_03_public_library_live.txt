@@ -1,15 +1,15 @@
 $ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-gate-03-public-library.mjs EXP-14
-started_at=2026-08-14T22:02:23.177Z
-ended_at=2026-08-14T22:02:58.527Z
-duration_ms=35350
-exit_code=1
+started_at=2026-08-14T22:09:48.460Z
+ended_at=2026-08-14T22:10:14.243Z
+duration_ms=25783
+exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
 [stdout]
-GATE03_PUBLIC_LIBRARY_OBSERVATION={"classification":"VALIDATOR_INDETERMINATE","reasons":["API_SERVICE_NOT_READY","WEB_SERVICE_NOT_READY","PRODUCT_STAGE_MARKER_COUNT_0"],"controlRevision":"REV-0003","experiment":"EXP-14","listExitCode":0,"listedTestCount":1,"apiBuildExitCode":0,"webBuildExitCode":0,"apiServiceReady":false,"webServiceReady":false,"testExitCode":1,"apiPortFreeBefore":true,"webPortFreeBefore":true,"apiPortFreeAfter":true,"webPortFreeAfter":true,"orphanProcessCount":0,"pathIsolationValid":true,"isolatedRootCreated":true,"cleanupComplete":true,"personalDbSentinelUnchanged":true,"personalBlobSentinelUnchanged":true,"personalDbSentinelBefore":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalDbSentinelAfter":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalBlobSentinelBefore":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","personalBlobSentinelAfter":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","sentinelSetupError":null,"browserChannel":"chrome","runnerMode":"production","productStageMarkerCount":0,"productStageEntered":false,"evidenceRecordsValid":true,"strategy":{"fixture":"fixed-legal-two-chapter-txt","maintenanceCredential":"x-public-library-maintenance-key","anonymousCatalog":true,"immutableFullPackage":true,"newLocalIds":true,"atomicLocalCommit":true,"trueOfflineAfterJoin":true,"personalSyncSentinel":true,"isolatedPersonalDatabase":true,"isolatedPublicDatabase":true,"isolatedBlobRoots":true,"productionServers":true,"systemChrome":true,"explicitProcessGroups":true,"cleanupIsolatedRoot":true}}
+GATE03_PUBLIC_LIBRARY_OBSERVATION={"classification":"PASS","reasons":[],"controlRevision":"REV-0003","experiment":"EXP-14","listExitCode":0,"listedTestCount":1,"apiBuildExitCode":0,"webBuildExitCode":0,"apiServiceReady":true,"webServiceReady":true,"testExitCode":0,"apiPortFreeBefore":true,"webPortFreeBefore":true,"apiPortFreeAfter":true,"webPortFreeAfter":true,"orphanProcessCount":0,"pathIsolationValid":true,"isolatedRootCreated":true,"cleanupComplete":true,"personalDbSentinelUnchanged":true,"personalBlobSentinelUnchanged":true,"personalDbSentinelBefore":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalDbSentinelAfter":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalBlobSentinelBefore":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","personalBlobSentinelAfter":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","sentinelSetupError":null,"browserChannel":"chrome","runnerMode":"production","productStageMarkerCount":1,"productStageEntered":true,"evidenceRecordsValid":true,"strategy":{"fixture":"fixed-legal-two-chapter-txt","maintenanceCredential":"x-public-library-maintenance-key","anonymousCatalog":true,"immutableFullPackage":true,"newLocalIds":true,"atomicLocalCommit":true,"trueOfflineAfterJoin":true,"personalSyncSentinel":true,"isolatedPersonalDatabase":true,"isolatedPublicDatabase":true,"isolatedBlobRoots":true,"productionServers":true,"systemChrome":true,"explicitProcessGroups":true,"cleanupIsolatedRoot":true}}
 
 [list]
 Listing tests:
@@ -32,7 +32,7 @@ Total: 1 test in 1 file
    Creating an optimized production build ...
 > [PWA] PWA support is disabled
 > [PWA] PWA support is disabled
- ✓ Compiled successfully in 3.4s
+ ✓ Compiled successfully in 3.3s
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/14) ...
@@ -67,28 +67,71 @@ Route (app)                                 Size  First Load JS
 ○  (Static)  prerendered as static content
 ●  (SSG)     prerendered as static HTML (uses generateStaticParams)
 
-[stderr]
+
+[test]
+
+Running 1 test using 1 worker
+
+
+
+[1/1] [chromium-chrome] › e2e/public-library.spec.ts:9:5 › EXP-14 isolates publication, browses a real page boundary, joins atomically, and reads offline
+[chromium-chrome] › e2e/public-library.spec.ts:9:5 › EXP-14 isolates publication, browses a real page boundary, joins atomically, and reads offline
+GATE03_PRODUCT_STAGE_ENTERED=EXP-14
+
+  1 passed (4.3s)
+
 [api-service]
-node:internal/modules/cjs/loader:1424
-  throw err;
-  ^
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [NestFactory] Starting Nest application...
+[SQLite DB] preparation complete { deduplicatedChapters: 0, uniqueIndexReady: true }
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] AppModule dependencies initialized +11ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] ImportsModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] DatabaseModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] PublicLibraryModule dependencies initialized +1ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] BookModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] SearchModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] FolderModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] ChapterModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [InstanceLoader] AiModule dependencies initialized +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] AppController {/}: +1ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/, GET} route +1ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] BookController {/books}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books, GET} route +1ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books/import, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books/:id, DELETE} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books/:id/progress, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books, DELETE} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] ChapterController {/books/:bookId/chapters}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books/:bookId/chapters, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/books/:bookId/chapters/:index, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] SearchController {/search}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/search, GET} route +1ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] AiController {/ai}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/ai/status, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/ai/chat, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/ai/summarize, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/ai/analyze, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] ImportsController {/imports}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/imports/url/parse, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] FolderController {/folders}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/folders, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/folders, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/folders/:id, DELETE} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RoutesResolver] PublicLibraryController {/public-library/books}: +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/public-library/books, POST} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/public-library/books, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [RouterExplorer] Mapped {/public-library/books/:id/package, GET} route +0ms
+[Nest] 39960  - 08/15/2026, 6:10:05 AM     LOG [NestApplication] Nest application successfully started +1ms
 
-Error: Cannot find module 'express'
-Require stack:
-- ./apps/api/dist/main.js
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
-    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
-    at Module._load (node:internal/modules/cjs/loader:1227:37)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
-    at Module.require (node:internal/modules/cjs/loader:1504:12)
-    at require (node:internal/modules/helpers:152:16)
-    at Object.<anonymous> (./apps/api/dist/main.js:38:30)
-    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [ './apps/api/dist/main.js' ]
-}
+[web-service]
+   ▲ Next.js 15.5.20
+   - Local:        http://127.0.0.1:3100
+   - Network:      http://127.0.0.1:3100
 
-Node.js v24.13.0
+ ✓ Starting...
+ ✓ Ready in 472ms
+
+[stderr]
+[test]
+(node:39979) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
 

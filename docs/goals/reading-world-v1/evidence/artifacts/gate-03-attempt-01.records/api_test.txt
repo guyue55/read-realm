@@ -1,19 +1,19 @@
 $ corepack pnpm --filter api exec jest --runInBand
-started_at=2026-08-14T22:01:57.145Z
-ended_at=2026-08-14T22:01:58.693Z
-duration_ms=1548
+started_at=2026-08-14T22:09:19.104Z
+ended_at=2026-08-14T22:09:21.199Z
+duration_ms=2095
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
 [stdout]
 [stderr]
 
 Test Suites: 12 passed, 12 total
 Tests:       52 passed, 52 total
 Snapshots:   0 total
-Time:        1.038 s, estimated 2 s
+Time:        0.95 s, estimated 1 s
 Ran all test suites.
 

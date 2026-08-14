@@ -1,0 +1,19 @@
+$ corepack pnpm --filter api exec jest --runInBand
+started_at=2026-08-14T22:01:57.145Z
+ended_at=2026-08-14T22:01:58.693Z
+duration_ms=1548
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+[stderr]
+
+Test Suites: 12 passed, 12 total
+Tests:       52 passed, 52 total
+Snapshots:   0 total
+Time:        1.038 s, estimated 2 s
+Ran all test suites.
+
