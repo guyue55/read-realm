@@ -2,6 +2,7 @@ const REQUIRED_SCENARIOS = [
   "semantic-layout",
   "pagination-persistence",
   "bounded-scroll",
+  "lifecycle-offline",
 ];
 
 export function parsePhase04ReaderSamples(output) {
@@ -21,7 +22,7 @@ export function classifyPhase04ReaderRun(observation) {
   const reasons = [];
   if (!observation.portFreeBefore) reasons.push("PORT_BUSY_BEFORE");
   if (observation.listExitCode !== 0) reasons.push(`LIST_EXIT_${observation.listExitCode}`);
-  if (observation.listedTestCount !== 12) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
+  if (observation.listedTestCount !== 13) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
   if (!observation.serviceReady) reasons.push("SERVICE_NOT_READY");
   if (observation.testExitCode !== 0) reasons.push(`TEST_EXIT_${observation.testExitCode}`);
   if (!observation.portFreeAfter) reasons.push("PORT_BUSY_AFTER");
@@ -55,6 +56,12 @@ export function classifyPhase04ReaderRun(observation) {
     if (!Number.isFinite(bounded.maxChapterDom) || bounded.maxChapterDom > 3) {
       reasons.push(`CHAPTER_DOM_${bounded.maxChapterDom}`);
     }
+  }
+  const lifecycle = byScenario.get("lifecycle-offline")?.[0];
+  if (lifecycle) {
+    if (lifecycle.pagehideRestored !== true) reasons.push("PAGEHIDE_RESTORE_NOT_OBSERVED");
+    if (lifecycle.offlineObserved !== true) reasons.push("TRUE_OFFLINE_NOT_OBSERVED");
+    if (lifecycle.semanticAnchorVisible !== true) reasons.push("LIFECYCLE_ANCHOR_NOT_VISIBLE");
   }
   return { classification: reasons.length === 0 ? "PASS" : "FAIL", reasons };
 }

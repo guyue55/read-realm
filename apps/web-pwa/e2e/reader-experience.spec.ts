@@ -392,6 +392,49 @@ test("mobile pagination advances one page before changing chapters and restores 
   })}`);
 });
 
+test("pagehide flush and true offline continuation preserve progress", async ({ page, context }) => {
+  const bookId = "reader-lifecycle-offline-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "pagination",
+    chapterCount: 2,
+    contentFor: (index) => `生命周期章节 ${index} ${"离线阅读正文".repeat(2_000)}`,
+  });
+  await page.goto(`/#/reader/${bookId}`);
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  await expect(canvas.getByText(/1\s*\/\s*\d+/)).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]').click();
+  await page.reload();
+  await expect.poll(async () => (await readProgress(page, bookId)).characterOffset, {
+    timeout: 15_000,
+    intervals: [50, 100, 200],
+  }).toBeGreaterThan(0);
+  const saved = await readProgress(page, bookId);
+  await context.setOffline(true);
+  await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
+  const indicator = canvas.getByText(/\d+\s*\/\s*\d+/);
+  const beforeOfflinePage = Number((await indicator.textContent())?.match(/^(\d+)/)?.[1] ?? 0);
+  await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]').click();
+  await expect.poll(async () => Number((await indicator.textContent())?.match(/^(\d+)/)?.[1] ?? 0), {
+    timeout: 5_000,
+  }).toBe(beforeOfflinePage + 1);
+  await expect.poll(async () => (await readProgress(page, bookId)).characterOffset, {
+    timeout: 1_000,
+  }).toBeGreaterThan(saved.characterOffset);
+  await expect(canvas.locator('[data-page-index]:visible').filter({
+    hasText: "离线阅读正文",
+  }).first()).toBeVisible();
+  await context.setOffline(false);
+
+  console.log(`PHASE04_READER_SAMPLE=${JSON.stringify({
+    scenario: "lifecycle-offline",
+    pagehideRestored: true,
+    offlineObserved: true,
+    semanticAnchorVisible: true,
+  })}`);
+});
+
 test("continuous scroll keeps an active three-chapter window while moving both directions", async ({ page }) => {
   await page.goto("/#/library");
   await page.evaluate(async () => {
