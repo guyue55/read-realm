@@ -74,7 +74,21 @@ function normalizeSettings(value: unknown): ReaderSettingsState {
 export function loadReaderSettings(): ReaderSettingsState {
   if (typeof window === "undefined") return DEFAULT_READER_SETTINGS;
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  return loadReaderSettingsFromStorage(window.localStorage);
+}
+
+type ReaderSettingsStorage = Pick<Storage, "getItem" | "setItem">;
+
+export function loadReaderSettingsFromStorage(
+  storage: ReaderSettingsStorage,
+): ReaderSettingsState {
+  let raw: string | null;
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return DEFAULT_READER_SETTINGS;
+  }
+
   if (!raw) return DEFAULT_READER_SETTINGS;
 
   try {
@@ -86,10 +100,29 @@ export function loadReaderSettings(): ReaderSettingsState {
 
 export function saveReaderSettings(settings: ReaderSettingsState): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(normalizeSettings(settings)),
-  );
+  saveReaderSettingsToStorage(window.localStorage, settings);
+}
+
+export function saveReaderSettingsToStorage(
+  storage: ReaderSettingsStorage,
+  settings: ReaderSettingsState,
+): void {
+  const normalized = normalizeSettings(settings);
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  } catch {
+    throw new Error("READER_SETTINGS_WRITE_FAILED");
+  }
+  let readback: ReaderSettingsState;
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    readback = raw ? normalizeSettings(JSON.parse(raw)) : DEFAULT_READER_SETTINGS;
+  } catch {
+    throw new Error("READER_SETTINGS_READBACK_FAILED");
+  }
+  if (JSON.stringify(readback) !== JSON.stringify(normalized)) {
+    throw new Error("READER_SETTINGS_READBACK_FAILED");
+  }
 }
 
 export function createReaderSettingsWriteQueue(

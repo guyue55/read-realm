@@ -38,6 +38,18 @@ class RecordingPort implements LibraryCommandPort {
   offloadBookAtomic(input: { bookId: string; updatedAt: string }) {
     return this.record("offload", input);
   }
+
+  disconnectBookAtomic(input: { bookId: string; updatedAt: string }) {
+    return this.record("disconnect-book", input);
+  }
+
+  disconnectFolderAtomic(input: { folderId: string; updatedAt: string }) {
+    return this.record("disconnect-folder", input);
+  }
+
+  requestReconstruct(input: { bookId: string }) {
+    return this.record("request-reconstruct", input);
+  }
 }
 
 function createService(port: RecordingPort) {

@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Delete, Param, Get } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Post,
+  Body,
+  Delete,
+  Param,
+  Get,
+} from '@nestjs/common';
 import { BookRepository } from './book.repository';
 import { ShareToken } from '../../common/decorators/share-token.decorator';
 import {
@@ -53,6 +61,9 @@ export class BookController {
 
   @Delete()
   async clearAllBooks(@ShareToken() token: string) {
+    if (!token || token.toLocaleLowerCase('en-US') === 'default') {
+      throw new BadRequestException('默认书架不允许执行批量清空');
+    }
     await this.bookRepository.clearAllBooks(token);
     return { success: true };
   }

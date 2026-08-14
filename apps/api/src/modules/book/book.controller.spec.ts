@@ -16,6 +16,7 @@ describe('BookController', () => {
           provide: BookRepository,
           useValue: {
             importBook: jest.fn().mockResolvedValue(undefined),
+            clearAllBooks: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -23,6 +24,13 @@ describe('BookController', () => {
 
     controller = module.get<BookController>(BookController);
     repository = module.get<BookRepository>(BookRepository);
+  });
+
+  it('rejects clearing the reserved default namespace', async () => {
+    await expect(controller.clearAllBooks('default')).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(repository.clearAllBooks).not.toHaveBeenCalled();
   });
 
   it('should be defined', () => {

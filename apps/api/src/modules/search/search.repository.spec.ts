@@ -68,6 +68,31 @@ describe('SearchRepository', () => {
 
     const result = await repository.searchBooks('Shared', 'friend');
 
-    expect(result).toEqual([{ id: '2', title: 'Shared' }]);
+    expect(result).toEqual([{ id: '2', title: 'Shared', tags: [] }]);
+  });
+
+  it('bounds a private scope to a stable first 200 results before loading details', async () => {
+    const rows = Array.from({ length: 500 }, (_, index) => ({
+      id: `${String(index).padStart(3, '0')}#friend`,
+    }));
+    db.all.mockResolvedValueOnce(rows);
+    db.query.books.findMany.mockImplementationOnce(
+      ({ where }: { where: unknown }) => {
+        void where;
+        return Promise.resolve(
+          rows.slice(0, 200).map(({ id }) => ({ id, title: id })),
+        );
+      },
+    );
+
+    const result = await repository.searchBooks('共同词', 'friend');
+
+    expect(result).toHaveLength(200);
+    expect(result[0]?.id).toBe('000');
+    expect(result[199]?.id).toBe('199');
+    const query = JSON.stringify(db.all.mock.calls[0]?.[0]);
+    expect(query).toContain('ORDER BY rank, id');
+    expect(query).toContain('LIMIT');
+    expect(query).toContain('200');
   });
 });

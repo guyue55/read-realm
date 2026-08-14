@@ -1,42 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useVirtualRouter } from "@/lib/route-store";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { apiUrl, getApiBaseUrl, getShareHeaders } from "@/lib/api";
+import { useVirtualRouter } from "@/lib/route-store";
+import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
-import { db } from "@reader/storage-core";
 import type { Book } from "@reader/shared-types";
 import { AppShell } from "@/components/AppShell";
 import { BookCard } from "@/components/BookCard";
 import { BookCover } from "@/components/BookCover";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { libraryQueryService } from "@/features/library/dexie-library-query";
+import {
+  createLegacyPersonalSyncApiClient,
+  type LegacyRemoteBook,
+} from "@/features/library/legacy-personal-sync-api";
+import { createPersonalSyncService } from "@/features/library/personal-sync-service";
+import { clearSyncTask, markSyncTask } from "@/features/library/sync-tasks";
+import {
+  searchLocalBooks,
+  type LocalSearchFilter,
+} from "@/features/search/search-results";
 
 export default function SearchPage() {
   const isOnline = useOnlineStatus();
   const router = useVirtualRouter();
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<string>("综合");
+  const [activeFilter, setActiveFilter] = useState<LocalSearchFilter>("综合");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
       window.location.replace(`/#${window.location.pathname}${window.location.search}`);
     }
   }, []);
-  const [localResults, setLocalResults] = useState<Book[]>([]);
-  const [globalResults, setGlobalResults] = useState<Book[]>([]);
+  const [inventoryGeneration, setInventoryGeneration] = useState(0);
+  const [globalResults, setGlobalResults] = useState<LegacyRemoteBook[]>([]);
   const [remoteStatus, setRemoteStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [isSearching, setIsSearching] = useState(false);
   const [status, setStatus] = useState("");
+  const [statusTone, setStatusTone] = useState<"info" | "error">("info");
   const [toastMsg, setToastMsg] = useState("");
+  const searchGenerationRef = useRef(0);
 
   // 记录每个云端书籍的下载同步百分比与正在同步状态
   const [importProgress, setImportProgress] = useState<Record<string, number>>({});
   const [importingBookIds, setImportingBookIds] = useState<Set<string>>(new Set());
-
-  // 实时监测本地数据库中已有书籍的映射，进行秒级去重和“拉取入库/去阅读”状态变换
-  const localBooks = useLiveQuery(() => db.books.toArray(), []);
-  const localBookIds = new Set(localBooks?.map((b) => b.id) || []);
 
   const PRESET_RECOMMENDS = [
     { q: "庄子内篇", label: "庄子内篇 · 逍遥无待" },
@@ -86,6 +94,39 @@ export default function SearchPage() {
 
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
+  const localInventory = useLiveQuery(
+    async () => {
+      try {
+        return await libraryQueryService.readSyncInventory();
+      } catch (error) {
+        console.error("读取本地搜索快照失败", error);
+        setStatusTone("error");
+        setStatus("本地书架暂时无法读取，请刷新后重试。");
+        return { books: [] as Book[], folders: [] };
+      }
+    },
+    [inventoryGeneration],
+    { books: [] as Book[], folders: [] },
+  );
+  const localBooks = localInventory.books;
+  const localBookIds = useMemo(
+    () => new Set(localBooks.map((book) => book.id)),
+    [localBooks],
+  );
+
+  useEffect(() => {
+    const refresh = () => setInventoryGeneration((generation) => generation + 1);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, []);
+
   // 1. 输入防抖 200ms：打字期间仅流畅更新 searchQuery State，停顿 200ms 后再向 IndexedDB 触发本地检索
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,59 +135,50 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // 2. 本地检索：防抖后触发，关联分类过滤器 activeFilter 进行多维度匹配
-  useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setLocalResults([]);
-      return;
-    }
-    const q = debouncedQuery.toLowerCase();
-    db.books.toArray().then((allBooks) => {
-      const filtered = allBooks.filter((b) => {
-        const titleMatch = b.title.toLowerCase().includes(q);
-        const authorMatch = b.author?.toLowerCase().includes(q);
-        const tagsMatch = b.tags?.some((t) => t.toLowerCase().includes(q));
+  const localResults = useMemo(
+    () => searchLocalBooks(localBooks, debouncedQuery, activeFilter),
+    [activeFilter, debouncedQuery, localBooks],
+  );
 
-        if (activeFilter === "书名") return titleMatch;
-        if (activeFilter === "作者") return authorMatch;
-        if (activeFilter === "标签") return !!tagsMatch;
-        if (activeFilter === "已完结") return (titleMatch || authorMatch) && b.status === "finished";
-        if (activeFilter === "连载中") return (titleMatch || authorMatch) && b.status !== "finished";
-        return titleMatch || authorMatch || !!tagsMatch;
-      });
-
-      // 限制本地检索最大渲染 12 个结果，保障超大藏书量下移动端 diff 重绘顺滑度
-      setLocalResults(filtered.slice(0, 12));
-    });
-  }, [debouncedQuery, activeFilter]);
-
-  // 全局/云端搜索倒排索引匹配
+  // 只搜索已绑定分享密钥的私人旧云端；公共馆藏留给 GATE-03。
   const handleGlobalSearch = async (overrideQuery?: string) => {
     const queryToSearch = overrideQuery !== undefined ? overrideQuery : searchQuery;
     if (!queryToSearch.trim()) return;
 
     if (!isOnline) {
+      setStatusTone("info");
       setStatus(strings.network.offlineSearchHint);
       setIsSearching(false);
       return;
     }
 
+    const shareToken = normalizeShareToken(
+      window.localStorage.getItem("reader-share-token"),
+    );
+    if (!shareToken) {
+      setGlobalResults([]);
+      setRemoteStatus("failed");
+      setStatusTone("error");
+      setStatus("尚未绑定私人云端密钥；本地搜索仍可正常使用。");
+      return;
+    }
+
+    const generation = ++searchGenerationRef.current;
     setIsSearching(true);
     setRemoteStatus("loading");
+    setStatusTone("info");
     setStatus(strings.shelf.searchingGlobal);
     try {
-      const response = await fetch(
-        apiUrl(`/search?q=${encodeURIComponent(queryToSearch)}`),
-        {
-          headers: getShareHeaders(),
-        }
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error("Search endpoint returned non-JSON content");
+      const results = await createLegacyPersonalSyncApiClient(
+        shareToken,
+      ).searchBooks(queryToSearch);
+      if (
+        generation !== searchGenerationRef.current ||
+        normalizeShareToken(window.localStorage.getItem("reader-share-token")) !==
+          shareToken
+      ) {
+        return;
       }
-      const results = await response.json();
       setGlobalResults(results);
       setRemoteStatus("ready");
       setStatus(
@@ -157,13 +189,13 @@ export default function SearchPage() {
       );
     } catch (e) {
       console.error("Global search failed", e);
+      if (generation !== searchGenerationRef.current) return;
       setGlobalResults([]);
       setRemoteStatus("failed");
-      setStatus(
-        `搜索失败：请确认 API 已启动在 ${getApiBaseUrl()}（本地默认端口 4000）。`,
-      );
+      setStatusTone("error");
+      setStatus("私人云端暂时不可用；本地搜索和已下载阅读不受影响。");
     } finally {
-      setIsSearching(false);
+      if (generation === searchGenerationRef.current) setIsSearching(false);
     }
   };
 
@@ -173,8 +205,7 @@ export default function SearchPage() {
     handleGlobalSearch(q);
   };
 
-  // 核心功能：一键高并发异步拉取该书籍在云端中存储的所有章节，同步写入本地 IndexedDB
-  const handleImportBook = async (book: Book) => {
+  const handleImportBook = async (book: LegacyRemoteBook) => {
     if (!isOnline) {
       setToastMsg(strings.network.offlineDownloadHint);
       return;
@@ -182,72 +213,54 @@ export default function SearchPage() {
 
     if (importingBookIds.has(book.id)) return;
 
+    const shareToken = normalizeShareToken(
+      window.localStorage.getItem("reader-share-token"),
+    );
+    if (!shareToken) {
+      setToastMsg("私人云端密钥已变更，未写入本地书架。");
+      return;
+    }
+
     setImportingBookIds((prev) => {
       const next = new Set(prev);
       next.add(book.id);
       return next;
     });
     setImportProgress((prev) => ({ ...prev, [book.id]: 0 }));
+    markSyncTask(window.localStorage, book.id, "download", shareToken);
 
     try {
-      // 1. 先将 Book metadata 存入本地
-      await db.books.put(book);
-
-      // 2. 高并发拉取下载所有章节
-      const totalChapters = book.chapterCount;
-      let completed = 0;
-      const failedIndices: number[] = [];
-
-      if (totalChapters > 0) {
-        // Concurrency 并发限制器，最大并发数为 5，确保秒级飞速载入同时保护网络队列
-        const concurrencyLimit = 5;
-        const indices = Array.from({ length: totalChapters }, (_, i) => i);
-
-        const downloadChapter = async (index: number) => {
-          try {
-            const res = await fetch(
-              apiUrl(`/books/${book.id}/chapters/${index}`),
-              {
-                headers: getShareHeaders(),
-              }
-            );
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const chap = await res.json();
-            await db.chapters.put({
-              id: chap.id,
-              bookId: book.id,
-              index: chap.index,
-              title: chap.title,
-              content: chap.content,
-            });
-          } catch (e) {
-            console.error(`下载章节 ${index} 失败:`, e);
-            failedIndices.push(index);
-          } finally {
-            completed++;
-            const pct = Math.round((completed / totalChapters) * 100);
-            setImportProgress((prev) => ({ ...prev, [book.id]: pct }));
-          }
-        };
-
-        // 按并发批次处理
-        for (let i = 0; i < indices.length; i += concurrencyLimit) {
-          const chunk = indices.slice(i, i + concurrencyLimit);
-          await Promise.all(chunk.map(downloadChapter));
-        }
+      const api = createLegacyPersonalSyncApiClient(shareToken);
+      const outcome = await createPersonalSyncService(api).downloadBook(book, {
+        onPage: (loaded, total) => {
+          setImportProgress((prev) => ({
+            ...prev,
+            [book.id]: Math.round((loaded / Math.max(1, total)) * 100),
+          }));
+        },
+        shouldCommit: () =>
+          normalizeShareToken(
+            window.localStorage.getItem("reader-share-token"),
+          ) === shareToken,
+      });
+      if (outcome.status === "failed") {
+        setToastMsg(
+          outcome.code === "sync_generation_changed"
+            ? "私人云端密钥已变更，未写入本地书架。"
+            : `「${book.title}」正文未完整下载，本地未留下半本书。`,
+        );
+        return;
       }
-
-      if (failedIndices.length > 0) {
-        await db.books.update(book.id, { cacheStatus: "chapters_partial" });
-        setToastMsg(`「${book.title}」已下载 ${totalChapters - failedIndices.length}/${totalChapters} 章，可稍后重试缺失章节。`);
-      } else {
-        setImportProgress((prev) => ({ ...prev, [book.id]: 100 }));
-        await db.books.update(book.id, { cacheStatus: "chapters_full" });
-        setToastMsg(`「${book.title}」共 ${totalChapters} 章已下载到本地。`);
+      clearSyncTask(window.localStorage, book.id, shareToken);
+      if (outcome.status === "already_local") {
+        setToastMsg(`「${book.title}」已在本地，保留现有正文与阅读进度。`);
+        return;
       }
+      setImportProgress((prev) => ({ ...prev, [book.id]: 100 }));
+      setToastMsg(`「${book.title}」共 ${outcome.chapterCount} 章已完整下载到本地。`);
     } catch (err) {
       console.error("同步云端书籍章节失败:", err);
-      setToastMsg("💡 本地存储或云端通道繁忙，请稍后再试。");
+      setToastMsg("本地存储或云端通道繁忙，请稍后再试。");
     } finally {
       setImportingBookIds((prev) => {
          const next = new Set(prev);
@@ -260,11 +273,11 @@ export default function SearchPage() {
   return (
     <AppShell
       title="发现"
-      subtitle="本地书架搜索、云端好书同步与在线检索"
+      subtitle="本地书架搜索与已绑定的私人云端"
       rightNodes={
         <button
           onClick={() => router.push("/library")}
-          className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white"
+          className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white"
         >
           回书架
         </button>
@@ -288,7 +301,7 @@ export default function SearchPage() {
             disabled={isSearching || !searchQuery.trim()}
             className="ui-focus-ring absolute bottom-1.5 right-1.5 top-1.5 rounded-full bg-[var(--ui-accent)] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
           >
-            {isSearching ? "搜索中" : "搜索云端"}
+            {isSearching ? "搜索中" : "搜索私人云端"}
           </button>
         </div>
 
@@ -300,8 +313,8 @@ export default function SearchPage() {
               return (
                 <button
                   key={label}
-                  onClick={() => setActiveFilter(label)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 shadow-sm physics-spring hover:scale-[1.05] hover:-translate-y-0.5 ${
+                  onClick={() => setActiveFilter(label as LocalSearchFilter)}
+                  className={`ui-focus-ring min-h-11 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors duration-200 shadow-sm ${
                     isActive
                       ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)] font-bold"
                       : "border-[var(--ui-border)] bg-white/60 text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
@@ -335,14 +348,14 @@ export default function SearchPage() {
 
             <div className="mt-2 flex flex-col items-center gap-3 w-full max-w-md">
               <p className="text-xs text-[var(--ui-muted)] font-medium">
-                🍃 寻章摘句，您可以一键探索以下精选名著：
+                寻章摘句，您可以一键探索以下精选名著：
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {PRESET_RECOMMENDS.map((rec) => (
                   <button
                     key={rec.q}
                     onClick={() => handleQuickSearch(rec.q)}
-                    className="ui-focus-ring px-3.5 py-1.5 rounded-full border border-[rgba(80,65,45,0.12)] bg-white/70 text-xs font-semibold text-[var(--ui-text)] hover:border-[var(--ui-accent)] hover:text-[var(--ui-accent)] hover:bg-white transition-all physics-spring hover:scale-[1.03]"
+                    className="ui-focus-ring min-h-11 px-3.5 py-2 rounded-full border border-[rgba(80,65,45,0.12)] bg-white/70 text-xs font-semibold text-[var(--ui-text)] hover:border-[var(--ui-accent)] hover:text-[var(--ui-accent)] hover:bg-white transition-colors"
                   >
                     {rec.label}
                   </button>
@@ -373,7 +386,10 @@ export default function SearchPage() {
         )}
 
         {status && (
-          <p className="mb-6 rounded-full border border-[var(--ui-border)] bg-white/54 px-4 py-2 text-center text-sm text-[var(--ui-muted)] shadow-sm">
+          <p
+            role={statusTone === "error" ? "alert" : "status"}
+            className="mb-6 rounded-2xl border border-[var(--ui-border)] bg-white/54 px-4 py-3 text-center text-sm text-[var(--ui-muted)] shadow-sm"
+          >
             {status}
           </p>
         )}
@@ -381,7 +397,7 @@ export default function SearchPage() {
         {globalResults.length > 0 ? (
           <div>
             <h2 className="mb-4 text-xl font-bold text-[var(--ui-text)]">
-              云端免费候选 ({globalResults.length})
+              私人云端结果 ({globalResults.length})
             </h2>
             <div className="grid grid-cols-1 gap-3">
               {globalResults.map((book) => {
@@ -392,7 +408,7 @@ export default function SearchPage() {
                 return (
                   <div
                     key={book.id}
-                    className="ui-card flex items-center gap-4 rounded-[16px] p-4 bg-gradient-to-br from-white/70 to-white/40 border border-white/60 shadow-[0_10px_30px_rgba(80,65,45,0.03)]"
+                    className="ui-card flex flex-col items-stretch gap-4 rounded-[18px] border border-white/60 bg-gradient-to-br from-white/70 to-white/40 p-4 shadow-[0_10px_30px_rgba(80,65,45,0.03)] sm:flex-row sm:items-center"
                   >
                     <BookCover
                       title={book.title}
@@ -409,7 +425,7 @@ export default function SearchPage() {
                             {book.author || "佚名"} · {book.format.toUpperCase()}
                           </p>
                         </div>
-                        <span className="text-xs font-semibold text-[var(--ui-muted)]">云端结果</span>
+                        <span className="text-xs font-semibold text-[var(--ui-muted)]">私人云端</span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-md bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
@@ -422,16 +438,16 @@ export default function SearchPage() {
                     </div>
 
                     {/* 云端一键同步批量拉取入库控制钮 */}
-                    <div className="shrink-0">
+                    <div className="w-full shrink-0 sm:w-auto">
                       {isLocal ? (
                         <button
                           onClick={() => router.push(`/reader/${book.id}`)}
-                          className="ui-focus-ring rounded-full border border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] transition-all hover:bg-[var(--ui-accent)] hover:text-white shadow-sm physics-spring hover:scale-[1.03]"
+                          className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] shadow-sm transition-colors hover:bg-[var(--ui-accent)] hover:text-white sm:w-auto"
                         >
-                          去阅读 📖
+                          去阅读
                         </button>
                       ) : isImporting ? (
-                        <div className="rounded-full bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none border border-[rgba(95,125,82,0.18)] flex items-center gap-1.5">
+                        <div role="status" className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[rgba(95,125,82,0.18)] bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto">
                           <svg className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -441,9 +457,9 @@ export default function SearchPage() {
                       ) : (
                         <button
                           onClick={() => handleImportBook(book)}
-                          className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--ui-text)] shadow-sm transition-all hover:border-[var(--ui-accent)] hover:text-[var(--ui-accent)] hover:bg-white physics-spring hover:scale-[1.03]"
+                          className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--ui-text)] shadow-sm transition-colors hover:border-[var(--ui-accent)] hover:bg-white hover:text-[var(--ui-accent)] sm:w-auto"
                         >
-                          拉取入库 📥
+                          拉取入库
                         </button>
                       )}
                     </div>
@@ -457,7 +473,7 @@ export default function SearchPage() {
           searchQuery.trim() &&
           localResults.length === 0 && (
             <div className="ui-card mt-8 rounded-[16px] py-20 text-center text-[var(--ui-muted)] shadow-sm">
-              未找到相关书籍，点击“搜索云端”尝试联网查找
+              本地未找到相关书籍；可搜索已绑定的私人云端
             </div>
           )
         )}
@@ -465,8 +481,8 @@ export default function SearchPage() {
 
       {/* 优雅宣纸毛玻璃 Toast */}
       {toastMsg && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.85)] px-5 py-2.5 text-xs font-bold text-[var(--ui-text)] shadow-lg backdrop-blur-md physics-spring flex items-center gap-2 animate-bounce-short animate-duration-300">
-          <span>🍃</span> {toastMsg}
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center rounded-2xl border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.9)] px-5 py-3 text-xs font-bold text-[var(--ui-text)] shadow-lg backdrop-blur-md">
+          {toastMsg}
         </div>
       )}
     </AppShell>

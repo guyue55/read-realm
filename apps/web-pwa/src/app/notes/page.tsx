@@ -2,17 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
-import {
-  createHumanNotesJsonExport,
-  createHumanNotesMarkdownExport,
-  db,
-} from "@reader/storage-core";
 import type { Bookmark } from "@reader/shared-types";
 import { PageLayout } from "@/components/PageLayout";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useVirtualRouter } from "@/lib/route-store";
 import { filterNotes, type NoteWithBook } from "@/features/notes/notes-filter";
+import { notesService } from "@/features/notes/dexie-notes";
 
 export default function NotesPage() {
   const router = useVirtualRouter();
@@ -21,6 +17,8 @@ export default function NotesPage() {
   const [bookId, setBookId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [operationError, setOperationError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Bookmark | null>(null);
 
   useEffect(() => {
@@ -28,15 +26,9 @@ export default function NotesPage() {
       window.location.replace(`/#${window.location.pathname}${window.location.search}`);
       return;
     }
-    void Promise.all([db.bookmarks.toArray(), db.books.toArray()])
-      .then(([bookmarks, books]) => {
-        const titles = new Map(books.map((book) => [book.id, book.title]));
-        setNotes(
-          bookmarks
-            .map((note) => ({ ...note, bookTitle: titles.get(note.bookId) ?? "未知书籍" }))
-            .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
-        );
-      })
+    void notesService
+      .readNotes()
+      .then(setNotes)
       .catch((reason) => {
         console.error("读取笔记失败", reason);
         setError("暂时无法读取本地笔记，请刷新后重试。");
@@ -56,23 +48,27 @@ export default function NotesPage() {
   };
 
   const downloadNotes = async (format: "markdown" | "json") => {
-    const [bookmarks, currentBooks] = await Promise.all([
-      db.bookmarks.toArray(),
-      db.books.toArray(),
-    ]);
-    const createdAt = new Date().toISOString();
-    const content =
-      format === "markdown"
-        ? createHumanNotesMarkdownExport({ books: currentBooks, bookmarks, createdAt })
-        : createHumanNotesJsonExport({ books: currentBooks, bookmarks, createdAt });
-    const extension = format === "markdown" ? "md" : "json";
-    const mediaType = format === "markdown" ? "text/markdown" : "application/json";
-    const url = URL.createObjectURL(new Blob([content], { type: `${mediaType};charset=utf-8` }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `read-realm-notes-${createdAt.slice(0, 10)}.${extension}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    if (exporting) return;
+    setExporting(true);
+    setOperationError("");
+    try {
+      const result = await notesService.createExport(format);
+      const url = URL.createObjectURL(
+        new Blob([result.content], {
+          type: `${result.mediaType};charset=utf-8`,
+        }),
+      );
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = result.fileName;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (reason) {
+      console.error("笔记导出失败", reason);
+      setOperationError("笔记导出失败，本地数据未变更，请稍后重试。");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -83,18 +79,18 @@ export default function NotesPage() {
             <button
               type="button"
               onClick={() => void downloadNotes("markdown")}
-              disabled={notes.length === 0}
+              disabled={notes.length === 0 || exporting}
               className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
             >
-              导出 Markdown
+              {exporting ? "正在导出…" : "导出 Markdown"}
             </button>
             <button
               type="button"
               onClick={() => void downloadNotes("json")}
-              disabled={notes.length === 0}
+              disabled={notes.length === 0 || exporting}
               className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
             >
-              导出 JSON
+              {exporting ? "正在导出…" : "导出 JSON"}
             </button>
           </div>
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
@@ -113,6 +109,15 @@ export default function NotesPage() {
           </div>
         </section>
 
+        {operationError && (
+          <p
+            role="alert"
+            className="rounded-md border border-[#E7B8AF] bg-[#FFF0EC] px-4 py-3 text-sm text-[var(--ui-danger)]"
+          >
+            {operationError}
+          </p>
+        )}
+
         {loading ? (
           <p className="py-16 text-center text-sm text-[var(--ui-muted)]">正在读取本地笔记...</p>
         ) : error ? (
@@ -129,7 +134,7 @@ export default function NotesPage() {
               <article key={note.id} className="ui-card flex min-h-56 flex-col rounded-lg p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div><h2 className="font-bold text-[var(--ui-text)]">{note.bookTitle}</h2><p className="mt-1 text-xs text-[var(--ui-muted)]">第 {note.chapterIndex + 1} 章</p></div>
-                  <button aria-label="删除笔记" title="删除笔记" onClick={() => setDeleteTarget(note)} className="ui-focus-ring flex h-10 w-10 items-center justify-center rounded-md text-[var(--ui-danger)] hover:bg-[#FFF0EC]"><Trash2 aria-hidden="true" size={18} /></button>
+                  <button aria-label="删除笔记" title="删除笔记" onClick={() => { setOperationError(""); setDeleteTarget(note); }} className="ui-focus-ring flex h-11 w-11 items-center justify-center rounded-md text-[var(--ui-danger)] hover:bg-[#FFF0EC]"><Trash2 aria-hidden="true" size={18} /></button>
                 </div>
                 <blockquote className="mt-4 flex-1 border-l-2 border-[var(--ui-warm)] pl-3 text-sm leading-6 text-[var(--ui-muted)]">{note.contentPreview || "无摘录预览"}</blockquote>
                 {note.note && <p className="mt-4 rounded-md bg-[var(--ui-accent-soft)] p-3 text-sm leading-6 text-[var(--ui-text)]">{note.note}</p>}
@@ -145,9 +150,16 @@ export default function NotesPage() {
 
       <ConfirmDialog isOpen={Boolean(deleteTarget)} title="删除笔记" message="确定删除这条笔记吗？此操作无法撤销。" isDanger onClose={() => setDeleteTarget(null)} onConfirm={async () => {
         if (!deleteTarget) return;
-        await db.bookmarks.delete(deleteTarget.id);
-        setNotes((current) => current.filter((note) => note.id !== deleteTarget.id));
-        setDeleteTarget(null);
+        try {
+          const result = await notesService.deleteNote(deleteTarget.id);
+          if (result.status !== "deleted") throw new Error("NOTE_NOT_FOUND");
+          setNotes((current) => current.filter((note) => note.id !== deleteTarget.id));
+          setOperationError("");
+        } catch (reason) {
+          console.error("笔记删除失败", reason);
+          setOperationError("笔记删除失败，该记录仍保留在本地。");
+          throw reason;
+        }
       }} />
     </PageLayout>
   );

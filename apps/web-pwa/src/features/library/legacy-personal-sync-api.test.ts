@@ -73,6 +73,20 @@ describe("LegacyPersonalSyncApiClient", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("refuses destructive writes to the reserved default namespace", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => json({ success: true }));
+    const reservedDefault = new LegacyPersonalSyncApiClient({
+      fetchImpl,
+      resolveUrl: (path) => `https://legacy.invalid${path}`,
+      getHeaders: () => ({ "x-share-token": "default" }),
+    });
+
+    await expect(reservedDefault.clearBooks()).rejects.toMatchObject({
+      code: "private_share_token_required",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("invokes a browser-native fetch with the global receiver", async () => {
     const fetchImpl = vi.fn(function (this: unknown) {
       if (this !== globalThis) throw new TypeError("Illegal invocation");
@@ -88,6 +102,27 @@ describe("LegacyPersonalSyncApiClient", () => {
     );
 
     await expect(client(fetchImpl).listBooks()).rejects.toMatchObject({
+      code: "invalid_remote_books",
+    });
+  });
+
+  it("validates private search results through the same strict book boundary", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      expect(String(input)).toBe("https://legacy.invalid/search?q=%E5%B1%B1%E8%B0%B7");
+      return json([remoteBook({ title: "山谷" })]);
+    });
+
+    await expect(client(fetchImpl).searchBooks("山谷")).resolves.toEqual([
+      expect.objectContaining({ id: "book-1", title: "山谷" }),
+    ]);
+  });
+
+  it("rejects malformed private search payloads instead of exposing them to the page", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      json([{ ...remoteBook(), chapterCount: "two" }]),
+    );
+
+    await expect(client(fetchImpl).searchBooks("山谷")).rejects.toMatchObject({
       code: "invalid_remote_books",
     });
   });

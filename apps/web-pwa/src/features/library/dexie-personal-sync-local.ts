@@ -17,6 +17,8 @@ export interface DownloadedPersonalBookBundle {
   progress?: ReadingProgress;
 }
 
+export type DownloadedBookApplyResult = "applied" | "already_local";
+
 function sameChapterSnapshot(
   current: readonly LocalChapter[],
   expected: readonly LocalChapter[],
@@ -137,7 +139,9 @@ export class DexiePersonalSyncLocalStore {
     });
   }
 
-  async applyDownloadedBook(bundle: DownloadedPersonalBookBundle): Promise<void> {
+  async applyDownloadedBook(
+    bundle: DownloadedPersonalBookBundle,
+  ): Promise<DownloadedBookApplyResult> {
     assertCompleteBundle(bundle);
     const { book, chapters, progress } = bundle;
     const storedBook: Book = {
@@ -146,7 +150,19 @@ export class DexiePersonalSyncLocalStore {
       sourceAvailability: "full_cached",
     };
 
-    await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+    return db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
+      const [existingBook, existingChapterCount] = await Promise.all([
+        db.books.get(book.id),
+        db.chapters.where("bookId").equals(book.id).count(),
+      ]);
+      if (
+        existingBook &&
+        (existingChapterCount > 0 ||
+          existingBook.cacheStatus !== "metadata_only" ||
+          existingBook.sourceAvailability === "full_cached")
+      ) {
+        return "already_local" as const;
+      }
       await db.chapters.where("bookId").equals(book.id).delete();
       await db.books.put(storedBook);
       await db.chapters.bulkPut([...chapters]);
@@ -165,6 +181,7 @@ export class DexiePersonalSyncLocalStore {
       ) {
         throw new PersonalSyncLocalError("下载数据未完整落盘");
       }
+      return "applied" as const;
     });
   }
 }

@@ -31,7 +31,7 @@ function setup() {
     verifyRemoteCopy: vi.fn(async () => undefined),
   };
   const local: PersonalSyncDownloadLocalStore & PersonalSyncUploadLocalStore = {
-    applyDownloadedBook: vi.fn(async () => undefined),
+    applyDownloadedBook: vi.fn(async () => "applied" as const),
     readUploadBundle: vi.fn(async () => ({ book, chapters })),
     offloadIfSnapshotMatches: vi.fn(async () => undefined),
   };
@@ -81,6 +81,30 @@ describe("PersonalSyncService.downloadBook", () => {
       status: "failed",
       bookId: book.id,
       code: "local_write_failed",
+    });
+  });
+
+  it("does not commit a downloaded private book after its credential generation changes", async () => {
+    const { local, service } = setup();
+
+    await expect(
+      service.downloadBook(book, { shouldCommit: () => false }),
+    ).resolves.toEqual({
+      status: "failed",
+      bookId: book.id,
+      code: "sync_generation_changed",
+    });
+    expect(local.applyDownloadedBook).not.toHaveBeenCalled();
+  });
+
+  it("reports an existing local copy without claiming a remote overwrite", async () => {
+    const { local, service } = setup();
+    vi.mocked(local.applyDownloadedBook).mockResolvedValueOnce("already_local");
+
+    await expect(service.downloadBook(book)).resolves.toEqual({
+      status: "already_local",
+      bookId: book.id,
+      chapterCount: 1,
     });
   });
 });

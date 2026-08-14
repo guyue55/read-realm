@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   DEFAULT_READER_SETTINGS,
   loadReaderSettings,
-  saveReaderSettings,
+  queueReaderSettingsSave,
   type ReaderSettingsState,
 } from "@/lib/reader-settings";
 import { THEMES, type ThemeName } from "@/styles/themes";
@@ -40,6 +40,7 @@ export default function SettingsPage() {
     DEFAULT_READER_SETTINGS,
   );
   const [saved, setSaved] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
   const [backupStatus, setBackupStatus] = useState<{
     state: "idle" | "working" | "success" | "failed";
     message: string;
@@ -73,17 +74,30 @@ export default function SettingsPage() {
   }, []);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const settingsGenerationRef = useRef(0);
+  const restoreMutexRef = useRef(false);
 
-  const saveNextSettings = (nextSettings: ReaderSettingsState) => {
-    setSettings(nextSettings);
-    saveReaderSettings(nextSettings);
+  const markSaved = () => {
     setSaved(true);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setSaved(false), 1200);
+  };
+
+  const saveNextSettings = async (nextSettings: ReaderSettingsState) => {
+    const generation = ++settingsGenerationRef.current;
+    setSettings(nextSettings);
+    setSettingsError("");
+    try {
+      await queueReaderSettingsSave(nextSettings);
+      if (generation === settingsGenerationRef.current) markSaved();
+    } catch (error) {
+      console.error("设置保存失败", error);
+      if (generation === settingsGenerationRef.current) {
+        setSettings(loadReaderSettings());
+        setSaved(false);
+        setSettingsError("设置保存失败，已恢复为上次成功保存的值。");
+      }
     }
-    timerRef.current = setTimeout(() => {
-      setSaved(false);
-    }, 1200);
   };
 
   // 拖动期间仅更新 React State，变动 CSS 变量触发预览重绘，无任何 IO 与定时器开销，保障 60fps 流畅度
@@ -92,23 +106,28 @@ export default function SettingsPage() {
   };
 
   // 拖动结束/松开时执行写盘，并单次优雅触发保存气泡
-  const handleSettingCommit = (nextSettings: ReaderSettingsState) => {
-    saveReaderSettings(nextSettings);
-    setSaved(true);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  const handleSettingCommit = async (nextSettings: ReaderSettingsState) => {
+    const generation = ++settingsGenerationRef.current;
+    setSettingsError("");
+    try {
+      await queueReaderSettingsSave(nextSettings);
+      if (generation === settingsGenerationRef.current) markSaved();
+    } catch (error) {
+      console.error("设置保存失败", error);
+      if (generation === settingsGenerationRef.current) {
+        setSettings(loadReaderSettings());
+        setSaved(false);
+        setSettingsError("设置保存失败，已恢复为上次成功保存的值。");
+      }
     }
-    timerRef.current = setTimeout(() => {
-      setSaved(false);
-    }, 1200);
   };
 
   const updateTheme = (theme: ThemeName) => {
-    saveNextSettings({ ...settings, theme });
+    void saveNextSettings({ ...settings, theme });
   };
 
   const updateUiMode = (uiMode: "default" | "simple") => {
-    saveNextSettings({ ...settings, uiMode });
+    void saveNextSettings({ ...settings, uiMode });
   };
 
   const handleReset = () => {
@@ -118,7 +137,7 @@ export default function SettingsPage() {
       message: "确定要恢复默认排版设置吗？此操作将立即恢复纸墨底色、字号行间至初始状态。",
       isDanger: false,
       onConfirm: () => {
-        saveNextSettings(DEFAULT_READER_SETTINGS);
+        return saveNextSettings(DEFAULT_READER_SETTINGS);
       }
     });
   };
@@ -152,6 +171,11 @@ export default function SettingsPage() {
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (restoreMutexRef.current) {
+      event.target.value = "";
+      return;
+    }
+    restoreMutexRef.current = true;
     setRestorePreview(null);
     setMergePlan(null);
     setMergeResolutions({});
@@ -175,12 +199,15 @@ export default function SettingsPage() {
         message: describeLocalDataBackupError(error),
       });
     } finally {
+      restoreMutexRef.current = false;
       event.target.value = "";
     }
   };
 
   const handleConfirmPortableRestore = async () => {
     if (!restorePreview) return;
+    if (restoreMutexRef.current) return;
+    restoreMutexRef.current = true;
     setBackupStatus({
       state: "working",
       message:
@@ -222,6 +249,8 @@ export default function SettingsPage() {
       });
     } catch (error) {
       setBackupStatus({ state: "failed", message: describeLocalDataBackupError(error) });
+    } finally {
+      restoreMutexRef.current = false;
     }
   };
 
@@ -250,6 +279,14 @@ export default function SettingsPage() {
       }
     >
       <div className="max-w-3xl mx-auto space-y-6 pb-12">
+        {settingsError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {settingsError}
+          </p>
+        )}
         <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
@@ -315,12 +352,13 @@ export default function SettingsPage() {
             >
               下载完整备份包
             </button>
-            <label className="ui-focus-ring flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold">
+            <label className={`ui-focus-ring flex min-h-11 items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold ${backupStatus.state === "working" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
               选择备份恢复
               <input
                 type="file"
                 accept="application/json,.json"
                 aria-label="选择阅读备份文件"
+                disabled={backupStatus.state === "working"}
                 onChange={(event) => void handleRestoreBackup(event)}
                 className="sr-only"
               />
@@ -411,12 +449,14 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => void handleConfirmPortableRestore()}
+                  disabled={backupStatus.state === "working"}
                   className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
                 >
                   {restoreMode === "merge" ? "确认合并并校验" : "确认恢复到空书架"}
                 </button>
                 <button
                   type="button"
+                  disabled={backupStatus.state === "working"}
                   onClick={() => {
                     setRestorePreview(null);
                     setMergePlan(null);
@@ -517,7 +557,7 @@ export default function SettingsPage() {
                 <button
                   key={f.key}
                   onClick={() =>
-                    saveNextSettings({
+                    void saveNextSettings({
                       ...settings,
                       fontFamily: f.key as "kaiti" | "songti" | "heiti",
                     })
@@ -560,13 +600,15 @@ export default function SettingsPage() {
               </div>
               <input
                 type="range"
+                aria-label="字号"
                 min="14"
                 max="36"
                 step="1"
                 value={settings.fontSize}
                 onChange={(e) => handleSettingChange({ ...settings, fontSize: parseInt(e.target.value) })}
-                onMouseUp={() => handleSettingCommit(settings)}
-                onTouchEnd={() => handleSettingCommit(settings)}
+                onMouseUp={() => void handleSettingCommit(settings)}
+                onTouchEnd={() => void handleSettingCommit(settings)}
+                onBlur={() => void handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -583,13 +625,15 @@ export default function SettingsPage() {
               </div>
               <input
                 type="range"
+                aria-label="行高"
                 min="1.3"
                 max="2.4"
                 step="0.1"
                 value={settings.lineHeight}
                 onChange={(e) => handleSettingChange({ ...settings, lineHeight: parseFloat(e.target.value) })}
-                onMouseUp={() => handleSettingCommit(settings)}
-                onTouchEnd={() => handleSettingCommit(settings)}
+                onMouseUp={() => void handleSettingCommit(settings)}
+                onTouchEnd={() => void handleSettingCommit(settings)}
+                onBlur={() => void handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -606,13 +650,15 @@ export default function SettingsPage() {
               </div>
               <input
                 type="range"
+                aria-label="段落间距"
                 min="0"
                 max="40"
                 step="2"
                 value={settings.paragraphSpacing}
                 onChange={(e) => handleSettingChange({ ...settings, paragraphSpacing: parseInt(e.target.value) })}
-                onMouseUp={() => handleSettingCommit(settings)}
-                onTouchEnd={() => handleSettingCommit(settings)}
+                onMouseUp={() => void handleSettingCommit(settings)}
+                onTouchEnd={() => void handleSettingCommit(settings)}
+                onBlur={() => void handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
@@ -629,13 +675,15 @@ export default function SettingsPage() {
               </div>
               <input
                 type="range"
+                aria-label="字符间距"
                 min="-0.05"
                 max="0.25"
                 step="0.01"
                 value={settings.letterSpacing}
                 onChange={(e) => handleSettingChange({ ...settings, letterSpacing: parseFloat(e.target.value) })}
-                onMouseUp={() => handleSettingCommit(settings)}
-                onTouchEnd={() => handleSettingCommit(settings)}
+                onMouseUp={() => void handleSettingCommit(settings)}
+                onTouchEnd={() => void handleSettingCommit(settings)}
+                onBlur={() => void handleSettingCommit(settings)}
                 className="w-full h-1.5 bg-[rgba(80,65,45,0.08)] rounded-lg appearance-none cursor-pointer accent-[var(--ui-accent)]"
               />
               <div className="flex justify-between text-[10px] text-[var(--ui-quiet)]">
