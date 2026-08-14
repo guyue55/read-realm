@@ -78,7 +78,11 @@ export function TocDrawer({
             {strings.reader.bookmarks}
           </button>
           {isMobileDrawer && onClose && (
-            <button onClick={onClose} className="px-2 text-[#6F665B]">
+            <button
+              aria-label="关闭目录"
+              onClick={onClose}
+              className="px-2 text-[#6F665B]"
+            >
               ✕
             </button>
           )}
@@ -176,6 +180,7 @@ export function TocDrawer({
       {isMobileDrawer && onClose && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
           <button
+            aria-label="收起目录"
             onClick={(e) => {
               e.stopPropagation();
               onClose();

@@ -55,7 +55,11 @@ export function SettingsSheet({
             {strings.reader.settings}
           </h3>
           {onClose && (
-            <button onClick={onClose} className={`${mutedText} p-1`}>
+            <button
+              aria-label="关闭阅读设置"
+              onClick={onClose}
+              className={`${mutedText} p-1`}
+            >
               ✕
             </button>
           )}
