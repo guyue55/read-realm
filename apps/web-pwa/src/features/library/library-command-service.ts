@@ -11,7 +11,13 @@ export type LibraryCommandResult =
         | "book_not_found"
         | "folder_not_found"
         | "folder_not_dissolvable"
-        | "invalid_folder_name";
+        | "invalid_folder_name"
+        | "book_not_source_bound"
+        | "book_not_fully_cached"
+        | "folder_not_source_bound"
+        | "folder_contains_incomplete_books"
+        | "folder_contains_ambiguous_sources"
+        | "reconstruct_requires_reimport";
     };
 
 export interface LibraryCommandPort {
@@ -36,6 +42,17 @@ export interface LibraryCommandPort {
   offloadBookAtomic(input: {
     bookId: string;
     updatedAt: string;
+  }): Promise<LibraryCommandResult>;
+  disconnectBookAtomic(input: {
+    bookId: string;
+    updatedAt: string;
+  }): Promise<LibraryCommandResult>;
+  disconnectFolderAtomic(input: {
+    folderId: string;
+    updatedAt: string;
+  }): Promise<LibraryCommandResult>;
+  requestReconstruct(input: {
+    bookId: string;
   }): Promise<LibraryCommandResult>;
 }
 
@@ -102,5 +119,23 @@ export class LibraryCommandService {
       bookId,
       updatedAt: this.dependencies.now(),
     });
+  }
+
+  disconnectBook(bookId: string): Promise<LibraryCommandResult> {
+    return this.port.disconnectBookAtomic({
+      bookId,
+      updatedAt: this.dependencies.now(),
+    });
+  }
+
+  disconnectFolder(folderId: string): Promise<LibraryCommandResult> {
+    return this.port.disconnectFolderAtomic({
+      folderId,
+      updatedAt: this.dependencies.now(),
+    });
+  }
+
+  requestReconstruct(bookId: string): Promise<LibraryCommandResult> {
+    return this.port.requestReconstruct({ bookId });
   }
 }

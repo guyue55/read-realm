@@ -2,6 +2,7 @@ import type { LocalChapter, ReadingProgress } from "@reader/shared-types";
 import { readLegacyRemoteProgress, type LegacyRemoteBook } from "./legacy-personal-sync-api";
 import {
   personalSyncLocalStore,
+  type DownloadedBookApplyResult,
   type DownloadedPersonalBookBundle,
 } from "./dexie-personal-sync-local";
 
@@ -27,7 +28,9 @@ export interface PersonalSyncUploadApi {
 }
 
 export interface PersonalSyncDownloadLocalStore {
-  applyDownloadedBook(bundle: DownloadedPersonalBookBundle): Promise<void>;
+  applyDownloadedBook(
+    bundle: DownloadedPersonalBookBundle,
+  ): Promise<DownloadedBookApplyResult>;
 }
 
 export interface PersonalSyncUploadLocalStore {
@@ -45,6 +48,11 @@ export type PersonalSyncDownloadOutcome =
       status: "failed";
       bookId: string;
       code: string;
+    }
+  | {
+      status: "already_local";
+      bookId: string;
+      chapterCount: number;
     };
 
 function errorCode(error: unknown) {
@@ -116,7 +124,10 @@ export class PersonalSyncService {
 
   async downloadBook(
     book: LegacyRemoteBook,
-    options: { onPage?: (loaded: number, total: number) => void } = {},
+    options: {
+      onPage?: (loaded: number, total: number) => void;
+      shouldCommit?: () => boolean;
+    } = {},
   ): Promise<PersonalSyncDownloadOutcome> {
     try {
       const chapters = await this.api.downloadChapters(
@@ -125,7 +136,21 @@ export class PersonalSyncService {
         { onPage: options.onPage },
       );
       const progress: ReadingProgress | undefined = readLegacyRemoteProgress(book);
-      await this.local.applyDownloadedBook({ book, chapters, progress });
+      if (options.shouldCommit && !options.shouldCommit()) {
+        return {
+          status: "failed",
+          bookId: book.id,
+          code: "sync_generation_changed",
+        };
+      }
+      const applyResult = await this.local.applyDownloadedBook({ book, chapters, progress });
+      if (applyResult === "already_local") {
+        return {
+          status: "already_local",
+          bookId: book.id,
+          chapterCount: chapters.length,
+        };
+      }
       return {
         status: "succeeded",
         bookId: book.id,

@@ -51,11 +51,11 @@ export function ConfirmDialog({
     try {
       setLoading(true);
       await onConfirm();
+      onClose();
     } catch (err) {
       console.error("弹窗确认操作执行异常:", err);
     } finally {
       setLoading(false);
-      onClose();
     }
   };
 

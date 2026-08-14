@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { Book, LibraryFolder } from "@reader/shared-types";
+import { BookSchema, type Book, type LibraryFolder } from "@reader/shared-types";
 import {
   META_SHELF_EMPTY_ACK_KEY,
   backupMetadataToStorage,
@@ -242,5 +242,162 @@ describe("DexieLibraryCommandPort", () => {
       cacheStatus: "metadata_only",
       sourceAvailability: "cloud_available",
     });
+  });
+
+  it("blocks physical disconnect when the only local body is incomplete", async () => {
+    const book: Book = {
+      ...makeBook("physical-book"),
+      sourceType: "folder_index",
+      chapterCount: 2,
+      sourceFileId: "file-1",
+      contentLocator: {
+        sourceId: "source-1",
+        sourceType: "browser_directory",
+        rootName: "Books",
+        relativePath: "book.txt",
+      },
+    };
+    await db.books.put(book);
+    await db.chapters.put({
+      id: "chapter-0",
+      bookId: book.id,
+      index: 0,
+      title: "One",
+      content: "only one chapter",
+    });
+
+    await expect(libraryCommandService.disconnectBook(book.id)).resolves.toEqual({
+      status: "book_not_fully_cached",
+    });
+    await expect(db.books.get(book.id)).resolves.toEqual(book);
+    await expect(db.chapters.where("bookId").equals(book.id).count()).resolves.toBe(1);
+  });
+
+  it("disconnects a fully cached physical book into a valid offline book", async () => {
+    const book: Book = {
+      ...makeBook("physical-book"),
+      sourceType: "folder_index",
+      sourceFileId: "file-1",
+      contentLocator: {
+        sourceId: "source-1",
+        sourceType: "browser_directory",
+        rootName: "Books",
+        relativePath: "book.txt",
+      },
+    };
+    await db.books.put(book);
+    await db.chapters.put({
+      id: "chapter-0",
+      bookId: book.id,
+      index: 0,
+      title: "One",
+      content: "complete",
+    });
+    await db.indexedNovelFiles.put({
+      id: "physical-index",
+      sourceId: "source-1",
+      name: "book.txt",
+      relativePath: "book.txt",
+      kind: "file",
+      format: "txt",
+      status: "parsed",
+      bookId: book.id,
+      createdAt: "2026-08-15T00:00:00.000Z",
+      updatedAt: "2026-08-15T00:00:00.000Z",
+    });
+
+    await expect(libraryCommandService.disconnectBook(book.id)).resolves.toEqual({
+      status: "applied",
+      affectedBookCount: 1,
+    });
+    const disconnected = await db.books.get(book.id);
+    expect(BookSchema.safeParse(disconnected).success).toBe(true);
+    expect(disconnected).toMatchObject({
+      sourceType: "manual",
+      cacheStatus: "chapters_full",
+      sourceAvailability: "full_cached",
+    });
+    expect(disconnected?.contentLocator).toBeUndefined();
+    await expect(db.chapters.where("bookId").equals(book.id).count()).resolves.toBe(1);
+    const detachedPhysicalIndex = await db.indexedNovelFiles.get("physical-index");
+    expect(detachedPhysicalIndex?.status).toBe("indexed");
+    expect(detachedPhysicalIndex?.bookId).toBeUndefined();
+  });
+
+  it("disconnects only books physically owned by the folder source", async () => {
+    const folder: LibraryFolder = {
+      ...makeFolder("physical-folder"),
+      sourceId: "source-1",
+      sourceType: "imported_directory",
+    };
+    const physical: Book = {
+      ...makeBook("physical-book"),
+      sourceType: "folder_index",
+      sourceFolderId: folder.id,
+      sourceFileId: "file-1",
+      contentLocator: {
+        sourceId: "source-1",
+        sourceType: "browser_directory",
+        rootName: "Books",
+        relativePath: "book.txt",
+      },
+    };
+    const logicallyMoved = {
+      ...makeBook("upload-book"),
+      sourceFolderId: folder.id,
+    };
+    await db.libraryFolders.put(folder);
+    await db.books.bulkPut([physical, logicallyMoved]);
+    await db.chapters.bulkPut([
+      { id: "p-0", bookId: physical.id, index: 0, title: "P", content: "P" },
+      { id: "u-0", bookId: logicallyMoved.id, index: 0, title: "U", content: "U" },
+    ]);
+    await db.indexedNovelFiles.put({
+      id: "folder-index",
+      sourceId: "source-1",
+      parentFolderId: folder.id,
+      name: "book.txt",
+      relativePath: "book.txt",
+      kind: "file",
+      format: "txt",
+      status: "parsed",
+      bookId: physical.id,
+      createdAt: "2026-08-15T00:00:00.000Z",
+      updatedAt: "2026-08-15T00:00:00.000Z",
+    });
+
+    await expect(libraryCommandService.disconnectFolder(folder.id)).resolves.toEqual({
+      status: "applied",
+      affectedBookCount: 1,
+      folderId: folder.id,
+    });
+    await expect(db.books.get(physical.id)).resolves.toMatchObject({ sourceType: "manual" });
+    await expect(db.books.get(logicallyMoved.id)).resolves.toMatchObject({ sourceType: "upload" });
+    await expect(db.libraryFolders.get(folder.id)).resolves.toMatchObject({
+      sourceType: "virtual",
+    });
+    const detachedFolderIndex = await db.indexedNovelFiles.get("folder-index");
+    expect(detachedFolderIndex?.status).toBe("indexed");
+    expect(detachedFolderIndex?.bookId).toBeUndefined();
+  });
+
+  it("never deletes old chapters merely to request a future reconstruction", async () => {
+    const book = makeBook("book-1");
+    await db.books.put(book);
+    await db.chapters.put({
+      id: "chapter-0",
+      bookId: book.id,
+      index: 0,
+      title: "One",
+      content: "only readable copy",
+    });
+
+    await expect(libraryCommandService.requestReconstruct(book.id)).resolves.toEqual({
+      status: "reconstruct_requires_reimport",
+    });
+    await expect(db.books.get(book.id)).resolves.toEqual(book);
+    await expect(db.chapters.where("bookId").equals(book.id).toArray()).resolves.toEqual([
+      expect.objectContaining({ content: "only readable copy" }),
+    ]);
   });
 });

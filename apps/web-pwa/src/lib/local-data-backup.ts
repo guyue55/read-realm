@@ -38,12 +38,19 @@ function byBookAndIndex<
 }
 
 export async function readBrowserLocalData(): Promise<LocalDataSnapshotData> {
-  const [books, chapters, progress, bookmarks] = await Promise.all([
-    db.books.toArray(),
-    db.chapters.toArray(),
-    db.progress.toArray(),
-    db.bookmarks.toArray(),
-  ]);
+  const { books, chapters, progress, bookmarks } = await db.transaction(
+    "r",
+    [db.books, db.chapters, db.progress, db.bookmarks],
+    async () => {
+      const [books, chapters, progress, bookmarks] = await Promise.all([
+        db.books.toArray(),
+        db.chapters.toArray(),
+        db.progress.toArray(),
+        db.bookmarks.toArray(),
+      ]);
+      return { books, chapters, progress, bookmarks };
+    },
+  );
 
   return {
     books: books.sort(byId),

@@ -6,6 +6,8 @@ import { inArray, sql } from 'drizzle-orm';
 
 @Injectable()
 export class SearchRepository {
+  private static readonly MAX_RESULTS = 200;
+
   constructor(@Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>) {}
 
   /**
@@ -21,37 +23,41 @@ export class SearchRepository {
     const sanitized = query.replace(/"/g, '""').trim();
     if (!sanitized) return [];
     const ftsQuery = `"${sanitized}"`;
+    const normalizedToken = shareToken?.trim() || 'default';
+    const isDefault = normalizedToken === 'default';
+    const privateSuffix = `#${normalizedToken}`;
+    const scopePredicate = isDefault
+      ? sql`(instr(id, '#') = 0 OR substr(id, -8) = '#default')`
+      : sql`substr(id, -${privateSuffix.length}) = ${privateSuffix}`;
     const results = await this.db.all<{ id: string }>(sql`
       SELECT id FROM books_search_v 
-      WHERE books_search_v MATCH ${ftsQuery} 
-      ORDER BY rank
+      WHERE books_search_v MATCH ${ftsQuery}
+        AND ${scopePredicate}
+      ORDER BY rank, id
+      LIMIT ${sql.raw(String(SearchRepository.MAX_RESULTS))}
     `);
 
-    const ids = results.map((row: { id: string }) => row.id);
+    const ids = results
+      .map((row: { id: string }) => row.id)
+      .filter((id) =>
+        isDefault
+          ? id.endsWith('#default') || !id.includes('#')
+          : id.endsWith(privateSuffix),
+      )
+      .slice(0, SearchRepository.MAX_RESULTS);
 
     if (ids.length === 0) return [];
 
-    // Filter IDs matching current shareToken scoping in memory
-    const isDefault = !shareToken || shareToken === 'default';
-    const filteredIds = ids.filter((id) => {
-      if (isDefault) {
-        return id.endsWith('#default') || !id.includes('#');
-      } else {
-        return id.endsWith(`#${shareToken}`);
-      }
-    });
-
-    if (filteredIds.length === 0) return [];
-
     // Fetch full book details
     const dbBooks = await this.db.query.books.findMany({
-      where: inArray(schema.books.id, filteredIds),
+      where: inArray(schema.books.id, ids),
     });
+    const booksById = new Map(dbBooks.map((book) => [book.id, book]));
 
-    // Strip physical suffixes on return
-    return dbBooks.map((book) => ({
-      ...book,
-      id: book.id.split('#')[0],
-    }));
+    // Preserve the stable FTS rank/id order after the details lookup.
+    return ids.flatMap((id) => {
+      const book = booksById.get(id);
+      return book ? [{ ...book, id: book.id.split('#')[0], tags: [] }] : [];
+    });
   }
 }

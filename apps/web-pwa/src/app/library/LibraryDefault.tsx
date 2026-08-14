@@ -483,23 +483,16 @@ export function LibraryDefault({
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         try {
-          await db.transaction("rw", [db.libraryFolders, db.books], async () => {
-            await db.libraryFolders.update(folderId, {
-              sourceId: undefined,
-              sourceType: "virtual",
-              updatedAt: new Date().toISOString()
-            });
-            const subBooks = await db.books.where("sourceFolderId").equals(folderId).toArray();
-            for (const b of subBooks) {
-              await db.books.update(b.id, {
-                sourceFileId: undefined,
-                sourceType: undefined,
-                contentLocator: undefined,
-                updatedAt: new Date().toISOString()
-              });
-            }
-          });
-          setToastMsg(`🔏 「${folderName}」已转换为虚拟书柜，物理句柄成功切断绑定。`);
+          const result = await libraryCommandService.disconnectFolder(folderId);
+          setToastMsg(
+            result.status === "applied"
+              ? `🔏 「${folderName}」已转换为虚拟书柜，${result.affectedBookCount ?? 0} 本完整缓存藏书已安全断开物理来源。`
+              : result.status === "folder_contains_incomplete_books"
+                ? "💡 解绑已停止：书箧中有藏书尚未完整缓存，先完整读入正文才能断开原文件。"
+                : result.status === "folder_contains_ambiguous_sources"
+                  ? "💡 解绑已停止：书箧中存在无法确认归属的物理来源，本地数据未变更。"
+                  : "💡 该书箧已不是可解绑的物理目录，本地数据未变更。",
+          );
         } catch (err) {
           console.error("解绑文件夹失败:", err);
           setToastMsg("💡 解绑定失败，存储数据库繁忙。");
@@ -518,13 +511,14 @@ export function LibraryDefault({
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         try {
-          await db.books.update(bookId, {
-            sourceFileId: undefined,
-            sourceType: undefined,
-            contentLocator: undefined,
-            updatedAt: new Date().toISOString()
-          });
-          setToastMsg(`🔏 《${title}》已转换为纯离线缓存藏书模式，安全切断直连。`);
+          const result = await libraryCommandService.disconnectBook(bookId);
+          setToastMsg(
+            result.status === "applied"
+              ? `🔏 《${title}》已转换为完整离线藏书，原文件直连已安全切断。`
+              : result.status === "book_not_fully_cached"
+                ? "💡 解绑已停止：该书正文尚未完整缓存，断开原文件会导致无法阅读。"
+                : "💡 该书没有可解除的物理来源，本地数据未变更。",
+          );
         } catch (err) {
           console.error("解绑书籍失败:", err);
           setToastMsg("💡 书籍解除硬关联失败。");
@@ -538,20 +532,17 @@ export function LibraryDefault({
     setConfirmState({
       isOpen: true,
       title: "📥 重构自愈藏书",
-      message: `您确认要清空《${title}》的旧有章节缓存并强制重新切章吗？这将重新解算原大文件或多章节目录，但原有的阅读进度、书签和手写笔记将绝对保留！`,
+      message: `《${title}》的当前正文是可读副本。为避免在原文件丢失、权限失效或解析失败时删掉唯一副本，当前版本不再先清空后重构。请从导入页重新选择原文件，完整解析成功后再原子替换。`,
       isDanger: true,
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         try {
-          await db.transaction("rw", [db.chapters, db.books], async () => {
-            await db.chapters.where("bookId").equals(bookId).delete();
-            await db.books.update(bookId, {
-              parseStatus: "not_parsed",
-              cacheStatus: "metadata_only",
-              updatedAt: new Date().toISOString()
-            });
-          });
-          setToastMsg(`📥 《${title}》已成功重置，下次打开时将重新切章自愈。`);
+          const result = await libraryCommandService.requestReconstruct(bookId);
+          setToastMsg(
+            result.status === "reconstruct_requires_reimport"
+              ? `🛡️ 已保留《${title}》当前正文；请从导入页重新选择原文件后完成安全替换。`
+              : "💡 藏书已不存在，未执行重构。",
+          );
         } catch (err) {
           console.error("重构书籍失败:", err);
           setToastMsg("💡 书籍重构重设失败。");
@@ -719,15 +710,29 @@ export function LibraryDefault({
       isDanger: true,
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        if (
+          syncMutexRef.current ||
+          currentShareTokenRef.current !== operation.shareToken
+        ) {
+          setToastMsg("⏳ 同步状态或私有密钥已变更，本次清空未执行。");
+          return;
+        }
+        syncMutexRef.current = true;
         try {
           await operation.api.clearBooks();
-          setToastMsg("🧼 拂尘一扫，云端密阁藏书已全物理清空！");
+          const remaining = await operation.api.listBooks();
+          if (remaining.length > 0) {
+            throw new Error("REMOTE_CLEAR_READBACK_NOT_EMPTY");
+          }
+          setToastMsg("🧼 私人云端已清空，并完成空库回读核验。");
           if (currentShareTokenRef.current === operation.shareToken) {
             setCloudBooks([]);
           }
         } catch (err) {
           console.error("清空云端备份失败:", err);
-          setToastMsg("💡 清空失败，云端同步通道繁忙，请稍后再试。");
+          setToastMsg("💡 清空未通过云端回读核验，不宣称成功，请稍后重试。");
+        } finally {
+          syncMutexRef.current = false;
         }
       },
     });

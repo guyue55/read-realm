@@ -1,4 +1,4 @@
-import { createId } from "@reader/shared-types";
+import { BookSchema, createId, type Book, type LocalChapter } from "@reader/shared-types";
 import { db, executeSafeWriteTransaction } from "@reader/storage-core";
 import {
   LibraryCommandService,
@@ -8,6 +8,37 @@ import {
 
 function assertMutation(condition: boolean) {
   if (!condition) throw new Error("LIBRARY_COMMAND_READBACK_FAILED");
+}
+
+function hasCompleteBody(book: Book, chapters: readonly LocalChapter[]) {
+  if (book.chapterCount <= 0 || chapters.length !== book.chapterCount) return false;
+  const ids = new Set<string>();
+  return chapters.every((chapter, index) => {
+    if (
+      chapter.bookId !== book.id ||
+      chapter.index !== index ||
+      chapter.content.length === 0 ||
+      ids.has(chapter.id)
+    ) {
+      return false;
+    }
+    ids.add(chapter.id);
+    return true;
+  });
+}
+
+function disconnectedBook(book: Book, updatedAt: string): Book {
+  const candidate: Book = {
+    ...book,
+    sourceType: "manual",
+    sourceFileId: undefined,
+    contentLocator: undefined,
+    multiFileBook: undefined,
+    cacheStatus: "chapters_full",
+    sourceAvailability: "full_cached",
+    updatedAt,
+  };
+  return BookSchema.parse(candidate);
 }
 
 export class DexieLibraryCommandPort implements LibraryCommandPort {
@@ -205,6 +236,142 @@ export class DexieLibraryCommandPort implements LibraryCommandPort {
       );
       return { status: "applied", affectedBookCount: 1 } as const;
     });
+  }
+
+  disconnectBookAtomic({
+    bookId,
+    updatedAt,
+  }: Parameters<LibraryCommandPort["disconnectBookAtomic"]>[0]) {
+    return executeSafeWriteTransaction(
+      [db.books, db.chapters, db.indexedNovelFiles],
+      async () => {
+      const [book, chapters] = await Promise.all([
+        db.books.get(bookId),
+        db.chapters.where("bookId").equals(bookId).sortBy("index"),
+      ]);
+      if (!book) return { status: "book_not_found" } as const;
+      if (!book.contentLocator && !book.sourceFileId && !book.multiFileBook) {
+        return { status: "book_not_source_bound" } as const;
+      }
+      if (!hasCompleteBody(book, chapters)) {
+        return { status: "book_not_fully_cached" } as const;
+      }
+      const candidate = disconnectedBook(book, updatedAt);
+      await db.books.put(candidate);
+      await db.indexedNovelFiles.where("bookId").equals(bookId).modify({
+        bookId: undefined,
+        status: "indexed",
+        updatedAt,
+      });
+      const saved = await db.books.get(bookId);
+      assertMutation(
+        BookSchema.safeParse(saved).success &&
+          saved?.sourceType === "manual" &&
+          !saved.contentLocator &&
+          (await db.chapters.where("bookId").equals(bookId).count()) ===
+            book.chapterCount &&
+          (await db.indexedNovelFiles.where("bookId").equals(bookId).count()) === 0,
+      );
+      return { status: "applied", affectedBookCount: 1 } as const;
+      },
+    );
+  }
+
+  disconnectFolderAtomic({
+    folderId,
+    updatedAt,
+  }: Parameters<LibraryCommandPort["disconnectFolderAtomic"]>[0]) {
+    return executeSafeWriteTransaction(
+      [db.libraryFolders, db.books, db.chapters, db.indexedNovelFiles],
+      async () => {
+        const folder = await db.libraryFolders.get(folderId);
+        if (!folder) return { status: "folder_not_found" } as const;
+        if (!folder.sourceId || folder.sourceType === "virtual") {
+          return { status: "folder_not_source_bound" } as const;
+        }
+        const assigned = await db.books
+          .where("sourceFolderId")
+          .equals(folderId)
+          .toArray();
+        const sourceBacked = assigned.filter(
+          (book) =>
+            book.sourceType === "folder_index" ||
+            book.sourceType === "folder_multi_file_book" ||
+            book.sourceType === "local_backend_directory",
+        );
+        if (
+          sourceBacked.some(
+            (book) => book.contentLocator?.sourceId !== folder.sourceId,
+          )
+        ) {
+          return { status: "folder_contains_ambiguous_sources" } as const;
+        }
+        const physicalBooks = assigned.filter(
+          (book) => book.contentLocator?.sourceId === folder.sourceId,
+        );
+        const chapterSets = await Promise.all(
+          physicalBooks.map((book) =>
+            db.chapters.where("bookId").equals(book.id).sortBy("index"),
+          ),
+        );
+        if (
+          physicalBooks.some(
+            (book, index) => !hasCompleteBody(book, chapterSets[index] ?? []),
+          )
+        ) {
+          return { status: "folder_contains_incomplete_books" } as const;
+        }
+        const candidates = physicalBooks.map((book) =>
+          disconnectedBook(book, updatedAt),
+        );
+        await db.books.bulkPut(candidates);
+        const physicalBookIds = physicalBooks.map((book) => book.id);
+        if (physicalBookIds.length > 0) {
+          await db.indexedNovelFiles
+            .where("bookId")
+            .anyOf(physicalBookIds)
+            .modify({ bookId: undefined, status: "indexed", updatedAt });
+        }
+        await db.libraryFolders.update(folderId, {
+          sourceId: undefined,
+          sourceType: "virtual",
+          updatedAt,
+        });
+        const [savedFolder, savedBooks] = await Promise.all([
+          db.libraryFolders.get(folderId),
+          Promise.all(physicalBooks.map((book) => db.books.get(book.id))),
+        ]);
+        assertMutation(
+          savedFolder?.sourceType === "virtual" &&
+            !savedFolder.sourceId &&
+            savedBooks.every(
+              (book) =>
+                BookSchema.safeParse(book).success &&
+                book?.sourceType === "manual" &&
+                !book.contentLocator,
+            ) &&
+            (physicalBookIds.length === 0 ||
+              (await db.indexedNovelFiles
+                .where("bookId")
+                .anyOf(physicalBookIds)
+                .count()) === 0),
+        );
+        return {
+          status: "applied",
+          affectedBookCount: physicalBooks.length,
+          folderId,
+        } as const;
+      },
+    );
+  }
+
+  async requestReconstruct({
+    bookId,
+  }: Parameters<LibraryCommandPort["requestReconstruct"]>[0]) {
+    if (!(await db.books.get(bookId))) {
+      return { status: "book_not_found" } as const;
+    }
+    return { status: "reconstruct_requires_reimport" } as const;
   }
 }
 

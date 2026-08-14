@@ -119,4 +119,26 @@ describe("DexiePersonalSyncLocalStore", () => {
     await expect(db.chapters.count()).resolves.toBe(0);
     await expect(db.progress.count()).resolves.toBe(0);
   });
+
+  it("does not overwrite an existing readable local copy with a remote search result", async () => {
+    const existingBook = book({ title: "标签页刚写入的本地版本", chapterCount: 1 });
+    const existingChapter = {
+      ...chapters[0],
+      title: "本地章节",
+      content: "不得被私人云端搜索覆盖的正文",
+    };
+    const existingProgress = { ...progress, percentage: 67 };
+    await db.books.put(existingBook);
+    await db.chapters.put(existingChapter);
+    await db.progress.put(existingProgress);
+
+    await expect(
+      personalSyncLocalStore.applyDownloadedBook({ book: book(), chapters, progress }),
+    ).resolves.toBe("already_local");
+    await expect(db.books.get(existingBook.id)).resolves.toEqual(existingBook);
+    await expect(db.chapters.where("bookId").equals(existingBook.id).toArray()).resolves.toEqual([
+      existingChapter,
+    ]);
+    await expect(db.progress.get(existingBook.id)).resolves.toEqual(existingProgress);
+  });
 });

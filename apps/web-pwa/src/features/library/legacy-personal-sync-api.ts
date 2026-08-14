@@ -164,7 +164,7 @@ export class LegacyPersonalSyncApiClient {
 
   private assertPrivateWriteCredential(): void {
     const token = new Headers(this.options.getHeaders()).get("x-share-token")?.trim();
-    if (!token) {
+    if (!token || token.toLocaleLowerCase("en-US") === "default") {
       throw new LegacyPersonalSyncError(
         "private_share_token_required",
         "旧个人同步写入必须显式绑定私有分享密钥",
@@ -212,6 +212,21 @@ export class LegacyPersonalSyncApiClient {
     const payload = await this.request("/books");
     if (!Array.isArray(payload) || payload.length > 5_000) {
       throw new LegacyPersonalSyncError("invalid_remote_books", "云端书目列表无效");
+    }
+    return payload.map(parseRemoteBook);
+  }
+
+  async searchBooks(query: string): Promise<LegacyRemoteBook[]> {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return [];
+    const payload = await this.request(
+      `/search?q=${encodeURIComponent(normalizedQuery)}`,
+    );
+    if (!Array.isArray(payload) || payload.length > 200) {
+      throw new LegacyPersonalSyncError(
+        "invalid_remote_books",
+        "私人云端搜索结果无效",
+      );
     }
     return payload.map(parseRemoteBook);
   }

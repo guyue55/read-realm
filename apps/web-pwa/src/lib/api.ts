@@ -30,7 +30,11 @@ export function getShareHeaders(): Record<string, string> {
 
 export function isValidShareToken(token: string) {
   const trimmed = token.trim();
-  return trimmed.length > 0 && SHARE_TOKEN_PATTERN.test(trimmed);
+  return (
+    trimmed.length > 0 &&
+    trimmed.toLocaleLowerCase("en-US") !== "default" &&
+    SHARE_TOKEN_PATTERN.test(trimmed)
+  );
 }
 
 export function normalizeShareToken(token: string | null | undefined) {
