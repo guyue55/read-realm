@@ -1,7 +1,7 @@
 $ corepack pnpm build
-started_at=2026-08-14T17:27:10.457Z
-ended_at=2026-08-14T17:27:29.193Z
-duration_ms=18736
+started_at=2026-08-14T16:37:14.448Z
+ended_at=2026-08-14T16:37:34.481Z
+duration_ms=20033
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -55,7 +55,7 @@ Scope: 10 of 11 workspace projects
    Creating an optimized production build ...
 > [PWA] PWA support is disabled
 > [PWA] PWA support is disabled
- ✓ Compiled successfully in 2.2s
+ ✓ Compiled successfully in 2.5s
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/13) ...
@@ -69,14 +69,14 @@ Scope: 10 of 11 workspace projects
 Route (app)                                 Size  First Load JS
 ┌ ○ /                                    4.68 kB         158 kB
 ├ ○ /_not-found                            995 B         104 kB
-├ ● /book/[bookId]                       7.94 kB         179 kB
+├ ● /book/[bookId]                       7.91 kB         179 kB
 ├   └ /book/placeholder
 ├ ○ /import                              15.8 kB         184 kB
 ├ ● /import/preview/[taskId]             12.8 kB         174 kB
 ├   └ /import/preview/placeholder
 ├ ○ /library                             35.7 kB         225 kB
-├ ○ /notes                                6.5 kB         167 kB
-├ ● /reader/[bookId]                     21.1 kB         200 kB
+├ ○ /notes                               6.47 kB         167 kB
+├ ● /reader/[bookId]                     20.8 kB         200 kB
 ├   └ /reader/placeholder
 ├ ○ /search                                13 kB         174 kB
 └ ○ /settings                            10.8 kB         180 kB

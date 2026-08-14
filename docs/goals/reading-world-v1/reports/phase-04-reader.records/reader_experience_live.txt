@@ -1,7 +1,7 @@
 $ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-phase-04-reader-experience.mjs
-started_at=2026-08-14T16:37:34.815Z
-ended_at=2026-08-14T16:38:26.362Z
-duration_ms=51547
+started_at=2026-08-14T17:27:29.402Z
+ended_at=2026-08-14T17:28:30.392Z
+duration_ms=60990
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -9,65 +9,77 @@ tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-04-reader.j
 tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
 tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
 [stdout]
-PHASE04_READER_OBSERVATION={"classification":"PASS","reasons":[],"listExitCode":0,"listedTestCount":14,"serviceReady":true,"testExitCode":0,"portFreeBefore":true,"portFreeAfter":true,"orphanProcessCount":0,"samples":[{"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":1275,"longTaskSupported":true,"longTaskDurationsMs":[],"maxLongTaskMs":0},{"scenario":"pagination-persistence","persistenceMs":252,"semanticAnchorVisible":true},{"scenario":"lifecycle-offline","pagehideRestored":true,"offlineObserved":true,"semanticAnchorVisible":true},{"scenario":"bookmark-restore","persisted":true,"semanticAnchorVisible":true},{"scenario":"bounded-scroll","maxChapterDom":3,"semanticAnchorVisible":true}]}
+PHASE04_READER_OBSERVATION={"classification":"PASS","reasons":[],"listExitCode":0,"listedTestCount":15,"listedTestCountsByProject":{"desktop":14,"mobile-touch":1},"listedTestIdsUnique":true,"serviceReady":true,"testExitCode":0,"nativeBackgroundExitCode":0,"portFreeBefore":true,"portFreeAfter":true,"orphanProcessCount":0,"samples":[{"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":1135,"longTaskSupported":true,"longTaskDurationsMs":[],"maxLongTaskMs":0},{"scenario":"pagination-persistence","persistenceMs":243,"semanticAnchorVisible":true},{"scenario":"lifecycle-offline","pagehideRestored":true,"offlineObserved":true,"semanticAnchorVisible":true},{"scenario":"bookmark-restore","persisted":true,"semanticAnchorVisible":true},{"scenario":"bounded-scroll","maxChapterDom":3,"semanticAnchorVisible":true},{"scenario":"mobile-touch","projectName":"mobile-touch","isMobile":true,"hasTouch":true,"maxTouchPoints":1,"coarsePointer":true,"trustedTouchObserved":true,"paginationSwipeObserved":true,"drawerTapObserved":true,"progressDragObserved":true,"chapterBoundaryObserved":true},{"scenario":"native-background","platform":"darwin","detachedDuringBackground":true,"windowStateSequence":["normal","minimized","normal"],"visibilitySequence":["visible","hidden","visible"],"progressFlushedWhileHidden":true,"semanticAnchorVisible":true,"restoreMs":657,"hiddenObservedAfterMs":627,"chapterIndex":0,"paragraphIndex":0,"characterOffset":320}]}
 
 [list]
 Listing tests:
-  [chromium-chrome] › reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
-  [chromium-chrome] › reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
-  [chromium-chrome] › reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
-  [chromium-chrome] › reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
-  [chromium-chrome] › reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
-  [chromium-chrome] › reader-experience.spec.ts:730:5 › reader dialogs contain and restore focus
-  [chromium-chrome] › reader-experience.spec.ts:770:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
-  [chromium-chrome] › reader-experience.spec.ts:816:5 › mobile toolbars never cover pagination content
-  [chromium-chrome] › reader-experience.spec.ts:872:5 › mobile toolbars never cover scroll content
-  [chromium-chrome] › reader-experience.spec.ts:922:5 › reader controls are touch safe and use coherent icons
-  [chromium-chrome] › reader-experience.spec.ts:981:5 › mobile progress preview commits only after dragging ends
-  [chromium-chrome] › reader-experience.spec.ts:1016:5 › reader note dialog contains focus and uses touch-safe actions
-  [chromium-chrome] › reader-experience.spec.ts:1068:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
-  [chromium-chrome] › reader-experience.spec.ts:1139:5 › reader layout stays contained across viewports and reduced motion
-Total: 14 tests in 1 file
+  [desktop] › reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
+  [desktop] › reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
+  [desktop] › reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
+  [desktop] › reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
+  [desktop] › reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
+  [desktop] › reader-experience.spec.ts:730:5 › reader dialogs contain and restore focus
+  [desktop] › reader-experience.spec.ts:770:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
+  [desktop] › reader-experience.spec.ts:816:5 › mobile toolbars never cover pagination content
+  [desktop] › reader-experience.spec.ts:872:5 › mobile toolbars never cover scroll content
+  [desktop] › reader-experience.spec.ts:922:5 › reader controls are touch safe and use coherent icons
+  [desktop] › reader-experience.spec.ts:985:5 › mobile progress preview commits only after dragging ends
+  [desktop] › reader-experience.spec.ts:1020:5 › reader note dialog contains focus and uses touch-safe actions
+  [desktop] › reader-experience.spec.ts:1072:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
+  [desktop] › reader-experience.spec.ts:1143:5 › reader layout stays contained across viewports and reduced motion
+  [mobile-touch] › reader-touch.spec.ts:140:5 › mobile touch context completes pagination, drawer, progress and chapter boundary
+Total: 15 tests in 2 files
 
 [test]
 
-Running 14 tests using 1 worker
+Running 15 tests using 1 worker
 
 
 
-[1/14] [chromium-chrome] › e2e/reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
-[chromium-chrome] › e2e/reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
-PHASE04_READER_SAMPLE={"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":1275,"longTaskSupported":true,"longTaskDurationsMs":[],"maxLongTaskMs":0}
+[1/15] [desktop] › e2e/reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
+[desktop] › e2e/reader-experience.spec.ts:188:5 › layout and page-mode changes preserve the current semantic anchor
+PHASE04_READER_SAMPLE={"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":1135,"longTaskSupported":true,"longTaskDurationsMs":[],"maxLongTaskMs":0}
 
-[2/14] [chromium-chrome] › e2e/reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
-[chromium-chrome] › e2e/reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
-PHASE04_READER_SAMPLE={"scenario":"pagination-persistence","persistenceMs":252,"semanticAnchorVisible":true}
+[2/15] [desktop] › e2e/reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
+[desktop] › e2e/reader-experience.spec.ts:298:5 › mobile pagination advances one page before changing chapters and restores its anchor
+PHASE04_READER_SAMPLE={"scenario":"pagination-persistence","persistenceMs":243,"semanticAnchorVisible":true}
 
-[3/14] [chromium-chrome] › e2e/reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
-[chromium-chrome] › e2e/reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
+[3/15] [desktop] › e2e/reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
+[desktop] › e2e/reader-experience.spec.ts:463:5 › pagehide flush and true offline continuation preserve progress
 PHASE04_READER_SAMPLE={"scenario":"lifecycle-offline","pagehideRestored":true,"offlineObserved":true,"semanticAnchorVisible":true}
 
-[4/14] [chromium-chrome] › e2e/reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
-[chromium-chrome] › e2e/reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
+[4/15] [desktop] › e2e/reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
+[desktop] › e2e/reader-experience.spec.ts:507:5 › pagination bookmark survives navigation and returns to its semantic anchor
 PHASE04_READER_SAMPLE={"scenario":"bookmark-restore","persisted":true,"semanticAnchorVisible":true}
 
-[5/14] [chromium-chrome] › e2e/reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
-[chromium-chrome] › e2e/reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
+[5/15] [desktop] › e2e/reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
+[desktop] › e2e/reader-experience.spec.ts:581:5 › continuous scroll keeps an active three-chapter window while moving both directions
 PHASE04_READER_SAMPLE={"scenario":"bounded-scroll","maxChapterDom":3,"semanticAnchorVisible":true}
 
-[6/14] [chromium-chrome] › e2e/reader-experience.spec.ts:730:5 › reader dialogs contain and restore focus
-[7/14] [chromium-chrome] › e2e/reader-experience.spec.ts:770:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
-[8/14] [chromium-chrome] › e2e/reader-experience.spec.ts:816:5 › mobile toolbars never cover pagination content
-[9/14] [chromium-chrome] › e2e/reader-experience.spec.ts:872:5 › mobile toolbars never cover scroll content
-[10/14] [chromium-chrome] › e2e/reader-experience.spec.ts:922:5 › reader controls are touch safe and use coherent icons
-[11/14] [chromium-chrome] › e2e/reader-experience.spec.ts:981:5 › mobile progress preview commits only after dragging ends
-[12/14] [chromium-chrome] › e2e/reader-experience.spec.ts:1016:5 › reader note dialog contains focus and uses touch-safe actions
-[13/14] [chromium-chrome] › e2e/reader-experience.spec.ts:1068:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
-[14/14] [chromium-chrome] › e2e/reader-experience.spec.ts:1139:5 › reader layout stays contained across viewports and reduced motion
-  14 passed (46.7s)
+[6/15] [desktop] › e2e/reader-experience.spec.ts:730:5 › reader dialogs contain and restore focus
+[7/15] [desktop] › e2e/reader-experience.spec.ts:770:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
+[8/15] [desktop] › e2e/reader-experience.spec.ts:816:5 › mobile toolbars never cover pagination content
+[9/15] [desktop] › e2e/reader-experience.spec.ts:872:5 › mobile toolbars never cover scroll content
+[10/15] [desktop] › e2e/reader-experience.spec.ts:922:5 › reader controls are touch safe and use coherent icons
+[11/15] [desktop] › e2e/reader-experience.spec.ts:985:5 › mobile progress preview commits only after dragging ends
+[12/15] [desktop] › e2e/reader-experience.spec.ts:1020:5 › reader note dialog contains focus and uses touch-safe actions
+[13/15] [desktop] › e2e/reader-experience.spec.ts:1072:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
+[14/15] [desktop] › e2e/reader-experience.spec.ts:1143:5 › reader layout stays contained across viewports and reduced motion
+
+
+[15/15] [mobile-touch] › e2e/reader-touch.spec.ts:140:5 › mobile touch context completes pagination, drawer, progress and chapter boundary
+[mobile-touch] › e2e/reader-touch.spec.ts:140:5 › mobile touch context completes pagination, drawer, progress and chapter boundary
+PHASE04_READER_SAMPLE={"scenario":"mobile-touch","projectName":"mobile-touch","isMobile":true,"hasTouch":true,"maxTouchPoints":1,"coarsePointer":true,"trustedTouchObserved":true,"paginationSwipeObserved":true,"drawerTapObserved":true,"progressDragObserved":true,"chapterBoundaryObserved":true}
+
+  15 passed (49.3s)
+
+[native-background]
+PHASE04_READER_SAMPLE={"scenario":"native-background","platform":"darwin","detachedDuringBackground":true,"windowStateSequence":["normal","minimized","normal"],"visibilitySequence":["visible","hidden","visible"],"progressFlushedWhileHidden":true,"semanticAnchorVisible":true,"restoreMs":657,"hiddenObservedAfterMs":627,"chapterIndex":0,"paragraphIndex":0,"characterOffset":320}
 
 [stderr]
 [test]
-(node:58600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:74412) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:74541) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
 
