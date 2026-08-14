@@ -116,11 +116,16 @@ async function readProgress(
       request.onerror = () => reject(request.error);
     });
     try {
-      return await new Promise<{ chapterIndex: number; characterOffset: number }>((resolve, reject) => {
+      return await new Promise<{
+        chapterIndex: number;
+        paragraphIndex: number;
+        characterOffset: number;
+      }>((resolve, reject) => {
         const request = database.transaction("progress", "readonly")
           .objectStore("progress").get(targetBookId);
         request.onsuccess = () => resolve({
           chapterIndex: request.result?.chapterIndex ?? -1,
+          paragraphIndex: request.result?.paragraphIndex ?? 0,
           characterOffset: request.result?.characterOffset ?? 0,
         });
         request.onerror = () => reject(request.error);
@@ -130,6 +135,91 @@ async function readProgress(
     }
   }, bookId);
 }
+
+test("layout and page-mode changes preserve the current semantic anchor", async ({ page }) => {
+  const bookId = "reader-layout-anchor-e2e-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 3,
+    contentFor: (chapterIndex) => Array.from({ length: 90 }, (_, paragraphIndex) => (
+      `<p>C${chapterIndex}-P${paragraphIndex}-BEGIN ${"语义位置正文".repeat(16)} C${chapterIndex}-P${paragraphIndex}-END</p>`
+    )).join(""),
+  });
+  await page.goto(`/#/reader/${bookId}`);
+
+  const canvas = page.locator('[data-reader-content-canvas="mobile"]');
+  const chapter = canvas.locator('[data-chapter-index="1"]');
+  await expect(chapter).toBeAttached({ timeout: 15_000 });
+  await chapter.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex, {
+    timeout: 5_000,
+  }).toBe(1);
+  await expect.poll(async () => canvas.locator("[data-chapter-index]").evaluateAll((nodes) => (
+    nodes.map((node) => Number((node as HTMLElement).dataset.chapterIndex))
+  )), { timeout: 15_000 }).toEqual([0, 1, 2]);
+  const target = canvas.locator('[data-chapter-index="1"] p[data-idx="60"]');
+  await expect(target).toBeAttached({ timeout: 15_000 });
+  await target.evaluate((node) => {
+    const container = node.closest('[data-reader-content-canvas="mobile"]') as HTMLElement;
+    const targetRect = node.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    container.scrollTop += targetRect.top - containerRect.top;
+  });
+  await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex, {
+    timeout: 5_000,
+  }).toBe(1);
+  await page.waitForTimeout(750);
+  const readVisibleAnchor = () => canvas.evaluate((container) => {
+    const bounds = container.getBoundingClientRect();
+    const readingLine = bounds.top + Math.min(120, Math.max(12, bounds.height * 0.12));
+    const paragraph = Array.from(container.querySelectorAll("p[data-idx]")).find((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.right > bounds.left && rect.left < bounds.right && rect.bottom > readingLine;
+    });
+    const chapter = paragraph?.closest("[data-chapter-index]") as HTMLElement | null;
+    return {
+      chapterIndex: Number(chapter?.dataset.chapterIndex ?? -1),
+      paragraphIndex: Number(paragraph?.getAttribute("data-idx") ?? -1),
+    };
+  });
+  const before = await readVisibleAnchor();
+  expect(before.chapterIndex).toBe(1);
+  expect(before.paragraphIndex).toBeGreaterThan(10);
+
+  await page.getByRole("button", { name: "阅读设置" }).click();
+  const settings = page.getByRole("dialog", { name: "阅读设置" });
+  await settings.getByRole("button", { name: "增大字号" }).click();
+  await settings.getByRole("button", { name: "左右翻页" }).click();
+  await page.keyboard.press("Escape");
+
+  const paginationState = canvas.locator("[data-anchor-page]");
+  await expect(paginationState).toHaveAttribute("data-anchor-restored", "true", {
+    timeout: 15_000,
+  });
+  await expect(canvas.locator(
+    `[data-page-index]:visible p[data-idx="${before.paragraphIndex}"]`,
+  )).toBeVisible({ timeout: 15_000 });
+  await expect.poll(async () => (await readProgress(page, bookId)).chapterIndex, {
+    timeout: 5_000,
+  }).toBe(before.chapterIndex);
+
+  await page.getByRole("button", { name: "阅读设置" }).click();
+  await page.getByRole("dialog", { name: "阅读设置" })
+    .getByRole("button", { name: "上下滚动" })
+    .click();
+  await page.keyboard.press("Escape");
+  const restoredParagraph = canvas.locator(
+    `[data-chapter-index="${before.chapterIndex}"] p[data-idx="${before.paragraphIndex}"]`,
+  );
+  await expect(restoredParagraph).toBeVisible({ timeout: 5_000 });
+  await expect.poll(async () => restoredParagraph.evaluate((node) => {
+    const container = node.closest('[data-reader-content-canvas="mobile"]') as HTMLElement;
+    const bounds = container.getBoundingClientRect();
+    const paragraph = node.getBoundingClientRect();
+    return paragraph.bottom > bounds.top && paragraph.top < bounds.bottom;
+  }), { timeout: 5_000 }).toBe(true);
+});
 
 test("mobile pagination advances one page before changing chapters and restores its anchor", async ({ page }) => {
   await page.goto("/#/library");
