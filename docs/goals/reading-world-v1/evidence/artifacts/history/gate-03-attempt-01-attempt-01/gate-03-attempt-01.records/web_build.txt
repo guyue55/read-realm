@@ -1,0 +1,56 @@
+$ corepack pnpm --filter web-pwa build
+started_at=2026-08-14T22:02:11.689Z
+ended_at=2026-08-14T22:02:22.999Z
+duration_ms=11310
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+> web-pwa@0.1.0 build ./apps/web-pwa
+> next build
+
+   ▲ Next.js 15.5.20
+
+   Creating an optimized production build ...
+> [PWA] PWA support is disabled
+> [PWA] PWA support is disabled
+ ✓ Compiled successfully in 2.1s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/14) ...
+   Generating static pages (3/14)
+   Generating static pages (6/14)
+   Generating static pages (10/14)
+ ✓ Generating static pages (14/14)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    5.22 kB         161 kB
+├ ○ /_not-found                            995 B         104 kB
+├ ● /book/[bookId]                       11.3 kB         182 kB
+├   └ /book/placeholder
+├ ○ /import                              16.4 kB         187 kB
+├ ● /import/preview/[taskId]             13.3 kB         176 kB
+├   └ /import/preview/placeholder
+├ ○ /library                             39.2 kB         235 kB
+├ ○ /notes                               7.44 kB         170 kB
+├ ○ /public-library                      6.78 kB         170 kB
+├ ● /reader/[bookId]                     21.1 kB         202 kB
+├   └ /reader/placeholder
+├ ○ /search                              11.8 kB         182 kB
+└ ○ /settings                            11.6 kB         183 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
+  ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
+  └ other shared chunks (total)          2.39 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+[stderr]

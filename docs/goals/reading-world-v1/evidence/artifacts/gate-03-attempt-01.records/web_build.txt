@@ -1,13 +1,13 @@
 $ corepack pnpm --filter web-pwa build
-started_at=2026-08-14T22:02:11.689Z
-ended_at=2026-08-14T22:02:22.999Z
-duration_ms=11310
+started_at=2026-08-14T22:09:35.460Z
+ended_at=2026-08-14T22:09:48.266Z
+duration_ms=12806
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
 [stdout]
 
 > web-pwa@0.1.0 build ./apps/web-pwa
@@ -18,7 +18,7 @@ tracked_status_after=[]
    Creating an optimized production build ...
 > [PWA] PWA support is disabled
 > [PWA] PWA support is disabled
- ✓ Compiled successfully in 2.1s
+ ✓ Compiled successfully in 3.4s
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/14) ...

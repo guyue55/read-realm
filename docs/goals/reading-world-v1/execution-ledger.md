@@ -7,7 +7,7 @@
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
 - 当前入口：PHASE-05 / TASK-0503；只实现 GATE-03 最小纵切：独立公共馆藏存储/API、显式非默认密钥上传、匿名分页浏览、复制加入本地与真断网阅读，通过前隐藏扩张入口。
-- 最近有效提交：d0dbd73
+- 最近有效提交：3f37036
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/reader-ux-final.json，SHA-256 `f892de2c243840c23e513424a1c4ff90645ba62f0ef4ea2c9b224baf5ad14c84`，2026-08-15T01:43:41+08:00
 - 当前阻塞：无；PHASE-02/03/04、GATE-00/01 与 RISK-03 已通过，TASK-0501/0502 已完成。藏经阁保持为 PHASE-05 独立公共明文域；TASK-0503 只做 GATE-03 最小纵切，通过前不开放 TASK-0504 扫描/批量/多视图扩张。
 - 停止原因：无；从 PHASE-05 / TASK-0503 继续，EVID-02/03/04/05/07/16/17/25、PHASE-04 失败归档、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
@@ -32,6 +32,7 @@
 - RUN-0040：保持执行中；TASK-0501 完成，当前入口推进至 TASK-0502。依据：书架查询/原子命令/恢复真相/48 项有界窗口/个人同步分层四个提交 `91a39d8..eeff7cb`，500 书/500 书箧、个人同步、storage/Web 定向门禁与独立整任务审查 READY；PHASE-05、EVID-06/14/23/55/56/57 与 Goal 仍未完成。
 - RUN-0041：保持执行中；TASK-0502 完成，当前入口推进至 TASK-0503。依据：实现提交 `bda528a`，搜索/笔记/设置/危险维护操作真实反馈、原子读写与私有搜索 200 条上界闭合；全量单测、生产构建、12 条系统 Chrome 旅程和独立终审 READY。GATE-03、TASK-0503/0504/0505/0506、PHASE-05 与 Goal 仍未完成。
 - RUN-0042：保持执行中；TASK-0503 实现候选已提交 `d0dbd73`，首次正式 EXP-14 在 clean 候选上归类 `VALIDATOR_INDETERMINATE`。依据：EVID-59 的 11/11 records SHA 匹配，10/11 checks 通过，个人事实源哨兵、端口、进程与清理均闭合；生产 API 因未显式声明直接运行时依赖 `express` 而未启动，未进入产品断言阶段。EXP-14 产品/设计失败计数为 0，修复验证器后仍重放 EXP-14，不转 EXP-15，GATE-03 未通过。
+- RUN-0043：保持执行中；同一 EXP-14 在 clean@`3f37036` 正式重放得 EVID-59 PASS，首轮验证器不确定已自动归档且原始提交 `a3da145` 保留。依据：11/11 checks/records、唯一 product marker、个人 DB/Blob 哨兵、路径隔离、端口/进程/清理与独立复算均通过。当前只放行 EVID-57 FINAL 封装；FINAL 未生成前不宣称 GATE-03 完成，不进入 TASK-0504 扩张。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -423,3 +424,11 @@
 - 分类与原因：外层与独立复算均为 `VALIDATOR_INDETERMINATE / API_SERVICE_NOT_READY / WEB_SERVICE_NOT_READY / PRODUCT_STAGE_MARKER_COUNT_0`。`apps/api/src/main.ts` 直接 import/use `express`，但 API workspace 未将其声明为直接生产依赖，`node dist/main.js` 在 pnpm 严格隔离下启动前失败。这是生产装配/验证器事实，尚未进入产品断言阶段。
 - 副作用复算：个人 DB 哨兵前后同 SHA `f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638`，个人 Blob 哨兵前后同 SHA `ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d`；3100/4100 前后空闲，孤儿进程 0，隔离根已清理。
 - 计数与下一入口：该结果不计 EXP-14 产品/设计失败，当前计数 0/3；不转 EXP-15，不触发熔断。下一入口是显式声明 API 直接生产依赖，先提交 EVID-59 原始失败证据，再在 clean 工作树上以同一命令重放 EXP-14；归档机制必须保留本轮 report/records，禁止手工覆盖。
+
+### RUN-0043 · 2026-08-15T06:10:14+08:00 · PHASE-05 / TASK-0503 EXP-14 正式重放通过
+- 稳定输入：候选实现 `d0dbd73`，首轮不确定原始证据 `a3da145`，显式生产依赖修复 `3f37036`；重放前工作树 clean，命令与 EXP-14 机制均未改变。
+- 正式证据：EVID-59 报告 SHA-256 `26a01e211b095327a253e0524891792883103a04da95ae54097e445a89a0be55`；11/11 checks exit 0，11/11 records 实际 SHA 匹配，tracked mutation 0，外层与独立复算均为 `PASS`。唯一 Playwright 枚举与唯一整行 `GATE03_PRODUCT_STAGE_ENTERED=EXP-14` marker 均为 1。
+- 产品结果：系统 Chrome 从私人书架可发现入口进入藏经阁；缺失、`default`、错误维护凭据与仅 `x-share-token` 均被拒绝；25 本固定经典书加两类干扰样本后，匿名分类、检索、24+1 跨页与旧响应悬停反例成立。选中书生成非 `public-*` 本地 ID，整本校验后一次原子落库，阻断公共 API 并设置浏览器 true offline 后，仍可从书架打开并连续阅读两章。
+- 边界与副作用：个人 `/books` 请求为 0，本地同步任务前后不变；个人 DB 与 Blob 哨兵前后分别保持 `f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638` 与 `ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d`。四条隔离路径互异且不重叠，3100/4100 前后空闲，孤儿进程 0，临时根已清理。
+- 历史保留：首轮原始 report/records 已由提交 `a3da145` 保留；验证器另将其归档至 `docs/goals/reading-world-v1/evidence/artifacts/history/gate-03-attempt-01-attempt-01/`，历史 11/11 record 字节与原提交一致，report 仅将 11 个 `logPath` 改为归档路径，分类仍为 `VALIDATOR_INDETERMINATE`且不计产品失败。
+- 独立复审与下一入口：最新只读终审判定 READY，无 P0/P1 或假绿，允许提交 PASS ATTEMPT 并进入 FINAL 封装。当前仅放行从 clean 证据提交生成 EVID-57；FINAL 未独立复算前不宣称 GATE-03 完成，不扩张 TASK-0504。

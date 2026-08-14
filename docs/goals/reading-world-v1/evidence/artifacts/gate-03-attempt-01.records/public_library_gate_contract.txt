@@ -1,26 +1,26 @@
 $ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/gate-public-library-run.test.mjs scripts/verify-reading-world-contract.test.mjs
-started_at=2026-08-14T22:02:23.057Z
-ended_at=2026-08-14T22:02:23.124Z
-duration_ms=67
+started_at=2026-08-14T22:09:48.331Z
+ended_at=2026-08-14T22:09:48.399Z
+duration_ms=68
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.json"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_lint_non_fixing.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/api_typecheck.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/gate_03_public_library_live.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/public_library_gate_contract.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_build.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_lint.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_test.txt"," M docs/goals/reading-world-v1/evidence/artifacts/gate-03-attempt-01.records/web_typecheck.txt"]
 [stdout]
-✔ EXP-14 固定为隔离公共域、完整本地复制和真断网生产旅程 (0.920583ms)
-✔ 只接受唯一一条 GATE-03 observation (0.184458ms)
-✔ 只有浏览器与固定样本已进入产品断言阶段才认可 marker (0.170333ms)
-✔ 设施、隔离、清理和 EXP-14 纵切都可靠时 GATE-03 才 PASS (0.113167ms)
-✔ 设施可靠时浏览器纵切失败才是 PRODUCT_FAILURE (0.07125ms)
-✔ 未进入产品阶段的 Playwright 退出不计设计失败 (0.068292ms)
-✔ 设施可靠时个人事实源变化是产品失败而非验证器不确定 (0.066958ms)
-✔ 端口、生产服务、隔离、进程、清理或 records 失败不可形成产品结论 (0.081167ms)
-✔ PHASE-05 只放行 EXP-14 且包含 API/Web test lint type build、合同与 live (0.168959ms)
-✔ 隔离布局要求个人/公共数据库与 Blob 根都在临时根内且彼此不同 (0.403458ms)
-✔ formal verifier routes PHASE-05 EXP-14 to the public-library contract (0.581541ms)
-✔ formal verifier rejects unreleased PHASE-05 experiments and other gate parameters (0.240375ms)
+✔ EXP-14 固定为隔离公共域、完整本地复制和真断网生产旅程 (0.917125ms)
+✔ 只接受唯一一条 GATE-03 observation (0.191209ms)
+✔ 只有浏览器与固定样本已进入产品断言阶段才认可 marker (0.179125ms)
+✔ 设施、隔离、清理和 EXP-14 纵切都可靠时 GATE-03 才 PASS (0.112208ms)
+✔ 设施可靠时浏览器纵切失败才是 PRODUCT_FAILURE (0.07275ms)
+✔ 未进入产品阶段的 Playwright 退出不计设计失败 (0.067083ms)
+✔ 设施可靠时个人事实源变化是产品失败而非验证器不确定 (0.067375ms)
+✔ 端口、生产服务、隔离、进程、清理或 records 失败不可形成产品结论 (0.0795ms)
+✔ PHASE-05 只放行 EXP-14 且包含 API/Web test lint type build、合同与 live (0.172459ms)
+✔ 隔离布局要求个人/公共数据库与 Blob 根都在临时根内且彼此不同 (0.402292ms)
+✔ formal verifier routes PHASE-05 EXP-14 to the public-library contract (0.4585ms)
+✔ formal verifier rejects unreleased PHASE-05 experiments and other gate parameters (0.743792ms)
 ℹ tests 12
 ℹ suites 0
 ℹ pass 12
@@ -28,6 +28,6 @@ tracked_status_after=[]
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 43.006
+ℹ duration_ms 43.2275
 
 [stderr]
