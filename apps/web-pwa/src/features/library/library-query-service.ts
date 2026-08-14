@@ -60,6 +60,78 @@ export function mergeLibraryBooks(
   return sortLibraryBooks([...mergedById.values()], sortBy);
 }
 
+export interface LibraryRenderPage<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  rangeStart: number;
+  rangeEnd: number;
+}
+
+export function paginateLibraryItems<T>(
+  sourceItems: readonly T[],
+  requestedPage: number,
+  requestedPageSize = 60,
+): LibraryRenderPage<T> {
+  const pageSize = Math.max(1, Math.floor(requestedPageSize));
+  const totalItems = sourceItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const page = Math.min(
+    totalPages,
+    Math.max(1, Number.isFinite(requestedPage) ? Math.floor(requestedPage) : 1),
+  );
+  const startIndex = (page - 1) * pageSize;
+  const items = sourceItems.slice(startIndex, startIndex + pageSize);
+  return {
+    items,
+    page,
+    pageSize,
+    totalItems,
+    totalPages,
+    rangeStart: totalItems === 0 ? 0 : startIndex + 1,
+    rangeEnd: startIndex + items.length,
+  };
+}
+
+export function paginateLibraryBooks(
+  books: readonly Book[],
+  requestedPage: number,
+  requestedPageSize = 60,
+): LibraryRenderPage<Book> {
+  return paginateLibraryItems(books, requestedPage, requestedPageSize);
+}
+
+export function countLibraryBooksByFolder(
+  books: readonly Book[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const book of books) {
+    if (!book.sourceFolderId) continue;
+    counts.set(book.sourceFolderId, (counts.get(book.sourceFolderId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function filterMergedLibraryBooksByFolder({
+  mergedBooks,
+  folders,
+  currentFolderId,
+}: {
+  mergedBooks: readonly Book[];
+  folders: readonly LibraryFolder[];
+  currentFolderId: string | undefined;
+}): Book[] {
+  const knownFolders = new Set(folders.map((folder) => folder.id));
+  return mergedBooks.filter((book) => {
+    if (currentFolderId !== undefined) {
+      return book.sourceFolderId === currentFolderId;
+    }
+    return !book.sourceFolderId || !knownFolders.has(book.sourceFolderId);
+  });
+}
+
 export class LibraryQueryService {
   constructor(private readonly port: LibraryQueryPort) {}
 
@@ -113,12 +185,9 @@ export function selectVisibleLibraryBooks({
   currentFolderId: string | undefined;
   sortBy: LibrarySort;
 }): Book[] {
-  const knownFolders = new Set(folders.map((folder) => folder.id));
-  const visible = mergeLibraryBooks(localBooks, cloudBooks, sortBy).filter((book) => {
-    if (currentFolderId !== undefined) {
-      return book.sourceFolderId === currentFolderId;
-    }
-    return !book.sourceFolderId || !knownFolders.has(book.sourceFolderId);
+  return filterMergedLibraryBooksByFolder({
+    mergedBooks: mergeLibraryBooks(localBooks, cloudBooks, sortBy),
+    folders,
+    currentFolderId,
   });
-  return visible;
 }

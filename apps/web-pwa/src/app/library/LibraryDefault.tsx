@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, memo, useCallback, useRef } from "react";
+import { useEffect, useState, memo, useCallback, useMemo, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type LocalChapter } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -24,8 +24,10 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScanService";
 import { selectContinueBook } from "@/features/library/library-state";
 import {
+  countLibraryBooksByFolder,
+  filterMergedLibraryBooksByFolder,
   mergeLibraryBooks,
-  selectVisibleLibraryBooks,
+  paginateLibraryItems,
   type LibrarySort,
 } from "@/features/library/library-query-service";
 import { libraryQueryService } from "@/features/library/dexie-library-query";
@@ -38,8 +40,13 @@ import {
 } from "@/features/library/sync-tasks";
 
 type LibraryViewMode = "cover" | "compact" | "list";
+type LibraryShelfEntry =
+  | { kind: "folder"; folder: LibraryFolder }
+  | { kind: "book"; book: Book };
 
 const LIBRARY_VIEW_KEY = "library-view-mode";
+const LIBRARY_PAGE_SIZE = 48;
+const EMPTY_LIBRARY_FOLDERS: LibraryFolder[] = [];
 
 const POETIC_KEYS = [
   "松风阅心", "煮字生涯", "寒夜客来", "静夜钟声", "西窗剪烛", 
@@ -213,6 +220,7 @@ export function LibraryDefault({
 
   // 逻辑文件夹层级导航
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
+  const [libraryPageNumber, setLibraryPageNumber] = useState(1);
   // 藏书治理相关状态
   const [selectedGovBook, setSelectedGovBook] = useState<Book | null>(null);
   const [isGovOpen, setIsGovOpen] = useState(false);
@@ -223,14 +231,22 @@ export function LibraryDefault({
     [librarySort],
   );
   const books = librarySnapshot?.books;
-  const folders = librarySnapshot?.folders ?? [];
+  const folders = librarySnapshot?.folders ?? EMPTY_LIBRARY_FOLDERS;
   const cachedBookIdsSet = librarySnapshot?.cachedBookIds;
   const progressByBookId = librarySnapshot?.progressByBookId;
   const totalNotesCount = librarySnapshot?.totalNotesCount;
 
-  const currentFolders = folders
-    .filter((f) => f.parentId === currentFolderId)
-    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name));
+  const currentFolders = useMemo(
+    () =>
+      folders
+        .filter((folder) => folder.parentId === currentFolderId)
+        .sort(
+          (left, right) =>
+            (left.sortOrder || 0) - (right.sortOrder || 0) ||
+            left.name.localeCompare(right.name),
+        ),
+    [currentFolderId, folders],
+  );
 
   const navigateToFolder = (folderId: string | undefined) => {
     if (typeof document !== "undefined" && "startViewTransition" in document) {
@@ -243,6 +259,7 @@ export function LibraryDefault({
           };
         }).startViewTransition(() => {
           setCurrentFolderId(folderId);
+          setLibraryPageNumber(1);
         });
         if (transition) {
           if (transition.ready) transition.ready.catch(() => {});
@@ -252,9 +269,11 @@ export function LibraryDefault({
       } catch (e) {
         console.warn("[Library] 视图转场 ViewTransition 启动异常，自动降级为无动画状态同步:", e);
         setCurrentFolderId(folderId);
+        setLibraryPageNumber(1);
       }
     } else {
       setCurrentFolderId(folderId);
+      setLibraryPageNumber(1);
     }
   };
 
@@ -507,7 +526,7 @@ export function LibraryDefault({
     setToastMsg(`📤 正在并发将「${folderName}」下的书籍同步至云端...`);
     try {
       const subBooks = await db.books.where("sourceFolderId").equals(folderId).toArray();
-      const unbackedBooks = subBooks.filter(b => !cloudBooks.some(cb => cb.id === b.id));
+      const unbackedBooks = subBooks.filter((book) => !cloudBookIds.has(book.id));
       if (unbackedBooks.length === 0) {
         setToastMsg("⛩️ 此书箧内的所有藏书早已全量备份至云端。");
         return;
@@ -643,6 +662,18 @@ export function LibraryDefault({
   };
 
   const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
+  const localBookIds = useMemo(
+    () => new Set((books ?? []).map((book) => book.id)),
+    [books],
+  );
+  const cloudBookIds = useMemo(
+    () => new Set(cloudBooks.map((book) => book.id)),
+    [cloudBooks],
+  );
+  const cloudBooksById = useMemo(
+    () => new Map(cloudBooks.map((book) => [book.id, book])),
+    [cloudBooks],
+  );
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
   const [syncStepText, setSyncStepText] = useState("");
@@ -1593,7 +1624,7 @@ export function LibraryDefault({
     if (isSyncing || syncingBookId) return;
 
     // 1. 物理安全行级校验 Integrity Grid
-    const cloudBook = cloudBooks.find((cb) => cb.id === book.id);
+    const cloudBook = cloudBooksById.get(book.id);
     if (!cloudBook) {
       setToastMsg(strings.sync.offloadNoCloudError);
       return;
@@ -1683,16 +1714,58 @@ export function LibraryDefault({
   }, [isOnline, books, autoSyncOnStartup, currentShareToken]);
 
   // 所有融合后的书籍（本地 + 仅云端存在）
-  const mergedBooks = mergeLibraryBooks(books ?? [], cloudBooks, librarySort);
+  const mergedBooks = useMemo(
+    () => mergeLibraryBooks(books ?? [], cloudBooks, librarySort),
+    [books, cloudBooks, librarySort],
+  );
+  const folderBookCounts = useMemo(
+    () => countLibraryBooksByFolder(mergedBooks),
+    [mergedBooks],
+  );
 
   // 进行逻辑文件夹层级过滤后的书籍，安全归栈、防丢自愈
-  const filteredMergedBooks = selectVisibleLibraryBooks({
-    localBooks: books ?? [],
-    cloudBooks,
-    folders,
-    currentFolderId,
-    sortBy: librarySort,
-  });
+  const filteredMergedBooks = useMemo(
+    () =>
+      filterMergedLibraryBooksByFolder({
+        mergedBooks,
+        folders,
+        currentFolderId,
+      }),
+    [currentFolderId, folders, mergedBooks],
+  );
+  const libraryShelfEntries = useMemo<LibraryShelfEntry[]>(
+    () => [
+      ...currentFolders.map((folder) => ({ kind: "folder" as const, folder })),
+      ...filteredMergedBooks.map((book) => ({ kind: "book" as const, book })),
+    ],
+    [currentFolders, filteredMergedBooks],
+  );
+  const libraryRenderPage = useMemo(
+    () =>
+      paginateLibraryItems(
+        libraryShelfEntries,
+        libraryPageNumber,
+        LIBRARY_PAGE_SIZE,
+      ),
+    [libraryPageNumber, libraryShelfEntries],
+  );
+  const renderedShelfEntries = useMemo(
+    () => ({
+      folders: libraryRenderPage.items.flatMap((entry) =>
+        entry.kind === "folder" ? [entry.folder] : [],
+      ),
+      books: libraryRenderPage.items.flatMap((entry) =>
+        entry.kind === "book" ? [entry.book] : [],
+      ),
+    }),
+    [libraryRenderPage.items],
+  );
+
+  useEffect(() => {
+    if (libraryRenderPage.page !== libraryPageNumber) {
+      setLibraryPageNumber(libraryRenderPage.page);
+    }
+  }, [libraryPageNumber, libraryRenderPage.page]);
 
   const getBookAvailabilityStatus = (book: Book, cachedSet: Set<string> | undefined) => {
     if (book.cacheStatus === 'chapters_full' || book.sourceAvailability === 'full_cached') {
@@ -1717,6 +1790,15 @@ export function LibraryDefault({
     setViewModeState(mode);
     window.localStorage.setItem(LIBRARY_VIEW_KEY, mode);
   };
+
+  const goToLibraryPage = useCallback((page: number) => {
+    setLibraryPageNumber(page);
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>("[data-library-shelf]")
+        ?.scrollIntoView({ block: "start" });
+    });
+  }, []);
 
   const handleDelete = (bookId: string, title: string) => {
     setConfirmState({
@@ -2210,10 +2292,11 @@ export function LibraryDefault({
             </div>
           </div>
         )}
+
       </section>
       )}
 
-      <section className="mt-7">
+      <section className="mt-7" data-library-shelf>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             {/* 可交互多级面包屑 */}
@@ -2267,7 +2350,10 @@ export function LibraryDefault({
           <div className="flex flex-wrap gap-2 items-center">
             <div className="inline-flex w-fit rounded-full border border-[var(--ui-border)] bg-white/64 p-1 text-sm">
               <button
-                onClick={() => setSortBy("title")}
+                onClick={() => {
+                  setSortBy("title");
+                  setLibraryPageNumber(1);
+                }}
                 className={`rounded-full px-3 py-1.5 transition-colors ${
                   sortBy === "title"
                     ? "bg-[var(--ui-accent)] font-semibold text-white"
@@ -2277,7 +2363,10 @@ export function LibraryDefault({
                 {strings.shelf.sortTitle}
               </button>
               <button
-                onClick={() => setSortBy("createdAt")}
+                onClick={() => {
+                  setSortBy("createdAt");
+                  setLibraryPageNumber(1);
+                }}
                 className={`rounded-full px-3 py-1.5 transition-colors ${
                   sortBy === "createdAt"
                     ? "bg-[var(--ui-accent)] font-semibold text-white"
@@ -2311,7 +2400,7 @@ export function LibraryDefault({
 
         {books === undefined ? (
           <SkeletonLoader type={viewMode === "list" ? "list" : "grid"} count={4} />
-        ) : books.length === 0 ? (
+        ) : libraryShelfEntries.length === 0 ? (
           <EmptyState
             title="书架还是空的"
             description="导入一本 TXT 或 EPUB 开始阅读；示例内容只会在你明确选择后添加。"
@@ -2336,9 +2425,10 @@ export function LibraryDefault({
             </button>
 
             {/* 1. 渲染当前层级的逻辑文件夹 (书箧) */}
-            {currentFolders.map((folder) => (
+            {renderedShelfEntries.folders.map((folder) => (
               <div
                 key={folder.id}
+                data-folder-id={folder.id}
                 onClick={() => navigateToFolder(folder.id)}
                 className="group relative cursor-pointer flex items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-[#FFFDF9]/60 to-[#FDF9F2]/60 transition-all duration-300 hover:bg-[#FAF5EB]/50"
               >
@@ -2355,7 +2445,7 @@ export function LibraryDefault({
                       {folder.name}
                     </h3>
                     <p className="mt-0.5 text-xs text-[var(--ui-muted)]">
-                      逻辑书箧 · 共 {mergedBooks.filter(b => b.sourceFolderId === folder.id).length} 本藏书
+                      逻辑书箧 · 共 {folderBookCounts.get(folder.id) ?? 0} 本藏书
                     </p>
                   </div>
                 </div>
@@ -2428,12 +2518,12 @@ export function LibraryDefault({
             ))}
 
             {/* 2. 渲染当前层级的藏书 (Books) */}
-            {filteredMergedBooks.map((book) => {
+            {renderedShelfEntries.books.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
 
-              const isLocal = (books || []).some((lb) => lb.id === book.id);
-              const isCloud = cloudBooks.some((cb) => cb.id === book.id);
+              const isLocal = localBookIds.has(book.id);
+              const isCloud = cloudBookIds.has(book.id);
               const isLocalOnly = isLocal && !isCloud;
               const isCloudOnly = !isLocal && isCloud;
               const isSynced = isLocal && isCloud;
@@ -2688,9 +2778,10 @@ export function LibraryDefault({
             </button>
 
             {/* 1. 渲染当前层级的逻辑文件夹 (网格/紧凑卡片) */}
-            {currentFolders.map((folder) => (
+            {renderedShelfEntries.folders.map((folder) => (
               <div
                 key={folder.id}
+                data-folder-id={folder.id}
                 onClick={() => navigateToFolder(folder.id)}
                 className={`group relative overflow-hidden cursor-pointer ui-card flex flex-col justify-between rounded-[18px] p-4 physics-spring hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(80,65,45,0.07)] bg-gradient-to-br from-[#FFFDF9] via-[#FCFAF2] to-[#FAF6EE] border border-[#E4D7C2]/70 ${
                   viewMode === "compact" ? "min-h-[110px]" : "min-h-[148px]"
@@ -2720,7 +2811,7 @@ export function LibraryDefault({
 
                 <div className="mt-4 pt-3 border-t border-[#E4D7C2]/30 flex justify-between items-center relative z-20">
                   <span className="text-[10px] text-[var(--ui-quiet)] font-bold">
-                    共 {mergedBooks.filter(b => b.sourceFolderId === folder.id).length} 本藏书
+                    共 {folderBookCounts.get(folder.id) ?? 0} 本藏书
                   </span>
                   <div className="flex items-center gap-2">
                     {/* 🖌️ 逻辑文件夹独立治理菜单 (网格模式) */}
@@ -2789,12 +2880,12 @@ export function LibraryDefault({
               </div>
             ))}
 
-            {filteredMergedBooks.map((book) => {
+            {renderedShelfEntries.books.map((book) => {
               const progress = progressByBookId?.[book.id];
               const percent = getProgressPercent(book, progress);
 
-              const isLocal = (books || []).some((lb) => lb.id === book.id);
-              const isCloud = cloudBooks.some((cb) => cb.id === book.id);
+              const isLocal = localBookIds.has(book.id);
+              const isCloud = cloudBookIds.has(book.id);
               const isLocalOnly = isLocal && !isCloud;
               const isCloudOnly = !isLocal && isCloud;
               const isSynced = isLocal && isCloud;
@@ -3019,6 +3110,55 @@ export function LibraryDefault({
               );
             })}
           </div>
+        )}
+
+        {books !== undefined && libraryRenderPage.totalItems > LIBRARY_PAGE_SIZE && (
+          <nav
+            aria-label="书架分页"
+            data-library-pagination
+            className="mt-5 flex flex-col items-center justify-between gap-3 rounded-[18px] border border-[var(--ui-border)] bg-white/55 px-4 py-3 sm:flex-row"
+          >
+            <p className="text-xs text-[var(--ui-muted)]" aria-live="polite">
+              第 {libraryRenderPage.page} / {libraryRenderPage.totalPages} 页
+              <span className="mx-2 text-[var(--ui-quiet)]">·</span>
+              当前 {libraryRenderPage.rangeStart}–{libraryRenderPage.rangeEnd} 项，共{" "}
+              {libraryRenderPage.totalItems} 项
+            </p>
+            <div className="grid w-full grid-cols-4 gap-2 sm:w-auto">
+              <button
+                type="button"
+                disabled={libraryRenderPage.page === 1}
+                onClick={() => goToLibraryPage(1)}
+                className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/75 px-3 text-xs font-semibold text-[var(--ui-muted)] transition-colors hover:text-[var(--ui-text)] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                首页
+              </button>
+              <button
+                type="button"
+                disabled={libraryRenderPage.page === 1}
+                onClick={() => goToLibraryPage(libraryRenderPage.page - 1)}
+                className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/75 px-3 text-xs font-semibold text-[var(--ui-muted)] transition-colors hover:text-[var(--ui-text)] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                上一页
+              </button>
+              <button
+                type="button"
+                disabled={libraryRenderPage.page === libraryRenderPage.totalPages}
+                onClick={() => goToLibraryPage(libraryRenderPage.page + 1)}
+                className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/75 px-3 text-xs font-semibold text-[var(--ui-muted)] transition-colors hover:text-[var(--ui-text)] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                下一页
+              </button>
+              <button
+                type="button"
+                disabled={libraryRenderPage.page === libraryRenderPage.totalPages}
+                onClick={() => goToLibraryPage(libraryRenderPage.totalPages)}
+                className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/75 px-3 text-xs font-semibold text-[var(--ui-muted)] transition-colors hover:text-[var(--ui-text)] disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                末页
+              </button>
+            </div>
+          </nav>
         )}
       </section>
 
