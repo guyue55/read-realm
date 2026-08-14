@@ -10,11 +10,12 @@ const samples = [
   { scenario: "semantic-layout", semanticAnchorVisible: true, stabilizationMs: 420 },
   { scenario: "pagination-persistence", persistenceMs: 480, semanticAnchorVisible: true },
   { scenario: "bounded-scroll", maxChapterDom: 3, semanticAnchorVisible: true },
+  { scenario: "lifecycle-offline", pagehideRestored: true, offlineObserved: true, semanticAnchorVisible: true },
 ];
 
 const reliable = {
   listExitCode: 0,
-  listedTestCount: 12,
+  listedTestCount: 13,
   serviceReady: true,
   testExitCode: 0,
   portFreeBefore: true,
@@ -49,6 +50,7 @@ test("rejects slow persistence, semantic drift, unbounded DOM and infrastructure
       { ...samples[0], semanticAnchorVisible: false },
       { ...samples[1], persistenceMs: 1001 },
       { ...samples[2], maxChapterDom: 4 },
+      samples[3],
     ],
   });
   assert.equal(result.classification, "FAIL");
@@ -63,7 +65,7 @@ test("rejects slow persistence, semantic drift, unbounded DOM and infrastructure
 test("missing, duplicate or failed live tests cannot pass", () => {
   assert.equal(classifyPhase04ReaderRun({
     ...reliable,
-    listedTestCount: 11,
+    listedTestCount: 12,
     testExitCode: 1,
     samples: [...samples, samples[0]],
   }).classification, "FAIL");
