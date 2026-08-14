@@ -32,12 +32,15 @@ describe("readSyncTasks", () => {
 
   it("returns a validated task object", () => {
     const storage = createMemoryStorage(
-      JSON.stringify({ "book-1": "upload", "book-2": "download" }),
+      JSON.stringify({
+        "token-a::book-1": { bookId: "book-1", action: "upload", shareToken: "token-a" },
+        "token-a::book-2": { bookId: "book-2", action: "download", shareToken: "token-a" },
+      }),
     );
 
     expect(readSyncTasks(storage)).toEqual({
-      "book-1": "upload",
-      "book-2": "download",
+      "token-a::book-1": { bookId: "book-1", action: "upload", shareToken: "token-a" },
+      "token-a::book-2": { bookId: "book-2", action: "download", shareToken: "token-a" },
     });
   });
 
@@ -45,9 +48,10 @@ describe("readSyncTasks", () => {
     ["damaged JSON", "{"],
     ["an array", '["upload"]'],
     ["a scalar", '"upload"'],
-    ["an invalid action", JSON.stringify({ "book-1": "sync" })],
-    ["an empty book id", JSON.stringify({ "": "upload" })],
-    ["a dangerous book id", '{"__proto__":"upload"}'],
+    ["an old unscoped task", JSON.stringify({ "book-1": "download" })],
+    ["an invalid action", JSON.stringify({ "token-a::book-1": { bookId: "book-1", action: "sync", shareToken: "token-a" } })],
+    ["a mismatched key", JSON.stringify({ wrong: { bookId: "book-1", action: "upload", shareToken: "token-a" } })],
+    ["a dangerous book id", '{"token-a::__proto__":{"bookId":"__proto__","action":"upload","shareToken":"token-a"}}'],
   ])("removes %s and returns an empty object", (_label, initial) => {
     const storage = createMemoryStorage(initial);
 
@@ -58,12 +62,18 @@ describe("readSyncTasks", () => {
 
 describe("sync task mutations", () => {
   it("marks and clears a validated task without losing other tasks", () => {
-    const storage = createMemoryStorage(JSON.stringify({ first: "upload" }));
+    const storage = createMemoryStorage();
 
-    markSyncTask(storage, "second", "download");
-    expect(readSyncTasks(storage)).toEqual({ first: "upload", second: "download" });
+    markSyncTask(storage, "same-book", "upload", "token-a");
+    markSyncTask(storage, "same-book", "download", "token-b");
+    expect(Object.values(readSyncTasks(storage))).toEqual([
+      { bookId: "same-book", action: "upload", shareToken: "token-a" },
+      { bookId: "same-book", action: "download", shareToken: "token-b" },
+    ]);
 
-    clearSyncTask(storage, "first");
-    expect(readSyncTasks(storage)).toEqual({ second: "download" });
+    clearSyncTask(storage, "same-book", "token-a");
+    expect(Object.values(readSyncTasks(storage))).toEqual([
+      { bookId: "same-book", action: "download", shareToken: "token-b" },
+    ]);
   });
 });

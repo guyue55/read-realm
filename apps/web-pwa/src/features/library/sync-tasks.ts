@@ -1,11 +1,25 @@
 export const ACTIVE_SYNC_TASKS_KEY = "reader-active-sync-tasks";
 
-export type ActiveSyncTasks = Record<string, "upload" | "download">;
+export type SyncTaskAction = "upload" | "download" | "delete";
+export interface ActiveSyncTask {
+  bookId: string;
+  action: SyncTaskAction;
+  shareToken: string;
+}
+export type ActiveSyncTasks = Record<string, ActiveSyncTask>;
 
 const UNSAFE_BOOK_IDS = new Set(["__proto__", "constructor", "prototype"]);
 
 function isValidBookId(bookId: string): boolean {
   return bookId.trim().length > 0 && !UNSAFE_BOOK_IDS.has(bookId);
+}
+
+function isValidShareToken(token: string): boolean {
+  return /^[A-Za-z0-9_\-\u4E00-\u9FFF]{1,64}$/.test(token);
+}
+
+function taskKey(bookId: string, shareToken: string): string {
+  return `${encodeURIComponent(shareToken)}::${encodeURIComponent(bookId)}`;
 }
 
 function clearInvalidTasks(storage: Storage): ActiveSyncTasks {
@@ -29,14 +43,26 @@ export function readSyncTasks(storage: Storage): ActiveSyncTasks {
   }
 
   const tasks: ActiveSyncTasks = {};
-  for (const [bookId, action] of Object.entries(parsed)) {
+  for (const [key, value] of Object.entries(parsed)) {
     if (
-      !isValidBookId(bookId) ||
-      (action !== "upload" && action !== "download")
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value)
     ) {
       return clearInvalidTasks(storage);
     }
-    tasks[bookId] = action;
+    const { bookId, action, shareToken } = value as Record<string, unknown>;
+    if (
+      typeof bookId !== "string" ||
+      typeof shareToken !== "string" ||
+      !isValidBookId(bookId) ||
+      !isValidShareToken(shareToken) ||
+      (action !== "upload" && action !== "download" && action !== "delete") ||
+      key !== taskKey(bookId, shareToken)
+    ) {
+      return clearInvalidTasks(storage);
+    }
+    tasks[key] = { bookId, action, shareToken };
   }
 
   return tasks;
@@ -49,14 +75,23 @@ export function writeSyncTasks(storage: Storage, tasks: ActiveSyncTasks): void {
 export function markSyncTask(
   storage: Storage,
   bookId: string,
-  action: ActiveSyncTasks[string],
+  action: SyncTaskAction,
+  shareToken: string,
 ): void {
-  if (!isValidBookId(bookId)) return;
-  writeSyncTasks(storage, { ...readSyncTasks(storage), [bookId]: action });
+  if (!isValidBookId(bookId) || !isValidShareToken(shareToken)) return;
+  const key = taskKey(bookId, shareToken);
+  writeSyncTasks(storage, {
+    ...readSyncTasks(storage),
+    [key]: { bookId, action, shareToken },
+  });
 }
 
-export function clearSyncTask(storage: Storage, bookId: string): void {
+export function clearSyncTask(
+  storage: Storage,
+  bookId: string,
+  shareToken: string,
+): void {
   const tasks = readSyncTasks(storage);
-  delete tasks[bookId];
+  delete tasks[taskKey(bookId, shareToken)];
   writeSyncTasks(storage, tasks);
 }
