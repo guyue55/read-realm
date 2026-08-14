@@ -2,6 +2,7 @@ import React from "react";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { strings } from "@/lib/i18n";
 import type { ReaderSettingsState } from "@/lib/reader-settings";
+import { X } from "lucide-react";
 
 export interface SettingsSheetProps {
   settings: ReaderSettingsState;
@@ -58,9 +59,11 @@ export function SettingsSheet({
             <button
               aria-label="关闭阅读设置"
               onClick={onClose}
-              className={`${mutedText} p-1`}
+              data-icon-only="true"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring ${mutedText} flex h-11 w-11 items-center justify-center rounded-xl`}
             >
-              ✕
+              <X aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
           )}
         </div>
@@ -76,7 +79,8 @@ export function SettingsSheet({
               <button
                 onClick={() => updateUiMode("default")}
                 aria-pressed={settings.uiMode === "default"}
-                className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                data-reader-control
+                className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                   settings.uiMode === "default"
                     ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
@@ -87,7 +91,8 @@ export function SettingsSheet({
               <button
                 onClick={() => updateUiMode("simple")}
                 aria-pressed={settings.uiMode === "simple"}
-                className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                data-reader-control
+                className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                   settings.uiMode === "simple"
                     ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
@@ -107,7 +112,9 @@ export function SettingsSheet({
           >
             <button
               onClick={() => updateFontSize(-2)}
-              className={`w-12 h-8 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded transition-colors`}
+              aria-label="减小字号"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring w-12 min-h-11 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded-[10px]`}
             >
               A-
             </button>
@@ -116,7 +123,9 @@ export function SettingsSheet({
             </span>
             <button
               onClick={() => updateFontSize(2)}
-              className={`w-12 h-8 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded transition-colors`}
+              aria-label="增大字号"
+              data-reader-control
+              className={`reader-control-press reader-focus-ring w-12 min-h-11 flex items-center justify-center text-xl font-bold ${textColor} hover:bg-[rgba(80,65,45,0.05)] rounded-[10px]`}
             >
               A+
             </button>
@@ -142,7 +151,8 @@ export function SettingsSheet({
                     updateFontFamily(f.key as "kaiti" | "songti" | "heiti")
                   }
                   aria-pressed={settings.fontFamily === f.key}
-                  className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+                  data-reader-control
+                  className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                     settings.fontFamily === f.key
                       ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
                       : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
@@ -165,15 +175,25 @@ export function SettingsSheet({
               <button
                 key={name}
                 onClick={() => updateTheme(name as ThemeName)}
-                className={`w-10 h-10 rounded-full border-2 transition-all ${
+                data-reader-control
+                className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${
                   settings.theme === name
-                    ? "border-[#678055] scale-110"
-                    : "border-[rgba(80,65,45,0.12)] hover:scale-105"
+                    ? "bg-[#678055]/10"
+                    : "hover:bg-[rgba(80,65,45,0.05)]"
                 }`}
-                style={{ backgroundColor: colors.bg }}
                 title={strings.reader.themeNames[name as ThemeName]}
                 aria-label={strings.reader.themeNames[name as ThemeName]}
-              />
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-8 w-8 rounded-full border-2 ${
+                    settings.theme === name
+                      ? "border-[#678055]"
+                      : "border-[rgba(80,65,45,0.12)]"
+                  }`}
+                  style={{ backgroundColor: colors.bg }}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -188,7 +208,8 @@ export function SettingsSheet({
             <button
               onClick={() => updatePageMode("scroll")}
               aria-pressed={settings.pageMode === "scroll"}
-              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+              data-reader-control
+              className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                 settings.pageMode === "scroll"
                   ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
                   : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
@@ -199,7 +220,8 @@ export function SettingsSheet({
             <button
               onClick={() => updatePageMode("pagination")}
               aria-pressed={settings.pageMode === "pagination"}
-              className={`flex-1 h-8 flex items-center justify-center text-sm rounded-md transition-all ${
+              data-reader-control
+              className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                 settings.pageMode === "pagination"
                   ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
                   : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
@@ -219,13 +241,14 @@ export function SettingsSheet({
             </div>
             <input
               aria-label={strings.reader.lineHeightLabel}
+              data-reader-control
               type="range"
               min={1.4}
               max={2.2}
               step={0.1}
               value={settings.lineHeight}
               onChange={(e) => updateLineHeight(Number(e.target.value))}
-              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -238,13 +261,14 @@ export function SettingsSheet({
             </div>
             <input
               aria-label={strings.reader.paragraphSpacingLabel}
+              data-reader-control
               type="range"
               min={0}
               max={32}
               step={4}
               value={settings.paragraphSpacing}
               onChange={(e) => updateParagraphSpacing(Number(e.target.value))}
-              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -257,13 +281,14 @@ export function SettingsSheet({
             </div>
             <input
               aria-label={strings.reader.letterSpacingLabel}
+              data-reader-control
               type="range"
               min={-0.02}
               max={0.15}
               step={0.01}
               value={settings.letterSpacing}
               onChange={(e) => updateLetterSpacing(Number(e.target.value))}
-              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#678055] ${isDark ? "bg-white/10" : "bg-[rgba(80,65,45,0.12)]"}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -274,18 +299,21 @@ export function SettingsSheet({
             <span className={`text-sm font-medium ${mutedText}`}>{strings.reader.autoFlipAtBottomLabel}</span>
             <button
               onClick={() => updateAutoFlipAtBottom(!settings.autoFlipAtBottom)}
-              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${
-                settings.autoFlipAtBottom ? "bg-[#678055]" : "bg-gray-300 dark:bg-zinc-700"
-              }`}
+              data-reader-control
+              className="reader-control-press reader-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
               role="switch"
               aria-checked={settings.autoFlipAtBottom}
               aria-label={strings.reader.autoFlipAtBottomLabel}
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings.autoFlipAtBottom ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
+              <span className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                settings.autoFlipAtBottom ? "bg-[#678055]" : "bg-gray-300 dark:bg-zinc-700"
+              }`}>
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                    settings.autoFlipAtBottom ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </span>
             </button>
           </div>
         )}
