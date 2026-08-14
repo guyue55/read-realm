@@ -405,6 +405,7 @@ test("pagehide flush and true offline continuation preserve progress", async ({ 
   await expect(canvas.getByText(/1\s*\/\s*\d+/)).toBeVisible({ timeout: 15_000 });
 
   await page.locator('[data-reader-toolbar="bottom"] button[aria-label="下一页"]').click();
+  await page.waitForTimeout(100);
   await page.reload();
   await expect.poll(async () => (await readProgress(page, bookId)).characterOffset, {
     timeout: 15_000,
