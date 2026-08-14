@@ -25,6 +25,12 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScanService";
 import { selectContinueBook } from "@/features/library/library-state";
 import {
+  mergeLibraryBooks,
+  selectVisibleLibraryBooks,
+  type LibrarySort,
+} from "@/features/library/library-query-service";
+import { libraryQueryService } from "@/features/library/dexie-library-query";
+import {
   clearSyncTask,
   markSyncTask,
   readSyncTasks,
@@ -57,12 +63,6 @@ function markActiveSyncTask(bookId: string, action: ActiveSyncTasks[string]) {
 
 function clearActiveSyncTask(bookId: string) {
   clearSyncTask(window.localStorage, bookId);
-}
-
-function getBookTimestamp(book: Book) {
-  return new Date(
-    book.lastReadAt || book.updatedAt || book.createdAt,
-  ).getTime();
 }
 
 function getProgressPercent(book: Book, progress?: ReadingProgress) {
@@ -217,8 +217,16 @@ export function LibraryDefault({
   const [selectedGovBook, setSelectedGovBook] = useState<Book | null>(null);
   const [isGovOpen, setIsGovOpen] = useState(false);
 
-  // 检索所有的逻辑文件夹
-  const folders = useLiveQuery(() => db.libraryFolders.toArray()) || [];
+  const librarySort: LibrarySort = sortBy === "title" ? "title" : "recent";
+  const librarySnapshot = useLiveQuery(
+    () => libraryQueryService.readSnapshot(librarySort),
+    [librarySort],
+  );
+  const books = librarySnapshot?.books;
+  const folders = librarySnapshot?.folders ?? [];
+  const cachedBookIdsSet = librarySnapshot?.cachedBookIds;
+  const progressByBookId = librarySnapshot?.progressByBookId;
+  const totalNotesCount = librarySnapshot?.totalNotesCount;
 
   const currentFolders = folders
     .filter((f) => f.parentId === currentFolderId)
@@ -631,12 +639,6 @@ export function LibraryDefault({
     });
   };
 
-  // 云端同步及状态判定核心字段
-  const cachedBookIdsSet = useLiveQuery(async () => {
-    const allKeys = await db.chapters.orderBy("bookId").uniqueKeys() as string[];
-    return new Set(allKeys);
-  }, []);
-
   const [cloudBooks, setCloudBooks] = useState<(Book & { lastReadProgress?: string })[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
@@ -921,7 +923,8 @@ export function LibraryDefault({
           console.error("获取云端书箧遭遇网络问题:", foldersErr);
         }
 
-        const localFolders = await db.libraryFolders.toArray();
+        const localInventory = await libraryQueryService.readSyncInventory();
+        const localFolders = localInventory.folders;
 
         // 计算逻辑书箧（文件夹）变动差异
         const localOnlyFolders = localFolders.filter(
@@ -945,7 +948,7 @@ export function LibraryDefault({
           }
         }
 
-        const localBooks = await db.books.toArray();
+        const localBooks = localInventory.books;
         const localOnly = localBooks.filter(
           (lb) => !currentCloudBooks.some((cb) => cb.id === lb.id)
         );
@@ -1621,16 +1624,6 @@ export function LibraryDefault({
     });
   };
 
-  const books = useLiveQuery(async () => {
-    const allBooks = await db.books.toArray();
-    return allBooks.sort((a, b) => {
-      if (sortBy === "title") {
-        return a.title.localeCompare(b.title);
-      }
-      return getBookTimestamp(b) - getBookTimestamp(a);
-    });
-  }, [sortBy]);
-
   // 冷启动自愈：1. 静默自动同步大盘 2. 持久化未完结单书同步任务自愈
   const hasAutoSyncedRef = useRef(false);
 
@@ -1654,7 +1647,7 @@ export function LibraryDefault({
       try {
         const activeTasks = readSyncTasks(window.localStorage);
         if (Object.keys(activeTasks).length > 0) {
-          const localBooks = await db.books.toArray();
+          const { books: localBooks } = await libraryQueryService.readSyncInventory();
           
           for (const [bookId, action] of Object.entries(activeTasks)) {
             // 如果已经在同步该书，安全跳过
@@ -1685,25 +1678,15 @@ export function LibraryDefault({
   }, [isOnline, books, autoSyncOnStartup, currentShareToken]);
 
   // 所有融合后的书籍（本地 + 仅云端存在）
-  const mergedBooks = (() => {
-    const local = books || [];
-    const cloudOnly = cloudBooks.filter(
-      (cb) => !local.some((lb) => lb.id === cb.id)
-    );
-    return [...local, ...cloudOnly].sort((a, b) => {
-      if (sortBy === "title") {
-        return a.title.localeCompare(b.title);
-      }
-      return getBookTimestamp(b) - getBookTimestamp(a);
-    });
-  })();
+  const mergedBooks = mergeLibraryBooks(books ?? [], cloudBooks, librarySort);
 
   // 进行逻辑文件夹层级过滤后的书籍，安全归栈、防丢自愈
-  const filteredMergedBooks = mergedBooks.filter((book) => {
-    if (currentFolderId === undefined) {
-      return !book.sourceFolderId || !folders.some((f) => f.id === book.sourceFolderId);
-    }
-    return book.sourceFolderId === currentFolderId;
+  const filteredMergedBooks = selectVisibleLibraryBooks({
+    localBooks: books ?? [],
+    cloudBooks,
+    folders,
+    currentFolderId,
+    sortBy: librarySort,
   });
 
   const getBookAvailabilityStatus = (book: Book, cachedSet: Set<string> | undefined) => {
@@ -1724,13 +1707,6 @@ export function LibraryDefault({
     }
     return { label: "☁️ 密阁天青", style: "bg-[#EBF3F6] text-[#4E7A94] border-[#D1E4EC]" };
   };
-
-  const progressByBookId = useLiveQuery(async () => {
-    const allProgress = await db.progress.toArray();
-    return Object.fromEntries(
-      allProgress.map((progress) => [progress.bookId, progress]),
-    );
-  }, []);
 
   const setViewMode = (mode: LibraryViewMode) => {
     setViewModeState(mode);
@@ -1774,7 +1750,6 @@ export function LibraryDefault({
   };
 
   const bookCount = books?.length || 0;
-  const totalNotesCount = useLiveQuery(() => db.bookmarks.count(), []);
   const progressMap = new Map(Object.entries(progressByBookId || {}));
   const continueBook = selectContinueBook(books || [], progressMap);
   const continueProgress = continueBook

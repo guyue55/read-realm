@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@reader/tsconfig": "workspace:*",
+    "fake-indexeddb": "^6.2.4",
     "typescript": "latest",
     "vitest": "latest",
     "@types/node": "^20.0.0"

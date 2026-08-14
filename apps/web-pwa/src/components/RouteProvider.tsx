@@ -61,6 +61,7 @@ export function useRouteStore(): RouteState {
 export function RouteProvider({ children }: { children: React.ReactNode }) {
   const [storageState, setStorageState] = useState<"opening" | "ready" | "failed">("opening");
   const [storageError, setStorageError] = useState("");
+  const [storageNotice, setStorageNotice] = useState("");
   const [storageAttempt, setStorageAttempt] = useState(0);
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
     async function initPlatformAndHeal() {
       setStorageState("opening");
       setStorageError("");
+      setStorageNotice("");
       try {
         const connectDatabase = db["open"].bind(db);
         await connectDatabase();
@@ -92,9 +94,19 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
 
       // B. 校验并执行防清除双轨冗余镜像自愈 (E07-S04)
       try {
-        const didRestore = await checkAndRestoreFromBackup();
-        if (didRestore && active) {
-          console.log("[Storage] 冷启动自愈引擎：拦截到数据空虚！已完美还原书架镜像及进度、书签。");
+        const restoreResult = await checkAndRestoreFromBackup();
+        if (restoreResult.status === "complete" && active) {
+          console.log(`[Storage] 冷启动自愈完成：已核验恢复 ${restoreResult.restoredBookCount} 本书的全量元数据镜像。`);
+        } else if (restoreResult.status === "partial" && active) {
+          const message = `检测到本地书架曾被清空。已从轻量应急备份恢复 ${restoreResult.restoredBookCount} / ${restoreResult.expectedBookCount} 本；其余内容需从您的完整备份恢复。`;
+          setStorageNotice(message);
+          console.warn(`[Storage] ${message}`);
+        } else if (restoreResult.status === "recovery_gap" && active) {
+          const message = `本地书架仍只有 ${restoreResult.restoredBookCount} / ${restoreResult.expectedBookCount} 本；缺失的书未被标记为已恢复，请从完整备份继续恢复。`;
+          setStorageNotice(message);
+          console.warn(`[Storage] ${message}`);
+        } else if (restoreResult.status === "failed" && active) {
+          setStorageNotice("检测到本地书架恢复失败，没有把不完整数据标记为成功。请前往数据管理使用完整备份恢复。");
         }
       } catch (err) {
         console.error("[Storage] 冷启动双轨自愈判定异常:", err);
@@ -203,6 +215,27 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {storageNotice && (
+        <aside
+          role="alert"
+          aria-live="assertive"
+          className="fixed inset-x-3 top-3 z-[120] mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border border-amber-300/80 bg-[#FFF9E8]/95 p-4 text-[#6E5226] shadow-[0_14px_40px_rgba(80,65,45,0.16)] backdrop-blur"
+        >
+          <p className="flex-1 text-sm leading-6">{storageNotice}</p>
+          <button
+            type="button"
+            aria-label="关闭恢复提示"
+            className="ui-focus-ring min-h-11 min-w-11 rounded-xl text-lg"
+            onClick={() => setStorageNotice("")}
+          >
+            ×
+          </button>
+        </aside>
+      )}
+      {children}
+    </>
+  );
 }
 export default RouteProvider;
