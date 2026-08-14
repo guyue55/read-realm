@@ -1,0 +1,94 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-gate-03-public-library.mjs EXP-14
+started_at=2026-08-14T22:02:23.177Z
+ended_at=2026-08-14T22:02:58.527Z
+duration_ms=35350
+exit_code=1
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+GATE03_PUBLIC_LIBRARY_OBSERVATION={"classification":"VALIDATOR_INDETERMINATE","reasons":["API_SERVICE_NOT_READY","WEB_SERVICE_NOT_READY","PRODUCT_STAGE_MARKER_COUNT_0"],"controlRevision":"REV-0003","experiment":"EXP-14","listExitCode":0,"listedTestCount":1,"apiBuildExitCode":0,"webBuildExitCode":0,"apiServiceReady":false,"webServiceReady":false,"testExitCode":1,"apiPortFreeBefore":true,"webPortFreeBefore":true,"apiPortFreeAfter":true,"webPortFreeAfter":true,"orphanProcessCount":0,"pathIsolationValid":true,"isolatedRootCreated":true,"cleanupComplete":true,"personalDbSentinelUnchanged":true,"personalBlobSentinelUnchanged":true,"personalDbSentinelBefore":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalDbSentinelAfter":"f5a13280092285397fd70a54325b2af10869cf05497b6872e1f762541f067638","personalBlobSentinelBefore":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","personalBlobSentinelAfter":"ace5e2ddd778bf803507305df0dbb80a664badf260a737af578d5e3aea86258d","sentinelSetupError":null,"browserChannel":"chrome","runnerMode":"production","productStageMarkerCount":0,"productStageEntered":false,"evidenceRecordsValid":true,"strategy":{"fixture":"fixed-legal-two-chapter-txt","maintenanceCredential":"x-public-library-maintenance-key","anonymousCatalog":true,"immutableFullPackage":true,"newLocalIds":true,"atomicLocalCommit":true,"trueOfflineAfterJoin":true,"personalSyncSentinel":true,"isolatedPersonalDatabase":true,"isolatedPublicDatabase":true,"isolatedBlobRoots":true,"productionServers":true,"systemChrome":true,"explicitProcessGroups":true,"cleanupIsolatedRoot":true}}
+
+[list]
+Listing tests:
+  [chromium-chrome] › public-library.spec.ts:9:5 › EXP-14 isolates publication, browses a real page boundary, joins atomically, and reads offline
+Total: 1 test in 1 file
+
+[api-build]
+
+> api@0.0.1 build ./apps/api
+> nest build
+
+
+[web-build]
+
+> web-pwa@0.1.0 build ./apps/web-pwa
+> next build
+
+   ▲ Next.js 15.5.20
+
+   Creating an optimized production build ...
+> [PWA] PWA support is disabled
+> [PWA] PWA support is disabled
+ ✓ Compiled successfully in 3.4s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/14) ...
+   Generating static pages (3/14)
+   Generating static pages (6/14)
+   Generating static pages (10/14)
+ ✓ Generating static pages (14/14)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    5.22 kB         161 kB
+├ ○ /_not-found                            995 B         104 kB
+├ ● /book/[bookId]                       11.3 kB         182 kB
+├   └ /book/placeholder
+├ ○ /import                              16.4 kB         187 kB
+├ ● /import/preview/[taskId]             13.3 kB         176 kB
+├   └ /import/preview/placeholder
+├ ○ /library                             39.2 kB         235 kB
+├ ○ /notes                               7.44 kB         170 kB
+├ ○ /public-library                      6.79 kB         170 kB
+├ ● /reader/[bookId]                     21.1 kB         202 kB
+├   └ /reader/placeholder
+├ ○ /search                              11.8 kB         182 kB
+└ ○ /settings                            11.6 kB         183 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/28206575-aa5f8723902dc229.js  54.2 kB
+  ├ chunks/426-b6a98a8a0176c1ad.js       46.2 kB
+  └ other shared chunks (total)          2.39 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
+[stderr]
+[api-service]
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- ./apps/api/dist/main.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.require (node:internal/modules/cjs/loader:1504:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (./apps/api/dist/main.js:38:30)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ './apps/api/dist/main.js' ]
+}
+
+Node.js v24.13.0
+
