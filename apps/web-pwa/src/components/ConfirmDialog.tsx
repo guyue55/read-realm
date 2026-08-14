@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 
 export interface ConfirmDialogProps {
   /** 弹窗是否开启 */
@@ -42,19 +43,6 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
 
-  // 监听键盘 ESC 键，提升无障碍体验（Accessibility）
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !loading) {
-        if (onCancel) onCancel();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, loading, onCancel, onClose]);
-
   if (!isOpen) return null;
 
   // 物理执行确认，捕获异步状态，引入防抖
@@ -95,7 +83,11 @@ export function ConfirmDialog({
       };
 
   return (
-    <div 
+    <ReaderDialogSurface
+      open={isOpen}
+      label={title}
+      onClose={handleCancel}
+      fallbackFocus={() => null}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2C2621]/45 backdrop-blur-sm animate-in fade-in duration-300"
       onClick={handleCancel}
     >
@@ -129,7 +121,8 @@ export function ConfirmDialog({
             <button
               onClick={handleCancel}
               disabled={loading}
-              className="px-5 py-2 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] border border-[rgba(80,65,45,0.08)] text-[#6F665B] dark:text-[#A89F95] text-sm font-semibold rounded-full transition-all font-serif active:scale-95 disabled:opacity-50"
+              data-reader-control
+              className="reader-focus-ring min-h-11 px-5 py-2 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] border border-[rgba(80,65,45,0.08)] text-[#6F665B] dark:text-[#A89F95] text-sm font-semibold rounded-full transition-all font-serif active:scale-95 disabled:opacity-50"
             >
               {cancelText || themeStyles.defaultCancelText}
             </button>
@@ -137,12 +130,13 @@ export function ConfirmDialog({
           <button
             onClick={handleConfirm}
             disabled={loading}
-            className={`px-6 py-2.5 text-sm font-semibold rounded-full transition-all font-serif active:scale-95 flex items-center justify-center min-w-[72px] disabled:opacity-50 ${themeStyles.accentColor}`}
+            data-reader-control
+            className={`reader-focus-ring min-h-11 px-6 py-2.5 text-sm font-semibold rounded-full transition-all font-serif active:scale-95 flex items-center justify-center min-w-[72px] disabled:opacity-50 ${themeStyles.accentColor}`}
           >
             {loading ? "雕印中..." : (confirmText || (isAlert ? "知晓" : themeStyles.defaultConfirmText))}
           </button>
         </div>
       </div>
-    </div>
+    </ReaderDialogSurface>
   );
 }

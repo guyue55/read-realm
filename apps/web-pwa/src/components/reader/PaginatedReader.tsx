@@ -216,9 +216,12 @@ export const PaginatedReader = React.forwardRef<PaginatedReaderHandle, Paginated
     }, [containerWidth, totalPages, currentPage, onPageChange, onAnchorChange, pages]);
     handleScrollRef.current = handleScroll;
 
-    // 🏮 键盘翻页：检查焦点不在输入元素中才触发
+    // 键盘翻页只在正文交互层生效，不穿透到已打开的模态面板后方。
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
+
+        if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+
         // 如果焦点在输入框、文本区域或可编辑元素中，不拦截方向键
         const activeTag = (document.activeElement?.tagName || '').toLowerCase();
         const isEditable =
