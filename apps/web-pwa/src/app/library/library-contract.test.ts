@@ -33,4 +33,20 @@ describe("library truth contract", () => {
     expect(source).toContain("libraryCommandService.offloadBook");
     expect(source).not.toContain("await db.libraryFolders.add(");
   });
+
+  it("keeps large shelves on one bounded render window with indexed lookups", () => {
+    expect(source).toContain("paginateLibraryItems(");
+    expect(source).toContain("LIBRARY_PAGE_SIZE = 48");
+    expect(source.match(/renderedShelfEntries\.books\.map/g)).toHaveLength(2);
+    expect(source.match(/renderedShelfEntries\.folders\.map/g)).toHaveLength(2);
+    expect(source).toContain("data-folder-id={folder.id}");
+    expect(source).toContain("localBookIds.has(book.id)");
+    expect(source).toContain("cloudBookIds.has(book.id)");
+    expect(source).toContain("folderBookCounts.get(folder.id)");
+    expect(source.match(/filteredMergedBooks\.map/g)).toHaveLength(1);
+    expect(source).not.toContain("mergedBooks.filter");
+    expect(source).not.toContain("(books || []).some");
+    expect(source).not.toContain("cloudBooks.some");
+    expect(source.match(/currentFolders\.map/g)).toHaveLength(1);
+  });
 });

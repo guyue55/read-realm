@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Book, LibraryFolder, ReadingProgress } from "@reader/shared-types";
 import {
+  countLibraryBooksByFolder,
+  paginateLibraryBooks,
   LibraryQueryService,
   selectVisibleLibraryBooks,
   type LibraryQueryPort,
@@ -165,5 +167,57 @@ describe("selectVisibleLibraryBooks", () => {
 
     expect(selected.map((item) => item.id)).toEqual(["local"]);
     expect(selected[0]?.title).toBe("本地本");
+  });
+});
+
+describe("bounded library rendering", () => {
+  const books = Array.from({ length: 500 }, (_, index) =>
+    book(
+      `book-${String(index).padStart(3, "0")}`,
+      `Book ${String(index).padStart(3, "0")}`,
+      "2026-03-03T00:00:00.000Z",
+      index < 120 ? "folder-a" : index < 200 ? "folder-b" : undefined,
+    ),
+  );
+
+  it("keeps the complete result count while exposing at most 60 books per page", () => {
+    const first = paginateLibraryBooks(books, 1, 60);
+    const last = paginateLibraryBooks(books, 9, 60);
+
+    expect(first.totalItems).toBe(500);
+    expect(first.totalPages).toBe(9);
+    expect(first.items).toHaveLength(60);
+    expect(first.rangeStart).toBe(1);
+    expect(first.rangeEnd).toBe(60);
+    expect(last.items).toHaveLength(20);
+    expect(last.rangeStart).toBe(481);
+    expect(last.rangeEnd).toBe(500);
+  });
+
+  it("covers every book exactly once across the 48-book UI pages", () => {
+    const pages = Array.from({ length: Math.ceil(books.length / 48) }, (_, index) =>
+      paginateLibraryBooks(books, index + 1, 48),
+    );
+    const renderedIds = pages.flatMap((page) => page.items.map((item) => item.id));
+
+    expect(renderedIds).toHaveLength(500);
+    expect(new Set(renderedIds).size).toBe(500);
+    expect(renderedIds).toEqual(books.map((item) => item.id));
+  });
+
+  it("clamps a stale page after deletion instead of rendering a blank shelf", () => {
+    const result = paginateLibraryBooks(books.slice(0, 61), 9, 60);
+
+    expect(result.page).toBe(2);
+    expect(result.items.map((item) => item.id)).toEqual(["book-060"]);
+  });
+
+  it("counts folder membership in one index without changing the book collection", () => {
+    const counts = countLibraryBooksByFolder(books);
+
+    expect(counts.get("folder-a")).toBe(120);
+    expect(counts.get("folder-b")).toBe(80);
+    expect(counts.has("missing")).toBe(false);
+    expect(books).toHaveLength(500);
   });
 });
