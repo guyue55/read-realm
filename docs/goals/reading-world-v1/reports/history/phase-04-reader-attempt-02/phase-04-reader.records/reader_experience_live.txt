@@ -1,0 +1,108 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-phase-04-reader-experience.mjs
+started_at=2026-08-14T15:53:38.210Z
+ended_at=2026-08-14T15:55:16.434Z
+duration_ms=98224
+exit_code=1
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+[stdout]
+PHASE04_READER_OBSERVATION={"classification":"FAIL","reasons":["TEST_EXIT_1","LIFECYCLE_OFFLINE_COUNT_0"],"listExitCode":0,"listedTestCount":13,"serviceReady":true,"testExitCode":1,"portFreeBefore":true,"portFreeAfter":true,"orphanProcessCount":0,"samples":[{"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":2721},{"scenario":"pagination-persistence","persistenceMs":237,"semanticAnchorVisible":true},{"scenario":"bounded-scroll","maxChapterDom":3,"semanticAnchorVisible":true}]}
+
+[list]
+Listing tests:
+  [chromium-chrome] › reader-experience.spec.ts:139:5 › layout and page-mode changes preserve the current semantic anchor
+  [chromium-chrome] › reader-experience.spec.ts:230:5 › mobile pagination advances one page before changing chapters and restores its anchor
+  [chromium-chrome] › reader-experience.spec.ts:395:5 › pagehide flush and true offline continuation preserve progress
+  [chromium-chrome] › reader-experience.spec.ts:438:5 › continuous scroll keeps an active three-chapter window while moving both directions
+  [chromium-chrome] › reader-experience.spec.ts:587:5 › reader dialogs contain and restore focus
+  [chromium-chrome] › reader-experience.spec.ts:627:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
+  [chromium-chrome] › reader-experience.spec.ts:673:5 › mobile toolbars never cover pagination content
+  [chromium-chrome] › reader-experience.spec.ts:729:5 › mobile toolbars never cover scroll content
+  [chromium-chrome] › reader-experience.spec.ts:779:5 › reader controls are touch safe and use coherent icons
+  [chromium-chrome] › reader-experience.spec.ts:838:5 › mobile progress preview commits only after dragging ends
+  [chromium-chrome] › reader-experience.spec.ts:873:5 › reader note dialog contains focus and uses touch-safe actions
+  [chromium-chrome] › reader-experience.spec.ts:925:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
+  [chromium-chrome] › reader-experience.spec.ts:996:5 › reader layout stays contained across viewports and reduced motion
+Total: 13 tests in 1 file
+
+[test]
+
+Running 13 tests using 1 worker
+
+
+
+[1/13] [chromium-chrome] › e2e/reader-experience.spec.ts:139:5 › layout and page-mode changes preserve the current semantic anchor
+[chromium-chrome] › e2e/reader-experience.spec.ts:139:5 › layout and page-mode changes preserve the current semantic anchor
+PHASE04_READER_SAMPLE={"scenario":"semantic-layout","semanticAnchorVisible":true,"stabilizationMs":2721}
+
+[2/13] [chromium-chrome] › e2e/reader-experience.spec.ts:230:5 › mobile pagination advances one page before changing chapters and restores its anchor
+[chromium-chrome] › e2e/reader-experience.spec.ts:230:5 › mobile pagination advances one page before changing chapters and restores its anchor
+PHASE04_READER_SAMPLE={"scenario":"pagination-persistence","persistenceMs":237,"semanticAnchorVisible":true}
+
+[3/13] [chromium-chrome] › e2e/reader-experience.spec.ts:395:5 › pagehide flush and true offline continuation preserve progress
+  1) [chromium-chrome] › e2e/reader-experience.spec.ts:395:5 › pagehide flush and true offline continuation preserve progress
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      410 |     timeout: 15_000,
+      411 |     intervals: [50, 100, 200],
+    > 412 |   }).toBeGreaterThan(0);
+          |      ^
+      413 |   const saved = await readProgress(page, bookId);
+      414 |   await context.setOffline(true);
+      415 |   await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
+        at ./apps/web-pwa/e2e/reader-experience.spec.ts:412:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reader-experience-pagehide-161b9-tinuation-preserve-progress-chromium-chrome/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reader-experience-pagehide-161b9-tinuation-preserve-progress-chromium-chrome/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/reader-experience-pagehide-161b9-tinuation-preserve-progress-chromium-chrome/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/reader-experience-pagehide-161b9-tinuation-preserve-progress-chromium-chrome/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+[4/13] [chromium-chrome] › e2e/reader-experience.spec.ts:438:5 › continuous scroll keeps an active three-chapter window while moving both directions
+[chromium-chrome] › e2e/reader-experience.spec.ts:438:5 › continuous scroll keeps an active three-chapter window while moving both directions
+PHASE04_READER_SAMPLE={"scenario":"bounded-scroll","maxChapterDom":3,"semanticAnchorVisible":true}
+
+[5/13] [chromium-chrome] › e2e/reader-experience.spec.ts:587:5 › reader dialogs contain and restore focus
+[6/13] [chromium-chrome] › e2e/reader-experience.spec.ts:627:5 › mobile drawers fall back to the canvas when their toolbar trigger becomes inert
+[7/13] [chromium-chrome] › e2e/reader-experience.spec.ts:673:5 › mobile toolbars never cover pagination content
+[8/13] [chromium-chrome] › e2e/reader-experience.spec.ts:729:5 › mobile toolbars never cover scroll content
+[9/13] [chromium-chrome] › e2e/reader-experience.spec.ts:779:5 › reader controls are touch safe and use coherent icons
+[10/13] [chromium-chrome] › e2e/reader-experience.spec.ts:838:5 › mobile progress preview commits only after dragging ends
+[11/13] [chromium-chrome] › e2e/reader-experience.spec.ts:873:5 › reader note dialog contains focus and uses touch-safe actions
+[12/13] [chromium-chrome] › e2e/reader-experience.spec.ts:925:5 › desktop reader drawers trap focus, close with Escape, and restore their triggers
+[13/13] [chromium-chrome] › e2e/reader-experience.spec.ts:996:5 › reader layout stays contained across viewports and reduced motion
+  1 failed
+    [chromium-chrome] › e2e/reader-experience.spec.ts:395:5 › pagehide flush and true offline continuation preserve progress
+  12 passed (1.5m)
+undefined
+./apps/web-pwa:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: playwright test e2e/reader-experience.spec.ts --config playwright.phase-04.config.ts --project=chromium-chrome --timeout=60000 --reporter=line
+
+[stderr]
+[test]
+(node:43703) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44145) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
