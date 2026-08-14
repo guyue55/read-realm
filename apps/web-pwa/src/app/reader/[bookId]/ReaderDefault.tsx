@@ -326,7 +326,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     [contentRef],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateActiveRef = () => {
       if (!mainRef.current) return;
       const isDesktop = window.matchMedia("(min-width: 768px)").matches;

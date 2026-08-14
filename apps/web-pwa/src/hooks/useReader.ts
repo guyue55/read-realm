@@ -258,7 +258,7 @@ function getScrollChapterMetrics(
  * 杜绝传统 setTimeout 带来的进度恢复漂移、闪跳或被物理裁剪。
  */
 function restoreScrollPositionStable(
-  container: HTMLDivElement | null,
+  containerSource: HTMLDivElement | React.MutableRefObject<HTMLDivElement | null> | null,
   targetOffset: number,
   pageMode: "scroll" | "pagination",
   onSettled: (offset: number, maxOffset: number) => void,
@@ -266,7 +266,12 @@ function restoreScrollPositionStable(
   characterOffset?: number,
   chapterIndex?: number,
 ) {
-  if (!container) {
+  const resolveContainer = () => (
+    containerSource && "current" in containerSource
+      ? containerSource.current
+      : containerSource
+  );
+  if (!containerSource) {
     onSettled(targetOffset, 0);
     return () => {};
   }
@@ -280,6 +285,15 @@ function restoreScrollPositionStable(
 
   const check = () => {
     attempts++;
+    const container = resolveContainer();
+    if (!container?.isConnected) {
+      if (attempts >= maxAttempts) {
+        onSettled(targetOffset, 0);
+      } else {
+        rafId = requestAnimationFrame(check);
+      }
+      return;
+    }
     const currentHeight = container.scrollHeight;
     const currentWidth = container.scrollWidth;
 
@@ -299,6 +313,7 @@ function restoreScrollPositionStable(
     if (stableFrames >= 3 || attempts >= maxAttempts) {
       // 布局已彻底静止，安全执行精准物理定位
       let offsetApplied = false;
+      let semanticTarget: Element | null = null;
       if (typeof paragraphIndex === "number" && paragraphIndex >= 0) {
         const chapterRoot = typeof chapterIndex === "number"
           ? getRenderedChapterElement(container, chapterIndex)
@@ -307,17 +322,25 @@ function restoreScrollPositionStable(
           `p[data-idx="${paragraphIndex}"]`,
         );
         if (targetEl) {
+          const previousScrollBehavior = container.style.scrollBehavior;
           try {
+            // Semantic restoration is an internal correction. Never inherit the
+            // reader's smooth-scroll preference here: scrollIntoView({auto}) can
+            // still animate when CSS declares smooth and report an intermediate
+            // paragraph as the restored position.
+            container.style.scrollBehavior = "auto";
             if (pageMode === "scroll") {
-              targetEl.scrollIntoView({ block: "start", behavior: "auto" });
+              const targetRect = targetEl.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              container.scrollTop += targetRect.top - containerRect.top;
               if (characterOffset && characterOffset > 0 && targetEl.firstChild) {
                 const range = document.createRange();
                 const node = targetEl.firstChild;
                 const safeOffset = Math.min(characterOffset, node.textContent?.length || 0);
                 range.setStart(node, safeOffset);
                 const charRect = range.getBoundingClientRect();
-                const cRect = container.getBoundingClientRect();
-                container.scrollTop += (charRect.top - cRect.top);
+                const settledContainerRect = container.getBoundingClientRect();
+                container.scrollTop += (charRect.top - settledContainerRect.top);
               }
             } else {
               targetEl.scrollIntoView({ block: "nearest", inline: "start", behavior: "auto" });
@@ -330,8 +353,11 @@ function restoreScrollPositionStable(
               );
             }
             offsetApplied = true;
+            semanticTarget = targetEl;
           } catch (err) {
             console.error("Precise offset positioning failed, falling back:", err);
+          } finally {
+            container.style.scrollBehavior = previousScrollBehavior;
           }
         }
       }
@@ -342,6 +368,47 @@ function restoreScrollPositionStable(
         } else {
           container.scrollLeft = targetOffset;
         }
+      }
+
+      if (pageMode === "scroll" && semanticTarget) {
+        let anchorStableFrames = 0;
+        let anchorAttempts = 0;
+        const stabilizeSemanticAnchor = () => {
+          anchorAttempts += 1;
+          const containerRect = container.getBoundingClientRect();
+          const desiredLine = containerRect.top
+            + Math.min(120, Math.max(24, containerRect.height * 0.12));
+          let anchorTop = semanticTarget?.getBoundingClientRect().top ?? desiredLine;
+          if (characterOffset && characterOffset > 0 && semanticTarget.firstChild) {
+            const range = document.createRange();
+            const node = semanticTarget.firstChild;
+            const safeOffset = Math.min(characterOffset, node.textContent?.length || 0);
+            range.setStart(node, safeOffset);
+            anchorTop = range.getBoundingClientRect().top;
+          }
+          const delta = anchorTop - desiredLine;
+          if (Math.abs(delta) <= 1) {
+            anchorStableFrames += 1;
+          } else {
+            anchorStableFrames = 0;
+            const previousScrollBehavior = container.style.scrollBehavior;
+            container.style.scrollBehavior = "auto";
+            container.scrollTop += delta;
+            container.style.scrollBehavior = previousScrollBehavior;
+          }
+          if (anchorStableFrames >= 3 || anchorAttempts >= 30) {
+            const finalOffset = container.scrollTop;
+            const maxOffset = Math.max(
+              0,
+              container.scrollHeight - container.clientHeight,
+            );
+            onSettled(finalOffset, maxOffset);
+            return;
+          }
+          rafId = requestAnimationFrame(stabilizeSemanticAnchor);
+        };
+        rafId = requestAnimationFrame(stabilizeSemanticAnchor);
+        return;
       }
 
       // 获取最终确切的物理偏置
@@ -910,13 +977,15 @@ export function useReader(bookId: string) {
   useEffect(() => {
     if (chapter && pendingScrollRestoreRef.current) {
       const pending = pendingScrollRestoreRef.current;
-      pendingScrollRestoreRef.current = null;
       const container = contentRef.current;
 
       // 无感切章：跳过 hide/show 过渡，直接定位
       if (seamlessChapterSwitchRef.current) {
         // 防御性重置：确保标志不会泄漏到后续非切章触发的 effect
         seamlessChapterSwitchRef.current = false;
+        if (pendingScrollRestoreRef.current === pending) {
+          pendingScrollRestoreRef.current = null;
+        }
         // 立即设置滚动位置，不等稳定帧
         if (container) {
           if (settings.pageMode === "scroll") {
@@ -937,6 +1006,9 @@ export function useReader(bookId: string) {
       }
 
       const onSettleCallback = async (finalOffset: number, maxOffset: number) => {
+        if (pendingScrollRestoreRef.current === pending) {
+          pendingScrollRestoreRef.current = null;
+        }
         if (container && pending.flashElement) {
           const chapterRoot = getRenderedChapterElement(container, chapter.index) ?? container;
           let targetEl: Element | null = null;
@@ -995,7 +1067,7 @@ export function useReader(bookId: string) {
       } else {
         const targetOffset = pending.offset ?? 0;
         const cleanup = restoreScrollPositionStable(
-          container,
+          contentRef,
           targetOffset,
           settings.pageMode,
           onSettleCallback,
@@ -2254,6 +2326,36 @@ export function useReader(bookId: string) {
         setIsPositionRestored(false);
         await engine.loadChapter(bookmark.chapterIndex);
         const currentChapter = engine.getCurrentChapter();
+
+        if (currentChapter && settingsRef.current.pageMode === "pagination") {
+          const anchor = {
+            chapterIndex: currentChapter.index,
+            paragraphIndex: bookmark.paragraphIndex ?? 0,
+            characterOffset: bookmark.characterOffset ?? 0,
+          };
+          // Pagination restores by semantic page, not by the stale pixel offset from
+          // another mounted chapter. Keep the exact bookmark anchor authoritative
+          // until the user turns a page; otherwise the page-start scroll event can
+          // overwrite it during the chapter remount.
+          pendingScrollRestoreRef.current = null;
+          setChapter(currentChapter);
+          replaceRenderedChapter(currentChapter);
+          latestSemanticAnchorRef.current = anchor;
+          setPaginationAnchor(anchor);
+          await saveCurrentProgress(
+            currentChapter,
+            bookmark.offset,
+            anchor.paragraphIndex,
+            anchor.characterOffset,
+          );
+          setReadingProgress(
+            computeOverallProgress(currentChapter.index, toc.length || 1, 0),
+          );
+          setIsPositionRestored(true);
+          setActivePanel(null);
+          setShowMenu(false);
+          return;
+        }
 
         // 1. 写入定位调停
         pendingScrollRestoreRef.current = {

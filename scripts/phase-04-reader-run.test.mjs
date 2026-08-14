@@ -7,15 +7,23 @@ import {
 } from "./phase-04-reader-run.mjs";
 
 const samples = [
-  { scenario: "semantic-layout", semanticAnchorVisible: true, stabilizationMs: 420 },
+  {
+    scenario: "semantic-layout",
+    semanticAnchorVisible: true,
+    stabilizationMs: 420,
+    longTaskSupported: true,
+    longTaskDurationsMs: [54.2],
+    maxLongTaskMs: 54.2,
+  },
   { scenario: "pagination-persistence", persistenceMs: 480, semanticAnchorVisible: true },
   { scenario: "bounded-scroll", maxChapterDom: 3, semanticAnchorVisible: true },
   { scenario: "lifecycle-offline", pagehideRestored: true, offlineObserved: true, semanticAnchorVisible: true },
+  { scenario: "bookmark-restore", persisted: true, semanticAnchorVisible: true },
 ];
 
 const reliable = {
   listExitCode: 0,
-  listedTestCount: 13,
+  listedTestCount: 14,
   serviceReady: true,
   testExitCode: 0,
   portFreeBefore: true,
@@ -51,6 +59,7 @@ test("rejects slow persistence, semantic drift, unbounded DOM and infrastructure
       { ...samples[1], persistenceMs: 1001 },
       { ...samples[2], maxChapterDom: 4 },
       samples[3],
+      samples[4],
     ],
   });
   assert.equal(result.classification, "FAIL");
