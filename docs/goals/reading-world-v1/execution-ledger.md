@@ -34,6 +34,7 @@
 - RUN-0042：保持执行中；TASK-0503 实现候选已提交 `d0dbd73`，首次正式 EXP-14 在 clean 候选上归类 `VALIDATOR_INDETERMINATE`。依据：EVID-59 的 11/11 records SHA 匹配，10/11 checks 通过，个人事实源哨兵、端口、进程与清理均闭合；生产 API 因未显式声明直接运行时依赖 `express` 而未启动，未进入产品断言阶段。EXP-14 产品/设计失败计数为 0，修复验证器后仍重放 EXP-14，不转 EXP-15，GATE-03 未通过。
 - RUN-0043：保持执行中；同一 EXP-14 在 clean@`3f37036` 正式重放得 EVID-59 PASS，首轮验证器不确定已自动归档且原始提交 `a3da145` 保留。依据：11/11 checks/records、唯一 product marker、个人 DB/Blob 哨兵、路径隔离、端口/进程/清理与独立复算均通过。当前只放行 EVID-57 FINAL 封装；FINAL 未生成前不宣称 GATE-03 完成，不进入 TASK-0504 扩张。
 - RUN-0044：保持执行中；EVID-57 FINAL 从 clean@`cf1f061` 生成并独立复算 PASS，GATE-03/RISK-05/TASK-0503 完成，当前入口推进至 TASK-0504。该结论只放行公共域扩张，不证明 TASK-0504~0506、PHASE-05 整体、VPS 部署或 Goal 完成。
+- RUN-0045：保持执行中；TASK-0504 扩张规格与 EVID-62 槽冻结，当前入口为 A：canonical publisher、additive schema、原子对象写、edition/source/receipt 和并发/崩溃/重放反例。A 未通过前不并行扩张四个入口。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -440,3 +441,10 @@
 - 严格提交链：`d0dbd733 -> a3da1455 -> 3f370367 -> cf1f061b` 四者互异且逐段祖先关系成立；FINAL 自身、source attempt、history 与 records 已由独立审查再次复算，无 P0/P1。
 - 结论与边界：GATE-03、RISK-05 与 TASK-0503 完成；公共藏书已证明可发现入口、非默认维护凭据、匿名分类/检索/分页、新 ID 原子加入、真断网两章阅读，且个人 DB/Blob 哨兵不变。只放行 TASK-0504，不证明 TASK-0504~0506、PHASE-05 整体、VPS 部署或 Goal 完成。
 - 下一入口：PHASE-05 / TASK-0504。扩张必须继续保持公共 SQLite/Blob/API/凭据与个人 `/books`、`x-share-token`、个人 DB/Blob、同步任务分离；先以隔离维护目录和有界样本实现直接文件/文件夹上传、深度扫描关联、个人书架发布、固定分类标签与分页多视图，禁止修改原书本体。
+
+### RUN-0045 · 2026-08-15T06:37:22+08:00 · PHASE-05 / TASK-0504 扩张规格冻结
+- 独立审计：后端、前端/边界和验证器三路只读审计均确认现有 GATE-03 纵切可复用，但四入口扩张前必须先统一 canonical publisher；现有 JSON 体积、并发幂等、目录 realpath/symlink/TOCTOU、个人完整快照、taxonomy/facets 和搜索上界均不足以直接扩张。
+- 冻结规格：`reports/task-0504-public-library-expansion-spec.md`。直接文件、文件夹、allowlisted 服务端扫描和个人云快照只作为 adapter；完整公共 package 是唯一匿名正文事实源。维护者仅为密钥派生展示别名，不建账号或治理平台。
+- 任务证据：预登记 EVID-62 和独立 `TASK-0504-PUBLIC-LIBRARY-EXPANSION` 门；它不是 HYP-05 新实验，不使用 EXP-15/16，不改写 GATE-03 FINAL 或失败计数。
+- 实现顺序：A canonical publisher/原子写/edition-source-receipt → B multipart 单文件 → C 文件夹队列 → D allowlisted scanner → E 个人云快照发布 → F taxonomy/facets/四视图。A 未绿前禁止并行 B–F。
+- 边界：本轮未连接真实维护目录、真实公共库、个人真实云或 VPS，未 push/部署；TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。
