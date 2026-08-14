@@ -1,7 +1,7 @@
 $ corepack pnpm build
-started_at=2026-08-14T16:37:14.448Z
-ended_at=2026-08-14T16:37:34.481Z
-duration_ms=20033
+started_at=2026-08-14T15:53:12.841Z
+ended_at=2026-08-14T15:53:37.918Z
+duration_ms=25077
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -55,7 +55,7 @@ Scope: 10 of 11 workspace projects
    Creating an optimized production build ...
 > [PWA] PWA support is disabled
 > [PWA] PWA support is disabled
- ✓ Compiled successfully in 2.5s
+ ✓ Compiled successfully in 2.7s
    Linting and checking validity of types ...
    Collecting page data ...
    Generating static pages (0/13) ...

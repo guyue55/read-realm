@@ -1,7 +1,7 @@
 $ corepack pnpm --filter web-pwa test
-started_at=2026-08-14T16:37:07.653Z
-ended_at=2026-08-14T16:37:09.291Z
-duration_ms=1638
+started_at=2026-08-14T15:53:06.156Z
+ended_at=2026-08-14T15:53:08.069Z
+duration_ms=1913
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
@@ -19,7 +19,7 @@ tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.js
 
  Test Files  25 passed (25)
       Tests  81 passed (81)
-   Start at  00:37:08
-   Duration  1.13s (transform 1.33s, setup 0ms, import 2.42s, tests 217ms, environment 3ms)
+   Start at  23:53:06
+   Duration  1.40s (transform 1.60s, setup 0ms, import 3.06s, tests 286ms, environment 7ms)
 
 [stderr]
