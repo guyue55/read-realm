@@ -3,14 +3,19 @@ import { IDBKeyRange, indexedDB } from "fake-indexeddb";
 import type { Book, Bookmark, ReadingProgress } from "@reader/shared-types";
 import {
   META_SHELF_BACKUP_KEY,
+  META_SHELF_EMPTY_ACK_KEY,
+  META_SHELF_NATIVE_BACKUP_ID_KEY,
   META_SHELF_RECOVERY_GAP_KEY,
   buildBrowserMetaShelfBackup,
+  getMetaShelfBackupIdentity,
+  hasAcknowledgedEmptyShelf,
   parseMetaShelfBackup,
 } from "./metadata-redundancy";
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
   failWritesFor: string | null = null;
+  failReadsFor: string | null = null;
 
   get length() {
     return this.values.size;
@@ -21,6 +26,7 @@ class MemoryStorage implements Storage {
   }
 
   getItem(key: string) {
+    if (key === this.failReadsFor) throw new Error("STORAGE_READ_FAILED");
     return this.values.get(key) ?? null;
   }
 
@@ -92,6 +98,7 @@ describe("metadata backup and restore integration", () => {
   beforeEach(async () => {
     storage.clear();
     storage.failWritesFor = null;
+    storage.failReadsFor = null;
     delete (window as typeof window & { Capacitor?: unknown }).Capacitor;
     storageModule.db.close();
     await storageModule.db.delete();
@@ -166,6 +173,10 @@ describe("metadata backup and restore integration", () => {
         bookmarks: [],
         backupTime: "2026-08-15T00:00:00.000Z",
       }),
+    );
+    storage.setItem(
+      META_SHELF_NATIVE_BACKUP_ID_KEY,
+      getMetaShelfBackupIdentity(serialized),
     );
     let releaseRead: ((value: { data: string }) => void) | undefined;
     let markReadStarted: (() => void) | undefined;
@@ -255,5 +266,110 @@ describe("metadata backup and restore integration", () => {
     await expect(storageModule.db.books.toArray()).resolves.toEqual([
       committedBook,
     ]);
+  });
+
+  it("rolls back last-book deletion when empty-shelf acknowledgement cannot persist", async () => {
+    const item = makeBook(6);
+    await storageModule.db.books.put(item);
+    storage.failWritesFor = META_SHELF_EMPTY_ACK_KEY;
+
+    await expect(
+      storageModule.executeSafeWriteTransaction(
+        [storageModule.db.books],
+        () => storageModule.db.books.delete(item.id),
+        { acknowledgeEmptyShelfOnCommit: true },
+      ),
+    ).rejects.toThrow("STORAGE_WRITE_FAILED");
+    await expect(storageModule.db.books.get(item.id)).resolves.toEqual(item);
+  });
+
+  it("releases the write-depth guard when localStorage reads throw", async () => {
+    const item = makeBook(7);
+    await storageModule.db.books.put(item);
+    storage.failReadsFor = META_SHELF_EMPTY_ACK_KEY;
+
+    await expect(
+      storageModule.executeSafeWriteTransaction(
+        [storageModule.db.books],
+        () => storageModule.db.books.update(item.id, { title: "updated" }),
+      ),
+    ).rejects.toThrow("STORAGE_READ_FAILED");
+    storage.failReadsFor = null;
+    await expect(storageModule.backupMetadataToStorage()).resolves.toMatchObject({
+      status: "complete",
+      storedBookCount: 1,
+    });
+  });
+
+  it("never resurrects the deleted generation when a replacement backup fails", async () => {
+    const deletedBook = makeBook(8);
+    await storageModule.db.books.put(deletedBook);
+    await storageModule.backupMetadataToStorage();
+    await storageModule.executeSafeWriteTransaction(
+      [storageModule.db.books],
+      () => storageModule.db.books.delete(deletedBook.id),
+      { acknowledgeEmptyShelfOnCommit: true },
+    );
+    expect(hasAcknowledgedEmptyShelf(storage)).toBe(true);
+
+    const replacementBook = makeBook(9);
+    await storageModule.db.books.put(replacementBook);
+    storage.failWritesFor = META_SHELF_BACKUP_KEY;
+    await expect(storageModule.backupMetadataToStorage()).resolves.toMatchObject({
+      status: "failed",
+    });
+    expect(hasAcknowledgedEmptyShelf(storage)).toBe(true);
+    storage.failWritesFor = null;
+    await storageModule.db.books.clear();
+
+    await expect(storageModule.checkAndRestoreFromBackup()).resolves.toEqual({
+      status: "not_needed",
+      restoredBookCount: 0,
+      expectedBookCount: 0,
+      source: null,
+    });
+    await expect(storageModule.db.books.count()).resolves.toBe(0);
+  });
+
+  it("acknowledges both browser and native generations before deleting the last book", async () => {
+    let nativeBackup = "";
+    (window as typeof window & { Capacitor?: unknown }).Capacitor = {
+      Plugins: {
+        Filesystem: {
+          writeFile: ({ data }: { data: string }) => {
+            nativeBackup = data;
+            return Promise.resolve();
+          },
+          readFile: () => Promise.resolve({ data: nativeBackup }),
+        },
+        Directory: { Documents: "DOCUMENTS" },
+      },
+    };
+    const browserGeneration = makeBook(10);
+    await storageModule.db.books.put(browserGeneration);
+    await storageModule.backupMetadataToStorage();
+
+    const nativeGeneration = makeBook(11);
+    await storageModule.db.books.clear();
+    await storageModule.db.books.put(nativeGeneration);
+    storage.failWritesFor = META_SHELF_BACKUP_KEY;
+    await expect(storageModule.backupMetadataToStorage()).resolves.toMatchObject({
+      status: "complete",
+      storedBookCount: 1,
+    });
+    storage.failWritesFor = null;
+    await storageModule.executeSafeWriteTransaction(
+      [storageModule.db.books],
+      () => storageModule.db.books.delete(nativeGeneration.id),
+      { acknowledgeEmptyShelfOnCommit: true },
+    );
+
+    await expect(storageModule.checkAndRestoreFromBackup()).resolves.toEqual({
+      status: "not_needed",
+      restoredBookCount: 0,
+      expectedBookCount: 0,
+      source: null,
+    });
+    await expect(storageModule.db.books.count()).resolves.toBe(0);
   });
 });

@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Book, Bookmark, ReadingProgress } from "@reader/shared-types";
 import {
   META_SHELF_BACKUP_KEY,
+  META_SHELF_EMPTY_ACK_KEY,
   META_SHELF_RECOVERY_GAP_KEY,
   buildBrowserMetaShelfBackup,
+  createEmptyShelfAcknowledgement,
   getMetaShelfBackupCompleteness,
+  hasAcknowledgedEmptyShelf,
   parseMetaShelfBackup,
   readMetaShelfRecoveryGap,
   writeBrowserMetaShelfBackup,
@@ -200,6 +203,39 @@ describe("browser metadata redundancy", () => {
     };
 
     expect(readMetaShelfRecoveryGap(storage)).toBe(0);
+  });
+
+  it("acknowledges only the exact backup generation deleted by the user", () => {
+    const first = buildBrowserMetaShelfBackup({
+      books: [book(1)],
+      progress: [],
+      bookmarks: [],
+      backupTime: "2026-08-15T00:00:00.000Z",
+    });
+    const values = new Map([[META_SHELF_BACKUP_KEY, JSON.stringify(first)]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+    };
+    values.set(
+      META_SHELF_EMPTY_ACK_KEY,
+      createEmptyShelfAcknowledgement(
+        storage,
+        "2026-08-15T00:00:01.000Z",
+      ),
+    );
+    expect(hasAcknowledgedEmptyShelf(storage)).toBe(true);
+
+    const next = buildBrowserMetaShelfBackup({
+      books: [book(2)],
+      progress: [],
+      bookmarks: [],
+      backupTime: "2026-08-15T00:00:00.000Z",
+    });
+    values.set(META_SHELF_BACKUP_KEY, JSON.stringify(next));
+    expect(hasAcknowledgedEmptyShelf(storage)).toBe(false);
+
+    values.set(META_SHELF_EMPTY_ACK_KEY, "not-json");
+    expect(hasAcknowledgedEmptyShelf(storage)).toBe(false);
   });
 
   it("rejects a full backup whose declared count exceeds its payload", () => {

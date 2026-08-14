@@ -18,7 +18,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Book, ReadingProgress, LibraryFolder } from "@reader/shared-types";
-import { createId } from "@reader/shared-types";
 import { cacheEntireBook } from "@/hooks/useReader";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -30,6 +29,7 @@ import {
   type LibrarySort,
 } from "@/features/library/library-query-service";
 import { libraryQueryService } from "@/features/library/dexie-library-query";
+import { libraryCommandService } from "@/features/library/dexie-library-command";
 import {
   clearSyncTask,
   markSyncTask,
@@ -626,11 +626,14 @@ export function LibraryDefault({
       onConfirm: async () => {
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         try {
-          await db.transaction("rw", [db.books, db.libraryFolders], async () => {
-            await db.books.where("sourceFolderId").equals(folderId).modify({ sourceFolderId: undefined });
-            await db.libraryFolders.delete(folderId);
-          });
-          setToastMsg(`📖 书箧「${name}」已解散，藏书重归主阁。`);
+          const result = await libraryCommandService.dissolveFolder(folderId);
+          setToastMsg(
+            result.status === "applied"
+              ? `📖 书箧「${name}」已解散，${result.affectedBookCount ?? 0} 本藏书重归主阁。`
+              : result.status === "folder_not_dissolvable"
+                ? "💡 物理目录或仍有子目录的书箧不能直接解散，请先处理下层内容或解除绑定。"
+                : "💡 书箧已不存在，书架未发生额外变更。",
+          );
         } catch (e) {
           console.error("解散文件夹失败:", e);
           setToastMsg("💡 解散书箧失败，存储数据库繁忙。");
@@ -1611,11 +1614,13 @@ export function LibraryDefault({
       isDanger: false,
       onConfirm: async () => {
         try {
-          await db.transaction("rw", [db.chapters], async () => {
-            await db.chapters.where("bookId").equals(book.id).delete();
-          });
-          setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
-          await fetchCloudBooks(); // 重新拉取对齐，由于本地 chapters 为空而云端有，书卡在 mergedBooks 会自动转为 Cloud Only 磨砂状态
+          const result = await libraryCommandService.offloadBook(book.id);
+          if (result.status === "applied") {
+            setToastMsg(strings.sync.offloadSuccess.replace("{title}", book.title));
+            await fetchCloudBooks();
+          } else {
+            setToastMsg("💡 藏书已不在本地，未执行空间释放。");
+          }
         } catch (err) {
           console.error("释放本地空间失败:", err);
           setToastMsg("💡 物理释放空间失败，存储数据库繁忙。");
@@ -1721,16 +1726,7 @@ export function LibraryDefault({
       isDanger: true,
       onConfirm: async () => {
         try {
-          await db.transaction(
-            "rw",
-            [db.books, db.chapters, db.progress, db.bookmarks],
-            async () => {
-              await db.chapters.where("bookId").equals(bookId).delete();
-              await db.progress.where("bookId").equals(bookId).delete();
-              await db.bookmarks.where("bookId").equals(bookId).delete();
-              await db.books.delete(bookId);
-            },
-          );
+          await libraryCommandService.removeBook(bookId);
 
           try {
             await fetch(apiUrl(`/books/${bookId}`), {
@@ -3329,9 +3325,12 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
 
   const handleMove = async (folderId: string) => {
     try {
-      const targetId = folderId === "root" ? undefined : folderId;
-      await db.books.update(book.id, { sourceFolderId: targetId });
-      onToast(`📖 藏书已归置到 ${folderId === "root" ? "书架主阁" : folders.find(f => f.id === folderId)?.name || "指定书箧"}`);
+      const result = await libraryCommandService.moveBook(book.id, folderId);
+      if (result.status === "applied") {
+        onToast(`📖 藏书已归置到 ${folderId === "root" ? "书架主阁" : folders.find(f => f.id === folderId)?.name || "指定书箧"}`);
+      } else {
+        onToast(result.status === "folder_not_found" ? "💡 目标书箧已不存在" : "💡 藏书已不在本地");
+      }
     } catch (e) {
       console.error(e);
       onToast("💡 移动藏书失败");
@@ -3344,21 +3343,20 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
       return;
     }
     try {
-      const newId = createId();
-      await db.libraryFolders.add({
-        id: newId,
-        name: newFolderName.trim(),
-        sourceType: "virtual",
-        depth: 0,
-        sortOrder: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-      await db.books.update(book.id, { sourceFolderId: newId });
-      onToast(`🎨 已新建书箧「${newFolderName.trim()}」并移入藏书`);
-      setIsCreatingFolder(false);
-      setNewFolderName("");
-      setSelectedFolderId(newId);
+      const result = await libraryCommandService.createFolderAndMove(
+        book.id,
+        newFolderName,
+      );
+      if (result.status === "applied") {
+        onToast(`🎨 已新建书箧「${newFolderName.trim()}」并移入藏书`);
+        setIsCreatingFolder(false);
+        setNewFolderName("");
+        if (result.folderId) setSelectedFolderId(result.folderId);
+      } else if (result.status === "invalid_folder_name") {
+        onToast("💡 书箧名称需为 1–80 个字符");
+      } else {
+        onToast("💡 藏书已不在本地，未建立空书箧");
+      }
     } catch (e) {
       console.error(e);
       onToast("💡 新建书箧并移动失败");
@@ -3389,13 +3387,13 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
       return;
     }
     try {
-      await db.transaction("rw", [db.books, db.chapters, db.progress], async () => {
-        await db.chapters.where("bookId").equals(book.id).delete();
-        await db.progress.where("bookId").equals(book.id).delete();
-        await db.books.delete(book.id);
-      });
-      onToast(`🍃 藏书「${book.title}」已下架，缓存已彻底物理清空。`);
-      onClose();
+      const result = await libraryCommandService.removeBook(book.id);
+      if (result.status === "applied") {
+        onToast(`🍃 藏书「${book.title}」已下架，正文、进度与笔记均已从本机移除。`);
+        onClose();
+      } else {
+        onToast("💡 藏书已不在本地");
+      }
     } catch (e) {
       console.error(e);
       onToast("💡 下架失败");
