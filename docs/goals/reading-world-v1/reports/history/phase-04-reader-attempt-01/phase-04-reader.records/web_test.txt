@@ -1,0 +1,25 @@
+$ corepack pnpm --filter web-pwa test
+started_at=2026-08-14T15:43:11.394Z
+ended_at=2026-08-14T15:43:13.156Z
+duration_ms=1762
+exit_code=0
+tracked_worktree_mutated=false
+tracked_mutation_observed_before_compensation=false
+tracked_status_before=[]
+tracked_status_before_compensation=[]
+tracked_status_after=[]
+[stdout]
+
+> web-pwa@0.1.0 test ./apps/web-pwa
+> vitest run
+
+
+ RUN  v4.1.7 ./apps/web-pwa
+
+
+ Test Files  25 passed (25)
+      Tests  81 passed (81)
+   Start at  23:43:11
+   Duration  1.28s (transform 1.64s, setup 0ms, import 2.83s, tests 273ms, environment 4ms)
+
+[stderr]

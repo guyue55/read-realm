@@ -1,13 +1,13 @@
 $ corepack pnpm --filter web-pwa lint
-started_at=2026-08-14T15:43:13.224Z
-ended_at=2026-08-14T15:43:16.058Z
-duration_ms=2834
+started_at=2026-08-14T15:53:08.153Z
+ended_at=2026-08-14T15:53:11.016Z
+duration_ms=2863
 exit_code=0
 tracked_worktree_mutated=false
 tracked_mutation_observed_before_compensation=false
-tracked_status_before=[]
-tracked_status_before_compensation=[]
-tracked_status_after=[]
+tracked_status_before=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_before_compensation=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
+tracked_status_after=[" D docs/goals/reading-world-v1/reports/phase-04-reader.json"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/gesture_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/patch_whitespace.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_experience_live.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_run_contract.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/reader_test.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/storage_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_lint.txt"," M docs/goals/reading-world-v1/reports/phase-04-reader.records/web_test.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/web_typecheck.txt"," D docs/goals/reading-world-v1/reports/phase-04-reader.records/workspace_build.txt"]
 [stdout]
 
 > web-pwa@0.1.0 lint ./apps/web-pwa
