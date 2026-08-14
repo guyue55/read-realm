@@ -46,27 +46,46 @@ async function waitForHealth() {
 
 const playwrightArgs = [
   "corepack", "pnpm", "--filter", "web-pwa", "exec", "playwright", "test",
-  "e2e/reader-experience.spec.ts", "--config", "playwright.phase-04.config.ts",
-  "--project=chromium-chrome", "--timeout=60000", "--reporter=line",
+  "e2e/reader-experience.spec.ts", "e2e/reader-touch.spec.ts",
+  "--config", "playwright.phase-04.config.ts", "--timeout=60000", "--reporter=line",
 ];
 const channelEnv = { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: "chrome" };
 const portFreeBefore = await portIsFree();
 const list = command([...playwrightArgs, "--list"], channelEnv);
-const listedTestCount = (list.stdout.match(/reader-experience\.spec\.ts:/g) ?? []).length;
+const listedTests = list.stdout
+  .split(/\r?\n/)
+  .map((line) => line.match(/^\s+\[([^\]]+)]\s+›\s+(.+)$/))
+  .filter(Boolean)
+  .map((match) => ({ project: match[1], id: match[2] }));
+const listedTestCount = listedTests.length;
+const listedTestCountsByProject = Object.fromEntries(
+  [...new Set(listedTests.map(({ project }) => project))]
+    .map((project) => [project, listedTests.filter((test) => test.project === project).length]),
+);
+const listedTestIdsUnique = new Set(listedTests.map(({ id }) => id)).size === listedTests.length;
 let server = null;
 let serviceReady = false;
 let testResult = { status: 1, stdout: "", stderr: "" };
+let nativeBackgroundResult = { status: 1, stdout: "", stderr: "" };
 let orphanProcessCount = 0;
 
 try {
-  if (portFreeBefore && list.status === 0 && listedTestCount === 14) {
+  if (portFreeBefore && list.status === 0 && listedTestCount === 15) {
     server = spawn(
       process.execPath,
       [resolve(webRoot, "node_modules/next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)],
       { cwd: webRoot, env: process.env, detached: true, stdio: "ignore" },
     );
     serviceReady = await waitForHealth();
-    if (serviceReady) testResult = command(playwrightArgs, channelEnv);
+    if (serviceReady) {
+      testResult = command(playwrightArgs, channelEnv);
+      if (testResult.status === 0) {
+        nativeBackgroundResult = command([
+          process.execPath,
+          resolve(repoRoot, "scripts/run-phase-04-native-background.mjs"),
+        ], channelEnv);
+      }
+    }
   }
 } finally {
   if (server?.pid) {
@@ -89,7 +108,9 @@ try {
 
 let samples = [];
 try {
-  samples = parsePhase04ReaderSamples(testResult.stdout);
+  samples = parsePhase04ReaderSamples(
+    `${testResult.stdout}\n${nativeBackgroundResult.stdout}`,
+  );
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
 }
@@ -97,8 +118,11 @@ const portFreeAfter = await portIsFree();
 const observation = {
   listExitCode: list.status ?? 1,
   listedTestCount,
+  listedTestCountsByProject,
+  listedTestIdsUnique,
   serviceReady,
   testExitCode: testResult.status ?? 1,
+  nativeBackgroundExitCode: nativeBackgroundResult.status ?? 1,
   portFreeBefore,
   portFreeAfter,
   orphanProcessCount,
@@ -110,4 +134,10 @@ if (list.stdout) process.stdout.write(`\n[list]\n${list.stdout}`);
 if (list.stderr) process.stderr.write(`[list]\n${list.stderr}`);
 if (testResult.stdout) process.stdout.write(`\n[test]\n${testResult.stdout}`);
 if (testResult.stderr) process.stderr.write(`[test]\n${testResult.stderr}`);
+if (nativeBackgroundResult.stdout) {
+  process.stdout.write(`\n[native-background]\n${nativeBackgroundResult.stdout}`);
+}
+if (nativeBackgroundResult.stderr) {
+  process.stderr.write(`[native-background]\n${nativeBackgroundResult.stderr}`);
+}
 process.exitCode = outcome.classification === "PASS" ? 0 : 1;

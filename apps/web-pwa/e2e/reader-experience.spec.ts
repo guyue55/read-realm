@@ -964,15 +964,19 @@ test("reader controls are touch safe and use coherent icons", async ({ page }) =
   await expect(page.getByRole("dialog", { name: "阅读设置" })).toBeVisible();
   await assertTouchSafe();
   await page.getByRole("button", { name: "关闭阅读设置" }).click();
+  await expect(page.getByRole("dialog", { name: "阅读设置" })).toBeHidden();
 
   const tocButton = page.getByRole("button", { name: "目录" });
   await tocButton.click();
   await expect(page.getByRole("dialog", { name: "阅读目录" })).toBeVisible();
   await assertTouchSafe();
   await page.getByRole("button", { name: "关闭目录" }).click();
+  await expect(page.getByRole("dialog", { name: "阅读目录" })).toBeHidden();
 
   const progressButton = page.getByRole("button", { name: "进度" });
   await progressButton.focus();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  await expect(progressButton).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("dialog", { name: "阅读进度" })).toBeVisible();
   await assertTouchSafe();

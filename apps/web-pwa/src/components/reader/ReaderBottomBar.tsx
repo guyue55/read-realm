@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { strings } from "@/lib/i18n";
+import { ReaderProgressRange } from "@/components/reader/ReaderProgressRange";
 import {
   Bookmark,
   ChevronLeft,
@@ -152,31 +153,15 @@ export function ReaderBottomBar({
         >
           <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.8} />
         </button>
-        <input
-          aria-label="拖动阅读进度"
-          data-reader-control
-          type="range"
-          min={0}
-          max={100}
-          step={0.1}
+        <ReaderProgressRange
           value={tempProgress}
-          onChange={(event) => {
+          onPreview={(value) => {
             isDraggingRef.current = true;
-            setTempProgress(Number(event.target.value));
+            setTempProgress(value);
           }}
-          onMouseUp={() => {
+          onCommit={(value) => {
             isDraggingRef.current = false;
-            onSeekProgress(tempProgress);
-          }}
-          onTouchEnd={() => {
-            isDraggingRef.current = false;
-            onSeekProgress(tempProgress);
-          }}
-          onKeyUp={(event) => {
-            if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(event.key)) {
-              isDraggingRef.current = false;
-              onSeekProgress(tempProgress);
-            }
+            onSeekProgress(value);
           }}
           className="reader-range reader-focus-ring h-11 w-full accent-[#5F7D52]"
         />

@@ -4,6 +4,8 @@ const REQUIRED_SCENARIOS = [
   "bounded-scroll",
   "lifecycle-offline",
   "bookmark-restore",
+  "mobile-touch",
+  "native-background",
 ];
 
 export function parsePhase04ReaderSamples(output) {
@@ -23,9 +25,19 @@ export function classifyPhase04ReaderRun(observation) {
   const reasons = [];
   if (!observation.portFreeBefore) reasons.push("PORT_BUSY_BEFORE");
   if (observation.listExitCode !== 0) reasons.push(`LIST_EXIT_${observation.listExitCode}`);
-  if (observation.listedTestCount !== 14) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
+  if (observation.listedTestCount !== 15) reasons.push(`LISTED_TEST_COUNT_${observation.listedTestCount}`);
+  if (observation.listedTestCountsByProject?.desktop !== 14) {
+    reasons.push(`DESKTOP_TEST_COUNT_${observation.listedTestCountsByProject?.desktop ?? 0}`);
+  }
+  if (observation.listedTestCountsByProject?.["mobile-touch"] !== 1) {
+    reasons.push(`MOBILE_TOUCH_TEST_COUNT_${observation.listedTestCountsByProject?.["mobile-touch"] ?? 0}`);
+  }
+  if (observation.listedTestIdsUnique !== true) reasons.push("LISTED_TEST_IDS_NOT_UNIQUE");
   if (!observation.serviceReady) reasons.push("SERVICE_NOT_READY");
   if (observation.testExitCode !== 0) reasons.push(`TEST_EXIT_${observation.testExitCode}`);
+  if (observation.nativeBackgroundExitCode !== 0) {
+    reasons.push(`NATIVE_BACKGROUND_EXIT_${observation.nativeBackgroundExitCode}`);
+  }
   if (!observation.portFreeAfter) reasons.push("PORT_BUSY_AFTER");
   if (observation.orphanProcessCount !== 0) {
     reasons.push(`ORPHAN_PROCESS_COUNT_${observation.orphanProcessCount}`);
@@ -78,6 +90,43 @@ export function classifyPhase04ReaderRun(observation) {
   if (bookmark) {
     if (bookmark.persisted !== true) reasons.push("BOOKMARK_NOT_PERSISTED");
     if (bookmark.semanticAnchorVisible !== true) reasons.push("BOOKMARK_ANCHOR_NOT_VISIBLE");
+  }
+  const mobileTouch = byScenario.get("mobile-touch")?.[0];
+  if (mobileTouch) {
+    if (mobileTouch.projectName !== "mobile-touch") reasons.push("TOUCH_PROJECT_INVALID");
+    if (mobileTouch.isMobile !== true) reasons.push("MOBILE_CONTEXT_NOT_EMULATED");
+    if (mobileTouch.hasTouch !== true) reasons.push("TOUCH_CONTEXT_NOT_EMULATED");
+    if (!Number.isInteger(mobileTouch.maxTouchPoints) || mobileTouch.maxTouchPoints < 1) {
+      reasons.push("TOUCH_POINTS_UNAVAILABLE");
+    }
+    if (mobileTouch.coarsePointer !== true) reasons.push("COARSE_POINTER_NOT_OBSERVED");
+    if (mobileTouch.trustedTouchObserved !== true) reasons.push("TRUSTED_TOUCH_NOT_OBSERVED");
+    if (mobileTouch.paginationSwipeObserved !== true) reasons.push("TOUCH_PAGINATION_SWIPE_NOT_OBSERVED");
+    if (mobileTouch.drawerTapObserved !== true) reasons.push("TOUCH_DRAWER_TAP_NOT_OBSERVED");
+    if (mobileTouch.progressDragObserved !== true) reasons.push("TOUCH_PROGRESS_DRAG_NOT_OBSERVED");
+    if (mobileTouch.chapterBoundaryObserved !== true) reasons.push("TOUCH_CHAPTER_BOUNDARY_NOT_OBSERVED");
+  }
+  const nativeBackground = byScenario.get("native-background")?.[0];
+  if (nativeBackground) {
+    if (nativeBackground.platform !== "darwin") reasons.push("NATIVE_BACKGROUND_PLATFORM_INVALID");
+    if (nativeBackground.detachedDuringBackground !== true) reasons.push("BACKGROUND_NOT_DETACHED");
+    if (JSON.stringify(nativeBackground.windowStateSequence)
+      !== JSON.stringify(["normal", "minimized", "normal"])) {
+      reasons.push("WINDOW_STATE_SEQUENCE_INVALID");
+    }
+    if (JSON.stringify(nativeBackground.visibilitySequence)
+      !== JSON.stringify(["visible", "hidden", "visible"])) {
+      reasons.push("VISIBILITY_SEQUENCE_INVALID");
+    }
+    if (nativeBackground.progressFlushedWhileHidden !== true) {
+      reasons.push("BACKGROUND_PROGRESS_NOT_FLUSHED");
+    }
+    if (nativeBackground.semanticAnchorVisible !== true) {
+      reasons.push("BACKGROUND_ANCHOR_NOT_VISIBLE");
+    }
+    if (!Number.isFinite(nativeBackground.restoreMs) || nativeBackground.restoreMs > 2000) {
+      reasons.push(`BACKGROUND_RESTORE_${nativeBackground.restoreMs}MS`);
+    }
   }
   return { classification: reasons.length === 0 ? "PASS" : "FAIL", reasons };
 }

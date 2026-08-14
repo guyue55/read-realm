@@ -117,7 +117,17 @@ export function ReaderDialogSurface({
       cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown, true);
       const trigger = triggerRef.current;
+      const focusAtClose = document.activeElement;
       requestAnimationFrame(() => {
+        const currentFocus = document.activeElement;
+        if (
+          currentFocus !== focusAtClose &&
+          currentFocus instanceof HTMLElement &&
+          currentFocus !== document.body &&
+          focusIfAvailable(currentFocus)
+        ) {
+          return;
+        }
         if (focusIfAvailable(trigger)) return;
         focusIfAvailable(fallbackFocusRef.current());
       });
