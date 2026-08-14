@@ -6,10 +6,10 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504；GATE-03/TASK-0503 最小纵切已通过，下一步在独立公共明文域扩张直接文件/文件夹上传、维护目录扫描关联、个人书架发布、固定分类标签与有界多视图，不得混用个人同步事实源。
-- 最近有效提交：cf1f061
+- 当前入口：PHASE-05 / TASK-0504 / B；A 层 canonical publisher、additive schema、原子对象写和 edition/source/receipt 已通过独立复审，下一步只接单文件 multipart adapter，不并行扩张文件夹、扫描、个人发布或多视图。
+- 最近有效提交：e9aa8bc
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 获准扩张，但 PHASE-05、EVID-56/58 与 Goal 仍未完成。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A 已通过、B–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
 - 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
@@ -35,6 +35,7 @@
 - RUN-0043：保持执行中；同一 EXP-14 在 clean@`3f37036` 正式重放得 EVID-59 PASS，首轮验证器不确定已自动归档且原始提交 `a3da145` 保留。依据：11/11 checks/records、唯一 product marker、个人 DB/Blob 哨兵、路径隔离、端口/进程/清理与独立复算均通过。当前只放行 EVID-57 FINAL 封装；FINAL 未生成前不宣称 GATE-03 完成，不进入 TASK-0504 扩张。
 - RUN-0044：保持执行中；EVID-57 FINAL 从 clean@`cf1f061` 生成并独立复算 PASS，GATE-03/RISK-05/TASK-0503 完成，当前入口推进至 TASK-0504。该结论只放行公共域扩张，不证明 TASK-0504~0506、PHASE-05 整体、VPS 部署或 Goal 完成。
 - RUN-0045：保持执行中；TASK-0504 扩张规格与 EVID-62 槽冻结，当前入口为 A：canonical publisher、additive schema、原子对象写、edition/source/receipt 和并发/崩溃/重放反例。A 未通过前不并行扩张四个入口。
+- RUN-0046：保持执行中；TASK-0504 A 完成，当前入口推进至 B 单文件 multipart adapter。依据：实现提交 `e9aa8bc`、零延迟双 client 竞态 12/12、旧 GATE-03 package 重放、异来源同 edition、API/storage 全量测试、无 PWA 写入全工作区构建与独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -444,7 +445,16 @@
 
 ### RUN-0045 · 2026-08-15T06:37:22+08:00 · PHASE-05 / TASK-0504 扩张规格冻结
 - 独立审计：后端、前端/边界和验证器三路只读审计均确认现有 GATE-03 纵切可复用，但四入口扩张前必须先统一 canonical publisher；现有 JSON 体积、并发幂等、目录 realpath/symlink/TOCTOU、个人完整快照、taxonomy/facets 和搜索上界均不足以直接扩张。
-- 冻结规格：`reports/task-0504-public-library-expansion-spec.md`。直接文件、文件夹、allowlisted 服务端扫描和个人云快照只作为 adapter；完整公共 package 是唯一匿名正文事实源。维护者仅为密钥派生展示别名，不建账号或治理平台。
+- 冻结规格：`reports/task-0504-public-library-expansion-spec.md`。直接文件、文件夹、allowlisted 服务端扫描和个人云快照只作为 adapter；完整公共 package 是唯一匿名正文事实源。维护者使用公共 DB 首次初始化时生成并持久化的随机 maintainerId 与固定展示名，不从低熵密钥派生，也不建账号或治理平台。
 - 任务证据：预登记 EVID-62 和独立 `TASK-0504-PUBLIC-LIBRARY-EXPANSION` 门；它不是 HYP-05 新实验，不使用 EXP-15/16，不改写 GATE-03 FINAL 或失败计数。
 - 实现顺序：A canonical publisher/原子写/edition-source-receipt → B multipart 单文件 → C 文件夹队列 → D allowlisted scanner → E 个人云快照发布 → F taxonomy/facets/四视图。A 未绿前禁止并行 B–F。
 - 边界：本轮未连接真实维护目录、真实公共库、个人真实云或 VPS，未 push/部署；TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。
+
+### RUN-0046 · 2026-08-15T07:22:00+08:00 · PHASE-05 / TASK-0504 A canonical publisher
+- 本轮边界：只实现 A 层统一候选与公共持久化核心；旧 JSON、未来浏览器文件、allowlisted 扫描和个人云快照只能汇入同一 `publishCandidate`。未新增 multipart、文件夹、维护目录扫描、个人书架发布、taxonomy/facets、UI 或 VPS 操作。
+- 数据与兼容：公共库采用 additive schema，保存随机 maintainerId、单调 catalogRevision、edition、source association、ingest receipt 与 tags 关联槽；旧 GATE-03 行不伪造 editionHash，原输入重放时先验证不可变 package 的真实章节，再在一个原子批次补齐 edition/source/receipt 并保留旧 book ID。
+- 原子与并发：对象存储改为同目录临时文件完整写入、file fsync、close、原子 hard-link put-if-absent 与临时文件清理；Blob 写入及 SHA 读回完成后，目录事实才通过 libSQL `batch(..., 'write')` 同步原子提交。固定退避的 manual transaction 曾被独立零延迟探针 12/12 推翻为双客户端锁步活锁，失败因果保留；最终改为无 await 间隙的同步批次后，同探针 12/12、仓内连续 20/20 通过，目录四表均为 1 且 revision 仅为 1。
+- 来源与冲突：canonical candidate 显式携带 source kind/scope/relativePath/bytes；同 edition 的不同 provenance 只复用一本正文并分别留下 2 条 source/receipt，不递增目录 revision。元数据冲突返回 409、`duplicate_metadata_conflict` 与 existingBookId，不假报新元数据生效。
+- 验证：API public-library 定向 17/17、API 全量 60/60、storage-core 82/82，API 非写入 lint/typecheck/production build、storage build、`git diff --check` 与全工作区 `READING_WORLD_VERIFY_NO_PWA_WRITE=1` production build 全部通过。独立终审复算并发初始化 12/12、旧 package 重放、BUSY 重试副作用上界与个人域依赖隔离后结论 READY_TO_COMMIT，无 P0/P1。
+- 安全与边界：改动文件精确凭据/私钥模式扫描无命中；全仓安全扫描仍有既登记历史 Red，本轮不声称全仓安全门通过。实现提交 `e9aa8bc`，未 push、未部署、未连接真实公共库、个人云、维护目录或 VPS。
+- 状态与下一入口：TASK-0504 A 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 B：单文件 multipart adapter，继续复用 canonical publisher；B 未独立通过前不并行进入 C–F。
