@@ -92,7 +92,7 @@ function rowToBook(row: Record<string, unknown>): PublicLibraryBookDto {
 
 async function ensureColumn(
   client: Client,
-  table: 'public_books' | 'public_catalog_state',
+  table: 'public_books' | 'public_catalog_state' | 'public_sources',
   name: string,
   definition: string,
 ) {
@@ -210,10 +210,19 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
       source_scope TEXT NOT NULL,
       relative_path TEXT NOT NULL,
       source_hash TEXT NOT NULL,
+      scan_id TEXT,
+      scan_lease_owner TEXT,
       created_at TEXT NOT NULL,
       UNIQUE(source_kind, source_scope, relative_path, source_hash)
     )
   `);
+  await ensureColumn(client, 'public_sources', 'scan_id', 'scan_id TEXT');
+  await ensureColumn(
+    client,
+    'public_sources',
+    'scan_lease_owner',
+    'scan_lease_owner TEXT',
+  );
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_ingest_receipts (
       receipt_key TEXT PRIMARY KEY,
@@ -230,6 +239,83 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
       tag_id TEXT NOT NULL,
       PRIMARY KEY(book_id, tag_id)
     )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_scan_root_state (
+      root_id TEXT PRIMARY KEY,
+      config_fingerprint TEXT NOT NULL,
+      next_generation INTEGER NOT NULL CHECK(next_generation > 0),
+      last_completed_generation INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_scan_generations (
+      scan_id TEXT PRIMARY KEY,
+      root_id TEXT NOT NULL,
+      root_label TEXT NOT NULL,
+      generation INTEGER NOT NULL,
+      config_fingerprint TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN (
+        'running', 'completed', 'completed_with_errors', 'failed', 'interrupted'
+      )),
+      lease_owner TEXT NOT NULL,
+      lease_expires_at TEXT NOT NULL,
+      heartbeat_at TEXT NOT NULL,
+      discovered_count INTEGER NOT NULL DEFAULT 0,
+      processed_count INTEGER NOT NULL DEFAULT 0,
+      created_count INTEGER NOT NULL DEFAULT 0,
+      unchanged_count INTEGER NOT NULL DEFAULT 0,
+      duplicate_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      skipped_count INTEGER NOT NULL DEFAULT 0,
+      total_bytes INTEGER NOT NULL DEFAULT 0,
+      error_code TEXT,
+      started_at TEXT NOT NULL,
+      completed_at TEXT
+    )
+  `);
+  await client.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS public_scan_one_running_per_root
+    ON public_scan_generations(root_id) WHERE status = 'running'
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_scan_items (
+      scan_id TEXT NOT NULL REFERENCES public_scan_generations(scan_id),
+      relative_path TEXT NOT NULL,
+      source_hash TEXT,
+      book_id TEXT,
+      outcome TEXT NOT NULL CHECK(outcome IN (
+        'created', 'unchanged', 'duplicate', 'failed', 'skipped'
+      )),
+      error_code TEXT,
+      PRIMARY KEY(scan_id, relative_path)
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_scan_source_state (
+      root_id TEXT NOT NULL,
+      relative_path TEXT NOT NULL,
+      source_hash TEXT NOT NULL,
+      book_id TEXT NOT NULL REFERENCES public_books(id),
+      status TEXT NOT NULL CHECK(status IN ('active', 'missing')),
+      first_seen_generation INTEGER NOT NULL,
+      last_seen_generation INTEGER NOT NULL,
+      PRIMARY KEY(root_id, relative_path, source_hash)
+    )
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_scan_publication_fence
+    BEFORE INSERT ON public_sources
+    WHEN NEW.source_kind = 'maintenance_scan' AND NOT EXISTS (
+      SELECT 1 FROM public_scan_generations g
+      WHERE g.scan_id = NEW.scan_id
+        AND g.lease_owner = NEW.scan_lease_owner
+        AND g.status = 'running'
+        AND g.lease_expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    )
+    BEGIN
+      SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_SCAN_FENCE_INVALID');
+    END
   `);
   await client.execute(
     'CREATE UNIQUE INDEX IF NOT EXISTS public_books_edition_hash_unique ON public_books(edition_hash) WHERE edition_hash IS NOT NULL',
@@ -271,6 +357,7 @@ export interface CanonicalPublicBookCandidate {
   };
   chapters: Array<{ index: number; title: string; content: string }>;
   wordCount: number;
+  publicationFence?: { scanId: string; leaseOwner: string };
 }
 
 interface PreparedCandidate {
@@ -288,6 +375,7 @@ interface PreparedCandidate {
   relativePath: string;
   chapters: PublicLibraryPackage['chapters'];
   wordCount: number;
+  publicationFence?: { scanId: string; leaseOwner: string };
 }
 
 interface PreparedPublication {
@@ -351,8 +439,8 @@ export class PublicLibraryRepository {
       {
         sql: `INSERT OR IGNORE INTO public_sources (
           source_id, book_id, source_kind, source_scope, relative_path,
-          source_hash, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          source_hash, scan_id, scan_lease_owner, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           candidate.sourceId,
           bookId,
@@ -360,6 +448,8 @@ export class PublicLibraryRepository {
           candidate.sourceScope,
           candidate.relativePath,
           candidate.sourceHash,
+          candidate.publicationFence?.scanId ?? null,
+          candidate.publicationFence?.leaseOwner ?? null,
           createdAt,
         ],
       },
@@ -590,6 +680,7 @@ export class PublicLibraryRepository {
   ): Promise<PublicLibraryPublicationResult> {
     const normalizedSourcePath = normalizePublicLibraryRelativePath(
       input.source.relativePath,
+      input.source.kind === 'maintenance_scan' ? 32 : 12,
     );
     const derivedCollectionPath = publicLibraryCollectionPath(
       input.source.relativePath,
@@ -637,6 +728,7 @@ export class PublicLibraryRepository {
       sourceKind: input.source.kind,
       sourceScope: input.source.scope,
       relativePath: input.source.relativePath,
+      publicationFence: input.publicationFence,
       chapters: input.chapters.map((chapter) => ({
         id: `${bookId}-chapter-${chapter.index}`,
         index: chapter.index,

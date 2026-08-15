@@ -5,17 +5,19 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { parseTxtBook } from '@reader/parser-core/txt-parser';
 import { timingSafeEqual } from 'node:crypto';
 import {
   normalizePublicLibraryDirectFilename,
   normalizePublicLibraryRelativePath,
   PUBLIC_LIBRARY_FILE_MAX_BYTES,
-  publicLibraryCollectionPath,
   type PublicLibraryFileFields,
   type PublicLibraryListQuery,
   type PublicLibraryUpload,
 } from './public-library.contract';
+import {
+  buildPublicLibraryFileCandidate,
+  PublicLibraryFileCandidateError,
+} from './public-library-file-candidate';
 import {
   PublicLibraryDuplicateMetadataError,
   PublicLibraryRepository,
@@ -90,47 +92,38 @@ export class PublicLibraryService {
     ) {
       throw new BadRequestException('TXT 文件无效或超过 20 MiB');
     }
-    let parsed: ReturnType<typeof parseTxtBook>;
     try {
-      parsed = parseTxtBook(filename, Uint8Array.from(file.buffer).buffer);
-    } catch {
-      throw new BadRequestException('TXT 文件无法解析');
-    }
-    if (
-      parsed.chapters.length === 0 ||
-      parsed.chapters.some((chapter) => !chapter.content)
-    ) {
-      throw new BadRequestException('TXT 文件包含空章节或没有可读正文');
-    }
-    const title = fields.title ?? parsed.title.trim();
-    if (!title) throw new BadRequestException('书名不能为空');
-    const relativePath = fields.relativePath
-      ? normalizePublicLibraryRelativePath(fields.relativePath)
-      : filename;
-    if (!relativePath || relativePath.split('/').at(-1) !== filename) {
-      throw new BadRequestException('文件夹相对路径与文件名不一致');
-    }
-    const collectionPath = publicLibraryCollectionPath(relativePath);
-    return this.publishWithConflictBoundary(() =>
-      this.repository.publishCandidateWithOutcome({
-        title,
+      const relativePath = fields.relativePath
+        ? normalizePublicLibraryRelativePath(fields.relativePath)
+        : filename;
+      if (!relativePath || relativePath.split('/').at(-1) !== filename) {
+        throw new PublicLibraryFileCandidateError(
+          'PUBLIC_LIBRARY_RELATIVE_PATH_MISMATCH',
+        );
+      }
+      const candidate = buildPublicLibraryFileCandidate({
+        title: fields.title,
         author: fields.author,
         description: fields.description,
         category: fields.category,
-        collectionPath,
-        source: {
-          kind: 'browser_file',
-          scope: collectionPath ? 'browser-folder' : 'direct-upload',
-          relativePath,
-          bytes: Buffer.from(file.buffer),
-        },
-        chapters: parsed.chapters,
-        wordCount: parsed.chapters.reduce(
-          (total, chapter) => total + [...chapter.content].length,
-          0,
-        ),
-      }),
-    );
+        kind: 'browser_file',
+        scope: relativePath.includes('/') ? 'browser-folder' : 'direct-upload',
+        relativePath,
+        bytes: file.buffer,
+      });
+      return this.publishWithConflictBoundary(() =>
+        this.repository.publishCandidateWithOutcome(candidate),
+      );
+    } catch (error) {
+      if (error instanceof PublicLibraryFileCandidateError) {
+        throw new BadRequestException(
+          error.code === 'PUBLIC_LIBRARY_RELATIVE_PATH_MISMATCH'
+            ? '文件夹相对路径与文件名不一致'
+            : 'TXT 文件包含空章节、无法解析或没有可读正文',
+        );
+      }
+      throw error;
+    }
   }
 
   async list(query: PublicLibraryListQuery) {

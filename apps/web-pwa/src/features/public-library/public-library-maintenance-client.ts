@@ -18,12 +18,46 @@ export interface PublicLibraryFilePublication {
   book: PublicLibraryBook;
 }
 
+export interface PublicLibraryScanRoot {
+  rootId: string;
+  label: string;
+}
+
+export type PublicLibraryScanStatus =
+  | "running"
+  | "completed"
+  | "completed_with_errors"
+  | "failed"
+  | "interrupted";
+
+export interface PublicLibraryScanJob {
+  scanId: string;
+  rootId: string;
+  rootLabel: string;
+  status: PublicLibraryScanStatus;
+  discoveredCount: number;
+  processedCount: number;
+  createdCount: number;
+  unchangedCount: number;
+  duplicateCount: number;
+  failedCount: number;
+  skippedCount: number;
+  totalBytes: number;
+  errorCode?: string;
+  items: Array<{
+    relativePath: string;
+    outcome: "created" | "unchanged" | "duplicate" | "failed" | "skipped";
+    errorCode?: string;
+  }>;
+}
+
 export class PublicLibraryMaintenanceError extends Error {
   constructor(
     readonly code:
       | "credential_rejected"
       | "duplicate_metadata_conflict"
       | "file_rejected"
+      | "scan_already_running"
       | "service_unavailable",
     readonly existingBookId?: string,
   ) {
@@ -36,6 +70,68 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function readNumber(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new PublicLibraryMaintenanceError("service_unavailable");
+  }
+  return value;
+}
+
+function parseScanJob(value: unknown): PublicLibraryScanJob {
+  if (
+    !isRecord(value) ||
+    typeof value.scanId !== "string" ||
+    typeof value.rootId !== "string" ||
+    typeof value.rootLabel !== "string" ||
+    ![
+      "running",
+      "completed",
+      "completed_with_errors",
+      "failed",
+      "interrupted",
+    ].includes(String(value.status))
+  ) {
+    throw new PublicLibraryMaintenanceError("service_unavailable");
+  }
+  const items = Array.isArray(value.items)
+    ? value.items.slice(0, 50).map((item) => {
+        if (
+          !isRecord(item) ||
+          typeof item.relativePath !== "string" ||
+          !["created", "unchanged", "duplicate", "failed", "skipped"].includes(
+            String(item.outcome),
+          )
+        ) {
+          throw new PublicLibraryMaintenanceError("service_unavailable");
+        }
+        return {
+          relativePath: item.relativePath,
+          outcome:
+            item.outcome as PublicLibraryScanJob["items"][number]["outcome"],
+          errorCode:
+            typeof item.errorCode === "string" ? item.errorCode : undefined,
+        };
+      })
+    : [];
+  return {
+    scanId: value.scanId,
+    rootId: value.rootId,
+    rootLabel: value.rootLabel,
+    status: value.status as PublicLibraryScanStatus,
+    discoveredCount: readNumber(value.discoveredCount),
+    processedCount: readNumber(value.processedCount),
+    createdCount: readNumber(value.createdCount),
+    unchangedCount: readNumber(value.unchangedCount),
+    duplicateCount: readNumber(value.duplicateCount),
+    failedCount: readNumber(value.failedCount),
+    skippedCount: readNumber(value.skippedCount),
+    totalBytes: readNumber(value.totalBytes),
+    errorCode:
+      typeof value.errorCode === "string" ? value.errorCode : undefined,
+    items,
+  };
+}
+
 export class PublicLibraryMaintenanceClient {
   private readonly credentialSnapshot: string;
 
@@ -44,6 +140,68 @@ export class PublicLibraryMaintenanceClient {
     if (!this.credentialSnapshot) {
       throw new PublicLibraryMaintenanceError("credential_rejected");
     }
+  }
+
+  private headers() {
+    return {
+      "x-public-library-maintenance-key": this.credentialSnapshot,
+    };
+  }
+
+  private async parseMaintenanceResponse(response: Response) {
+    const payload: unknown = await response.json().catch(() => undefined);
+    if (response.status === 401 || response.status === 403) {
+      throw new PublicLibraryMaintenanceError("credential_rejected");
+    }
+    if (
+      response.status === 409 &&
+      isRecord(payload) &&
+      payload.code === "PUBLIC_LIBRARY_SCAN_ALREADY_RUNNING"
+    ) {
+      throw new PublicLibraryMaintenanceError("scan_already_running");
+    }
+    if (!response.ok) {
+      throw new PublicLibraryMaintenanceError("service_unavailable");
+    }
+    return payload;
+  }
+
+  async listScanRoots(): Promise<PublicLibraryScanRoot[]> {
+    const response = await fetch(
+      apiUrl("/public-library/maintenance/scan-roots"),
+      { headers: this.headers() },
+    );
+    const payload = await this.parseMaintenanceResponse(response);
+    if (!isRecord(payload) || !Array.isArray(payload.items)) {
+      throw new PublicLibraryMaintenanceError("service_unavailable");
+    }
+    return payload.items.map((item) => {
+      if (
+        !isRecord(item) ||
+        typeof item.rootId !== "string" ||
+        typeof item.label !== "string"
+      ) {
+        throw new PublicLibraryMaintenanceError("service_unavailable");
+      }
+      return { rootId: item.rootId, label: item.label };
+    });
+  }
+
+  async startScan(rootId: string) {
+    const response = await fetch(apiUrl("/public-library/maintenance/scans"), {
+      method: "POST",
+      headers: { ...this.headers(), "content-type": "application/json" },
+      body: JSON.stringify({ rootId, rightsConfirmed: true }),
+    });
+    return parseScanJob(await this.parseMaintenanceResponse(response));
+  }
+
+  async getScan(scanId: string) {
+    const response = await fetch(
+      apiUrl(`/public-library/maintenance/scans/${encodeURIComponent(scanId)}`),
+      { headers: this.headers() },
+    );
+    return parseScanJob(await this.parseMaintenanceResponse(response));
   }
 
   async publishFile(
@@ -58,7 +216,7 @@ export class PublicLibraryMaintenanceClient {
     const response = await fetch(apiUrl("/public-library/maintenance/files"), {
       method: "POST",
       headers: {
-        "x-public-library-maintenance-key": this.credentialSnapshot,
+        ...this.headers(),
       },
       body,
     });

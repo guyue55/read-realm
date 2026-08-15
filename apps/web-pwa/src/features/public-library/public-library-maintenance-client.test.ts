@@ -84,6 +84,51 @@ describe("PublicLibraryMaintenanceClient", () => {
     );
   });
 
+  it("lists and runs allowlisted scans with the same credential snapshot", async () => {
+    const scanJob = {
+      scanId: "3caac92c-5a53-4c0b-8da0-0cb37d2c8428",
+      rootId: "classics",
+      rootLabel: "古籍目录",
+      status: "running",
+      discoveredCount: 0,
+      processedCount: 0,
+      createdCount: 0,
+      unchangedCount: 0,
+      duplicateCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      totalBytes: 0,
+      items: [],
+    };
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      return new Response(
+        JSON.stringify(
+          url.endsWith("scan-roots")
+            ? { items: [{ rootId: "classics", label: "古籍目录" }] }
+            : scanJob,
+        ),
+        { status: url.endsWith("/scans") ? 202 : 200 },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new PublicLibraryMaintenanceClient("configured-key");
+    await expect(client.listScanRoots()).resolves.toEqual([
+      { rootId: "classics", label: "古籍目录" },
+    ]);
+    await expect(client.startScan("classics")).resolves.toMatchObject(scanJob);
+    await expect(client.getScan(scanJob.scanId)).resolves.toMatchObject(
+      scanJob,
+    );
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init?.headers).toMatchObject({
+        "x-public-library-maintenance-key": "configured-key",
+      });
+      expect(init?.headers).not.toHaveProperty("x-share-token");
+      expect(JSON.stringify(init)).not.toContain("/Users/");
+    }
+  });
+
   it.each(["", "default", "bad key"])(
     "rejects an invalid credential snapshot before fetch: %p",
     async (key) => {
