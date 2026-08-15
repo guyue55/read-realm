@@ -17,9 +17,13 @@ const input = {
 describe('PublicLibraryService maintenance boundary', () => {
   const repository = {
     publishTxt: jest.fn(() => Promise.resolve({ id: 'public-1' })),
-    publishCandidateWithOutcome: jest.fn(() =>
-      Promise.resolve({ outcome: 'created', book: { id: 'public-file' } }),
-    ),
+    publishCandidateWithOutcome: jest.fn((candidate: unknown) => {
+      void candidate;
+      return Promise.resolve({
+        outcome: 'created',
+        book: { id: 'public-file' },
+      });
+    }),
     list: jest.fn(),
     getPackage: jest.fn(),
   };
@@ -105,6 +109,7 @@ describe('PublicLibraryService maintenance boundary', () => {
       author: undefined,
       description: undefined,
       category: '经典',
+      collectionPath: '',
       source: {
         kind: 'browser_file',
         scope: 'direct-upload',
@@ -114,6 +119,62 @@ describe('PublicLibraryService maintenance boundary', () => {
       chapters: [{ index: 0, title: '第一章 起点', content: '浏览器正文' }],
       wordCount: 5,
     });
+  });
+
+  it('preserves a safe folder relative path and collection path', async () => {
+    const service = new PublicLibraryService(
+      repository as never,
+      'configured-key',
+    );
+    const content = Buffer.from('第一章\n文件夹正文');
+    await service.publishFile(
+      'configured-key',
+      {
+        category: '经典',
+        relativePath: '古籍/经部/folder-book.txt',
+        rightsConfirmed: true,
+      },
+      {
+        originalname: 'folder-book.txt',
+        mimetype: 'text/plain',
+        size: content.length,
+        buffer: content,
+      },
+    );
+    const candidate: unknown =
+      repository.publishCandidateWithOutcome.mock.lastCall?.[0];
+    expect(candidate).toMatchObject({
+      collectionPath: '古籍',
+      source: {
+        relativePath: '古籍/经部/folder-book.txt',
+        scope: 'browser-folder',
+      },
+    });
+  });
+
+  it('rejects a relative path whose basename does not match the uploaded file', async () => {
+    const service = new PublicLibraryService(
+      repository as never,
+      'configured-key',
+    );
+    const content = Buffer.from('第一章\n正文');
+    await expect(
+      service.publishFile(
+        'configured-key',
+        {
+          category: '经典',
+          relativePath: '古籍/other.txt',
+          rightsConfirmed: true,
+        },
+        {
+          originalname: 'book.txt',
+          mimetype: 'text/plain',
+          size: content.length,
+          buffer: content,
+        },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.publishCandidateWithOutcome).not.toHaveBeenCalled();
   });
 
   it('rejects malformed file facts before the canonical publisher', async () => {

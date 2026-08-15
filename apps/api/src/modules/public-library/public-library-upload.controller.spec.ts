@@ -118,6 +118,39 @@ describe('PublicLibraryController multipart boundary', () => {
     expect(service.publishFile).not.toHaveBeenCalled();
   });
 
+  it('accepts a safe folder relative path as catalog provenance', async () => {
+    await request(app.getHttpServer())
+      .post('/public-library/maintenance/files')
+      .set('x-public-library-maintenance-key', 'configured-key')
+      .field('category', '经典')
+      .field('rightsConfirmed', 'true')
+      .field('relativePath', '古籍/经部/folder-book.txt')
+      .attach('file', Buffer.from('第一章\n文件夹正文'), 'folder-book.txt')
+      .expect(201);
+    expect(service.publishFile).toHaveBeenCalledWith(
+      'configured-key',
+      expect.objectContaining({
+        relativePath: '古籍/经部/folder-book.txt',
+      }),
+      expect.objectContaining({ originalname: 'folder-book.txt' }),
+    );
+  });
+
+  it.each(['../escape.txt', 'folder\\mixed/book.txt', 'folder//book.txt'])(
+    'rejects unsafe relativePath field %p before the service writes',
+    async (relativePath) => {
+      await request(app.getHttpServer())
+        .post('/public-library/maintenance/files')
+        .set('x-public-library-maintenance-key', 'configured-key')
+        .field('category', '经典')
+        .field('rightsConfirmed', 'true')
+        .field('relativePath', relativePath)
+        .attach('file', Buffer.from('第一章\n正文'), 'book.txt')
+        .expect(400);
+      expect(service.publishFile).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ['missing file', undefined, 'direct.txt'],
     ['non TXT file', Buffer.from('正文'), 'direct.epub'],

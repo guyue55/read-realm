@@ -46,7 +46,7 @@ test("bounded TXT queue reports partial results and idempotent replay", async ({
   await importButton.click();
   await expect(dialog).toBeVisible();
 
-  const fileInput = page.getByLabel("选择 TXT 文件");
+  const fileInput = page.getByLabel("选择 TXT 文件", { exact: true });
   await fileInput.setInputFiles(
     Array.from({ length: 60 }, (_, index) => ({
       name: `${prefix}-window-${String(index).padStart(2, "0")}.txt`,
@@ -109,7 +109,33 @@ test("bounded TXT queue reports partial results and idempotent replay", async ({
   await page.getByRole("button", { name: "开始入阁" }).click();
   await expect(page.getByText("已存在 1", { exact: true })).toBeVisible();
 
-  expect(publicWrites).toHaveLength(3);
+  const folderInput = page.getByLabel("选择 TXT 文件夹", { exact: true });
+  await expect(folderInput).toBeAttached();
+  await folderInput.evaluate((input, uniquePrefix) => {
+    const transfer = new DataTransfer();
+    const folderFile = new File(
+      [`第一章\n文件夹正文 ${uniquePrefix}`],
+      "nested.txt",
+      { type: "text/plain" },
+    );
+    Object.defineProperty(folderFile, "webkitRelativePath", {
+      configurable: true,
+      value: `${uniquePrefix}-folder/经部/nested.txt`,
+    });
+    transfer.items.add(folderFile);
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: transfer.files,
+    });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, prefix);
+  await expect(
+    page.getByText(`${prefix}-folder/经部/nested.txt`),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "开始入阁" }).click();
+  await expect(page.getByText("已入阁 1", { exact: true })).toBeVisible();
+
+  expect(publicWrites).toHaveLength(4);
   for (const headers of publicWrites) {
     expect(headers["x-public-library-maintenance-key"]).toBe(maintenanceKey);
     expect(headers["x-share-token"]).toBeUndefined();

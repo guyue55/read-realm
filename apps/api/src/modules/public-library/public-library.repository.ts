@@ -8,6 +8,10 @@ import type {
   PublicLibraryPackage,
   PublicLibraryUpload,
 } from './public-library.contract';
+import {
+  normalizePublicLibraryRelativePath,
+  publicLibraryCollectionPath,
+} from './public-library.contract';
 
 function sha256(value: string | Buffer) {
   return createHash('sha256').update(value).digest('hex');
@@ -78,6 +82,7 @@ function rowToBook(row: Record<string, unknown>): PublicLibraryBookDto {
     description: optionalText(row.description),
     format: 'txt',
     category: String(row.category) as PublicLibraryBookDto['category'],
+    collectionPath: optionalText(row.collection_path),
     chapterCount: Number(row.chapter_count),
     wordCount: Number(row.word_count),
     contentHash: String(row.content_hash),
@@ -257,6 +262,7 @@ export interface CanonicalPublicBookCandidate {
   author?: string;
   description?: string;
   category: PublicLibraryBookDto['category'];
+  collectionPath?: string;
   source: {
     kind: PublicLibrarySourceKind;
     scope: string;
@@ -272,6 +278,7 @@ interface PreparedCandidate {
   author?: string;
   description?: string;
   category: PublicLibraryBookDto['category'];
+  collectionPath: string;
   sourceHash: string;
   editionHash: string;
   sourceId: string;
@@ -297,7 +304,8 @@ function sameMetadata(
     book.title === candidate.title &&
     book.author === candidate.author &&
     book.description === candidate.description &&
-    book.category === candidate.category
+    book.category === candidate.category &&
+    (book.collectionPath ?? '') === candidate.collectionPath
   );
 }
 
@@ -580,6 +588,13 @@ export class PublicLibraryRepository {
   async publishCandidateWithOutcome(
     input: CanonicalPublicBookCandidate,
   ): Promise<PublicLibraryPublicationResult> {
+    const normalizedSourcePath = normalizePublicLibraryRelativePath(
+      input.source.relativePath,
+    );
+    const derivedCollectionPath = publicLibraryCollectionPath(
+      input.source.relativePath,
+    );
+    const collectionPath = input.collectionPath ?? derivedCollectionPath;
     if (
       !input.title ||
       input.source.bytes.length === 0 ||
@@ -591,7 +606,9 @@ export class PublicLibraryRepository {
       input.chapters.some(
         (chapter, index) =>
           chapter.index !== index || !chapter.title || !chapter.content,
-      )
+      ) ||
+      normalizedSourcePath !== input.source.relativePath ||
+      collectionPath !== derivedCollectionPath
     ) {
       throw new Error('PUBLIC_LIBRARY_CANONICAL_CANDIDATE_INVALID');
     }
@@ -612,6 +629,7 @@ export class PublicLibraryRepository {
       author: input.author,
       description: input.description,
       category: input.category,
+      collectionPath,
       sourceHash,
       editionHash,
       sourceId: sha256(`source\0${sourceIdentity}`),
@@ -677,6 +695,7 @@ export class PublicLibraryRepository {
       description: candidate.description,
       format: 'txt',
       category: candidate.category,
+      collectionPath: candidate.collectionPath || undefined,
       chapterCount: candidate.chapters.length,
       wordCount: candidate.wordCount,
       contentHash: candidate.sourceHash,
@@ -684,7 +703,7 @@ export class PublicLibraryRepository {
     };
     const bundle: PublicLibraryPackage = {
       schemaVersion: 1,
-      book,
+      book: { ...book, collectionPath: undefined },
       chapters: candidate.chapters,
     };
     const serialized = canonicalPackage(bundle);
@@ -717,7 +736,7 @@ export class PublicLibraryRepository {
             ) VALUES (
               ?, ?, ?, ?, 'txt', ?, ?, ?, ?, ?, ?, ?, ?,
               (SELECT maintainer_id FROM public_maintainers WHERE id = 1),
-              '', 1,
+              ?, 1,
               (SELECT revision + 1 FROM public_catalog_state WHERE id = 1)
             )`,
             args: [
@@ -733,6 +752,7 @@ export class PublicLibraryRepository {
               book.publishedAt,
               candidate.editionHash,
               candidate.sourceHash,
+              candidate.collectionPath,
             ],
           },
           {
@@ -850,7 +870,8 @@ export class PublicLibraryRepository {
 
   async getPackage(id: string): Promise<PublicLibraryPackage> {
     const result = await this.client.execute({
-      sql: 'SELECT package_hash FROM public_books WHERE id = ? LIMIT 1',
+      sql: `SELECT package_hash, collection_path
+            FROM public_books WHERE id = ? LIMIT 1`,
       args: [id],
     });
     const packageHash = result.rows[0]?.package_hash;
@@ -874,6 +895,12 @@ export class PublicLibraryRepository {
     ) {
       throw new Error('PUBLIC_LIBRARY_PACKAGE_INVALID');
     }
-    return bundle;
+    return {
+      ...bundle,
+      book: {
+        ...bundle.book,
+        collectionPath: optionalText(result.rows[0]?.collection_path),
+      },
+    };
   }
 }

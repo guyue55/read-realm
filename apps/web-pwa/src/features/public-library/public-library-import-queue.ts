@@ -2,6 +2,7 @@ import {
   PublicLibraryMaintenanceError,
   type PublicLibraryFilePublication,
 } from "./public-library-maintenance-client";
+import { normalizePublicLibraryBrowserRelativePath } from "./public-library-path";
 
 export const PUBLIC_LIBRARY_BROWSER_FILE_LIMIT = 200;
 export const PUBLIC_LIBRARY_BROWSER_FILE_MAX_BYTES = 20 * 1024 * 1024;
@@ -19,6 +20,7 @@ export type PublicLibraryImportStatus =
 export interface PublicLibraryImportTask {
   id: string;
   file: File;
+  relativePath: string;
   status: PublicLibraryImportStatus;
   reason?: string;
   retryable: boolean;
@@ -31,13 +33,19 @@ export class PublicLibraryBatchLimitError extends Error {
   }
 }
 
-function invalidReason(file: File) {
+function invalidReason(file: File, relativePath: string | undefined) {
   if (!file.name.toLocaleLowerCase("en-US").endsWith(".txt")) {
     return "仅支持 TXT 文件";
   }
   if (file.size <= 0) return "文件为空";
   if (file.size > PUBLIC_LIBRARY_BROWSER_FILE_MAX_BYTES) {
     return "单个文件超过 20 MiB";
+  }
+  if (
+    !relativePath ||
+    relativePath.split("/").at(-1) !== file.name.normalize("NFC")
+  ) {
+    return "文件夹相对路径无效";
   }
   return undefined;
 }
@@ -52,16 +60,36 @@ export function preparePublicLibraryImportTasks(
   if (totalBytes > PUBLIC_LIBRARY_BROWSER_BATCH_MAX_BYTES) {
     throw new PublicLibraryBatchLimitError("batch_too_large");
   }
-  return files.map((file, index) => {
-    const reason = invalidReason(file);
+  const candidates: PublicLibraryImportTask[] = files.map((file, index) => {
+    const relativePath = normalizePublicLibraryBrowserRelativePath(
+      file.webkitRelativePath || file.name,
+    );
+    const reason = invalidReason(file, relativePath);
     return {
       id: `${index}-${file.name}-${file.size}`,
       file,
-      status: reason ? "failed" : "queued",
+      relativePath: relativePath ?? file.name.normalize("NFC"),
+      status: reason ? ("failed" as const) : ("queued" as const),
       reason,
       retryable: false,
     };
   });
+  const pathCounts = candidates.reduce((counts, task) => {
+    if (task.status !== "queued") return counts;
+    const key = task.relativePath.toLocaleLowerCase("en-US");
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
+  return candidates.map((task) =>
+    task.status === "queued" &&
+    (pathCounts.get(task.relativePath.toLocaleLowerCase("en-US")) ?? 0) > 1
+      ? {
+          ...task,
+          status: "failed" as const,
+          reason: "规范化路径重复",
+        }
+      : task,
+  );
 }
 
 function failureTask(
@@ -104,7 +132,10 @@ function failureTask(
 
 export async function runPublicLibraryImportQueue(
   sourceTasks: readonly PublicLibraryImportTask[],
-  upload: (file: File) => Promise<PublicLibraryFilePublication>,
+  upload: (
+    file: File,
+    relativePath: string,
+  ) => Promise<PublicLibraryFilePublication>,
   onTaskChange?: (task: PublicLibraryImportTask) => void,
 ): Promise<PublicLibraryImportTask[]> {
   const tasks = sourceTasks.map((task) => ({ ...task }));
@@ -129,7 +160,7 @@ export async function runPublicLibraryImportQueue(
       };
       update(current.index, uploading);
       try {
-        const result = await upload(uploading.file);
+        const result = await upload(uploading.file, uploading.relativePath);
         update(current.index, {
           ...uploading,
           status: result.outcome,

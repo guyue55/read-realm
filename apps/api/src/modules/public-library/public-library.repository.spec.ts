@@ -168,7 +168,7 @@ describe('PublicLibraryRepository', () => {
       source: {
         kind: 'maintenance_scan',
         scope: 'root-a',
-        relativePath: '乙/同版.txt',
+        relativePath: '甲/经部/同版.txt',
         bytes: Buffer.from('服务端来源字节'),
       },
     });
@@ -185,6 +185,98 @@ describe('PublicLibraryRepository', () => {
     await expect(
       repository.list({ q: '', page: 1, pageSize: 24 }),
     ).resolves.toMatchObject({ total: 1, snapshotRevision: 1 });
+  });
+
+  it('rejects a competing collection without attaching the losing provenance', async () => {
+    const databasePath = join(root, 'collection-race.sqlite');
+    const leftClient = createClient({ url: `file:${databasePath}` });
+    const rightClient = createClient({ url: `file:${databasePath}` });
+    await preparePublicLibraryDatabase(leftClient);
+    const objects = new Map<string, Buffer>();
+    const instantStorage = {
+      putObject(key: string, value: string | Buffer) {
+        if (!objects.has(key)) objects.set(key, Buffer.from(value));
+        return Promise.resolve();
+      },
+      getObject(key: string) {
+        const value = objects.get(key);
+        if (!value) throw new Error('OBJECT_NOT_FOUND');
+        return Promise.resolve(Buffer.from(value));
+      },
+      deleteObject(key: string) {
+        objects.delete(key);
+        return Promise.resolve();
+      },
+    } as unknown as LocalFileBlobStorage;
+    const leftRepository = new PublicLibraryRepository(
+      leftClient,
+      instantStorage,
+      () => '2026-08-15T00:00:00.000Z',
+    );
+    const rightRepository = new PublicLibraryRepository(
+      rightClient,
+      instantStorage,
+      () => '2026-08-15T00:00:00.001Z',
+    );
+    const canonical = {
+      title: '目录竞态',
+      category: '经典' as const,
+      chapters: [{ index: 0, title: '正文', content: '同一规范正文' }],
+      wordCount: 6,
+    };
+    try {
+      const results = await Promise.allSettled([
+        leftRepository.publishCandidate({
+          ...canonical,
+          source: {
+            kind: 'browser_file',
+            scope: 'browser-job-a',
+            relativePath: '甲/同版.txt',
+            bytes: Buffer.from('来源甲'),
+          },
+        }),
+        rightRepository.publishCandidate({
+          ...canonical,
+          source: {
+            kind: 'maintenance_scan',
+            scope: 'root-b',
+            relativePath: '乙/同版.txt',
+            bytes: Buffer.from('来源乙'),
+          },
+        }),
+      ]);
+      const fulfilled = results.filter(
+        (result) => result.status === 'fulfilled',
+      );
+      const rejected = results.filter((result) => result.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]).toMatchObject({
+        status: 'rejected',
+        reason: { code: 'duplicate_metadata_conflict' },
+      });
+      const counts = await Promise.all(
+        ['public_books', 'public_sources', 'public_ingest_receipts'].map(
+          async (table) =>
+            Number(
+              (
+                await leftClient.execute(
+                  `SELECT COUNT(*) AS total FROM ${table}`,
+                )
+              ).rows[0]?.total ?? 0,
+            ),
+        ),
+      );
+      expect(counts).toEqual([1, 1, 1]);
+      await expect(
+        leftClient.execute(
+          'SELECT revision FROM public_catalog_state WHERE id = 1',
+        ),
+      ).resolves.toMatchObject({ rows: [{ revision: 1 }] });
+    } finally {
+      leftClient.close();
+      rightClient.close();
+    }
   });
 
   it('prepares one additive schema safely through competing clients', async () => {

@@ -38,6 +38,46 @@ export function normalizePublicLibraryDirectFilename(value: string) {
   return filename;
 }
 
+export function normalizePublicLibraryRelativePath(value: string) {
+  const normalized = value.normalize('NFC');
+  const hasControlCharacter = [...normalized].some((character) => {
+    const code = character.codePointAt(0) ?? 0;
+    return code <= 31 || code === 127;
+  });
+  if (
+    normalized !== normalized.trim() ||
+    normalized.length === 0 ||
+    normalized.length > 1024 ||
+    normalized.startsWith('/') ||
+    /^[A-Za-z]:/u.test(normalized) ||
+    normalized.includes('\\') ||
+    hasControlCharacter
+  ) {
+    return undefined;
+  }
+  const segments = normalized.split('/');
+  if (
+    segments.length > 13 ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === '.' ||
+        segment === '..' ||
+        segment !== segment.trim() ||
+        segment.length > 255,
+    ) ||
+    !normalizePublicLibraryDirectFilename(segments.at(-1) ?? '')
+  ) {
+    return undefined;
+  }
+  return segments.join('/');
+}
+
+export function publicLibraryCollectionPath(relativePath: string) {
+  const segments = relativePath.split('/');
+  return segments.length > 1 ? (segments[0] ?? '') : '';
+}
+
 export const PUBLIC_LIBRARY_CATEGORIES = [
   '文学',
   '经典',
@@ -69,6 +109,14 @@ export const PublicLibraryFileFieldsSchema = z.object({
   author: z.string().trim().min(1).max(120).optional(),
   description: z.string().trim().max(2000).optional(),
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES),
+  relativePath: z
+    .string()
+    .max(1024)
+    .refine(
+      (value) => Boolean(normalizePublicLibraryRelativePath(value)),
+      '文件夹相对路径无效',
+    )
+    .optional(),
   rightsConfirmed: z
     .union([z.literal('true'), z.literal(true)])
     .transform(() => true as const),
@@ -97,6 +145,7 @@ export interface PublicLibraryBookDto {
   description?: string;
   format: 'txt';
   category: (typeof PUBLIC_LIBRARY_CATEGORIES)[number];
+  collectionPath?: string;
   chapterCount: number;
   wordCount: number;
   contentHash: string;

@@ -7,6 +7,7 @@ export interface PublicLibraryBook {
   description?: string;
   format: "txt";
   category: "文学" | "经典" | "思想" | "技术" | "其他";
+  collectionPath?: string;
   chapterCount: number;
   wordCount: number;
   contentHash: string;
@@ -41,6 +42,8 @@ export function parsePublicLibraryBook(value: unknown): PublicLibraryBook {
   if (
     typeof value.id !== "string" ||
     typeof value.title !== "string" ||
+    (value.collectionPath !== undefined &&
+      typeof value.collectionPath !== "string") ||
     value.format !== "txt" ||
     !["文学", "经典", "思想", "技术", "其他"].includes(
       String(value.category),
