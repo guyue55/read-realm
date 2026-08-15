@@ -1,0 +1,1250 @@
+{
+  "schemaVersion": 1,
+  "goalId": "GOAL-READING-WORLD-V1",
+  "controlRevision": "REV-0003",
+  "task": "TASK-0504",
+  "evidenceId": "EVID-62",
+  "role": "ATTEMPT",
+  "generatedAt": "2026-08-15T04:51:35.529Z",
+  "startedAt": "2026-08-15T04:50:20.862Z",
+  "repository": {
+    "root": ".",
+    "head": "0dcae90e69b28830ecd3c9e88e0de100810abab7",
+    "branch": "codex/deep-reading-experience-audit"
+  },
+  "archivedPreviousReport": null,
+  "checks": [
+    {
+      "id": "PATCH_WHITESPACE",
+      "command": "git diff --check",
+      "startedAt": "2026-08-15T04:50:20.895Z",
+      "endedAt": "2026-08-15T04:50:20.903Z",
+      "durationMs": 8,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/patch_whitespace.txt",
+      "logSha256": "9b966ac9bf85b125be5278bb8a7645d371e8ff8c116aec4f2bac40ff3f76687d"
+    },
+    {
+      "id": "GATE_03_FINAL_PREREQUISITE",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/check-gate-03-final-prerequisite.mjs",
+      "startedAt": "2026-08-15T04:50:20.976Z",
+      "endedAt": "2026-08-15T04:50:21.011Z",
+      "durationMs": 35,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/gate_03_final_prerequisite.txt",
+      "logSha256": "18399d0f469cbe963d75dd5d38d8dce556532c1d802507acafe2efe0a1e54005"
+    },
+    {
+      "id": "PUBLIC_LIBRARY_EXPANSION_FIXTURE_CONTRACT",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/task-0504-fixture-contract.test.mjs",
+      "startedAt": "2026-08-15T04:50:21.085Z",
+      "endedAt": "2026-08-15T04:50:21.159Z",
+      "durationMs": 74,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/public_library_expansion_fixture_contract.txt",
+      "logSha256": "2956eebd9a64cf07292655eea143da00143322a6ad11c9dda559ce86e5cafc3a"
+    },
+    {
+      "id": "API_TEST",
+      "command": "corepack pnpm --filter api test -- --runInBand",
+      "startedAt": "2026-08-15T04:50:21.233Z",
+      "endedAt": "2026-08-15T04:50:24.944Z",
+      "durationMs": 3711,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/api_test.txt",
+      "logSha256": "4be366792fa1dc6cbedde8c9e4327d45267c0434e250e5da6a39a7f654f1ab12"
+    },
+    {
+      "id": "API_LINT_NON_FIXING",
+      "command": "corepack pnpm --filter api exec eslint {src,apps,libs,test}/**/*.ts",
+      "startedAt": "2026-08-15T04:50:25.013Z",
+      "endedAt": "2026-08-15T04:50:29.932Z",
+      "durationMs": 4919,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/api_lint_non_fixing.txt",
+      "logSha256": "779d731e49261171dcfbbf88fbddf8df58abae0dcbfe6233b24314e7be73f06e"
+    },
+    {
+      "id": "API_TYPECHECK",
+      "command": "corepack pnpm --filter api exec tsc --noEmit",
+      "startedAt": "2026-08-15T04:50:30.001Z",
+      "endedAt": "2026-08-15T04:50:32.027Z",
+      "durationMs": 2026,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/api_typecheck.txt",
+      "logSha256": "e997113d7bb3d70ecdbb450a7b94cfdda1310507736c18378f8de5a36264449f"
+    },
+    {
+      "id": "API_BUILD",
+      "command": "corepack pnpm --filter api build",
+      "startedAt": "2026-08-15T04:50:32.100Z",
+      "endedAt": "2026-08-15T04:50:35.086Z",
+      "durationMs": 2986,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "NODE_ENV": "production"
+      },
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/api_build.txt",
+      "logSha256": "ee06c2b7f8ddcf20659ea1462b527d6cee0a66826398fc757c99d74408b585b9"
+    },
+    {
+      "id": "WEB_TEST",
+      "command": "corepack pnpm --filter web-pwa test",
+      "startedAt": "2026-08-15T04:50:35.162Z",
+      "endedAt": "2026-08-15T04:50:37.540Z",
+      "durationMs": 2378,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/web_test.txt",
+      "logSha256": "ec16a56868cc069954d90593e51e946eebbde0a0ab3532fe90bf288e5afa3f86"
+    },
+    {
+      "id": "WEB_LINT",
+      "command": "corepack pnpm --filter web-pwa lint",
+      "startedAt": "2026-08-15T04:50:37.613Z",
+      "endedAt": "2026-08-15T04:50:40.393Z",
+      "durationMs": 2780,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/web_lint.txt",
+      "logSha256": "06ad990eca459c4f8da32ea268329eb0ab0c3af10847ccf6147e78ca32c01847"
+    },
+    {
+      "id": "WEB_TYPECHECK",
+      "command": "corepack pnpm --filter web-pwa exec tsc --noEmit",
+      "startedAt": "2026-08-15T04:50:40.474Z",
+      "endedAt": "2026-08-15T04:50:42.042Z",
+      "durationMs": 1568,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/web_typecheck.txt",
+      "logSha256": "5cf29b5f24c42ee55d92d18651652222aa73ff9f239e28a80de63c809786e870"
+    },
+    {
+      "id": "WEB_BUILD_NO_PWA_WRITE",
+      "command": "corepack pnpm --filter web-pwa build",
+      "startedAt": "2026-08-15T04:50:42.107Z",
+      "endedAt": "2026-08-15T04:50:57.296Z",
+      "durationMs": 15189,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "NODE_ENV": "production",
+        "READING_WORLD_VERIFY_NO_PWA_WRITE": "1"
+      },
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/web_build_no_pwa_write.txt",
+      "logSha256": "4e67877da4599c06c243fcc796804400586144547746a4c8f431be5e9c433e78"
+    },
+    {
+      "id": "PUBLIC_PRIVATE_BOUNDARY_CONTRACT",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/check-public-library-boundary.mjs",
+      "startedAt": "2026-08-15T04:50:57.364Z",
+      "endedAt": "2026-08-15T04:50:57.392Z",
+      "durationMs": 28,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/public_private_boundary_contract.txt",
+      "logSha256": "e4c3d5c693ee4db567770c7e3ba84217659c2b74ff7c0b7a07e0ec3e730813cb"
+    },
+    {
+      "id": "TASK_0504_RUN_CONTRACT",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/task-0504-expansion-run.test.mjs scripts/task-0504-fixture-contract.test.mjs scripts/verify-public-library-expansion-contract.test.mjs",
+      "startedAt": "2026-08-15T04:50:57.468Z",
+      "endedAt": "2026-08-15T04:50:57.580Z",
+      "durationMs": 112,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {},
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/task_0504_run_contract.txt",
+      "logSha256": "b98bf02f9101ebe73c736e984941f85b147efcfc56cfe8031c562999525d16d7"
+    },
+    {
+      "id": "TASK_0504_PUBLIC_LIBRARY_LIVE",
+      "command": "$HOME/.nvm/versions/node/v24.13.0/bin/node scripts/run-task-0504-public-library.mjs",
+      "startedAt": "2026-08-15T04:50:57.660Z",
+      "endedAt": "2026-08-15T04:51:35.288Z",
+      "durationMs": 37628,
+      "exitCode": 0,
+      "signal": null,
+      "environment": {
+        "CI": "1",
+        "PLAYWRIGHT_BROWSER_CHANNEL": "chrome"
+      },
+      "trackedWorktreeMutated": false,
+      "unexpectedUntrackedMutation": false,
+      "archivedHistoryMutated": false,
+      "trackedStatusBefore": [],
+      "trackedStatusAfter": [],
+      "logPath": "docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.records/task_0504_public_library_live.txt",
+      "logSha256": "49cfd0f6d659ca0d82be172d42ebb90fe6264bb49a756dddd053684930013a37"
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "passedCount": 14,
+    "failedCount": 0,
+    "trackedMutationCount": 0,
+    "unexpectedUntrackedMutationCount": 0
+  },
+  "task0504Gate": {
+    "classification": "PASS",
+    "reasons": [],
+    "observation": {
+      "classification": "PASS",
+      "reasons": [],
+      "controlRevision": "REV-0003",
+      "task": "TASK-0504",
+      "prerequisiteValid": true,
+      "listExitCode": 0,
+      "listedTestCount": 1,
+      "apiBuildExitCode": 0,
+      "webBuildExitCode": 0,
+      "apiServiceReady": true,
+      "webServiceReady": true,
+      "testExitCode": 0,
+      "apiPortFreeBefore": true,
+      "webPortFreeBefore": true,
+      "apiPortFreeAfter": true,
+      "webPortFreeAfter": true,
+      "orphanProcessCount": 0,
+      "pathIsolationValid": true,
+      "physicalIsolationValid": true,
+      "isolatedRootCreated": true,
+      "cleanupComplete": true,
+      "sentinelSetupError": null,
+      "postObservationError": null,
+      "sourceTreeUnchanged": true,
+      "sourceTreeBefore": {
+        "entries": [
+          {
+            "path": "scan",
+            "type": "directory",
+            "size": "128",
+            "mode": 493,
+            "mtimeNs": "1786769457694270658"
+          },
+          {
+            "path": "scan/史部",
+            "type": "directory",
+            "size": "320",
+            "mode": 493,
+            "mtimeNs": "1786769457695070243"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-08.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694397450",
+            "sha256": "82e00e56849be630280d30ffc05f39c0008db49df4ce4050ca44bb42c5a696bc"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-09.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694504783",
+            "sha256": "ba024dc45e8152392a4c19bd24e0439585e2c9647107a80110b45b06b304de7b"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-10.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694608367",
+            "sha256": "f204266e375491ec7671fa7cf1fb24db337782a537b273888e201a36bd0d3ffb"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-11.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694709326",
+            "sha256": "f01d459d26148beffa9aaf46481fedad28484f55ed2f32f5590c0225f93edf94"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-12.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694808951",
+            "sha256": "35b331fc423beee5adb91892b88113ce93a9e6fa4cffc85d1a27f1aef42ba0d6"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-13.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694912201",
+            "sha256": "aa3fbb28e9184f6cad6ec94ba8c46b6153778abb7fe78d73dac94027954adfaf"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-14.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457695010993",
+            "sha256": "eb9e9652765b8e130945a25e111f6456b594c46fc6edd92ca38e754db7d0a58a"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-15.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457695107244",
+            "sha256": "a70cedf3d7d6c03270f17baa1572297b15749718c2261eb77e2cd8dfca4ede14"
+          },
+          {
+            "path": "scan/经部",
+            "type": "directory",
+            "size": "320",
+            "mode": 493,
+            "mtimeNs": "1786769457694151324"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-00.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693413113",
+            "sha256": "c3219cc36ff2ae3db7d9c83b880e47cb54970fe8235b2458d951687349d0582b"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-01.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693530739",
+            "sha256": "8d29f1a281a52aaeeba70c186827804dc96e631db23f283dfaa69d8e5ac46cf4"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-02.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693642781",
+            "sha256": "8cc870226cb8d272b5d9a1c6fccbf3f063405ba7d1ce3884d1d7d73bf56840de"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-03.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693751364",
+            "sha256": "68fd009b499dd4d17e6680601ff48e5db01e98b507cd3d5e98ad384e1931bb55"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-04.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693854281",
+            "sha256": "7906be94374a70c545adbeac0500f535c96bfa9881e3e7be25b487bdc4828077"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-05.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693961615",
+            "sha256": "0047c085e729e382c80ccb016f4ca4d8e1eece36292bbf97f2cc79a2acaa511c"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-06.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694075449",
+            "sha256": "b786c080fd803193b7fc003d45f46f6c9aee6aaafd466d3e74151a7eff858e28"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-07.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694198616",
+            "sha256": "d00f2f6febe572ffdc3fa7fba09cbaacd8da8bb09432c07fe85b607a49adbc2c"
+          }
+        ],
+        "sha256": "09e50d88f8c911b4b41c0f44382672b434e681c953b5198ba7f8e8bc3630f0cb"
+      },
+      "sourceTreeAfter": {
+        "entries": [
+          {
+            "path": "scan",
+            "type": "directory",
+            "size": "128",
+            "mode": 493,
+            "mtimeNs": "1786769457694270658"
+          },
+          {
+            "path": "scan/史部",
+            "type": "directory",
+            "size": "320",
+            "mode": 493,
+            "mtimeNs": "1786769457695070243"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-08.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694397450",
+            "sha256": "82e00e56849be630280d30ffc05f39c0008db49df4ce4050ca44bb42c5a696bc"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-09.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694504783",
+            "sha256": "ba024dc45e8152392a4c19bd24e0439585e2c9647107a80110b45b06b304de7b"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-10.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694608367",
+            "sha256": "f204266e375491ec7671fa7cf1fb24db337782a537b273888e201a36bd0d3ffb"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-11.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694709326",
+            "sha256": "f01d459d26148beffa9aaf46481fedad28484f55ed2f32f5590c0225f93edf94"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-12.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694808951",
+            "sha256": "35b331fc423beee5adb91892b88113ce93a9e6fa4cffc85d1a27f1aef42ba0d6"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-13.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694912201",
+            "sha256": "aa3fbb28e9184f6cad6ec94ba8c46b6153778abb7fe78d73dac94027954adfaf"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-14.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457695010993",
+            "sha256": "eb9e9652765b8e130945a25e111f6456b594c46fc6edd92ca38e754db7d0a58a"
+          },
+          {
+            "path": "scan/史部/TASK-0504-LIVE-scan-15.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457695107244",
+            "sha256": "a70cedf3d7d6c03270f17baa1572297b15749718c2261eb77e2cd8dfca4ede14"
+          },
+          {
+            "path": "scan/经部",
+            "type": "directory",
+            "size": "320",
+            "mode": 493,
+            "mtimeNs": "1786769457694151324"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-00.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693413113",
+            "sha256": "c3219cc36ff2ae3db7d9c83b880e47cb54970fe8235b2458d951687349d0582b"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-01.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693530739",
+            "sha256": "8d29f1a281a52aaeeba70c186827804dc96e631db23f283dfaa69d8e5ac46cf4"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-02.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693642781",
+            "sha256": "8cc870226cb8d272b5d9a1c6fccbf3f063405ba7d1ce3884d1d7d73bf56840de"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-03.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693751364",
+            "sha256": "68fd009b499dd4d17e6680601ff48e5db01e98b507cd3d5e98ad384e1931bb55"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-04.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693854281",
+            "sha256": "7906be94374a70c545adbeac0500f535c96bfa9881e3e7be25b487bdc4828077"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-05.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457693961615",
+            "sha256": "0047c085e729e382c80ccb016f4ca4d8e1eece36292bbf97f2cc79a2acaa511c"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-06.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694075449",
+            "sha256": "b786c080fd803193b7fc003d45f46f6c9aee6aaafd466d3e74151a7eff858e28"
+          },
+          {
+            "path": "scan/经部/TASK-0504-LIVE-scan-07.txt",
+            "type": "file",
+            "size": "42",
+            "mode": 292,
+            "mtimeNs": "1786769457694198616",
+            "sha256": "d00f2f6febe572ffdc3fa7fba09cbaacd8da8bb09432c07fe85b607a49adbc2c"
+          }
+        ],
+        "sha256": "09e50d88f8c911b4b41c0f44382672b434e681c953b5198ba7f8e8bc3630f0cb"
+      },
+      "personalDbSentinelBefore": "573fda95f84f222b55a137fb402f0a8e8965841a0fa8ee7c7a2a05006f1c0c8e",
+      "personalDbSentinelAfter": "573fda95f84f222b55a137fb402f0a8e8965841a0fa8ee7c7a2a05006f1c0c8e",
+      "personalDbSentinelUnchanged": true,
+      "personalBlobSentinelBefore": "120a28d353e2818b39db0ff33fe100a6547ce79707c9f0748b2b107e5eee2ca4",
+      "personalBlobSentinelAfter": "120a28d353e2818b39db0ff33fe100a6547ce79707c9f0748b2b107e5eee2ca4",
+      "personalBlobSentinelUnchanged": true,
+      "publicDatabaseFactsValid": true,
+      "publicProvenanceValid": true,
+      "publicBlobFactsValid": true,
+      "publicFacts": {
+        "books": 26,
+        "editions": 26,
+        "receipts": 26,
+        "sources": {
+          "browser_file": 8,
+          "legacy_json": 1,
+          "maintenance_scan": 16,
+          "personal_cloud": 1
+        },
+        "sourceFacts": [
+          {
+            "book_id": "public-666fb1858b6a6cf5bbb4dcbf",
+            "edition_hash": "666fb1858b6a6cf5bbb4dcbf439f22384a86cacc121454fc279c1f693e084c62",
+            "receipt_book_id": "public-666fb1858b6a6cf5bbb4dcbf",
+            "receipt_edition_hash": "666fb1858b6a6cf5bbb4dcbf439f22384a86cacc121454fc279c1f693e084c62",
+            "receipt_key": "cc12983155482492740adafcf33e2e5893fcd12730c263a920c73ec89964567b",
+            "receipt_source_hash": "8d2c6059e076b99dbcdd1b5ccd4c404f70e552f3a20693515694d9fffc2bd1b2",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-00.txt",
+            "source_hash": "8d2c6059e076b99dbcdd1b5ccd4c404f70e552f3a20693515694d9fffc2bd1b2",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-f597c1dc1d36b52521665232",
+            "edition_hash": "f597c1dc1d36b52521665232e3ae14a64a398b310d45f56d1fce3c5fee7fab83",
+            "receipt_book_id": "public-f597c1dc1d36b52521665232",
+            "receipt_edition_hash": "f597c1dc1d36b52521665232e3ae14a64a398b310d45f56d1fce3c5fee7fab83",
+            "receipt_key": "83e9e093e4c186f7ad7e0883b6b8d09f360671b586b0e4976415f1d1a6c64a43",
+            "receipt_source_hash": "0829c4b37029da62ed8d0cb3c5446deb1346985c4248e24c025f79f34a076140",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-01.txt",
+            "source_hash": "0829c4b37029da62ed8d0cb3c5446deb1346985c4248e24c025f79f34a076140",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-c041eef6e4369b546f15f008",
+            "edition_hash": "c041eef6e4369b546f15f00866fa33a0272478c51b23ebc7b5606ffcb99645af",
+            "receipt_book_id": "public-c041eef6e4369b546f15f008",
+            "receipt_edition_hash": "c041eef6e4369b546f15f00866fa33a0272478c51b23ebc7b5606ffcb99645af",
+            "receipt_key": "4f0e452108930db111ee3c8baf7cd7faa374e027af3ca3ed1fc4e88e962cd612",
+            "receipt_source_hash": "ffbfdcd60b57a2fd0f8825e32064e3438fa8319fec7b748b82296dc94b2e43a7",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-02.txt",
+            "source_hash": "ffbfdcd60b57a2fd0f8825e32064e3438fa8319fec7b748b82296dc94b2e43a7",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-63b39f0611fe10255777e154",
+            "edition_hash": "63b39f0611fe10255777e1545504e84468206788c3fd66a09a8b8efaa19239d6",
+            "receipt_book_id": "public-63b39f0611fe10255777e154",
+            "receipt_edition_hash": "63b39f0611fe10255777e1545504e84468206788c3fd66a09a8b8efaa19239d6",
+            "receipt_key": "2201216ed9e7f5f79e948d8235e512f94d883c27196c75d2be6234bdecb2037c",
+            "receipt_source_hash": "f19109a472341e4196fb87ceaab4d1baa22054122b52e7920736c99923c1c835",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-03.txt",
+            "source_hash": "f19109a472341e4196fb87ceaab4d1baa22054122b52e7920736c99923c1c835",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-2d1d71d450fb80d63ea7ea3b",
+            "edition_hash": "2d1d71d450fb80d63ea7ea3bbb0a3c71bd230196272744921a9d79505be848d1",
+            "receipt_book_id": "public-2d1d71d450fb80d63ea7ea3b",
+            "receipt_edition_hash": "2d1d71d450fb80d63ea7ea3bbb0a3c71bd230196272744921a9d79505be848d1",
+            "receipt_key": "f015823aa180a32513c3fe1757cfcc5eac613c30861e4e4b2667dfc3e0a8fc24",
+            "receipt_source_hash": "9e08b3f0b18ee473ca9e8b307ff93a5c0449b2db661409660fedb0974b3d2a02",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-04.txt",
+            "source_hash": "9e08b3f0b18ee473ca9e8b307ff93a5c0449b2db661409660fedb0974b3d2a02",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-f00f80a62435d6bdf32df977",
+            "edition_hash": "f00f80a62435d6bdf32df97761ab895242161c3b61a01d5803f6d6c94ea1c3d4",
+            "receipt_book_id": "public-f00f80a62435d6bdf32df977",
+            "receipt_edition_hash": "f00f80a62435d6bdf32df97761ab895242161c3b61a01d5803f6d6c94ea1c3d4",
+            "receipt_key": "476a1a4ca568ad928cdfda53130eb4f844c71fbfc799bf5b3c6043a729d26465",
+            "receipt_source_hash": "2fe05234bdcc1e7fb3b2519441cbcc299fc4331e9a0214adc2c58ccb0b21c994",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-05.txt",
+            "source_hash": "2fe05234bdcc1e7fb3b2519441cbcc299fc4331e9a0214adc2c58ccb0b21c994",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-161228c644730a6d057e244c",
+            "edition_hash": "161228c644730a6d057e244c55b3e61fbcc8b100f7120bff95acc769f0db232a",
+            "receipt_book_id": "public-161228c644730a6d057e244c",
+            "receipt_edition_hash": "161228c644730a6d057e244c55b3e61fbcc8b100f7120bff95acc769f0db232a",
+            "receipt_key": "ec332a7f0ff093b4e8a31636809840476cecd780bc60b4ad692c3cf7546d7634",
+            "receipt_source_hash": "0fedd4e5173687d9dee013ce7c5d1ac78bfcda923fe8bbd7b46aa4fa62c02018",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-folder/经部/TASK-0504-LIVE-folder-06.txt",
+            "source_hash": "0fedd4e5173687d9dee013ce7c5d1ac78bfcda923fe8bbd7b46aa4fa62c02018",
+            "source_kind": "browser_file",
+            "source_scope": "browser-folder"
+          },
+          {
+            "book_id": "public-f383d80f8f96156fab018af8",
+            "edition_hash": "f383d80f8f96156fab018af8b838226b0758510ec71c8308fe253542e9f68012",
+            "receipt_book_id": "public-f383d80f8f96156fab018af8",
+            "receipt_edition_hash": "f383d80f8f96156fab018af8b838226b0758510ec71c8308fe253542e9f68012",
+            "receipt_key": "9139298e8fa9a1b37283ae1a1e504a4a9eef15a654b6741774f508e4d3f393ef",
+            "receipt_source_hash": "4e65b697e202569064dd77e93402e36b11c223a1135edce1592795ce5a6de553",
+            "receipt_status": "succeeded",
+            "relative_path": "TASK-0504-LIVE-direct.txt",
+            "source_hash": "4e65b697e202569064dd77e93402e36b11c223a1135edce1592795ce5a6de553",
+            "source_kind": "browser_file",
+            "source_scope": "direct-upload"
+          },
+          {
+            "book_id": "public-d172a4a5572dd8ae28b31e82",
+            "edition_hash": "d172a4a5572dd8ae28b31e82e4851fb6e6e7861206b514e29442b8585c81550f",
+            "receipt_book_id": "public-d172a4a5572dd8ae28b31e82",
+            "receipt_edition_hash": "d172a4a5572dd8ae28b31e82e4851fb6e6e7861206b514e29442b8585c81550f",
+            "receipt_key": "0e52aa4a035c6bb1eccbe01431aa7aae8a7c7550793c9fd70f3e2750e55bc08b",
+            "receipt_source_hash": "84fc45171ae7807a4c684f45f4b442020fa26ebd51bff57e9b743ea3202538cc",
+            "receipt_status": "succeeded",
+            "relative_path": "legacy-json.txt",
+            "source_hash": "84fc45171ae7807a4c684f45f4b442020fa26ebd51bff57e9b743ea3202538cc",
+            "source_kind": "legacy_json",
+            "source_scope": "gate-03-json"
+          },
+          {
+            "book_id": "public-f1b48e9719d8dd29f0700db3",
+            "edition_hash": "f1b48e9719d8dd29f0700db3f186cfd4d437d9987ad133999c680caea0066d6f",
+            "receipt_book_id": "public-f1b48e9719d8dd29f0700db3",
+            "receipt_edition_hash": "f1b48e9719d8dd29f0700db3f186cfd4d437d9987ad133999c680caea0066d6f",
+            "receipt_key": "9f254ab963ed49fd398650501e609bd5c83d6bca627aa3ca348ed55f9ec41c5a",
+            "receipt_source_hash": "82e00e56849be630280d30ffc05f39c0008db49df4ce4050ca44bb42c5a696bc",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-08.txt",
+            "source_hash": "82e00e56849be630280d30ffc05f39c0008db49df4ce4050ca44bb42c5a696bc",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-6e7ceb1c917877a0fe795692",
+            "edition_hash": "6e7ceb1c917877a0fe79569265d451bd6d796036689b0d4eafce34741e8e4f7d",
+            "receipt_book_id": "public-6e7ceb1c917877a0fe795692",
+            "receipt_edition_hash": "6e7ceb1c917877a0fe79569265d451bd6d796036689b0d4eafce34741e8e4f7d",
+            "receipt_key": "ade386db561785bc24b2849532dc3a286d6209f9a035a517fd25dc378f97eb1a",
+            "receipt_source_hash": "ba024dc45e8152392a4c19bd24e0439585e2c9647107a80110b45b06b304de7b",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-09.txt",
+            "source_hash": "ba024dc45e8152392a4c19bd24e0439585e2c9647107a80110b45b06b304de7b",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-109b1b5f7e3811c34840da27",
+            "edition_hash": "109b1b5f7e3811c34840da273c16bbbec26bc7c0846f375eccf3de4f98ef0b2a",
+            "receipt_book_id": "public-109b1b5f7e3811c34840da27",
+            "receipt_edition_hash": "109b1b5f7e3811c34840da273c16bbbec26bc7c0846f375eccf3de4f98ef0b2a",
+            "receipt_key": "7e849815eb1957e1c464c6db7ea086686c422cf3b1b67f2225e49db4197e86b1",
+            "receipt_source_hash": "f204266e375491ec7671fa7cf1fb24db337782a537b273888e201a36bd0d3ffb",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-10.txt",
+            "source_hash": "f204266e375491ec7671fa7cf1fb24db337782a537b273888e201a36bd0d3ffb",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-1e14e41e1ca92f5100e85055",
+            "edition_hash": "1e14e41e1ca92f5100e8505528fea95ff9d348860cadfa2692930c01b6751d25",
+            "receipt_book_id": "public-1e14e41e1ca92f5100e85055",
+            "receipt_edition_hash": "1e14e41e1ca92f5100e8505528fea95ff9d348860cadfa2692930c01b6751d25",
+            "receipt_key": "36176c67cd0d1b6478e4c8d5757e9cde33f9ba42444c24c9d5d16cc6ad763331",
+            "receipt_source_hash": "f01d459d26148beffa9aaf46481fedad28484f55ed2f32f5590c0225f93edf94",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-11.txt",
+            "source_hash": "f01d459d26148beffa9aaf46481fedad28484f55ed2f32f5590c0225f93edf94",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-fb1f5694adedcb866edb49a3",
+            "edition_hash": "fb1f5694adedcb866edb49a31f1f256c5cd7906372c818aeda75446b28c02313",
+            "receipt_book_id": "public-fb1f5694adedcb866edb49a3",
+            "receipt_edition_hash": "fb1f5694adedcb866edb49a31f1f256c5cd7906372c818aeda75446b28c02313",
+            "receipt_key": "b216255ce24b845f72e711e8f6ff8cfca8c8f41612ca2a86b992ba5652a0ac7a",
+            "receipt_source_hash": "35b331fc423beee5adb91892b88113ce93a9e6fa4cffc85d1a27f1aef42ba0d6",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-12.txt",
+            "source_hash": "35b331fc423beee5adb91892b88113ce93a9e6fa4cffc85d1a27f1aef42ba0d6",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-5b4ef3e164483d99d0bcac6b",
+            "edition_hash": "5b4ef3e164483d99d0bcac6be7ad2aced56b52479869ba506568fa542c07bcbf",
+            "receipt_book_id": "public-5b4ef3e164483d99d0bcac6b",
+            "receipt_edition_hash": "5b4ef3e164483d99d0bcac6be7ad2aced56b52479869ba506568fa542c07bcbf",
+            "receipt_key": "a2427f31e5d437bbc6f63a0012a5e9fdff5e1fd81cba6be9fa8213a311ce770b",
+            "receipt_source_hash": "aa3fbb28e9184f6cad6ec94ba8c46b6153778abb7fe78d73dac94027954adfaf",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-13.txt",
+            "source_hash": "aa3fbb28e9184f6cad6ec94ba8c46b6153778abb7fe78d73dac94027954adfaf",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-457574e1fd0ed04289ebab1b",
+            "edition_hash": "457574e1fd0ed04289ebab1b505bbdb7fe4ceb6310b79c1e3ff97345295a32bf",
+            "receipt_book_id": "public-457574e1fd0ed04289ebab1b",
+            "receipt_edition_hash": "457574e1fd0ed04289ebab1b505bbdb7fe4ceb6310b79c1e3ff97345295a32bf",
+            "receipt_key": "91e90685b893b9fd74d5fc53cf087bf3ff8c4edff1d660fad19b14a935c2dda7",
+            "receipt_source_hash": "eb9e9652765b8e130945a25e111f6456b594c46fc6edd92ca38e754db7d0a58a",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-14.txt",
+            "source_hash": "eb9e9652765b8e130945a25e111f6456b594c46fc6edd92ca38e754db7d0a58a",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-462004649cd2545a8d3cd1b1",
+            "edition_hash": "462004649cd2545a8d3cd1b1ee48686f1b087294e3a6e5a5e6612e5d3069d26e",
+            "receipt_book_id": "public-462004649cd2545a8d3cd1b1",
+            "receipt_edition_hash": "462004649cd2545a8d3cd1b1ee48686f1b087294e3a6e5a5e6612e5d3069d26e",
+            "receipt_key": "2371081add8a9c2855da54cda3dabfa0a79621971c667fdd03d841313f3f52db",
+            "receipt_source_hash": "a70cedf3d7d6c03270f17baa1572297b15749718c2261eb77e2cd8dfca4ede14",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/史部/TASK-0504-LIVE-scan-15.txt",
+            "source_hash": "a70cedf3d7d6c03270f17baa1572297b15749718c2261eb77e2cd8dfca4ede14",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-1c0d1c57d4a68ee4ce388b24",
+            "edition_hash": "1c0d1c57d4a68ee4ce388b244d2cf4037f971b785834714ca7dbf1140b84c15a",
+            "receipt_book_id": "public-1c0d1c57d4a68ee4ce388b24",
+            "receipt_edition_hash": "1c0d1c57d4a68ee4ce388b244d2cf4037f971b785834714ca7dbf1140b84c15a",
+            "receipt_key": "82e6b30387bab00fc2817f83f5ad5b8602c2644abcf23bfe25a69912f7771ff1",
+            "receipt_source_hash": "c3219cc36ff2ae3db7d9c83b880e47cb54970fe8235b2458d951687349d0582b",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-00.txt",
+            "source_hash": "c3219cc36ff2ae3db7d9c83b880e47cb54970fe8235b2458d951687349d0582b",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-b87dfb4fe80953bb2d81e61b",
+            "edition_hash": "b87dfb4fe80953bb2d81e61b060ab5efc3d488010a35b2ff053a29db6c431dac",
+            "receipt_book_id": "public-b87dfb4fe80953bb2d81e61b",
+            "receipt_edition_hash": "b87dfb4fe80953bb2d81e61b060ab5efc3d488010a35b2ff053a29db6c431dac",
+            "receipt_key": "452f4ae2ffa9af68a03f047373681e3347981b0ca3b1a94992586e26e96c9ae1",
+            "receipt_source_hash": "8d29f1a281a52aaeeba70c186827804dc96e631db23f283dfaa69d8e5ac46cf4",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-01.txt",
+            "source_hash": "8d29f1a281a52aaeeba70c186827804dc96e631db23f283dfaa69d8e5ac46cf4",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-1c2d1e5d8a80f8bc7c3b40d2",
+            "edition_hash": "1c2d1e5d8a80f8bc7c3b40d259d83f7bf463d3a7157988ed84e2b83dfca3c901",
+            "receipt_book_id": "public-1c2d1e5d8a80f8bc7c3b40d2",
+            "receipt_edition_hash": "1c2d1e5d8a80f8bc7c3b40d259d83f7bf463d3a7157988ed84e2b83dfca3c901",
+            "receipt_key": "e8c2c96a559f27702d719a04bd29019c1798acbd4dd78643f497b372eea503d0",
+            "receipt_source_hash": "8cc870226cb8d272b5d9a1c6fccbf3f063405ba7d1ce3884d1d7d73bf56840de",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-02.txt",
+            "source_hash": "8cc870226cb8d272b5d9a1c6fccbf3f063405ba7d1ce3884d1d7d73bf56840de",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-c5e3b5964cbaa5116962473b",
+            "edition_hash": "c5e3b5964cbaa5116962473b1bb45949f75cd1818c1f8605279da39170b4b8dc",
+            "receipt_book_id": "public-c5e3b5964cbaa5116962473b",
+            "receipt_edition_hash": "c5e3b5964cbaa5116962473b1bb45949f75cd1818c1f8605279da39170b4b8dc",
+            "receipt_key": "05570d2210a9d293db09c013d4a94dc017d9be192de1dc6f672b45394611a10a",
+            "receipt_source_hash": "68fd009b499dd4d17e6680601ff48e5db01e98b507cd3d5e98ad384e1931bb55",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-03.txt",
+            "source_hash": "68fd009b499dd4d17e6680601ff48e5db01e98b507cd3d5e98ad384e1931bb55",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-2b10f3a612528955768a263f",
+            "edition_hash": "2b10f3a612528955768a263f0d7a5b1d417582dbe1957b9c61385e135e713997",
+            "receipt_book_id": "public-2b10f3a612528955768a263f",
+            "receipt_edition_hash": "2b10f3a612528955768a263f0d7a5b1d417582dbe1957b9c61385e135e713997",
+            "receipt_key": "3777cc0aab9f1d9893b51634403d042fb8c68a97aabbb24d2c20129d5af4643a",
+            "receipt_source_hash": "7906be94374a70c545adbeac0500f535c96bfa9881e3e7be25b487bdc4828077",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-04.txt",
+            "source_hash": "7906be94374a70c545adbeac0500f535c96bfa9881e3e7be25b487bdc4828077",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-1750a53c1eeffbf85e56d735",
+            "edition_hash": "1750a53c1eeffbf85e56d7352a51b3333577de5404faf5e987e34cf14ef18eb0",
+            "receipt_book_id": "public-1750a53c1eeffbf85e56d735",
+            "receipt_edition_hash": "1750a53c1eeffbf85e56d7352a51b3333577de5404faf5e987e34cf14ef18eb0",
+            "receipt_key": "a823981490eae1258d1b739807d0fc7ace5d42779cd5a182d18734e409c7dc2e",
+            "receipt_source_hash": "0047c085e729e382c80ccb016f4ca4d8e1eece36292bbf97f2cc79a2acaa511c",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-05.txt",
+            "source_hash": "0047c085e729e382c80ccb016f4ca4d8e1eece36292bbf97f2cc79a2acaa511c",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-36142a574604222f46946e63",
+            "edition_hash": "36142a574604222f46946e637d6d44bd9e1b217e3b2cea698d9e80e8709f71bf",
+            "receipt_book_id": "public-36142a574604222f46946e63",
+            "receipt_edition_hash": "36142a574604222f46946e637d6d44bd9e1b217e3b2cea698d9e80e8709f71bf",
+            "receipt_key": "2d29f2bc8079c2494f670ab4c2f6d51ee5f6349ec20d14f7b78f32a96d69aab1",
+            "receipt_source_hash": "b786c080fd803193b7fc003d45f46f6c9aee6aaafd466d3e74151a7eff858e28",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-06.txt",
+            "source_hash": "b786c080fd803193b7fc003d45f46f6c9aee6aaafd466d3e74151a7eff858e28",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-138bb6b30d41a6a26a4335e9",
+            "edition_hash": "138bb6b30d41a6a26a4335e976ee218bbadb094054e2944ba309223a209b58f1",
+            "receipt_book_id": "public-138bb6b30d41a6a26a4335e9",
+            "receipt_edition_hash": "138bb6b30d41a6a26a4335e976ee218bbadb094054e2944ba309223a209b58f1",
+            "receipt_key": "69a22fba09fccc9b79288eb923c186ce2c80a0fff236e3e1aa2aff5b4190cf5d",
+            "receipt_source_hash": "d00f2f6febe572ffdc3fa7fba09cbaacd8da8bb09432c07fe85b607a49adbc2c",
+            "receipt_status": "succeeded",
+            "relative_path": "scan/经部/TASK-0504-LIVE-scan-07.txt",
+            "source_hash": "d00f2f6febe572ffdc3fa7fba09cbaacd8da8bb09432c07fe85b607a49adbc2c",
+            "source_kind": "maintenance_scan",
+            "source_scope": "task0504"
+          },
+          {
+            "book_id": "public-1b88a1ea85309b75aeab720e",
+            "edition_hash": "1b88a1ea85309b75aeab720ea1c8794b1db6eea843619685b860971b94e710f8",
+            "receipt_book_id": "public-1b88a1ea85309b75aeab720e",
+            "receipt_edition_hash": "1b88a1ea85309b75aeab720ea1c8794b1db6eea843619685b860971b94e710f8",
+            "receipt_key": "81ae4c593532d4cffc8e165e4f07f7f4d05e4e55aafa3116a458c134c69311b4",
+            "receipt_source_hash": "3d4b93734a0573c735d127ae1721bc2a0525a373187dc6f1973ffac93191ce3b",
+            "receipt_status": "succeeded",
+            "relative_path": "personal-f1096c55cd74bc7795d6517b82806afa45b75965ca4d3326e72ef7856e11809d.txt",
+            "source_hash": "3d4b93734a0573c735d127ae1721bc2a0525a373187dc6f1973ffac93191ce3b",
+            "source_kind": "personal_cloud",
+            "source_scope": "personal-cloud"
+          }
+        ],
+        "packageHashes": [
+          "00d005561de8926aaf4f876c43e7c451b35cf6bae713443ed54bb6f04eb6251d",
+          "1736f6032782646f5d46ef9e047743d24cabd92ad6bd1e398556555705c5a8bb",
+          "24fb56f96f7504c95c7e2f0ce9116ceb7016cee16718efacee83403447650db6",
+          "2eb230d35e9b5e9a9517045aff97a692803b9b61f3218437c9472d5d782e3b21",
+          "30d1ce57f149f08730151c5acdcccd9d73beae74dfe3a372df20e32e45fc870f",
+          "34e2f7502924f87ad6126610f935308d1efbe70cbc005bead2c80bd8a12023ea",
+          "36cc1453ff63c8eb1db3de934930faee6a67e6428361b0fa78fe16022ae40f1f",
+          "5b2c2e37218caee90040ed2c04e38fc7dfcf61b7a1aa86ba8bf6f787e60ec8da",
+          "5f200f2e9485cfd30c580b324fb8a88e53e19113b0199ce1c927355ef9e11ac5",
+          "64fc5f855aee15ce86116b8c53b9755b456c95398a653e274942b636b3e3ae57",
+          "66a5e0104a954c736fbaaf5d2b31243121dfa2ddc795520a849f3ddae2a26a10",
+          "7a472c2c908d4c5a102d02df3b76228ee1288376824e879816a23d9b7e7905aa",
+          "836733d43404dee54a8da6768905a5e4c237ebdc8b41d671b2477a382112b064",
+          "83a6ea0561b90d27bdae96ce57a36d872c483964a702e3adc7ba33ffe426a341",
+          "8f4825c55ff9c9fc136366a5261f5701babb156e7321d9777668b19c699a1763",
+          "9eb760f7e0c7f973a6dbf080ef9e2b33fbee4a7f8e82f716be635b1592b29780",
+          "ad3ef7483b3a84319a593a66eb025ed5ed97bd1456cfa54fdc17d3bd3a098e43",
+          "b19772eb1f4b6712e386d9ff41ad8349a42a0dc8e3810b3d9a4a870211282e32",
+          "b1ff1e72965c9832b5cf80a19189772397715fd71e622aaac7774bd9f1f2e5a7",
+          "c8e637f880bf2807ab783b608ddd00c1f59f2a7230c7354e273994ce00b53f2e",
+          "cf9fd00960f02221904e1c6d4d16cf1216f4f6cd5e7b67f28466e6c7d987572b",
+          "d85db6446d9db3c4e5c12133bd5b8fea4e47dd141c596a8d3e2cff6bc21a5c22",
+          "d89e13bad7888dcea750371e6b86d12de3e49f246a04b45092be6f987ae1b91d",
+          "d9796ef2c1d1e3c2ce55e8de3c6a8f8da7c5f44032423edc2ef8249382b7e681",
+          "e3a894614445a0f819c12d3c02d0d9a84f150ea22270c18785f8762e2844c9f2",
+          "fc7a9ec72b4b84310347feaacc451984e3f4af3948e108909ee463b15c139214"
+        ],
+        "revision": 27,
+        "integrityOk": true,
+        "foreignKeyViolations": 0
+      },
+      "publicBlobFacts": {
+        "entries": [
+          {
+            "path": "00d005561de8926aaf4f876c43e7c451b35cf6bae713443ed54bb6f04eb6251d",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486120222383",
+            "sha256": "00d005561de8926aaf4f876c43e7c451b35cf6bae713443ed54bb6f04eb6251d"
+          },
+          {
+            "path": "1736f6032782646f5d46ef9e047743d24cabd92ad6bd1e398556555705c5a8bb",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769485021895963",
+            "sha256": "1736f6032782646f5d46ef9e047743d24cabd92ad6bd1e398556555705c5a8bb"
+          },
+          {
+            "path": "24fb56f96f7504c95c7e2f0ce9116ceb7016cee16718efacee83403447650db6",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486136027350",
+            "sha256": "24fb56f96f7504c95c7e2f0ce9116ceb7016cee16718efacee83403447650db6"
+          },
+          {
+            "path": "2eb230d35e9b5e9a9517045aff97a692803b9b61f3218437c9472d5d782e3b21",
+            "type": "file",
+            "size": "949",
+            "mode": 420,
+            "mtimeNs": "1786769484039487453",
+            "sha256": "2eb230d35e9b5e9a9517045aff97a692803b9b61f3218437c9472d5d782e3b21"
+          },
+          {
+            "path": "30d1ce57f149f08730151c5acdcccd9d73beae74dfe3a372df20e32e45fc870f",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486046669398",
+            "sha256": "30d1ce57f149f08730151c5acdcccd9d73beae74dfe3a372df20e32e45fc870f"
+          },
+          {
+            "path": "34e2f7502924f87ad6126610f935308d1efbe70cbc005bead2c80bd8a12023ea",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486127047904",
+            "sha256": "34e2f7502924f87ad6126610f935308d1efbe70cbc005bead2c80bd8a12023ea"
+          },
+          {
+            "path": "36cc1453ff63c8eb1db3de934930faee6a67e6428361b0fa78fe16022ae40f1f",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769484975263856",
+            "sha256": "36cc1453ff63c8eb1db3de934930faee6a67e6428361b0fa78fe16022ae40f1f"
+          },
+          {
+            "path": "5b2c2e37218caee90040ed2c04e38fc7dfcf61b7a1aa86ba8bf6f787e60ec8da",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769484975250480",
+            "sha256": "5b2c2e37218caee90040ed2c04e38fc7dfcf61b7a1aa86ba8bf6f787e60ec8da"
+          },
+          {
+            "path": "5f200f2e9485cfd30c580b324fb8a88e53e19113b0199ce1c927355ef9e11ac5",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769485008143752",
+            "sha256": "5f200f2e9485cfd30c580b324fb8a88e53e19113b0199ce1c927355ef9e11ac5"
+          },
+          {
+            "path": "64fc5f855aee15ce86116b8c53b9755b456c95398a653e274942b636b3e3ae57",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769484993533455",
+            "sha256": "64fc5f855aee15ce86116b8c53b9755b456c95398a653e274942b636b3e3ae57"
+          },
+          {
+            "path": "66a5e0104a954c736fbaaf5d2b31243121dfa2ddc795520a849f3ddae2a26a10",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486073672651",
+            "sha256": "66a5e0104a954c736fbaaf5d2b31243121dfa2ddc795520a849f3ddae2a26a10"
+          },
+          {
+            "path": "7a472c2c908d4c5a102d02df3b76228ee1288376824e879816a23d9b7e7905aa",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486102417493",
+            "sha256": "7a472c2c908d4c5a102d02df3b76228ee1288376824e879816a23d9b7e7905aa"
+          },
+          {
+            "path": "836733d43404dee54a8da6768905a5e4c237ebdc8b41d671b2477a382112b064",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769484993519664",
+            "sha256": "836733d43404dee54a8da6768905a5e4c237ebdc8b41d671b2477a382112b064"
+          },
+          {
+            "path": "83a6ea0561b90d27bdae96ce57a36d872c483964a702e3adc7ba33ffe426a341",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486142807997",
+            "sha256": "83a6ea0561b90d27bdae96ce57a36d872c483964a702e3adc7ba33ffe426a341"
+          },
+          {
+            "path": "8f4825c55ff9c9fc136366a5261f5701babb156e7321d9777668b19c699a1763",
+            "type": "file",
+            "size": "969",
+            "mode": 420,
+            "mtimeNs": "1786769489108249832",
+            "sha256": "8f4825c55ff9c9fc136366a5261f5701babb156e7321d9777668b19c699a1763"
+          },
+          {
+            "path": "9eb760f7e0c7f973a6dbf080ef9e2b33fbee4a7f8e82f716be635b1592b29780",
+            "type": "file",
+            "size": "729",
+            "mode": 420,
+            "mtimeNs": "1786769490491496204",
+            "sha256": "9eb760f7e0c7f973a6dbf080ef9e2b33fbee4a7f8e82f716be635b1592b29780"
+          },
+          {
+            "path": "ad3ef7483b3a84319a593a66eb025ed5ed97bd1456cfa54fdc17d3bd3a098e43",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486064394038",
+            "sha256": "ad3ef7483b3a84319a593a66eb025ed5ed97bd1456cfa54fdc17d3bd3a098e43"
+          },
+          {
+            "path": "b19772eb1f4b6712e386d9ff41ad8349a42a0dc8e3810b3d9a4a870211282e32",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486055686468",
+            "sha256": "b19772eb1f4b6712e386d9ff41ad8349a42a0dc8e3810b3d9a4a870211282e32"
+          },
+          {
+            "path": "b1ff1e72965c9832b5cf80a19189772397715fd71e622aaac7774bd9f1f2e5a7",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486025921915",
+            "sha256": "b1ff1e72965c9832b5cf80a19189772397715fd71e622aaac7774bd9f1f2e5a7"
+          },
+          {
+            "path": "c8e637f880bf2807ab783b608ddd00c1f59f2a7230c7354e273994ce00b53f2e",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486111535230",
+            "sha256": "c8e637f880bf2807ab783b608ddd00c1f59f2a7230c7354e273994ce00b53f2e"
+          },
+          {
+            "path": "cf9fd00960f02221904e1c6d4d16cf1216f4f6cd5e7b67f28466e6c7d987572b",
+            "type": "file",
+            "size": "741",
+            "mode": 420,
+            "mtimeNs": "1786769485008173169",
+            "sha256": "cf9fd00960f02221904e1c6d4d16cf1216f4f6cd5e7b67f28466e6c7d987572b"
+          },
+          {
+            "path": "d85db6446d9db3c4e5c12133bd5b8fea4e47dd141c596a8d3e2cff6bc21a5c22",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486092505544",
+            "sha256": "d85db6446d9db3c4e5c12133bd5b8fea4e47dd141c596a8d3e2cff6bc21a5c22"
+          },
+          {
+            "path": "d89e13bad7888dcea750371e6b86d12de3e49f246a04b45092be6f987ae1b91d",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486014685463",
+            "sha256": "d89e13bad7888dcea750371e6b86d12de3e49f246a04b45092be6f987ae1b91d"
+          },
+          {
+            "path": "d9796ef2c1d1e3c2ce55e8de3c6a8f8da7c5f44032423edc2ef8249382b7e681",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486038654831",
+            "sha256": "d9796ef2c1d1e3c2ce55e8de3c6a8f8da7c5f44032423edc2ef8249382b7e681"
+          },
+          {
+            "path": "e3a894614445a0f819c12d3c02d0d9a84f150ea22270c18785f8762e2844c9f2",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486151827025",
+            "sha256": "e3a894614445a0f819c12d3c02d0d9a84f150ea22270c18785f8762e2844c9f2"
+          },
+          {
+            "path": "fc7a9ec72b4b84310347feaacc451984e3f4af3948e108909ee463b15c139214",
+            "type": "file",
+            "size": "739",
+            "mode": 420,
+            "mtimeNs": "1786769486083452432",
+            "sha256": "fc7a9ec72b4b84310347feaacc451984e3f4af3948e108909ee463b15c139214"
+          }
+        ],
+        "sha256": "aa7c385a286f8f30196b7dd26aa1e442949cb1f025f0b64b2bcd82a58b1f976f"
+      },
+      "browserChannel": "chrome",
+      "runnerMode": "production",
+      "productStageMarkerCount": 1,
+      "productStageEntered": true,
+      "productObservation": {
+        "baselineBookCount": 25,
+        "pageOneCount": 24,
+        "pageTwoCount": 1,
+        "scanCreatedCount": 16,
+        "folderCreatedCount": 7,
+        "directCreatedCount": 1,
+        "personalCreatedCount": 1,
+        "oldBooksRevisionRejected": true,
+        "oldFacetRevisionsRejected": 3,
+        "offlineChaptersRead": 2,
+        "personalBrowserFactsUnchanged": true
+      },
+      "productObservationValid": true,
+      "evidenceRecordsValid": true,
+      "strategy": {
+        "maintenanceDirectoryBooks": 16,
+        "browserFolderBooks": 7,
+        "directFileBooks": 1,
+        "verifiedPersonalCloudBooks": 1,
+        "baselineBookCount": 25,
+        "pageSize": 24,
+        "browserChannel": "chrome",
+        "runnerMode": "production",
+        "publicPrivateIsolation": true,
+        "sourceTreeReadOnly": true
+      }
+    },
+    "recordVerification": {
+      "valid": true,
+      "checkedCount": 14,
+      "failures": []
+    }
+  },
+  "boundary": "仅证明 TASK-0504 公共藏书扩张候选的本轮 ATTEMPT；不证明 EVID-56/58 FINAL、TASK-0505/0506、PHASE-05 整体、VPS 部署或 Goal complete。"
+}

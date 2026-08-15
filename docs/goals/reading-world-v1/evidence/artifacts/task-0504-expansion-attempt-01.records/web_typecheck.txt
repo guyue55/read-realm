@@ -1,0 +1,14 @@
+$ corepack pnpm --filter web-pwa exec tsc --noEmit
+started_at=2026-08-15T04:50:40.474Z
+ended_at=2026-08-15T04:50:42.042Z
+duration_ms=1568
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+[stderr]

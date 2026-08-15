@@ -1,0 +1,14 @@
+$ git diff --check
+started_at=2026-08-15T04:50:20.895Z
+ended_at=2026-08-15T04:50:20.903Z
+duration_ms=8
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+[stderr]

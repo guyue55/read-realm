@@ -1,0 +1,25 @@
+$ corepack pnpm --filter api test -- --runInBand
+started_at=2026-08-15T04:50:21.233Z
+ended_at=2026-08-15T04:50:24.944Z
+duration_ms=3711
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+
+> api@0.0.1 test ./apps/api
+> jest "--runInBand"
+
+[stderr]
+
+Test Suites: 22 passed, 22 total
+Tests:       141 passed, 141 total
+Snapshots:   0 total
+Time:        3.162 s, estimated 5 s
+Ran all test suites.
+
