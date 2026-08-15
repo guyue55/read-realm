@@ -14,6 +14,7 @@ import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
+import { createPortal } from "react-dom";
 import { GestureRecognizer } from "@reader/gesture-core";
 import {
   ChevronLeft,
@@ -41,6 +42,7 @@ const recognizer = new GestureRecognizer();
 export function ReaderDefault({ bookId }: { bookId: string }) {
   const router = useVirtualRouter();
   const mainRef = useRef<HTMLDivElement>(null);
+  const readerCanvasRef = useRef<HTMLDivElement | null>(null);
   const paginatedReaderRef = useRef<PaginatedReaderHandle>(null);
   const {
     chapter,
@@ -94,6 +96,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     addBookmarkWithNote,
     showToast,
     clearAiSession,
+    prepareViewportLayoutRestore,
     error,
     regrantPermission,
     sourceFolderId,
@@ -114,15 +117,26 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     immersiveIndicator: 12,
   });
   const mobileRootRef = useRef<HTMLDivElement>(null);
+  const viewportModeRef = useRef<boolean | null>(null);
   const paginationTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 768px)");
-    const syncViewport = () => setIsDesktopViewport(media.matches);
+    const syncViewport = () => {
+      const nextDesktop = media.matches;
+      if (
+        viewportModeRef.current !== null &&
+        viewportModeRef.current !== nextDesktop
+      ) {
+        prepareViewportLayoutRestore(isPagination ? "pagination" : "scroll");
+      }
+      viewportModeRef.current = nextDesktop;
+      setIsDesktopViewport(nextDesktop);
+    };
     syncViewport();
     media.addEventListener("change", syncViewport);
     return () => media.removeEventListener("change", syncViewport);
-  }, []);
+  }, [isPagination, prepareViewportLayoutRestore]);
 
   useEffect(() => {
     if (activePanel === "progress") {
@@ -174,7 +188,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       window.removeEventListener("resize", measureChrome);
       window.visualViewport?.removeEventListener("resize", measureChrome);
     };
-  }, [isDesktopViewport]);
+  }, [chapter?.id, isDesktopViewport]);
 
   // 🏮 分页模式下将 contentRef 指向 PaginatedReader 内部的 scroll 容器
   useEffect(() => {
@@ -316,31 +330,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     };
   }, [handleMouseOrTouchUp]);
 
-  const setActiveContentRef = useCallback(
-    (node: HTMLDivElement | null, target: "desktop" | "mobile") => {
-      if (!node || typeof window === "undefined") return;
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      if ((target === "desktop" && isDesktop) || (target === "mobile" && !isDesktop)) {
-        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-      }
-    },
-    [contentRef],
-  );
+  const setReaderCanvasRef = useCallback((node: HTMLDivElement | null) => {
+    readerCanvasRef.current = node;
+    (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [contentRef]);
 
   useLayoutEffect(() => {
-    const updateActiveRef = () => {
-      if (!mainRef.current) return;
-      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-      const selector = `[data-reader-content-canvas="${isDesktop ? "desktop" : "mobile"}"]`;
-      const container = mainRef.current.querySelector(selector) as HTMLDivElement | null;
-      if (container) {
-        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = container;
-      }
-    };
-
-    updateActiveRef();
-    window.addEventListener("resize", updateActiveRef);
-    return () => window.removeEventListener("resize", updateActiveRef);
+    if (!isPagination && readerCanvasRef.current) {
+      (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = readerCanvasRef.current;
+    }
   }, [contentRef, isPagination]);
 
   const handleMobileReaderClick = useCallback(
@@ -577,236 +575,63 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         </div>
       )}
 
-      {/* 
-        Desktop Workspace Container 
-        Matching SVG Max-width ~1372px (92 + 240 + 700 + 338 = 1370)
-      */}
-      <div
-        className="hidden md:flex w-full h-[calc(100vh-64px)] max-w-[1372px] rounded-[12px] border shadow-sm overflow-hidden relative"
-        style={{
-          backgroundColor: currentThemeColors.bg,
-          color: currentThemeColors.text,
-          borderColor: borderColor,
-        }}
-      >
-        {/* Reader Canvas (Flex-1) */}
-        <div className="flex-1 flex flex-col min-w-0 bg-transparent relative h-full">
+      {isDesktopViewport !== null && (
+        <div
+          ref={mobileRootRef}
+          data-reader-viewport-root={isDesktopViewport ? "desktop" : "mobile"}
+          className={isDesktopViewport
+            ? "relative flex h-[calc(100vh-64px)] w-full max-w-[1372px] flex-col overflow-hidden rounded-[12px] border shadow-sm"
+            : "reader-mobile-root absolute inset-0 flex h-full w-full flex-col"}
+          style={{
+            backgroundColor: currentThemeColors.bg,
+            color: currentThemeColors.text,
+            borderColor,
+            "--reader-mobile-content-top": `${activeMobileInsets.top}px`,
+            "--reader-mobile-content-bottom": `${activeMobileInsets.bottom}px`,
+          } as React.CSSProperties}
+        >
           <ReaderTopBar
             title={chapter.title}
-            isVisible={true}
-            isDesktop={true}
+            isVisible={isDesktopViewport || showMenu}
+            isDesktop={isDesktopViewport}
+            isDark={isDark}
             progress={readingProgress}
             currentChapterIndex={chapter.index}
             totalChapters={toc.length}
             onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
             onBookmark={addBookmark}
             onSettings={() => togglePanel("settings")}
-            onToggleToc={() => togglePanel("toc")}
-            onToggleAi={() => {
-              togglePanel("ai");
-              handleSummarize();
-            }}
+            onToggleToc={isDesktopViewport ? () => togglePanel("toc") : undefined}
+            onToggleAi={isDesktopViewport ? () => void handleSummarize() : undefined}
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
             backgroundDisabled={Boolean(activePanel || showNoteDialog)}
           />
+
           <div
-            ref={(node) => setActiveContentRef(node, "desktop")}
-            data-reader-content-canvas="desktop"
-            inert={activePanel === "settings" || showNoteDialog ? true : undefined}
+            ref={setReaderCanvasRef}
+            data-reader-content-canvas={isDesktopViewport ? "desktop" : "mobile"}
+            data-page-mode={isPagination ? "pagination" : "scroll"}
+            inert={activePanel || showNoteDialog ? true : undefined}
             tabIndex={-1}
             onClick={handleMobileReaderClick}
-            className={`flex-1 relative reader-gpu-accelerated ${
-              isPagination
-                ? "overflow-hidden"
-                : "overflow-y-auto overflow-x-hidden"
+            onTouchStart={handleVisibleTouchStart}
+            onTouchEnd={handleVisibleTouchEnd}
+            className={`${isDesktopViewport ? "" : "reader-mobile-canvas"} relative flex-1 overflow-x-hidden reader-gpu-accelerated ${
+              isPagination && isDesktopViewport ? "overflow-hidden" : "overflow-y-auto"
             } transition-all duration-300 ease-out ${
               isPagination || isPositionRestored
-                ? "opacity-100 blur-0 scale-100"
-                : "opacity-0 blur-md scale-[0.995] pointer-events-none"
+                ? "opacity-100 blur-0"
+                : "pointer-events-none opacity-0 blur-md"
             }`}
             style={{
-              scrollBehavior: isPagination ? "auto" : "smooth",
+              scrollBehavior: isPagination && isDesktopViewport ? "auto" : "smooth",
               overflowAnchor: isPagination ? "auto" : "none",
             }}
           >
-            {/* 🏮 高级常驻侧栏展示时，点击 Canvas 内容区域自动优雅折叠收起遮罩 */}
-            {activePanel && (activePanel === "toc" || activePanel === "ai") && (
-              <div 
-                className="absolute inset-0 z-30 bg-black/5 dark:bg-black/20 backdrop-blur-[0.5px] transition-opacity cursor-pointer"
-                onClick={() => setActivePanel(null)}
-              />
-            )}
-
-            {/* 🏮 左侧绝对定位磨砂 TOC 面板，完美规避 Canvas 多栏排版重绘与抖动 */}
-            <ReaderDialogSurface
-              open={activePanel === "toc" && isDesktopViewport === true}
-              label="阅读目录"
-              onClose={() => setActivePanel(null)}
-              fallbackFocus={() => contentRef.current}
-              className={`reader-panel-motion absolute left-0 top-0 bottom-0 z-40 w-[260px] border-r overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
-                activePanel === "toc" ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 border-r-0"
-              }`}
-              style={{ borderColor: borderColor }}
-            >
-              <div className="w-[260px] h-full">
-                <TocDrawer
-                  toc={toc}
-                  bookmarks={bookmarks}
-                  currentChapterIndex={chapter.index}
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  onJumpToChapter={jumpToChapter}
-                  onJumpToBookmark={jumpToBookmark}
-                  isMobileDrawer={false}
-                  onClose={() => setActivePanel(null)}
-                />
-              </div>
-            </ReaderDialogSurface>
-
-            {/* 🏮 右侧绝对定位磨砂 AI 伴读面板，完美规避 Canvas 多栏排版重绘与抖动 */}
-            <ReaderDialogSurface
-              open={activePanel === "ai" && isDesktopViewport === true}
-              label="伴读"
-              onClose={() => setActivePanel(null)}
-              fallbackFocus={() => contentRef.current}
-              className={`reader-panel-motion absolute right-0 top-0 bottom-0 z-40 w-[340px] border-l overflow-hidden bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md ${
-                activePanel === "ai" ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 border-l-0"
-              }`}
-              style={{ borderColor: borderColor }}
-            >
-              <div className="w-[340px] h-full">
-                <AIReaderPanel
-                  isAiLoading={isAiLoading}
-                  aiSummary={aiSummary}
-                  isMobileDrawer={false}
-                  isDark={isDark}
-                  onClose={() => setActivePanel(null)}
-                  aiInput={aiInput}
-                  setAiInput={setAiInput}
-                  onAsk={handleAsk}
-                  onIntent={handleSummarize}
-                  onClearSession={async () => {
-                    await clearAiSession();
-                    setAiInput("");
-                  }}
-                />
-              </div>
-            </ReaderDialogSurface>
-
             {isPagination ? (
-              isDesktopViewport === true ? (
-                <PaginatedReader
-                  key={`desktop-${chapter.id}`}
-                  ref={paginatedReaderRef}
-                  title={chapter.title}
-                  content={chapter.content}
-                  isDark={isDark}
-                  fontSize={settings.fontSize}
-                  lineHeight={settings.lineHeight}
-                  fontFamily={settings.fontFamily || "kaiti"}
-                  paragraphSpacing={settings.paragraphSpacing ?? 16}
-                  letterSpacing={settings.letterSpacing ?? 0.03}
-                  initialAnchor={paginationAnchor?.chapterIndex === chapter.index ? paginationAnchor : undefined}
-                  onAnchorChange={savePaginationAnchor}
-                  onBoundaryNext={handleNext}
-                  onBoundaryPrev={handlePrev}
-                />
-              ) : null
-            ) : isDesktopViewport === true ? (
-              renderedChapters.map((ch) => (
-                <div
-                  key={ch.id}
-                  className="chapter-container mx-auto px-6 pt-12 pb-[60px] md:px-12 border-b border-[rgba(80,65,45,0.08)] last:border-b-0"
-                  data-chapter-index={ch.index}
-                  style={{
-                    maxWidth: `${readerTokens.layout.desktopContentMaxWidth}px`,
-                  }}
-                >
-                  <ReaderContent
-                    title={ch.title}
-                    content={ch.content}
-                    isDark={isDark}
-                    isPagination={isPagination}
-                    buttonVariant="default"
-                    onPrev={undefined}
-                    onNext={undefined}
-                    style={{
-                      fontSize: `${settings.fontSize}px`,
-                      lineHeight: settings.lineHeight,
-                      columnWidth: "auto",
-                      columnGap: "48px",
-                      height: "auto",
-                      "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-                      "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-                      "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-                    } as React.CSSProperties}
-                    titleClassName="text-3xl font-bold mb-10 font-serif text-center"
-                    titleStyle={{ color: currentThemeColors.text }}
-                  />
-                </div>
-              ))
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* 
-        Mobile View Container (md:hidden) 
-      */}
-      <div
-        ref={mobileRootRef}
-        className="reader-mobile-root md:hidden absolute inset-0 flex flex-col w-full h-full"
-        style={{
-          backgroundColor: currentThemeColors.bg,
-          color: currentThemeColors.text,
-          "--reader-mobile-content-top": `${activeMobileInsets.top}px`,
-          "--reader-mobile-content-bottom": `${activeMobileInsets.bottom}px`,
-        } as React.CSSProperties}
-      >
-        {/* Mobile Top Toolbar Overlay */}
-        <ReaderTopBar
-          title={chapter.title}
-          isVisible={showMenu}
-          isDesktop={false}
-          isDark={isDark}
-          progress={readingProgress}
-          currentChapterIndex={chapter.index}
-          totalChapters={toc.length}
-          onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
-          onBookmark={addBookmark}
-          onSettings={() => togglePanel("settings")}
-          backgroundDisabled={Boolean(activePanel || showNoteDialog)}
-        />
-
-        {/* Scrollable / Paginable Content Canvas */}
-        <div
-          ref={(node) => setActiveContentRef(node, "mobile")}
-          data-reader-content-canvas="mobile"
-          data-page-mode={isPagination ? "pagination" : "scroll"}
-          inert={activePanel || showNoteDialog ? true : undefined}
-          tabIndex={-1}
-          onClick={handleMobileReaderClick}
-          onTouchStart={handleVisibleTouchStart}
-          onTouchEnd={handleVisibleTouchEnd}
-          className={`reader-mobile-canvas flex-1 relative reader-gpu-accelerated ${
-            isPagination
-              ? "overflow-y-auto overflow-x-hidden"
-              : "overflow-y-auto overflow-x-hidden"
-          } transition-all duration-300 ease-out ${
-            isPositionRestored
-              ? "opacity-100 blur-0"
-              : "opacity-0 blur-md pointer-events-none"
-          }`}
-          style={{
-            scrollBehavior: "smooth",
-            overflowAnchor: isPagination ? "auto" : "none",
-          }}
-        >
-          {isPagination ? (
-            isDesktopViewport === false ? (
               <PaginatedReader
-                key={`mobile-${chapter.id}`}
+                key={chapter.id}
                 ref={paginatedReaderRef}
                 title={chapter.title}
                 content={chapter.content}
@@ -820,111 +645,191 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 onAnchorChange={savePaginationAnchor}
                 onBoundaryNext={handleNext}
                 onBoundaryPrev={handlePrev}
-                reservedTop={activeMobileInsets.top}
-                reservedBottom={activeMobileInsets.bottom}
-                pageIndicatorInset={activeMobileInsets.indicator}
+                reservedTop={isDesktopViewport ? 48 : activeMobileInsets.top}
+                reservedBottom={isDesktopViewport ? 120 : activeMobileInsets.bottom}
+                pageIndicatorInset={isDesktopViewport ? 16 : activeMobileInsets.indicator}
               />
-            ) : null
-          ) : isDesktopViewport === false ? (
-            renderedChapters.map((ch) => (
-              <div
-                key={ch.id}
-                className="chapter-container mx-auto px-6 border-b border-[rgba(80,65,45,0.08)] last:border-b-0"
-                data-chapter-index={ch.index}
-                style={{
-                  maxWidth: `${readerTokens.layout.tabletContentMaxWidth}px`,
-                }}
-              >
-                <ReaderContent
-                  title={ch.title}
-                  content={ch.content}
-                  isDark={isDark}
-                  isPagination={isPagination}
-                  buttonVariant="default"
-                  onPrev={undefined}
-                  onNext={undefined}
+            ) : (
+              renderedChapters.map((ch) => (
+                <div
+                  key={ch.id}
+                  className={`chapter-container mx-auto border-b border-[rgba(80,65,45,0.08)] px-6 last:border-b-0 ${
+                    isDesktopViewport ? "pb-[60px] pt-12 md:px-12" : ""
+                  }`}
+                  data-chapter-index={ch.index}
                   style={{
-                    fontSize: `${settings.fontSize}px`,
-                    lineHeight: settings.lineHeight,
-                    columnWidth: "auto",
-                    columnGap: "48px",
-                    height: "auto",
-                    "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-                    "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-                    "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-                  } as React.CSSProperties}
-                  titleClassName="text-2xl font-bold mb-8 font-serif"
-                />
-              </div>
-            ))
-          ) : null}
+                    maxWidth: `${isDesktopViewport
+                      ? readerTokens.layout.desktopContentMaxWidth
+                      : readerTokens.layout.tabletContentMaxWidth}px`,
+                  }}
+                >
+                  <ReaderContent
+                    title={ch.title}
+                    content={ch.content}
+                    isDark={isDark}
+                    isPagination={false}
+                    buttonVariant="default"
+                    onPrev={undefined}
+                    onNext={undefined}
+                    style={{
+                      fontSize: `${settings.fontSize}px`,
+                      lineHeight: settings.lineHeight,
+                      columnWidth: "auto",
+                      columnGap: "48px",
+                      height: "auto",
+                      "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+                      "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+                      "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
+                    } as React.CSSProperties}
+                    titleClassName={isDesktopViewport
+                      ? "mb-10 text-center font-serif text-3xl font-bold"
+                      : "mb-8 font-serif text-2xl font-bold"}
+                    titleStyle={isDesktopViewport ? { color: currentThemeColors.text } : undefined}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+
+          {!isDesktopViewport && (
+            <ReaderBottomBar
+              isVisible={showMenu}
+              activePanel={activePanel}
+              isDark={isDark}
+              progress={readingProgress}
+              onToggleToc={() => togglePanel("toc")}
+              onToggleProgress={() => togglePanel("progress")}
+              onToggleAi={() => void handleSummarize()}
+              onToggleSettings={() => togglePanel("settings")}
+              onToggleNightMode={handleNightModeToggle}
+              onBookmark={addBookmark}
+              onPagePrev={handleVisiblePagePrev}
+              onPageNext={handleVisiblePageNext}
+              onSeekProgress={seekToProgress}
+              onPrevChapter={handlePrevChapterActive}
+              onNextChapter={handleNextChapterActive}
+              backgroundDisabled={Boolean(activePanel || showNoteDialog)}
+            />
+          )}
         </div>
+      )}
 
-        {/* Mobile Bottom Bar Overlay */}
-        <ReaderBottomBar
-          isVisible={showMenu}
-          activePanel={activePanel}
-          isDark={isDark}
-          progress={readingProgress}
-          onToggleToc={() => togglePanel("toc")}
-          onToggleProgress={() => togglePanel("progress")}
-          onToggleAi={() => handleSummarize()}
-          onToggleSettings={() => togglePanel("settings")}
-          onToggleNightMode={handleNightModeToggle}
-          onBookmark={addBookmark}
-          onPagePrev={handleVisiblePagePrev}
-          onPageNext={handleVisiblePageNext}
-          onSeekProgress={seekToProgress}
-          onPrevChapter={handlePrevChapterActive}
-          onNextChapter={handleNextChapterActive}
-          backgroundDisabled={Boolean(activePanel || showNoteDialog)}
-        />
-
-        {/* Mobile Settings/Progress Backdrop */}
-        {(activePanel === "settings" || activePanel === "progress") && (
-          <div
-            className="fixed inset-0 z-40 bg-black/20"
-            onClick={() => setActivePanel(null)}
-          />
-        )}
-
-        {/* Settings Sheet */}
-        <ReaderDialogSurface
-          open={activePanel === "settings" && isDesktopViewport === false}
-          label="阅读设置"
-          onClose={() => setActivePanel(null)}
-          fallbackFocus={() => contentRef.current}
-          className="reader-panel-motion fixed bottom-3 inset-x-3 bg-transparent z-50 reader-gpu-accelerated rounded-[24px] overflow-hidden mb-safe shadow-2xl"
-          style={{
-            transform: activePanel === "settings" ? "translateY(0)" : "translateY(calc(100% + 24px))"
-          }}
-        >
-          <SettingsSheet
-            settings={settings}
-            updateFontSize={updateFontSize}
-            updateTheme={updateTheme}
-            updatePageMode={updatePageMode}
-            updateFontFamily={updateFontFamily}
-            updateParagraphSpacing={updateParagraphSpacing}
-            updateLetterSpacing={updateLetterSpacing}
-            updateLineHeight={updateLineHeight}
-            updateAutoFlipAtBottom={updateAutoFlipAtBottom}
-            isMobileSheet={true}
+      {isDesktopViewport !== null && typeof document !== "undefined" && createPortal(
+        <>
+          <ReaderDialogSurface
+            open={activePanel === "toc"}
+            label="阅读目录"
             onClose={() => setActivePanel(null)}
-          />
-        </ReaderDialogSurface>
+            fallbackFocus={() => contentRef.current}
+            className={`reader-panel-motion fixed inset-0 z-50 flex justify-start bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
+            onClick={() => setActivePanel(null)}
+          >
+            <div
+              className={isDesktopViewport
+                ? "h-full w-[320px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                : "h-full w-[280px] max-w-[82vw] overflow-hidden bg-[var(--theme-bg)] shadow-xl"}
+              style={{ backgroundColor: currentThemeColors.bg, borderColor }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <TocDrawer
+                toc={toc}
+                bookmarks={bookmarks}
+                currentChapterIndex={chapter.index}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                onJumpToChapter={jumpToChapter}
+                onJumpToBookmark={jumpToBookmark}
+                isMobileDrawer={!isDesktopViewport}
+                onClose={() => setActivePanel(null)}
+              />
+            </div>
+          </ReaderDialogSurface>
 
-        {/* Progress Sheet */}
-        <ReaderDialogSurface
-          open={activePanel === "progress" && isDesktopViewport === false}
-          label="阅读进度"
-          onClose={() => setActivePanel(null)}
-          fallbackFocus={() => contentRef.current}
-          className={`reader-panel-motion fixed bottom-3 inset-x-3 ${isDark ? "bg-[rgba(35,35,35,0.92)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.92)] text-[#2F2A24]"} backdrop-blur-md z-50 px-5 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl reader-gpu-accelerated rounded-[24px] mb-safe max-h-[60vh] overflow-y-auto`}
-          style={{
-            transform: activePanel === "progress" ? "translateY(0)" : "translateY(calc(100% + 24px))"
-          }}
-        >
+          <ReaderDialogSurface
+            open={activePanel === "ai"}
+            label="伴读"
+            onClose={() => setActivePanel(null)}
+            fallbackFocus={() => contentRef.current}
+            className={`reader-panel-motion fixed inset-0 z-50 flex justify-end bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
+            onClick={() => setActivePanel(null)}
+          >
+            <div
+              className={isDesktopViewport
+                ? "h-full w-[360px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                : "h-full w-[300px] max-w-[88vw] overflow-hidden bg-[var(--theme-bg)] shadow-xl"}
+              style={{ backgroundColor: currentThemeColors.bg, borderColor }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <AIReaderPanel
+                isAiLoading={isAiLoading}
+                aiSummary={aiSummary}
+                isMobileDrawer={!isDesktopViewport}
+                isDark={isDark}
+                onClose={() => setActivePanel(null)}
+                aiInput={aiInput}
+                setAiInput={setAiInput}
+                onAsk={handleAsk}
+                onIntent={handleSummarize}
+                onClearSession={async () => {
+                  await clearAiSession();
+                  setAiInput("");
+                }}
+              />
+            </div>
+          </ReaderDialogSurface>
+
+          <ReaderDialogSurface
+            open={activePanel === "settings"}
+            label="阅读设置"
+            onClose={() => setActivePanel(null)}
+            fallbackFocus={() => contentRef.current}
+            className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
+              isDesktopViewport
+                ? "items-center justify-center p-4"
+                : "items-end p-3"
+            }`}
+            onClick={() => setActivePanel(null)}
+          >
+            <div
+              className={isDesktopViewport
+                ? ""
+                : "mb-safe w-full overflow-hidden rounded-[24px] shadow-2xl"}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <SettingsSheet
+                settings={settings}
+                updateFontSize={updateFontSize}
+                updateTheme={updateTheme}
+                updatePageMode={updatePageMode}
+                updateFontFamily={updateFontFamily}
+                updateParagraphSpacing={updateParagraphSpacing}
+                updateLetterSpacing={updateLetterSpacing}
+                updateLineHeight={updateLineHeight}
+                updateAutoFlipAtBottom={updateAutoFlipAtBottom}
+                isMobileSheet={!isDesktopViewport}
+                onClose={() => setActivePanel(null)}
+              />
+            </div>
+          </ReaderDialogSurface>
+
+          <ReaderDialogSurface
+            open={activePanel === "progress"}
+            label="阅读进度"
+            onClose={() => setActivePanel(null)}
+            fallbackFocus={() => contentRef.current}
+            className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
+              isDesktopViewport ? "items-center justify-center p-4" : "items-end p-3"
+            }`}
+            onClick={() => setActivePanel(null)}
+          >
+            <div
+              className={`max-h-[70vh] w-full overflow-y-auto rounded-[24px] px-5 pt-6 shadow-2xl backdrop-blur-md ${
+              isDesktopViewport
+                ? "max-w-[560px] pb-6"
+                : "mb-safe pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+              } ${isDark ? "bg-[rgba(35,35,35,0.96)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.96)] text-[#2F2A24]"}`}
+              onClick={(event) => event.stopPropagation()}
+            >
           <div className="flex justify-between items-center mb-4">
             <h3
               className={`font-bold ${isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]"}`}
@@ -1022,96 +927,10 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               {strings.sync.progressRollbackBtn}
             </button>
           </div>
-        </ReaderDialogSurface>
-      </div>
-
-      {/* Shared Drawers (TOC & AI) and Backdrop for both Mobile and Desktop */}
-      {(activePanel === "toc" || activePanel === "ai") && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 md:hidden"
-          onClick={() => setActivePanel(null)}
-        />
-      )}
-
-      {/* TOC Drawer (Shared) */}
-      <ReaderDialogSurface
-        open={activePanel === "toc" && isDesktopViewport === false}
-        label="阅读目录"
-        onClose={() => setActivePanel(null)}
-        fallbackFocus={() => contentRef.current}
-        className="reader-panel-motion fixed inset-y-0 left-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl reader-gpu-accelerated md:hidden"
-        style={{
-          backgroundColor: currentThemeColors.bg,
-          transform: activePanel === "toc" ? "translateX(0)" : "translateX(-100%)"
-        }}
-      >
-        <TocDrawer
-          toc={toc}
-          bookmarks={bookmarks}
-          currentChapterIndex={chapter.index}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onJumpToChapter={jumpToChapter}
-          onJumpToBookmark={jumpToBookmark}
-          isMobileDrawer={true}
-          onClose={() => setActivePanel(null)}
-        />
-      </ReaderDialogSurface>
-
-      {/* AI Drawer (Shared) */}
-      <ReaderDialogSurface
-        open={activePanel === "ai" && isDesktopViewport === false}
-        label="伴读"
-        onClose={() => setActivePanel(null)}
-        fallbackFocus={() => contentRef.current}
-        className="reader-panel-motion fixed inset-y-0 right-0 w-[280px] max-w-[72vw] bg-[var(--theme-bg)] z-50 shadow-xl reader-gpu-accelerated md:hidden"
-        style={{
-          backgroundColor: currentThemeColors.bg,
-          transform: activePanel === "ai" ? "translateX(0)" : "translateX(100%)"
-        }}
-      >
-        <AIReaderPanel
-          isAiLoading={isAiLoading}
-          aiSummary={aiSummary}
-          isMobileDrawer={true}
-          isDark={isDark}
-          onClose={() => setActivePanel(null)}
-          aiInput={aiInput}
-          setAiInput={setAiInput}
-          onAsk={handleAsk}
-          onIntent={handleSummarize}
-          onClearSession={async () => {
-            await clearAiSession();
-            setAiInput("");
-          }}
-        />
-      </ReaderDialogSurface>
-
-      {/* Desktop Settings Modal Overlay */}
-      {activePanel === "settings" && (
-        <ReaderDialogSurface
-          open={isDesktopViewport === true}
-          label="阅读设置"
-          onClose={() => setActivePanel(null)}
-          fallbackFocus={() => contentRef.current}
-          className="hidden md:flex fixed inset-0 z-50 bg-black/20 items-center justify-center"
-          onClick={() => setActivePanel(null)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <SettingsSheet
-              settings={settings}
-              updateFontSize={updateFontSize}
-              updateTheme={updateTheme}
-              updatePageMode={updatePageMode}
-              updateFontFamily={updateFontFamily}
-              updateParagraphSpacing={updateParagraphSpacing}
-              updateLetterSpacing={updateLetterSpacing}
-              updateLineHeight={updateLineHeight}
-              updateAutoFlipAtBottom={updateAutoFlipAtBottom}
-              isMobileSheet={false}
-            />
-          </div>
-        </ReaderDialogSurface>
+            </div>
+          </ReaderDialogSurface>
+        </>,
+        document.body,
       )}
 
       {/* 磨砂玻璃自适应自动换章倒计时胶囊 */}

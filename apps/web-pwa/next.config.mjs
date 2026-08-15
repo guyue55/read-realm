@@ -19,6 +19,10 @@ const isExportMode = process.env.EXPORT_MODE === "true";
 
 const nextConfig = {
   output: isExportMode ? "export" : undefined,
+  devIndicators:
+    process.env.READING_WORLD_DISABLE_DEV_INDICATORS === "1"
+      ? false
+      : undefined,
   images: {
     unoptimized: isExportMode ? true : undefined,
   },

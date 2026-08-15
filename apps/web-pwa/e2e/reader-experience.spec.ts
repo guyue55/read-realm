@@ -32,6 +32,31 @@ async function seedReaderBook(
     content: contentFor(index),
   }));
   await page.goto("/#/library");
+  await expect(page.locator("[data-library-shelf]")).toBeAttached({ timeout: 15_000 });
+  await expect.poll(async () => page.evaluate(async () => {
+    const requiredStores = ["books", "chapters", "progress", "bookmarks"];
+    const databases = await indexedDB.databases();
+    const metadata = databases.find(({ name }) => name === "ReaderDatabase");
+    if (!metadata || (metadata.version ?? 0) < 10) return false;
+
+    return await new Promise<boolean>((resolve) => {
+      const request = indexedDB.open("ReaderDatabase");
+      request.onupgradeneeded = () => {
+        request.transaction?.abort();
+        resolve(false);
+      };
+      request.onsuccess = () => {
+        const database = request.result;
+        const ready = requiredStores.every((name) => (
+          database.objectStoreNames.contains(name)
+        ));
+        database.close();
+        resolve(ready);
+      };
+      request.onerror = () => resolve(false);
+      request.onblocked = () => resolve(false);
+    });
+  }), { timeout: 15_000 }).toBe(true);
   await page.evaluate(async ({ targetBookId, targetPageMode, targetChapters }) => {
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
@@ -775,7 +800,9 @@ test("mobile drawers fall back to the canvas when their toolbar trigger becomes 
     chapterCount: 2,
     contentFor: fixtureContentFor,
   });
+  let aiRequestCount = 0;
   await page.route("**/ai/analyze", async (route) => {
+    aiRequestCount += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -794,6 +821,18 @@ test("mobile drawers fall back to the canvas when their toolbar trigger becomes 
   await expect(page.locator(
     '.reader-mobile-root [data-reader-toolbar][aria-hidden="true"]',
   )).toHaveCount(2);
+  const aiInput = aiDialog.getByPlaceholder("问问 AI 助手...");
+  await aiInput.fill("跨端输入应保留");
+  await aiDialog.evaluate((element) => {
+    element.setAttribute("data-responsive-instance", "retained-ai");
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(aiDialog).toHaveCount(1);
+  await expect(aiDialog).toHaveAttribute("data-responsive-instance", "retained-ai");
+  await expect(aiInput).toHaveValue("跨端输入应保留");
+  expect(aiRequestCount).toBe(1);
+  await page.setViewportSize({ width: 340, height: 732 });
+  await expect(aiInput).toHaveValue("跨端输入应保留");
   await page.keyboard.press("Escape");
   await expect(aiDialog).toBeHidden();
   await expect(canvas).toBeFocused();
@@ -1108,7 +1147,7 @@ test("desktop reader drawers trap focus, close with Escape, and restore their tr
   await expect(tocDialog).toBeHidden();
   await expect(tocTrigger).toBeFocused();
 
-  const aiTrigger = page.getByRole("button", { name: "智能阅读助手" });
+  const aiTrigger = page.getByRole("button", { name: "伴读" });
   await aiTrigger.focus();
   await page.keyboard.press("Enter");
   const aiDialog = page.getByRole("dialog", { name: "伴读" });
@@ -1217,4 +1256,269 @@ test("reader layout stays contained across viewports and reduced motion", async 
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
+});
+
+test("reader keeps one responsive subtree and touch-safe controls across viewport handoff", async ({ page }) => {
+  const bookId = "reader-responsive-single-subtree-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "scroll",
+    chapterCount: 1,
+    contentFor: (chapterIndex) => Array.from({ length: 90 }, (_, paragraphIndex) => (
+      `<p>C${chapterIndex}-P${paragraphIndex} ${"跨宽度语义锚点正文。".repeat(12)}</p>`
+    )).join(""),
+  });
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.goto(`/#/reader/${bookId}`);
+
+  const canvas = page.locator("[data-reader-content-canvas]");
+  await expect(canvas).toHaveCount(1);
+  await expect(page.locator("[data-reader-viewport-root]")).toHaveCount(1);
+  await expect(page.locator('[data-reader-toolbar="top"]')).toHaveCount(1);
+  await expect(page.locator('[data-reader-toolbar="bottom"]')).toHaveCount(1);
+
+  await expect(page.locator('[data-reader-toolbar="bottom"]')).toHaveAttribute(
+    "aria-hidden",
+    "false",
+  );
+  const undersizedMobileControls = await page
+    .locator('[data-reader-toolbar="bottom"] [data-reader-control]:visible')
+    .evaluateAll((controls) => controls.map((control) => {
+      const box = control.getBoundingClientRect();
+      return {
+        label: control.getAttribute("aria-label") ?? control.textContent?.trim(),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      };
+    }).filter(({ width, height }) => width < 44 || height < 44));
+  expect(undersizedMobileControls).toEqual([]);
+
+  const anchorParagraph = canvas.locator('p[data-idx="60"]').first();
+  await expect(anchorParagraph).toBeAttached();
+  await anchorParagraph.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "书签", exact: true })
+    .click();
+  await expect.poll(async () => (await readBookmarks(page, bookId)).length).toBe(1);
+  const [anchorBeforeResize] = await readBookmarks(page, bookId);
+  expect(anchorBeforeResize.paragraphIndex).toBeGreaterThan(10);
+
+  const expectSemanticAnchorVisible = async () => {
+    const retained = page.locator(
+      `[data-reader-content-canvas] [data-chapter-index="${anchorBeforeResize.chapterIndex}"] p[data-idx="${anchorBeforeResize.paragraphIndex}"]`,
+    );
+    await expect(retained).toBeAttached();
+    await expect.poll(() => retained.evaluate((node) => {
+      const container = node.closest("[data-reader-content-canvas]") as HTMLElement;
+      const containerBox = container.getBoundingClientRect();
+      const paragraphBox = node.getBoundingClientRect();
+      return paragraphBox.bottom > containerBox.top && paragraphBox.top < containerBox.bottom;
+    })).toBe(true);
+  };
+
+  const settingsTrigger = page.getByRole("button", { name: "阅读设置" });
+  await settingsTrigger.click();
+  const settingsDialog = page.getByRole("dialog", { name: "阅读设置" });
+  await expect(settingsDialog).toHaveCount(1);
+  await settingsDialog.evaluate((element) => {
+    element.setAttribute("data-responsive-instance", "retained");
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("[data-reader-content-canvas]")).toHaveCount(1);
+  await expect(page.locator('[data-reader-toolbar="top"]')).toHaveCount(1);
+  await expect(page.locator('[data-reader-toolbar="bottom"]')).toHaveCount(0);
+  await expect.poll(() => canvas.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingBottom: Number.parseFloat(style.paddingBottom),
+    };
+  })).toEqual({ paddingTop: 0, paddingBottom: 0 });
+  await expect(settingsDialog).toHaveCount(1);
+  await expect(settingsDialog).toHaveAttribute("data-responsive-instance", "retained");
+  await expect.poll(() => settingsDialog.evaluate((dialog) => (
+    dialog.contains(document.activeElement)
+  ))).toBe(true);
+  await expectSemanticAnchorVisible();
+
+  await page.setViewportSize({ width: 340, height: 732 });
+  await expect(settingsDialog).toHaveCount(1);
+  await expect(settingsDialog).toHaveAttribute("data-responsive-instance", "retained");
+  await expectSemanticAnchorVisible();
+  await expect.poll(() => settingsDialog.evaluate((dialog) => (
+    getComputedStyle(dialog).backgroundColor
+  ))).not.toBe("rgba(0, 0, 0, 0)");
+  await settingsDialog.click({ position: { x: 5, y: 5 } });
+  await expect(settingsDialog).toBeHidden();
+  await expect(page.locator("[data-reader-content-canvas]")).toHaveCount(1);
+
+  const stalePanelAnchor = canvas.locator('p[data-idx="20"]').first();
+  await stalePanelAnchor.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  await settingsTrigger.click();
+  await expect(settingsDialog).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog).toBeHidden();
+
+  await canvas.hover();
+  await page.mouse.wheel(0, 15_000);
+  await page.waitForTimeout(1_000);
+  const wheelAnchorIndex = await canvas.evaluate((node) => {
+    const line = node.getBoundingClientRect().top + 120;
+    const paragraph = Array.from(node.querySelectorAll<HTMLElement>('p[data-idx]'))
+      .find((candidate) => candidate.getBoundingClientRect().bottom > line);
+    return Number.parseInt(paragraph?.dataset.idx ?? "-1", 10);
+  });
+  expect(wheelAnchorIndex).toBeGreaterThan(30);
+  expect(wheelAnchorIndex).toBeLessThan(80);
+  const wheelAnchorParagraph = canvas.locator(`p[data-idx="${wheelAnchorIndex}"]`).first();
+  const expectWheelAnchorVisible = async () => {
+    await expect.poll(() => wheelAnchorParagraph.evaluate((node) => {
+      const container = node.closest("[data-reader-content-canvas]") as HTMLElement;
+      const containerBox = container.getBoundingClientRect();
+      const paragraphBox = node.getBoundingClientRect();
+      return paragraphBox.bottom > containerBox.top && paragraphBox.top < containerBox.bottom;
+    })).toBe(true);
+  };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(1_500);
+  await expectWheelAnchorVisible();
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.waitForTimeout(1_500);
+  await expectWheelAnchorVisible();
+
+  await stalePanelAnchor.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  await settingsTrigger.click();
+  await expect(settingsDialog).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog).toBeHidden();
+  await canvas.hover();
+  await page.mouse.wheel(0, 120);
+  const postPanelParagraph = canvas.locator('p[data-idx="21"]').first();
+  await postPanelParagraph.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  const smallIntentScrollTop = await canvas.evaluate((node) => node.scrollTop);
+  await page.waitForTimeout(500);
+  expect(Math.abs(
+    (await canvas.evaluate((node) => node.scrollTop)) - smallIntentScrollTop,
+  )).toBeLessThanOrEqual(2);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(() => postPanelParagraph.evaluate((node) => {
+    const container = node.closest("[data-reader-content-canvas]") as HTMLElement;
+    const containerBox = container.getBoundingClientRect();
+    const paragraphBox = node.getBoundingClientRect();
+    return paragraphBox.bottom > containerBox.top && paragraphBox.top < containerBox.bottom;
+  })).toBe(true);
+  await page.setViewportSize({ width: 340, height: 732 });
+
+  // A user can interrupt a still-settling restore and resize again before the
+  // cancellation RAF runs. The stale RAF must not write old geometry into the
+  // new restore generation or make a later handoff jump elsewhere.
+  await stalePanelAnchor.evaluate((node) => node.scrollIntoView({ block: "start", behavior: "auto" }));
+  await settingsTrigger.click();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.keyboard.press("Escape");
+  await canvas.hover();
+  await page.mouse.wheel(0, 8_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(1_200);
+  const sameFrameAnchor = await canvas.evaluate((node) => {
+    const line = node.getBoundingClientRect().top + 120;
+    const paragraph = Array.from(node.querySelectorAll<HTMLElement>('p[data-idx]'))
+      .find((candidate) => candidate.getBoundingClientRect().bottom > line);
+    return Number.parseInt(paragraph?.dataset.idx ?? "-1", 10);
+  });
+  expect(sameFrameAnchor).toBeGreaterThan(20);
+  expect(sameFrameAnchor).toBeLessThan(85);
+  const sameFrameParagraph = canvas.locator(`p[data-idx="${sameFrameAnchor}"]`).first();
+  const expectSameFrameAnchorVisible = async () => {
+    await expect.poll(() => sameFrameParagraph.evaluate((node) => {
+      const container = node.closest("[data-reader-content-canvas]") as HTMLElement;
+      const containerBox = container.getBoundingClientRect();
+      const paragraphBox = node.getBoundingClientRect();
+      return paragraphBox.bottom > containerBox.top && paragraphBox.top < containerBox.bottom;
+    })).toBe(true);
+  };
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.waitForTimeout(1_200);
+  await expectSameFrameAnchorVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(1_200);
+  await expectSameFrameAnchorVisible();
+  await page.setViewportSize({ width: 340, height: 732 });
+
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "目录", exact: true })
+    .click();
+  const tocDialog = page.getByRole("dialog", { name: "阅读目录" });
+  await tocDialog.evaluate((element) => {
+    element.setAttribute("data-responsive-instance", "retained-toc");
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(tocDialog).toHaveCount(1);
+  await expect(tocDialog).toHaveAttribute("data-responsive-instance", "retained-toc");
+  await page.setViewportSize({ width: 340, height: 732 });
+  await expect(tocDialog).toHaveAttribute("data-responsive-instance", "retained-toc");
+  await tocDialog.click({ position: { x: 330, y: 300 } });
+  await expect(tocDialog).toBeHidden();
+
+  await page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "进度", exact: true })
+    .click();
+  const progressDialog = page.getByRole("dialog", { name: "阅读进度" });
+  await progressDialog.evaluate((element) => {
+    element.setAttribute("data-responsive-instance", "retained-progress");
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(progressDialog).toHaveCount(1);
+  await expect(progressDialog).toHaveAttribute("data-responsive-instance", "retained-progress");
+  await progressDialog.click({ position: { x: 10, y: 10 } });
+  await expect(progressDialog).toBeHidden();
+});
+
+test("pagination keeps its semantic anchor while the responsive shell changes", async ({ page }) => {
+  const bookId = "reader-responsive-pagination-anchor-book";
+  await seedReaderBook(page, {
+    bookId,
+    pageMode: "pagination",
+    chapterCount: 1,
+    contentFor: () => Array.from({ length: 80 }, (_, paragraphIndex) => (
+      `<p>P${paragraphIndex} ${"分页跨宽度语义锚点。".repeat(14)}</p>`
+    )).join(""),
+  });
+  await page.setViewportSize({ width: 340, height: 732 });
+  await page.goto(`/#/reader/${bookId}`);
+
+  const pagination = page.locator("[data-anchor-page]");
+  await expect(pagination).toHaveCount(1);
+  await expect(pagination).toHaveAttribute("data-anchor-restored", "true", {
+    timeout: 15_000,
+  });
+  const nextPage = page.locator('[data-reader-toolbar="bottom"]')
+    .getByRole("button", { name: "下一页" });
+  await nextPage.click();
+  await expect(pagination).toHaveAttribute("data-current-page", "1");
+  await nextPage.click();
+  await expect.poll(async () => Number(await pagination.getAttribute("data-anchor-paragraph"))).toBeGreaterThan(0);
+  const anchor = {
+    paragraph: await pagination.getAttribute("data-anchor-paragraph"),
+    character: await pagination.getAttribute("data-anchor-character"),
+  };
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 340, height: 732 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(page.locator("[data-pagination-scroll]")).toHaveCount(1);
+    await expect(pagination).toHaveAttribute("data-anchor-restored", "true", {
+      timeout: 15_000,
+    });
+    await expect(pagination).toHaveAttribute("data-anchor-paragraph", anchor.paragraph!);
+    await expect(pagination).toHaveAttribute("data-anchor-character", anchor.character!);
+  }
 });

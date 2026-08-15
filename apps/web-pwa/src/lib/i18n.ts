@@ -37,7 +37,7 @@ export const strings = {
   reader: {
     loading: "正在加载章节...",
     backToShelf: "← 返回书架",
-    aiSummary: "AI 总结",
+    aiSummary: "伴读",
     bookmark: "书签",
     bookmarkAdded: "已添加书签",
     toc: "目录",
@@ -61,7 +61,7 @@ export const strings = {
     quickQuestions: "快捷提问",
     aiInputPlaceholder: "问问 AI 助手...",
     send: "发送",
-    aiError: "AI 总结失败，请检查后端服务是否启动。",
+    aiError: "伴读失败，请检查后端服务是否启动。",
     aiNotConfigured:
       "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。",
     questionCharacters: "解释本章的关键人物关系",

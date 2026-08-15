@@ -650,6 +650,7 @@ export function useReader(bookId: string) {
   const [renderedChapters, setRenderedChapters] = useState<ChapterData[]>([]);
   const renderedChaptersRef = useRef<ChapterData[]>([]);
   const [isPositionRestored, setIsPositionRestoredState] = useState(false);
+  const [layoutRestoreEpoch, setLayoutRestoreEpoch] = useState(0);
   const isPositionRestoredRef = useRef(false);
   const setIsPositionRestored = useCallback((val: boolean) => {
     isPositionRestoredRef.current = val;
@@ -694,6 +695,9 @@ export function useReader(bookId: string) {
     contentPreview?: string;
     onSettled?: (finalOffset: number, maxOffset: number) => void | Promise<void>;
   } | null>(null);
+  const activeScrollRestoreCleanupRef = useRef<(() => void) | null>(null);
+  const userIntentCaptureRafRef = useRef<number | null>(null);
+  const userIntentCaptureGenerationRef = useRef(0);
   const semanticLayoutAnchorRef = useRef<{
     chapterIndex: number;
     paragraphIndex: number;
@@ -704,6 +708,13 @@ export function useReader(bookId: string) {
     paragraphIndex: number;
     characterOffset: number;
   } | null>(null);
+  const trustedUserSemanticAnchorRef = useRef<{
+    chapterIndex: number;
+    paragraphIndex: number;
+    characterOffset: number;
+  } | null>(null);
+  const trustedUserScrollSequenceRef = useRef(false);
+  const trustedUserScrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelSemanticAnchorRef = useRef<{
     chapterIndex: number;
     paragraphIndex: number;
@@ -724,6 +735,7 @@ export function useReader(bookId: string) {
       paragraphIndex: 0,
       characterOffset: 0,
     };
+    trustedUserSemanticAnchorRef.current = null;
     setRenderedChapters([nextChapter]);
   }, []);
 
@@ -813,9 +825,15 @@ export function useReader(bookId: string) {
 
   const [toast, setToast] = useState<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activePanel, setActivePanel] = useState<
+  const [activePanel, setActivePanelState] = useState<
     "toc" | "progress" | "ai" | "settings" | null
   >(null);
+  const activePanelRef = useRef<typeof activePanel>(null);
+  const setActivePanel = useCallback((panel: "toc" | "progress" | "ai" | "settings" | null) => {
+    activePanelRef.current = panel;
+    if (panel === null) panelSemanticAnchorRef.current = null;
+    setActivePanelState(panel);
+  }, []);
   const [toc, setToc] = useState<{ index: number; title: string }[]>([]);
   const [progressSaveStatus, setProgressSaveStatus] =
     useState<ProgressSaveStatus>({ state: "idle" });
@@ -969,6 +987,12 @@ export function useReader(bookId: string) {
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (userIntentCaptureRafRef.current !== null) {
+        cancelAnimationFrame(userIntentCaptureRafRef.current);
+      }
+      if (trustedUserScrollEndTimerRef.current) {
+        clearTimeout(trustedUserScrollEndTimerRef.current);
+      }
     };
   }, []);
 
@@ -1063,7 +1087,13 @@ export function useReader(bookId: string) {
           settings.pageMode,
           onSettleCallback
         );
-        return cleanup;
+        activeScrollRestoreCleanupRef.current = cleanup;
+        return () => {
+          if (activeScrollRestoreCleanupRef.current === cleanup) {
+            activeScrollRestoreCleanupRef.current = null;
+          }
+          cleanup();
+        };
       } else {
         const targetOffset = pending.offset ?? 0;
         const cleanup = restoreScrollPositionStable(
@@ -1075,7 +1105,13 @@ export function useReader(bookId: string) {
           pending.characterOffset,
           chapter.index,
         );
-        return cleanup;
+        activeScrollRestoreCleanupRef.current = cleanup;
+        return () => {
+          if (activeScrollRestoreCleanupRef.current === cleanup) {
+            activeScrollRestoreCleanupRef.current = null;
+          }
+          cleanup();
+        };
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1088,6 +1124,7 @@ export function useReader(bookId: string) {
     settings.paragraphSpacing,
     settings.letterSpacing,
     settings.lineHeight,
+    layoutRestoreEpoch,
   ]);
 
   useEffect(() => {
@@ -1193,6 +1230,70 @@ export function useReader(bookId: string) {
     return { paragraphIndex, characterOffset };
   }, [settings.pageMode]);
 
+  const cancelPendingLayoutRestore = useCallback(() => {
+    if (!pendingScrollRestoreRef.current || !chapter) return false;
+
+    activeScrollRestoreCleanupRef.current?.();
+    activeScrollRestoreCleanupRef.current = null;
+    pendingScrollRestoreRef.current = null;
+    semanticLayoutAnchorRef.current = null;
+    // Let the native wheel/touch/key default action happen before React rebinds
+    // the scroll listener. The ref opens the existing listener synchronously;
+    // the next frame records the post-input semantic position and then reveals
+    // the settled canvas.
+    isPositionRestoredRef.current = true;
+    const fallbackAnchor = {
+      chapterIndex: chapter.index,
+      ...getPrecisePosition(),
+    };
+    latestSemanticAnchorRef.current = fallbackAnchor;
+    trustedUserSemanticAnchorRef.current = fallbackAnchor;
+    const captureGeneration = userIntentCaptureGenerationRef.current + 1;
+    userIntentCaptureGenerationRef.current = captureGeneration;
+    if (userIntentCaptureRafRef.current !== null) {
+      cancelAnimationFrame(userIntentCaptureRafRef.current);
+    }
+    userIntentCaptureRafRef.current = requestAnimationFrame(() => {
+      userIntentCaptureRafRef.current = null;
+      if (
+        userIntentCaptureGenerationRef.current !== captureGeneration ||
+        pendingScrollRestoreRef.current
+      ) {
+        return;
+      }
+      const anchor = {
+        chapterIndex: chapter.index,
+        ...getPrecisePosition(),
+      };
+      latestSemanticAnchorRef.current = anchor;
+      trustedUserSemanticAnchorRef.current = anchor;
+      setIsPositionRestoredState(true);
+    });
+    return true;
+  }, [chapter, getPrecisePosition]);
+
+  const finishTrustedUserScrollSequence = useCallback(() => {
+    trustedUserScrollSequenceRef.current = false;
+    if (trustedUserScrollEndTimerRef.current) {
+      clearTimeout(trustedUserScrollEndTimerRef.current);
+      trustedUserScrollEndTimerRef.current = null;
+    }
+  }, []);
+
+  const extendTrustedUserScrollSequence = useCallback(() => {
+    trustedUserScrollSequenceRef.current = true;
+    if (trustedUserScrollEndTimerRef.current) {
+      clearTimeout(trustedUserScrollEndTimerRef.current);
+    }
+    // Touch momentum may continue long after touchstart/touchend. The sequence
+    // therefore settles relative to the final scroll event, not a fixed window
+    // from the initial gesture.
+    trustedUserScrollEndTimerRef.current = setTimeout(() => {
+      trustedUserScrollSequenceRef.current = false;
+      trustedUserScrollEndTimerRef.current = null;
+    }, 250);
+  }, []);
+
   const togglePanel = useCallback(
     (panel: "toc" | "progress" | "ai" | "settings") => {
       if (activePanel === panel) {
@@ -1208,11 +1309,13 @@ export function useReader(bookId: string) {
       }
       setActivePanel(panel);
     },
-    [activePanel, chapter, getPrecisePosition],
+    [activePanel, chapter, getPrecisePosition, setActivePanel],
   );
 
   const scrollToOffsetRatio = useCallback(
     (ratio: number) => {
+      extendTrustedUserScrollSequence();
+      cancelPendingLayoutRestore();
       const safeRatio = Math.max(0, Math.min(1, ratio));
       const container = contentRef.current;
       if (!container) {
@@ -1241,7 +1344,7 @@ export function useReader(bookId: string) {
       container.scrollTo({ top: offset, behavior: "smooth" });
       return offset;
     },
-    [settings.pageMode],
+    [cancelPendingLayoutRestore, extendTrustedUserScrollSequence, settings.pageMode],
   );
 
   useEffect(() => {
@@ -1251,7 +1354,7 @@ export function useReader(bookId: string) {
       if (!isPositionRestoredRef.current) return;
       // Reader-owned overlays may trigger layout/scroll events while covering the
       // reading line. They are configuration interactions, not reading progress.
-      if (activePanel) return;
+      if (activePanelRef.current) return;
       if (scrollWindowReflowRef.current) {
         const target = scrollWindowReflowTargetRef.current;
         // DOM commit 到 layout effect 之间尚未建立补偿目标，这段只能是内部重排事件。
@@ -1261,6 +1364,15 @@ export function useReader(bookId: string) {
         }
         scrollWindowReflowRef.current = false;
         scrollWindowReflowTargetRef.current = null;
+      }
+      const directAnchor = {
+        chapterIndex: chapter.index,
+        ...getPrecisePosition(),
+      };
+      latestSemanticAnchorRef.current = directAnchor;
+      if (trustedUserScrollSequenceRef.current) {
+        trustedUserSemanticAnchorRef.current = directAnchor;
+        extendTrustedUserScrollSequence();
       }
       const { offset, maxOffset } = getOffsetState();
       
@@ -1332,11 +1444,16 @@ export function useReader(bookId: string) {
           )
         : null;
       if (semanticProgress) {
-        latestSemanticAnchorRef.current = {
+        const semanticAnchor = {
           chapterIndex: semanticProgress.chapterIndex,
           paragraphIndex: semanticProgress.paragraphIndex ?? 0,
           characterOffset: semanticProgress.characterOffset ?? 0,
         };
+        latestSemanticAnchorRef.current = semanticAnchor;
+        if (trustedUserScrollSequenceRef.current) {
+          trustedUserSemanticAnchorRef.current = semanticAnchor;
+          extendTrustedUserScrollSequence();
+        }
       }
 
       // 触底自动切章逻辑监控
@@ -1374,17 +1491,29 @@ export function useReader(bookId: string) {
       const releaseReflowForUserInput = () => {
         scrollWindowReflowRef.current = false;
         scrollWindowReflowTargetRef.current = null;
+        extendTrustedUserScrollSequence();
+        cancelPendingLayoutRestore();
+      };
+      const releaseReflowForKeyboardScroll = (event: KeyboardEvent) => {
+        if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) {
+          return;
+        }
+        releaseReflowForUserInput();
       };
       container.addEventListener("scroll", handleScroll);
       container.addEventListener("wheel", releaseReflowForUserInput, { passive: true });
       container.addEventListener("touchstart", releaseReflowForUserInput, { passive: true });
+      container.addEventListener("touchmove", releaseReflowForUserInput, { passive: true });
       container.addEventListener("pointerdown", releaseReflowForUserInput, { passive: true });
+      container.addEventListener("keydown", releaseReflowForKeyboardScroll);
       return () => {
         clearAutoFlipTimer();
         container.removeEventListener("scroll", handleScroll);
         container.removeEventListener("wheel", releaseReflowForUserInput);
         container.removeEventListener("touchstart", releaseReflowForUserInput);
+        container.removeEventListener("touchmove", releaseReflowForUserInput);
         container.removeEventListener("pointerdown", releaseReflowForUserInput);
+        container.removeEventListener("keydown", releaseReflowForKeyboardScroll);
       };
     } else if (settings.pageMode === "scroll") {
       window.addEventListener("scroll", handleScroll);
@@ -1411,6 +1540,9 @@ export function useReader(bookId: string) {
     ensureScrollChapterWindow,
     engine,
     activePanel,
+    setIsPositionRestored,
+    cancelPendingLayoutRestore,
+    extendTrustedUserScrollSequence,
   ]);
 
   // 组件退出时立即发起剩余进度的持久化，不会提前清除失败值。
@@ -1975,7 +2107,7 @@ export function useReader(bookId: string) {
         }
       }
     },
-    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer, setIsPositionRestored, showToast, settings.pageMode, replaceRenderedChapter],
+    [engine, saveCurrentProgress, toc.length, clearAutoFlipTimer, setIsPositionRestored, showToast, settings.pageMode, replaceRenderedChapter, setActivePanel],
   );
 
   const seekToProgress = useCallback(
@@ -2035,7 +2167,7 @@ export function useReader(bookId: string) {
       const { paragraphIndex, characterOffset } = getPrecisePosition();
       await saveCurrentProgress(chapter, 0, paragraphIndex, characterOffset);
     },
-    [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, getPrecisePosition, clearAutoFlipTimer, setIsPositionRestored, showToast, replaceRenderedChapter],
+    [chapter, engine, saveCurrentProgress, scrollToOffsetRatio, toc.length, getPrecisePosition, clearAutoFlipTimer, setIsPositionRestored, showToast, replaceRenderedChapter, setActivePanel],
   );
 
   const handleNext = useCallback(async (targetIndex?: number) => {
@@ -2384,7 +2516,7 @@ export function useReader(bookId: string) {
         setShowMenu(false);
       }
     },
-    [engine, saveCurrentProgress, toc.length, setIsPositionRestored, replaceRenderedChapter],
+    [engine, saveCurrentProgress, toc.length, setIsPositionRestored, replaceRenderedChapter, setActivePanel],
   );
 
   const rollbackProgress = useCallback(
@@ -2581,7 +2713,7 @@ export function useReader(bookId: string) {
     } finally {
       setIsAiLoading(false);
     }
-  }, [chapter, bookId]);
+  }, [chapter, bookId, setActivePanel]);
 
 
   const handleAsk = useCallback(async (question: string) => {
@@ -2630,7 +2762,7 @@ ${data.answer || "未能生成回答。"}`;
     } finally {
       setIsAiLoading(false);
     }
-  }, [chapter, bookId]);
+  }, [chapter, bookId, setActivePanel]);
 
   const clearAiSession = useCallback(async () => {
     if (!chapter) return;
@@ -2677,10 +2809,19 @@ ${data.answer || "未能生成回答。"}`;
   const prepareSemanticLayoutRestore = useCallback(
     (targetMode: "scroll" | "pagination") => {
       if (!chapter) return;
+      userIntentCaptureGenerationRef.current += 1;
+      if (userIntentCaptureRafRef.current !== null) {
+        cancelAnimationFrame(userIntentCaptureRafRef.current);
+        userIntentCaptureRafRef.current = null;
+      }
+      // Freeze the last trusted user position before the viewport change can
+      // emit layout-owned scroll events on the new canvas geometry.
+      finishTrustedUserScrollSequence();
       const retained = semanticLayoutAnchorRef.current;
       const panelAnchor = panelSemanticAnchorRef.current;
+      const trustedUserAnchor = trustedUserSemanticAnchorRef.current;
       const latest = latestSemanticAnchorRef.current;
-      const anchor = retained ?? panelAnchor ?? latest ?? {
+      const anchor = retained ?? panelAnchor ?? trustedUserAnchor ?? latest ?? {
         chapterIndex: chapter.index,
         ...getPrecisePosition(),
       };
@@ -2715,8 +2856,9 @@ ${data.answer || "未能生成回答。"}`;
         },
       };
       setIsPositionRestored(false);
+      setLayoutRestoreEpoch((epoch) => epoch + 1);
     },
-    [chapter, engine, getPrecisePosition, setIsPositionRestored],
+    [chapter, engine, finishTrustedUserScrollSequence, getPrecisePosition, setIsPositionRestored],
   );
 
   const updateFontSize = useCallback(
@@ -2870,6 +3012,7 @@ ${data.answer || "未能生成回答。"}`;
     handleSummarize,
     handleAsk,
     clearAiSession,
+    prepareViewportLayoutRestore: prepareSemanticLayoutRestore,
     updateFontSize,
     updateTheme,
     updatePageMode,

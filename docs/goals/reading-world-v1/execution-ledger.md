@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0505 D；仅收敛阅读器 desktop/mobile chrome 为当前 viewport 的单一响应式子树，保持语义锚点、面板、焦点和 AI effect 唯一；不提前运行 TASK-0506 阶段总验收。
+- 当前入口：PHASE-05 / TASK-0506；运行固定 500 本压力、公共馆藏分页/故障/权限、340/390/768/1440 视口与 a11y 回放，并形成独立视觉体验审查；不提前生成 EVID-56/58 FINAL，不部署 VPS。
 - 最近有效提交：bcbff53
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.json，SHA-256 `7dbce7835f458f194acced8a612b2d5140a623236e79e233555afe3e186bef90`，2026-08-15T12:51:35+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501~0504 已完成。PHASE-05、TASK-0505/0506、EVID-56/58 与 Goal 仍未完成。
-- 停止原因：无；从 PHASE-05 / TASK-0505 继续，EVID-02/03/04/05/07/16/17/25/57/62、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501~0505 已完成。PHASE-05、TASK-0506、EVID-56/58 与 Goal 仍未完成。
+- 停止原因：无；从 PHASE-05 / TASK-0506 继续，EVID-02/03/04/05/07/16/17/25/57/62、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -44,6 +44,7 @@
 - RUN-0052：保持执行中；EVID-62 在 clean@`0dcae90` 正式运行并经三路独立复算 PASS，TASK-0504 完成，当前入口推进至 TASK-0505。依据：14/14 checks/records、唯一 production Chrome、16+7+1+1 混合 25 本、24+1 分页、终态 26 本/revision 27、精确 provenance/Blob、故障与离线阅读、个人事实/源树/进程/清理均闭合。该 ATTEMPT 不证明 EVID-56/58 FINAL、TASK-0505/0506、PHASE-05、VPS 或 Goal 完成。
 - RUN-0053：保持执行中；TASK-0505 合同已冻结，A 真相/返回上下文与 B 共享交互候选经真实 500 本旅程和独立复审放行提交。当前入口推进至 C 信息层级/视觉语言，随后才执行 D 单一响应式阅读器子树；TASK-0505、TASK-0506、PHASE-05 与 Goal 均未完成，不引入 GSAP，不运行阶段总验收。
 - RUN-0054：保持执行中；TASK-0505 C 信息层级/视觉语言候选经全量 Web 门、production build、真实 340/500 本 Chrome 旅程与三路独立复审放行。当前入口推进至 D 单一响应式阅读器子树；TASK-0505、TASK-0506、PHASE-05、EVID-56/58 与 Goal 均未完成，未运行 formal、未部署 VPS。
+- RUN-0055：保持执行中；TASK-0505 D 单一响应式阅读器子树经 18 条系统 Chrome 旅程、无 PWA 写入 production build 与三路独立复审放行，TASK-0505 完成，当前入口推进至 TASK-0506 阶段压力/a11y/视觉总验收。PHASE-05、TASK-0506、EVID-56/58 与 Goal 均未完成，未运行 formal、未部署 VPS。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -539,3 +540,11 @@
 - 事实与稳定性收口：首次无访问口令时同步设置可达，云端仅称“上次核验”。目录扫描、解除关联、重新导入、解散与治理移动/建箧/缓存/移除在真正写入点共用同一 `syncMutexRef` fail-closed，静默恢复不能绕过。删除按本机、远端、重试登记与回读分流陈述；远端已删时先失效代际并移除旧 cloud item，失败分支不再生成幽灵书或假称两端未变。扫描 changed 只统计真正有 bookId 且已标待解析的文件。
 - 验证：Web 全量 `60 files / 232 tests`、TypeScript、全 `src` 非写入 ESLint、禁用 PWA 写入的 production build 14/14 页与 `git diff --check` 通过。系统 Chrome `library-bounded-rendering` `5/5`：含 340px 无口令入口、真实 Geist、不裁剪菜单、治理 Escape 精确归回原 trigger、500 本/500 书箧有界窗口、深页恢复、离线与同钥旧 inventory 抑制；藏经阁 taxonomy 四视图/340–1440 旅程 `1/1` 保持通过。三路独立终审均 `READY_TO_COMMIT`，P0/P1=0。
 - 状态与下一入口：TASK-0505 C 完成，但 TASK-0505、TASK-0506、PHASE-05、EVID-56/58 与 Goal 均未完成。下一入口严格为 D：只将阅读器 desktop/mobile chrome 收敛为当前 viewport 的单一响应式子树，回归 340↔1440 锚点、TOC/AI/Settings 各一实例、焦点和 AI effect 唯一；D 未独立通过前不运行 TASK-0506。
+
+### RUN-0055 · 2026-08-15T18:08:34+08:00 · PHASE-05 / TASK-0505 D 单一响应式阅读器子树
+- 本轮边界：只完成冻结合同 D；保留单一 `useReader`、章节读取、进度协调、AI 协议与本地事实源，不重写 reader-core、同步、书架或藏经阁领域逻辑。未运行 TASK-0506/formal，未连接真实私人云、维护目录或 VPS，未 push/部署。
+- 单一响应式结构：阅读器按当前 viewport 只挂载一套 root、top chrome、正文 canvas 与分页/连续正文；移动底栏只在移动端存在。TOC、伴读、进度与设置提升为 body portal 的单一稳定实例，跨 340↔1440 不重启 AI typing、不复制 online/progress effect，背景隔离、初始焦点、Escape、空白遮罩关闭和焦点归还保持一致。
+- 锚点与竞态：viewport handoff 只保存段落/字符语义锚点，不复制像素 offset。恢复任务具备 epoch；真实 wheel/touch/key/seek 会取消旧恢复。触摸惯性以“输入开启、每次 scroll 延长、最后 scroll 后结算”的可信序列记录最终锚点，handoff 前冻结，layout scroll 不能污染。用户取消恢复后的 RAF 另绑定 capture generation；新 handoff 会同步增代并取消旧 RAF，回调还要求代际匹配且无新 pending，封住旧帧写入新几何。
+- 移动与文案：340px 底栏分页控件与六个主动作双轴均不小于 44px且无横溢；desktop 不再继承 mobile canvas 上下 padding。桌面和移动入口统一称“伴读”，设置/TOC/进度移动弹层均有全屏遮罩与可点击空白区。测试 fixture 在写入前等待 ReaderDatabase version ≥10 且 books/chapters/progress/bookmarks 四表齐备。
+- 验证：Web 全量 `60 files / 232 tests`、TypeScript、全 `src` ESLint、`git diff --check` 与禁用 PWA 写入的 production build 14/14 页通过。独占系统 Chrome 共 `18/18`：原有语义布局、分页、pagehide/离线、书签、连续滚动三章 DOM 上界、焦点与触控回归，加上单章尾部快速 340↔1440、恢复中真实 wheel 后同帧 handoff、后续 roundtrip、Pixel 5 真 CDP touch 与超过旧 350ms 窗口的惯性滚动。关键 desktop 反例累计 `3/3`，touch momentum 累计 `3/3`；三路独立终审均 `READY_TO_COMMIT`，P0/P1=0。
+- 状态与下一入口：TASK-0505 完成，但 TASK-0506、PHASE-05、EVID-56/58 与 Goal 均未完成。下一入口严格为 TASK-0506：运行固定 500 本压力、公共馆藏分页/故障/权限、340/390/768/1440 视口与 a11y 回放，写入 `reports/phase-05-ui-score.md` 和 `reviews/phase-05-ui.md`；完成并独立复算前不生成 EVID-56/58 FINAL，不部署 VPS。
