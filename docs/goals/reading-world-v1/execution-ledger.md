@@ -458,3 +458,13 @@
 - 验证：API public-library 定向 17/17、API 全量 60/60、storage-core 82/82，API 非写入 lint/typecheck/production build、storage build、`git diff --check` 与全工作区 `READING_WORLD_VERIFY_NO_PWA_WRITE=1` production build 全部通过。独立终审复算并发初始化 12/12、旧 package 重放、BUSY 重试副作用上界与个人域依赖隔离后结论 READY_TO_COMMIT，无 P0/P1。
 - 安全与边界：改动文件精确凭据/私钥模式扫描无命中；全仓安全扫描仍有既登记历史 Red，本轮不声称全仓安全门通过。实现提交 `e9aa8bc`，未 push、未部署、未连接真实公共库、个人云、维护目录或 VPS。
 - 状态与下一入口：TASK-0504 A 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 B：单文件 multipart adapter，继续复用 canonical publisher；B 未独立通过前不并行进入 C–F。
+
+### RUN-0047 · 2026-08-15T08:06:00+08:00 · PHASE-05 / TASK-0504 B 浏览器文件入阁
+- 本轮边界：只完成单文件 multipart 后端 adapter 与浏览器有界队列；不实现文件夹 relativePath/collectionPath、服务端目录扫描、个人云快照发布、taxonomy/facets 或四视图。实现提交为后端 `acd609a` 与前端/真实结果 `0fc92de`，未 push、未部署、未连接 VPS 或真实馆藏。
+- 传输与鉴权：`POST /public-library/maintenance/files` 仅接受一个安全命名 TXT，单文件上限 20 MiB；Guard 在 FileInterceptor 前拒绝缺失/错误凭据。Busboy 的 UTF-8 中文文件名乱码被规范恢复，`preservePath=true` 使 Unix/Windows/子目录形式在裁剪 basename 前明确 400。Unicode 维护密钥按 UTF-8 字节长度做 timing-safe 比较，不再把长度异常冒充为 500。
+- 解析与真实结果：TXT parser 保留显式空章，公共发布边界据此拒绝空章，不再静默吞掉首章后假成功。canonical publisher 新增 typed `created / unchanged`，书目冲突仍为带 existingBookId 的 409；双 client 同正文 12/12 均只有一个 created、一个 unchanged，revision 只增一次，未回退 A 层并发/旧 GATE-03 兼容。
+- 前端队列：每批最多 200 个 TXT、总量 200 MiB、并发固定 2；逐项保留 queued/uploading/created/unchanged/duplicate/failed 真实状态，只重试 retryable failed，任务 DOM 最多 50 行。每次批次开始时快照 normalized `reader-share-token`，独立 maintenance client 只发 `x-public-library-maintenance-key`，不触发个人 `/books`、`x-share-token` 或 `reader-active-sync-tasks`。
+- UI 与目录快照：无密钥时入阁按钮禁用且在移动端文案中说明先配置私有云，匿名浏览不受影响。面板复用 ReaderDialogSurface，背景 inert，初始焦点、Escape、焦点归还、44px 控件和 390px 无横溢出均在系统 Chrome 成立。书籍列表从第一页保留 catalogRevision，后续页原样携带；409 清理旧快照回第一页，新建后也显式重载。
+- 验证与失败因果：parser-core 11/11、API 80/80、Web 183/183，API/Web typecheck、非写入 lint、API 构建与 `READING_WORLD_VERIFY_NO_PWA_WRITE=1` Web 生产构建均通过。系统 Chrome 上新上传旅程 1/1 与旧 GATE-03 匿名分页/真断网加入 1/1 通过；一次早期回放因跨轮正文相同而正确命中书目冲突，归为 fixture `VALIDATOR_INDETERMINATE`，改为每轮唯一正文后重放通过，不计任何 GATE 设计失败。
+- 独立复审与状态：canonical outcome 与完整 B 边界两路均 `READY_TO_COMMIT`，无 P0/P1 或假绿。TASK-0504 B 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。
+- 下一入口：TASK-0504 C；在现有单文件队列上增加文件夹选择的安全 relativePath/collectionPath、规范化重名拒绝与部分结果。C 独立通过前不进入 D 服务端目录扫描、E 个人云快照或 F 四视图。
