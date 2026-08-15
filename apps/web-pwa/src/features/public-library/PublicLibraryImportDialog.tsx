@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { FileText, FolderOpen, RotateCcw, Upload, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  FileText,
+  FolderOpen,
+  RotateCcw,
+  Server,
+  Upload,
+  X,
+} from "lucide-react";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { normalizeShareToken } from "@/lib/api";
 import {
   PublicLibraryMaintenanceClient,
   type PublicLibraryCategory,
+  type PublicLibraryScanJob,
+  type PublicLibraryScanRoot,
 } from "./public-library-maintenance-client";
 import {
   PublicLibraryBatchLimitError,
@@ -51,6 +61,12 @@ export function PublicLibraryImportDialog({
   const [message, setMessage] = useState("");
   const [running, setRunning] = useState(false);
   const [folderSupported, setFolderSupported] = useState(false);
+  const [scanRoots, setScanRoots] = useState<PublicLibraryScanRoot[]>([]);
+  const [selectedRootId, setSelectedRootId] = useState("");
+  const [scanJob, setScanJob] = useState<PublicLibraryScanJob>();
+  const [scanMessage, setScanMessage] = useState("");
+  const [scanRunning, setScanRunning] = useState(false);
+  const scanGenerationRef = useRef(0);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,7 +76,34 @@ export function PublicLibraryImportDialog({
     setTasks([]);
     setMessage("");
     setRunning(false);
+    setScanRoots([]);
+    setSelectedRootId("");
+    setScanJob(undefined);
+    setScanMessage("");
+    setScanRunning(false);
     setFolderSupported("webkitdirectory" in document.createElement("input"));
+    const generation = ++scanGenerationRef.current;
+    const maintenanceKey = normalizeShareToken(
+      window.localStorage.getItem("reader-share-token"),
+    );
+    if (maintenanceKey) {
+      const client = new PublicLibraryMaintenanceClient(maintenanceKey);
+      void client
+        .listScanRoots()
+        .then((roots) => {
+          if (scanGenerationRef.current !== generation) return;
+          setScanRoots(roots);
+          setSelectedRootId(roots[0]?.rootId ?? "");
+        })
+        .catch(() => {
+          if (scanGenerationRef.current === generation) {
+            setScanMessage("服务端维护目录暂不可用，仍可选择本地 TXT 入阁。");
+          }
+        });
+    }
+    return () => {
+      scanGenerationRef.current += 1;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -162,10 +205,54 @@ export function PublicLibraryImportDialog({
     (task) => task.status === "failed" && task.retryable,
   ).length;
   const visibleTasks = tasks.slice(0, 50);
+  const busy = running || scanRunning;
 
-  return (
+  const runServerScan = async () => {
+    if (busy || !rightsConfirmed || !selectedRootId) return;
+    const maintenanceKey = normalizeShareToken(
+      window.localStorage.getItem("reader-share-token"),
+    );
+    if (!maintenanceKey) {
+      setScanMessage("请先在书架设置私有云密钥，再尝试扫描维护目录。");
+      return;
+    }
+    const generation = ++scanGenerationRef.current;
+    const client = new PublicLibraryMaintenanceClient(maintenanceKey);
+    setScanRunning(true);
+    setScanMessage("");
+    try {
+      let job = await client.startScan(selectedRootId);
+      if (scanGenerationRef.current !== generation) return;
+      setScanJob(job);
+      while (job.status === "running") {
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        if (scanGenerationRef.current !== generation) return;
+        job = await client.getScan(job.scanId);
+        setScanJob(job);
+      }
+      if (job.createdCount > 0) onCompleted();
+      setScanMessage(
+        job.status === "completed"
+          ? "维护目录扫描完成。"
+          : job.status === "completed_with_errors"
+            ? "扫描已完成，但有条目未入阁，请查看结果。"
+            : "扫描未完成，既有馆藏与上次完整代际保持不变。",
+      );
+    } catch (error) {
+      if (scanGenerationRef.current !== generation) return;
+      setScanMessage(
+        error instanceof Error && error.message === "scan_already_running"
+          ? "该维护目录正在扫描，请稍后重试。"
+          : "服务端目录扫描失败，既有馆藏未受影响。",
+      );
+    } finally {
+      if (scanGenerationRef.current === generation) setScanRunning(false);
+    }
+  };
+
+  return createPortal(
     <ReaderDialogSurface
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#2c2621]/40 p-0 backdrop-blur-sm sm:items-center sm:p-5"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden overscroll-none bg-[#2c2621]/40 p-0 backdrop-blur-sm sm:items-center sm:p-5"
       fallbackFocus={() => fallbackFocus.current}
       label="入阁"
       onClose={() => {
@@ -173,8 +260,15 @@ export function PublicLibraryImportDialog({
       }}
       open={open}
     >
-      <section className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl sm:rounded-[28px]">
-        <header className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+      <section
+        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl sm:rounded-[28px]"
+        style={{
+          height: "calc(100dvh - 1rem)",
+          maxHeight: "92dvh",
+          minHeight: 0,
+        }}
+      >
+        <header className="relative z-10 flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 sm:px-6">
           <div>
             <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-primary)]">
               公共明文副本
@@ -197,7 +291,10 @@ export function PublicLibraryImportDialog({
           </button>
         </header>
 
-        <div className="overflow-y-auto px-5 py-5 sm:px-6">
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6"
+          style={{ minHeight: 0 }}
+        >
           <label
             className="block text-sm font-semibold"
             htmlFor="public-library-category"
@@ -206,7 +303,7 @@ export function PublicLibraryImportDialog({
           </label>
           <select
             className="ui-focus-ring mt-2 min-h-11 w-full rounded-2xl border border-[var(--color-border)] bg-white/80 px-4 text-sm"
-            disabled={running}
+            disabled={busy}
             id="public-library-category"
             onChange={(event) =>
               setCategory(event.target.value as PublicLibraryCategory)
@@ -224,7 +321,7 @@ export function PublicLibraryImportDialog({
             <input
               checked={rightsConfirmed}
               className="mt-1 h-5 w-5 shrink-0 accent-[var(--color-primary)]"
-              disabled={running}
+              disabled={busy}
               onChange={(event) => setRightsConfirmed(event.target.checked)}
               type="checkbox"
             />
@@ -240,7 +337,7 @@ export function PublicLibraryImportDialog({
               <input
                 accept=".txt,text/plain"
                 className="sr-only"
-                disabled={running}
+                disabled={busy}
                 multiple
                 onChange={(event) => {
                   chooseFiles(event.target.files);
@@ -256,7 +353,7 @@ export function PublicLibraryImportDialog({
                 <input
                   accept=".txt,text/plain"
                   className="sr-only"
-                  disabled={running}
+                  disabled={busy}
                   multiple
                   onChange={(event) => {
                     chooseFiles(event.target.files);
@@ -272,6 +369,88 @@ export function PublicLibraryImportDialog({
               </p>
             )}
           </div>
+
+          <section className="mt-6 rounded-[22px] border border-[var(--color-border)] bg-white/55 p-4">
+            <div className="flex items-start gap-3">
+              <Server
+                aria-hidden="true"
+                className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-primary)]"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold">服务端目录</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                  只扫描运维预先配置的目录；不会显示主机路径，也不会移动、重命名或修改原文件。
+                </p>
+              </div>
+            </div>
+            {scanRoots.length > 0 ? (
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <label className="sr-only" htmlFor="public-library-scan-root">
+                  维护目录
+                </label>
+                <select
+                  className="ui-focus-ring min-h-11 min-w-0 rounded-2xl border border-[var(--color-border)] bg-white/80 px-4 text-sm"
+                  disabled={busy}
+                  id="public-library-scan-root"
+                  onChange={(event) => setSelectedRootId(event.target.value)}
+                  value={selectedRootId}
+                >
+                  {scanRoots.map((root) => (
+                    <option key={root.rootId} value={root.rootId}>
+                      {root.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="ui-focus-ring min-h-11 rounded-full border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)] disabled:opacity-40"
+                  disabled={busy || !rightsConfirmed || !selectedRootId}
+                  onClick={() => void runServerScan()}
+                  type="button"
+                >
+                  {scanRunning ? "正在扫描…" : "扫描并入阁"}
+                </button>
+              </div>
+            ) : (
+              <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
+                当前实例未提供可用维护目录；本地文件与文件夹入阁仍可使用。
+              </p>
+            )}
+            {scanJob && (
+              <div className="mt-3" role="status">
+                <p className="text-xs text-[var(--color-muted)]">
+                  已处理 {scanJob.processedCount}/{scanJob.discoveredCount} ·
+                  新入阁 {scanJob.createdCount} · 已存在{" "}
+                  {scanJob.unchangedCount}· 未入阁{" "}
+                  {scanJob.failedCount + scanJob.duplicateCount} · 跳过{" "}
+                  {scanJob.skippedCount}
+                </p>
+                {scanJob.items.length > 0 && (
+                  <ul className="mt-2 space-y-1" data-public-library-scan-items>
+                    {scanJob.items.slice(0, 50).map((item) => (
+                      <li
+                        className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-white/70 px-3 text-xs"
+                        key={item.relativePath}
+                      >
+                        <span className="min-w-0 truncate">
+                          {item.relativePath}
+                        </span>
+                        <span className="shrink-0 font-semibold text-[var(--color-primary)]">
+                          {item.outcome === "skipped"
+                            ? "已跳过"
+                            : statusLabel[item.outcome]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {scanMessage && (
+              <p className="mt-3 text-xs leading-5" role="alert">
+                {scanMessage}
+              </p>
+            )}
+          </section>
 
           {tasks.length > 0 && (
             <div className="mt-5">
@@ -329,8 +508,8 @@ export function PublicLibraryImportDialog({
           )}
         </div>
 
-        <footer className="flex flex-wrap justify-end gap-3 border-t border-[var(--color-border)] px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-4">
-          {retryableCount > 0 && !running && (
+        <footer className="flex shrink-0 flex-wrap justify-end gap-3 border-t border-[var(--color-border)] px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-4">
+          {retryableCount > 0 && !busy && (
             <button
               className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] px-5 text-sm font-semibold"
               onClick={() => void runQueue(true)}
@@ -343,7 +522,7 @@ export function PublicLibraryImportDialog({
           <button
             className="ui-focus-ring min-h-11 rounded-full bg-[var(--color-primary)] px-6 text-sm font-semibold text-white disabled:opacity-40"
             disabled={
-              running ||
+              busy ||
               !rightsConfirmed ||
               !tasks.some((task) => task.status === "queued")
             }
@@ -354,6 +533,7 @@ export function PublicLibraryImportDialog({
           </button>
         </footer>
       </section>
-    </ReaderDialogSurface>
+    </ReaderDialogSurface>,
+    document.body,
   );
 }

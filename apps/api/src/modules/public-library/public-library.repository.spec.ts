@@ -166,7 +166,7 @@ describe('PublicLibraryRepository', () => {
     const second = await repository.publishCandidate({
       ...canonical,
       source: {
-        kind: 'maintenance_scan',
+        kind: 'browser_file',
         scope: 'root-a',
         relativePath: '甲/经部/同版.txt',
         bytes: Buffer.from('服务端来源字节'),

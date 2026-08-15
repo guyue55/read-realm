@@ -43,6 +43,14 @@ describe('public library transport contracts', () => {
     }
   });
 
+  it('keeps browser depth at 12 while allowing scanner paths through depth 32', () => {
+    const pathAt = (depth: number) =>
+      `${Array.from({ length: depth }, (_, index) => `d${index}`).join('/')}/book.txt`;
+    expect(normalizePublicLibraryRelativePath(pathAt(13))).toBeUndefined();
+    expect(normalizePublicLibraryRelativePath(pathAt(32), 32)).toBe(pathAt(32));
+    expect(normalizePublicLibraryRelativePath(pathAt(33), 32)).toBeUndefined();
+  });
+
   it('bounds the legacy JSON body by UTF-8 bytes, not only characters', () => {
     const multibyteContent = '藏'.repeat(
       Math.floor(PUBLIC_LIBRARY_LEGACY_JSON_MAX_BYTES / 3) + 1,

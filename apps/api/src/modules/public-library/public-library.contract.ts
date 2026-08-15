@@ -38,7 +38,10 @@ export function normalizePublicLibraryDirectFilename(value: string) {
   return filename;
 }
 
-export function normalizePublicLibraryRelativePath(value: string) {
+export function normalizePublicLibraryRelativePath(
+  value: string,
+  maxDirectoryDepth = 12,
+) {
   const normalized = value.normalize('NFC');
   const hasControlCharacter = [...normalized].some((character) => {
     const code = character.codePointAt(0) ?? 0;
@@ -57,7 +60,7 @@ export function normalizePublicLibraryRelativePath(value: string) {
   }
   const segments = normalized.split('/');
   if (
-    segments.length > 13 ||
+    segments.length > maxDirectoryDepth + 1 ||
     segments.some(
       (segment) =>
         !segment ||
