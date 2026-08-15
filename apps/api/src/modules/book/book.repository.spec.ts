@@ -9,6 +9,7 @@ import { BookRepository } from './book.repository';
 import { DRIZZLE } from '../database/database.module';
 import { Book } from '@reader/shared-types';
 import * as schema from '../database/schema';
+import { LocalFileBlobStorage } from '@reader/storage-core/node';
 
 describe('BookRepository', () => {
   let repository: BookRepository;
@@ -33,6 +34,13 @@ describe('BookRepository', () => {
         {
           provide: DRIZZLE,
           useValue: db,
+        },
+        {
+          provide: LocalFileBlobStorage,
+          useValue: {
+            putObject: jest.fn().mockResolvedValue(undefined),
+            deleteObject: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

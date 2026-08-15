@@ -36,7 +36,9 @@ export const LibrarySourceSchema = z.object({
   rootName: z.string(),
   deviceId: z.string().optional(),
   backendBaseUrl: z.string().optional(),
-  permissionState: z.enum(["granted", "prompt", "denied", "expired"]).default("prompt"),
+  permissionState: z
+    .enum(["granted", "prompt", "denied", "expired"])
+    .default("prompt"),
   lastScanAt: z.string().optional(),
   scanMode: z.enum(["manual", "on_open", "scheduled"]).default("manual"),
   createdAt: z.string(),
@@ -50,7 +52,12 @@ export const LibraryFolderSchema = z.object({
   name: z.string(),
   parentId: z.string().optional(),
   sourceId: z.string().optional(),
-  sourceType: z.enum(["virtual", "imported_directory", "local_backend_directory", "cloud_directory"]),
+  sourceType: z.enum([
+    "virtual",
+    "imported_directory",
+    "local_backend_directory",
+    "cloud_directory",
+  ]),
   relativePath: z.string().optional(),
   depth: z.number().default(0),
   sortOrder: z.number().default(0),
@@ -84,7 +91,15 @@ export const IndexedNovelFileSchema = z.object({
   lastModified: z.number().optional(),
   quickFingerprint: z.string().optional(),
   contentHash: z.string().optional(),
-  status: z.enum(["indexed", "parsed", "cached", "missing", "changed", "permission_lost", "ignored"]),
+  status: z.enum([
+    "indexed",
+    "parsed",
+    "cached",
+    "missing",
+    "changed",
+    "permission_lost",
+    "ignored",
+  ]),
   bookId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -157,28 +172,42 @@ export const BookSchema = z.object({
     "folder_index",
     "folder_multi_file_book",
     "local_backend_directory",
-    "cloud_cache"
+    "cloud_cache",
   ]),
   sourceUrl: z.string().optional(),
   sourceRightsConfirmedAt: z.string().optional(),
-  sourceCheckPreference: z.object({
-    enabled: z.boolean(),
-    intervalHours: z.union([
-      z.literal(6),
-      z.literal(12),
-      z.literal(24),
-      z.literal(72),
-      z.literal(168),
-    ]),
-  }).optional(),
+  sourceCheckPreference: z
+    .object({
+      enabled: z.boolean(),
+      intervalHours: z.union([
+        z.literal(6),
+        z.literal(12),
+        z.literal(24),
+        z.literal(72),
+        z.literal(168),
+      ]),
+    })
+    .optional(),
   sourceLastCheckedAt: z.string().optional(),
-  sourceCheckPreview: z.object({
-    status: z.enum(["current", "update_available"]),
-    remoteTitle: z.string(),
-    remoteChapterCount: z.number().int().nonnegative(),
-    differences: z.array(z.string()),
-  }).optional(),
-  format: z.enum(["txt", "epub", "html", "md", "pdf", "docx", "mobi", "azw3", "unknown"]),
+  sourceCheckPreview: z
+    .object({
+      status: z.enum(["current", "update_available"]),
+      remoteTitle: z.string(),
+      remoteChapterCount: z.number().int().nonnegative(),
+      differences: z.array(z.string()),
+    })
+    .optional(),
+  format: z.enum([
+    "txt",
+    "epub",
+    "html",
+    "md",
+    "pdf",
+    "docx",
+    "mobi",
+    "azw3",
+    "unknown",
+  ]),
   status: z.enum(["reading", "finished", "dropped", "to_read"]),
   tags: z.array(z.string()),
   chapterCount: z.number(),
@@ -187,22 +216,34 @@ export const BookSchema = z.object({
   updatedAt: z.string(),
   lastReadAt: z.string().optional(),
   toc: z.array(z.object({ index: z.number(), title: z.string() })).optional(),
-  
+
   // BookShell (藏书外壳) 及多文件小说拓展字段：
   sourceFileId: z.string().optional(),
   sourceFolderId: z.string().optional(),
-  parseStatus: z.enum(["not_parsed", "parsing", "toc_ready", "parsed", "failed"]).optional(),
-  cacheStatus: z.enum(["metadata_only", "toc_cached", "chapters_partial", "chapters_full", "original_cached"]).optional(),
-  sourceAvailability: z.enum([
-    "metadata_only",
-    "source_available",
-    "permission_required",
-    "source_missing",
-    "source_offline",
-    "partial_cached",
-    "full_cached",
-    "cloud_available"
-  ]).optional(),
+  parseStatus: z
+    .enum(["not_parsed", "parsing", "toc_ready", "parsed", "failed"])
+    .optional(),
+  cacheStatus: z
+    .enum([
+      "metadata_only",
+      "toc_cached",
+      "chapters_partial",
+      "chapters_full",
+      "original_cached",
+    ])
+    .optional(),
+  sourceAvailability: z
+    .enum([
+      "metadata_only",
+      "source_available",
+      "permission_required",
+      "source_missing",
+      "source_offline",
+      "partial_cached",
+      "full_cached",
+      "cloud_available",
+    ])
+    .optional(),
   contentLocator: ContentLocatorSchema.optional(),
   multiFileBook: MultiFileBookShellSchema.optional(),
 });
@@ -276,6 +317,119 @@ export const LocalChapterSchema = z.object({
 
 export type LocalChapter = z.infer<typeof LocalChapterSchema>;
 
+const Sha256HexSchema = z.string().regex(/^[a-f0-9]{64}$/u);
+
+export const PersonalPublicationBookSchema = z.object({
+  title: z.string().trim().min(1).max(240),
+  author: z.string().trim().min(1).max(120).optional(),
+  description: z.string().trim().max(2000).optional(),
+  format: z.literal("txt"),
+  chapterCount: z.number().int().positive().max(20000),
+});
+
+export const PersonalPublicationChapterManifestSchema = z.object({
+  index: z.number().int().nonnegative(),
+  title: z.string().trim().min(1).max(500),
+  contentHash: Sha256HexSchema,
+});
+
+export const PersonalPublicationSnapshotDescriptorSchema = z.object({
+  schemaVersion: z.literal(1),
+  sourceRef: Sha256HexSchema,
+  book: PersonalPublicationBookSchema,
+  chapters: z.array(PersonalPublicationChapterManifestSchema).min(1).max(20000),
+});
+
+export type PersonalPublicationSnapshotDescriptor = z.infer<
+  typeof PersonalPublicationSnapshotDescriptorSchema
+>;
+
+export function serializePersonalPublicationSnapshotDescriptor(
+  value: PersonalPublicationSnapshotDescriptor,
+): string {
+  const parsed = PersonalPublicationSnapshotDescriptorSchema.parse(value);
+  return JSON.stringify({
+    schemaVersion: 1,
+    sourceRef: parsed.sourceRef,
+    book: {
+      title: parsed.book.title,
+      author: parsed.book.author ?? null,
+      description: parsed.book.description ?? null,
+      format: "txt",
+      chapterCount: parsed.book.chapterCount,
+    },
+    chapters: parsed.chapters.map((chapter) => ({
+      index: chapter.index,
+      title: chapter.title,
+      contentHash: chapter.contentHash,
+    })),
+  });
+}
+
+export const PersonalPublicationManifestPageSchema = z.object({
+  schemaVersion: z.literal(1),
+  snapshotHash: Sha256HexSchema,
+  sourceRef: Sha256HexSchema,
+  book: PersonalPublicationBookSchema,
+  total: z.number().int().positive().max(20000),
+  offset: z.number().int().nonnegative(),
+  limit: z.number().int().positive().max(200),
+  items: z
+    .array(
+      PersonalPublicationChapterManifestSchema.extend({
+        byteLength: z
+          .number()
+          .int()
+          .positive()
+          .max(20 * 1024 * 1024),
+      }),
+    )
+    .max(200),
+});
+
+export type PersonalPublicationManifestPage = z.infer<
+  typeof PersonalPublicationManifestPageSchema
+>;
+
+export const PersonalPublicationContentPageSchema =
+  PersonalPublicationManifestPageSchema.extend({
+    items: z
+      .array(
+        PersonalPublicationChapterManifestSchema.extend({
+          byteLength: z
+            .number()
+            .int()
+            .positive()
+            .max(20 * 1024 * 1024),
+          content: z.string().min(1),
+        }),
+      )
+      .max(200),
+  });
+
+export type PersonalPublicationContentPage = z.infer<
+  typeof PersonalPublicationContentPageSchema
+>;
+
+export const VerifiedPersonalPublicationSnapshotSchema = z.object({
+  schemaVersion: z.literal(1),
+  snapshotHash: Sha256HexSchema,
+  sourceRef: Sha256HexSchema,
+  book: PersonalPublicationBookSchema,
+  chapters: z
+    .array(
+      PersonalPublicationChapterManifestSchema.extend({
+        content: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(20000),
+});
+
+export type VerifiedPersonalPublicationSnapshot = z.infer<
+  typeof VerifiedPersonalPublicationSnapshotSchema
+>;
+
 export const LocalFileRefSchema = z.object({
   id: z.string(),
   bookId: z.string(),
@@ -290,71 +444,73 @@ export const LocalFileRefSchema = z.object({
 
 export type LocalFileRef = z.infer<typeof LocalFileRefSchema>;
 
-export const LocalDataSnapshotEnvelopeSchema = z.object({
-  kind: z.literal("read-realm-local-snapshot"),
-  schemaVersion: z.literal(1),
-  createdAt: z.string(),
-  source: z.object({
-    appVersion: z.string(),
-    databaseVersion: z.number().int().nonnegative(),
-  }),
-  data: z.object({
-    books: z.array(BookSchema),
-    chapters: z.array(LocalChapterSchema),
-    progress: z.array(ReadingProgressSchema),
-    bookmarks: z.array(BookmarkSchema),
-    settings: ReaderSettingsSchema,
-    fileRefs: z.array(LocalFileRefSchema),
-  }),
-}).superRefine((snapshot, context) => {
-  const bookIds = new Set(snapshot.data.books.map((book) => book.id));
-  const chapterIds = new Set(
-    snapshot.data.chapters.map((chapter) => chapter.id),
-  );
-  snapshot.data.chapters.forEach((chapter, index) => {
-    if (!bookIds.has(chapter.bookId)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "章节引用了不存在的书籍",
-        path: ["data", "chapters", index, "bookId"],
-      });
-    }
+export const LocalDataSnapshotEnvelopeSchema = z
+  .object({
+    kind: z.literal("read-realm-local-snapshot"),
+    schemaVersion: z.literal(1),
+    createdAt: z.string(),
+    source: z.object({
+      appVersion: z.string(),
+      databaseVersion: z.number().int().nonnegative(),
+    }),
+    data: z.object({
+      books: z.array(BookSchema),
+      chapters: z.array(LocalChapterSchema),
+      progress: z.array(ReadingProgressSchema),
+      bookmarks: z.array(BookmarkSchema),
+      settings: ReaderSettingsSchema,
+      fileRefs: z.array(LocalFileRefSchema),
+    }),
+  })
+  .superRefine((snapshot, context) => {
+    const bookIds = new Set(snapshot.data.books.map((book) => book.id));
+    const chapterIds = new Set(
+      snapshot.data.chapters.map((chapter) => chapter.id),
+    );
+    snapshot.data.chapters.forEach((chapter, index) => {
+      if (!bookIds.has(chapter.bookId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "章节引用了不存在的书籍",
+          path: ["data", "chapters", index, "bookId"],
+        });
+      }
+    });
+    snapshot.data.progress.forEach((progress, index) => {
+      if (!bookIds.has(progress.bookId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "阅读进度引用了不存在的书籍",
+          path: ["data", "progress", index, "bookId"],
+        });
+      }
+      if (!chapterIds.has(progress.chapterId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "阅读进度引用了不存在的章节",
+          path: ["data", "progress", index, "chapterId"],
+        });
+      }
+    });
+    snapshot.data.bookmarks.forEach((bookmark, index) => {
+      if (!bookIds.has(bookmark.bookId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "书签引用了不存在的书籍",
+          path: ["data", "bookmarks", index, "bookId"],
+        });
+      }
+    });
+    snapshot.data.fileRefs.forEach((fileRef, index) => {
+      if (!bookIds.has(fileRef.bookId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "文件引用了不存在的书籍",
+          path: ["data", "fileRefs", index, "bookId"],
+        });
+      }
+    });
   });
-  snapshot.data.progress.forEach((progress, index) => {
-    if (!bookIds.has(progress.bookId)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "阅读进度引用了不存在的书籍",
-        path: ["data", "progress", index, "bookId"],
-      });
-    }
-    if (!chapterIds.has(progress.chapterId)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "阅读进度引用了不存在的章节",
-        path: ["data", "progress", index, "chapterId"],
-      });
-    }
-  });
-  snapshot.data.bookmarks.forEach((bookmark, index) => {
-    if (!bookIds.has(bookmark.bookId)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "书签引用了不存在的书籍",
-        path: ["data", "bookmarks", index, "bookId"],
-      });
-    }
-  });
-  snapshot.data.fileRefs.forEach((fileRef, index) => {
-    if (!bookIds.has(fileRef.bookId)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "文件引用了不存在的书籍",
-        path: ["data", "fileRefs", index, "bookId"],
-      });
-    }
-  });
-});
 
 export type LocalDataSnapshotEnvelope = z.infer<
   typeof LocalDataSnapshotEnvelopeSchema
@@ -475,9 +631,12 @@ export async function generateAiSigKeyAsync(
   const secretKeyBytes = encoder.encode("read-realm-secret-salt-2026");
 
   // 融合浏览器端 (window) 与服务端 (globalThis) 的 SubtleCrypto 加密上下文
-  const cryptoObj = typeof window !== "undefined"
-    ? (window.crypto || (window as unknown as { msCrypto?: Crypto }).msCrypto)
-    : (typeof globalThis !== "undefined" ? (globalThis as unknown as { crypto?: Crypto }).crypto : null);
+  const cryptoObj =
+    typeof window !== "undefined"
+      ? window.crypto || (window as unknown as { msCrypto?: Crypto }).msCrypto
+      : typeof globalThis !== "undefined"
+        ? (globalThis as unknown as { crypto?: Crypto }).crypto
+        : null;
 
   if (!cryptoObj || !cryptoObj.subtle) {
     // 降级兜底：在未支持 Subtle 极度特殊的旧原生套壳中拼接退避
@@ -490,17 +649,13 @@ export async function generateAiSigKeyAsync(
       secretKeyBytes,
       { name: "HMAC", hash: { name: "SHA-256" } },
       false,
-      ["sign"]
+      ["sign"],
     );
 
-    const signature = await cryptoObj.subtle.sign(
-      "HMAC",
-      key,
-      dataBytes
-    );
+    const signature = await cryptoObj.subtle.sign("HMAC", key, dataBytes);
 
     const hashArray = Array.from(new Uint8Array(signature));
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   } catch (err) {
     console.warn("[Crypto] SubtleCrypto HMAC 运算失败，启动降级签名:", err);
     return `fallback-${scope}-${sourceHash}-${model}-${promptVersion}`;

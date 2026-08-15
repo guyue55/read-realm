@@ -1,5 +1,6 @@
 import { apiUrl } from "@/lib/api";
 import { normalizeShareToken } from "@/lib/api";
+import type { VerifiedPersonalPublicationSnapshot } from "@reader/shared-types";
 import {
   parsePublicLibraryBook,
   type PublicLibraryBook,
@@ -238,6 +239,51 @@ export class PublicLibraryMaintenanceClient {
     }
     if (response.status === 400 || response.status === 413) {
       throw new PublicLibraryMaintenanceError("file_rejected");
+    }
+    if (!response.ok || !isRecord(payload)) {
+      throw new PublicLibraryMaintenanceError("service_unavailable");
+    }
+    if (payload.outcome !== "created" && payload.outcome !== "unchanged") {
+      throw new PublicLibraryMaintenanceError("service_unavailable");
+    }
+    return {
+      outcome: payload.outcome,
+      book: parsePublicLibraryBook(payload.book),
+    };
+  }
+
+  async publishPersonalSnapshot(
+    snapshot: VerifiedPersonalPublicationSnapshot,
+    fields: { category: PublicLibraryCategory; rightsConfirmed: true },
+  ): Promise<PublicLibraryFilePublication> {
+    const body = new FormData();
+    body.set("category", fields.category);
+    body.set("rightsConfirmed", String(fields.rightsConfirmed));
+    body.set(
+      "snapshot",
+      new File([JSON.stringify(snapshot)], "verified-personal-snapshot.json", {
+        type: "application/json",
+      }),
+    );
+    const response = await fetch(
+      apiUrl("/public-library/maintenance/personal-snapshots"),
+      { method: "POST", headers: this.headers(), body },
+    );
+    const payload: unknown = await response.json().catch(() => undefined);
+    if (response.status === 401 || response.status === 403) {
+      throw new PublicLibraryMaintenanceError("credential_rejected");
+    }
+    if (
+      response.status === 409 &&
+      isRecord(payload) &&
+      payload.code === "duplicate_metadata_conflict"
+    ) {
+      throw new PublicLibraryMaintenanceError(
+        "duplicate_metadata_conflict",
+        typeof payload.existingBookId === "string"
+          ? payload.existingBookId
+          : undefined,
+      );
     }
     if (!response.ok || !isRecord(payload)) {
       throw new PublicLibraryMaintenanceError("service_unavailable");

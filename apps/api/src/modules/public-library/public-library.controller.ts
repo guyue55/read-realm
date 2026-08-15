@@ -16,8 +16,10 @@ import { parseBody } from '../../common/request-boundary';
 import {
   normalizePublicLibraryDirectFilename,
   PUBLIC_LIBRARY_FILE_MAX_BYTES,
+  PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES,
   PublicLibraryFileFieldsSchema,
   PublicLibraryListQuerySchema,
+  PublicLibraryPersonalSnapshotFieldsSchema,
   PublicLibraryUploadSchema,
 } from './public-library.contract';
 import {
@@ -100,5 +102,44 @@ export class PublicLibraryController {
       ...file,
       originalname: normalizedFilename,
     });
+  }
+
+  @Post('maintenance/personal-snapshots')
+  @UseGuards(PublicLibraryMaintenanceGuard)
+  @UseInterceptors(
+    FileInterceptor('snapshot', {
+      limits: {
+        fileSize: PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES,
+        files: 1,
+        fields: 4,
+        fieldSize: 16 * 1024,
+      },
+      fileFilter: (_request, file, callback) => {
+        const valid =
+          file.originalname === 'verified-personal-snapshot.json' &&
+          file.mimetype === 'application/json';
+        callback(
+          valid ? null : new BadRequestException('个人云发布快照文件无效'),
+          valid,
+        );
+      },
+    }),
+  )
+  publishPersonalSnapshot(
+    @Headers('x-public-library-maintenance-key')
+    maintenanceKey: string | undefined,
+    @Body() body: unknown,
+    @UploadedFile() file: PublicLibraryUploadedFile | undefined,
+  ) {
+    if (!file) throw new BadRequestException('请选择个人云发布快照');
+    const fields = PublicLibraryPersonalSnapshotFieldsSchema.safeParse(body);
+    if (!fields.success) {
+      throw new BadRequestException('个人云发布确认字段无效');
+    }
+    return this.service.publishPersonalSnapshot(
+      maintenanceKey,
+      fields.data,
+      file,
+    );
   }
 }

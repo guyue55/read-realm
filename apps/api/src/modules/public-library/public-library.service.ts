@@ -5,13 +5,19 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import {
+  serializePersonalPublicationSnapshotDescriptor,
+  VerifiedPersonalPublicationSnapshotSchema,
+} from '@reader/shared-types';
 import {
   normalizePublicLibraryDirectFilename,
   normalizePublicLibraryRelativePath,
   PUBLIC_LIBRARY_FILE_MAX_BYTES,
+  PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES,
   type PublicLibraryFileFields,
   type PublicLibraryListQuery,
+  type PublicLibraryPersonalSnapshotFields,
   type PublicLibraryUpload,
 } from './public-library.contract';
 import {
@@ -124,6 +130,97 @@ export class PublicLibraryService {
       }
       throw error;
     }
+  }
+
+  async publishPersonalSnapshot(
+    key: string | undefined,
+    fields: PublicLibraryPersonalSnapshotFields,
+    file: PublicLibraryUploadedFile,
+  ) {
+    this.assertMaintenanceKey(key);
+    if (
+      file.originalname !== 'verified-personal-snapshot.json' ||
+      file.mimetype !== 'application/json' ||
+      !Buffer.isBuffer(file.buffer) ||
+      file.buffer.length === 0 ||
+      file.buffer.length !== file.size ||
+      file.size > PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES
+    ) {
+      throw new BadRequestException('个人云发布快照文件无效或过大');
+    }
+    let raw: unknown;
+    try {
+      const json = new TextDecoder('utf-8', { fatal: true }).decode(
+        file.buffer,
+      );
+      raw = JSON.parse(json) as unknown;
+    } catch {
+      throw new BadRequestException('个人云发布快照不是严格 UTF-8 JSON');
+    }
+    const parsed = VerifiedPersonalPublicationSnapshotSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new BadRequestException('个人云发布快照结构无效');
+    }
+    const snapshot = parsed.data;
+    if (
+      snapshot.chapters.length !== snapshot.book.chapterCount ||
+      snapshot.chapters.some(
+        (chapter, index) =>
+          chapter.index !== index ||
+          createHash('sha256').update(chapter.content).digest('hex') !==
+            chapter.contentHash,
+      )
+    ) {
+      throw new BadRequestException('个人云发布章节顺序或正文哈希无效');
+    }
+    const totalBytes = snapshot.chapters.reduce(
+      (total, chapter) => total + Buffer.byteLength(chapter.content, 'utf8'),
+      0,
+    );
+    if (totalBytes > PUBLIC_LIBRARY_FILE_MAX_BYTES) {
+      throw new BadRequestException('个人云发布正文超过 20 MiB');
+    }
+    const descriptor = {
+      schemaVersion: 1 as const,
+      sourceRef: snapshot.sourceRef,
+      book: snapshot.book,
+      chapters: snapshot.chapters.map((chapter) => ({
+        index: chapter.index,
+        title: chapter.title,
+        contentHash: chapter.contentHash,
+      })),
+    };
+    const serialized =
+      serializePersonalPublicationSnapshotDescriptor(descriptor);
+    if (
+      createHash('sha256').update(serialized).digest('hex') !==
+      snapshot.snapshotHash
+    ) {
+      throw new BadRequestException('个人云发布快照代际哈希无效');
+    }
+    return this.publishWithConflictBoundary(() =>
+      this.repository.publishCandidateWithOutcome({
+        title: snapshot.book.title,
+        author: snapshot.book.author,
+        description: snapshot.book.description,
+        category: fields.category,
+        source: {
+          kind: 'personal_cloud',
+          scope: 'personal-cloud',
+          relativePath: `personal-${snapshot.sourceRef}.txt`,
+          bytes: Buffer.from(serialized),
+        },
+        chapters: snapshot.chapters.map((chapter) => ({
+          index: chapter.index,
+          title: chapter.title,
+          content: chapter.content,
+        })),
+        wordCount: snapshot.chapters.reduce(
+          (total, chapter) => total + [...chapter.content].length,
+          0,
+        ),
+      }),
+    );
   }
 
   async list(query: PublicLibraryListQuery) {

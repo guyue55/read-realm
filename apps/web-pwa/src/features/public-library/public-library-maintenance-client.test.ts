@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { VerifiedPersonalPublicationSnapshot } from "@reader/shared-types";
 import {
   PublicLibraryMaintenanceClient,
   PublicLibraryMaintenanceError,
@@ -53,6 +54,48 @@ describe("PublicLibraryMaintenanceClient", () => {
     expect((init?.body as FormData).get("relativePath")).toBe(
       "古籍/经部/book.txt",
     );
+  });
+
+  it("publishes a verified personal snapshot without either private identity field", async () => {
+    const snapshot: VerifiedPersonalPublicationSnapshot = {
+      schemaVersion: 1,
+      snapshotHash: "a".repeat(64),
+      sourceRef: "b".repeat(64),
+      book: { title: "云上书", format: "txt", chapterCount: 1 },
+      chapters: [
+        {
+          index: 0,
+          title: "第一章",
+          content: "正文",
+          contentHash: "c".repeat(64),
+        },
+      ],
+    };
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ outcome: "created", book }), {
+          status: 201,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new PublicLibraryMaintenanceClient("private-a");
+
+    await client.publishPersonalSnapshot(snapshot, {
+      category: "其他",
+      rightsConfirmed: true,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain("/maintenance/personal-snapshots");
+    expect(init?.headers).toEqual({
+      "x-public-library-maintenance-key": "private-a",
+    });
+    expect(init?.headers).not.toHaveProperty("x-share-token");
+    const body = init?.body as FormData;
+    expect(body.get("category")).toBe("其他");
+    const uploaded = body.get("snapshot") as File;
+    expect(await uploaded.text()).not.toContain("private-a");
+    expect(await uploaded.text()).not.toContain("book-1");
   });
 
   it("maps metadata conflict without exposing response text", async () => {

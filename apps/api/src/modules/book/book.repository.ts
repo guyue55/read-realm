@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../database/database.module';
 import { LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '../database/schema';
@@ -17,7 +17,8 @@ import {
 export class BookRepository {
   constructor(
     @Inject(DRIZZLE) private db: LibSQLDatabase<typeof schema>,
-    @Optional() private blobStorage?: LocalFileBlobStorage,
+    @Inject(LocalFileBlobStorage)
+    private blobStorage: LocalFileBlobStorage,
   ) {}
 
   async importBook(
@@ -100,9 +101,7 @@ export class BookRepository {
             .update(chapter.content)
             .digest('hex');
 
-          if (this.blobStorage) {
-            await this.blobStorage.putObject(contentHash, chapter.content);
-          }
+          await this.blobStorage.putObject(contentHash, chapter.content);
 
           chaptersToInsert.push({
             index: chapter.index,
@@ -179,7 +178,7 @@ export class BookRepository {
     });
 
     // 3. Cleanup files from disk
-    if (this.blobStorage && hashes.length > 0) {
+    if (hashes.length > 0) {
       for (const hash of hashes) {
         const otherChapters = await this.db
           .select({ id: schema.chapters.id })

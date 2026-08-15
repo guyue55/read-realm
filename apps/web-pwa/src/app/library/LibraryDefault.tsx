@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, memo, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
@@ -16,6 +17,9 @@ import type { Book, ReadingProgress, LibraryFolder } from "@reader/shared-types"
 import { cacheEntireBook } from "@/hooks/useReader";
 import { PRESET_BOOKLISTS } from "./presetBooks";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
+import { useDocumentModalIsolation } from "@/components/reader/useDocumentModalIsolation";
+import { PersonalBookPublicationDialog } from "@/features/library/PersonalBookPublicationDialog";
 import { FolderScanService, type ImportPreviewNode } from "@/services/FolderScanService";
 import { selectContinueBook } from "@/features/library/library-state";
 import {
@@ -2524,7 +2528,7 @@ export function LibraryDefault({
                           setSelectedGovBook(book);
                           setIsGovOpen(true);
                         }}
-                        className="px-2.5 py-1 rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white border border-[#E4D7C2] text-xs font-semibold text-[#8C6239] transition-all shadow-sm"
+                        className="min-h-[44px] px-2.5 py-1 rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white border border-[#E4D7C2] text-xs font-semibold text-[#8C6239] transition-all shadow-sm"
                         title="藏书管理与目录治理"
                       >
                         🏮 治理
@@ -2889,7 +2893,7 @@ export function LibraryDefault({
                               setSelectedGovBook(book);
                               setIsGovOpen(true);
                             }}
-                            className="rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white px-2 py-0.5 text-[10px] font-semibold text-[#8C6239] transition-all border border-[#E4D7C2]"
+                            className="min-h-[44px] rounded bg-[#FAF5EB] hover:bg-[#8C6239] hover:text-white px-2 py-0.5 text-[10px] font-semibold text-[#8C6239] transition-all border border-[#E4D7C2]"
                             title="藏书管理与目录治理"
                           >
                             🏮 治理
@@ -3306,10 +3310,16 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
   const [newFolderName, setNewFolderName] = useState("");
   const [cacheProgress, setCacheProgress] = useState<number | null>(null);
   const [isCaching, setIsCaching] = useState(false);
+  const [publicationOpen, setPublicationOpen] = useState(false);
+  const [publicationCredential, setPublicationCredential] = useState("");
+  const publicationTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      setPublicationCredential(
+        normalizeShareToken(window.localStorage.getItem("reader-share-token")),
+      );
       if (book) {
         setSelectedFolderId(book.sourceFolderId || "root");
       }
@@ -3319,11 +3329,17 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
       setNewFolderName("");
       setCacheProgress(null);
       setIsCaching(false);
+      setPublicationOpen(false);
+      setPublicationCredential("");
     }
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen, book]);
+  useDocumentModalIsolation(
+    isOpen && !publicationOpen,
+    '[data-book-governance-dialog="true"]',
+  );
 
   if (!isOpen || !book) return null;
 
@@ -3404,18 +3420,29 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 磨砂背景 */}
-      <div onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-md transition-opacity" />
+  const canPublish = Boolean(publicationCredential) && book.format === "txt";
 
+  return createPortal(
+    <>
+    <ReaderDialogSurface
+      open={isOpen}
+      label={`藏书治理：${book.title}`}
+      onClose={onClose}
+      fallbackFocus={() => document.querySelector<HTMLElement>("[data-library-shelf]")}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/30 p-3 backdrop-blur-md sm:p-4"
+      data-book-governance-dialog="true"
+    >
       {/* 弹窗框 (宣纸风格) */}
-      <div className="relative w-full max-w-lg overflow-hidden rounded-[24px] border border-[#E9DCC8] bg-[#FAF8F2] shadow-2xl transition-all p-7 text-[#5C4533] z-10 animate-scale-in">
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="relative my-auto max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[#E9DCC8] bg-[#FAF8F2] p-5 text-[#5C4533] shadow-2xl transition-all z-10 animate-scale-in sm:p-7"
+      >
         {/* 注入淡入和缩放动画 */}
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+            from { transform: translateY(6px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
           }
           .animate-scale-in {
             animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -3437,7 +3464,8 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
           </div>
           <button
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(80,65,45,0.05)] text-[var(--ui-muted)] transition-colors hover:bg-[rgba(80,65,45,0.1)]"
+            className="reader-focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-[rgba(80,65,45,0.05)] text-[var(--ui-muted)] transition-colors hover:bg-[rgba(80,65,45,0.1)]"
+            aria-label="关闭藏书治理"
           >
             ×
           </button>
@@ -3482,7 +3510,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                       handleMove(val);
                     }
                   }}
-                  className="flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
+                  className="min-h-[44px] flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
                 >
                   <option value="root">📜 书架主阁 (未分类)</option>
                   {folders.map((f) => (
@@ -3502,17 +3530,17 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                   placeholder="请输入新书箧名称..."
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  className="flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
+                  className="min-h-[44px] flex-1 rounded-xl border border-[#E9DCC8] bg-white px-3 py-2 text-xs font-semibold shadow-sm focus:border-[var(--ui-accent)] focus:outline-none text-[#5C4533]"
                 />
                 <button
                   onClick={handleCreateAndMove}
-                  className="rounded-xl bg-[var(--ui-accent)] hover:bg-[#527047] text-white px-3 text-xs font-bold transition-colors"
+                  className="min-h-[44px] rounded-xl bg-[var(--ui-accent)] hover:bg-[#527047] text-white px-3 text-xs font-bold transition-colors"
                 >
                   新建并移入
                 </button>
                 <button
                   onClick={() => setIsCreatingFolder(false)}
-                  className="rounded-xl border border-[#E9DCC8] bg-white hover:bg-gray-50 text-[var(--ui-muted)] px-3 text-xs font-bold transition-colors"
+                  className="min-h-[44px] min-w-[44px] rounded-xl border border-[#E9DCC8] bg-white hover:bg-gray-50 text-[var(--ui-muted)] px-3 text-xs font-bold transition-colors"
                 >
                   取消
                 </button>
@@ -3536,7 +3564,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                 <button
                   onClick={handleCache}
                   disabled={isCaching}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shrink-0 ${
+                  className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 ${
                     isCaching
                       ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                       : "bg-[#F1F6F0] hover:bg-[var(--ui-accent)] hover:text-white text-[var(--ui-accent)] border-[var(--ui-accent-soft)]"
@@ -3564,6 +3592,35 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className="block text-xs font-bold tracking-wide text-[#7C624E]">
+              🏛️ 公共藏经阁
+            </label>
+            <div className="rounded-xl border border-[#E9DCC8]/50 bg-white/55 p-3.5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h5 className="text-xs font-bold text-[#5C4533]">发布已验证的云端正文</h5>
+                  <p className="mt-1 text-[11px] leading-5 text-[var(--ui-muted)]">
+                    {!publicationCredential
+                      ? "需先在同步设置绑定私有云密钥；匿名浏览仍可正常使用。"
+                      : book.format !== "txt"
+                        ? "当前首版仅支持已上传私人云端的 TXT 藏书。"
+                        : "先核验同一私有云密钥下的云端章节，再创建独立公共明文副本。"}
+                  </p>
+                </div>
+                <button
+                  ref={publicationTriggerRef}
+                  type="button"
+                  disabled={!canPublish}
+                  onClick={() => setPublicationOpen(true)}
+                  className="reader-focus-ring min-h-[44px] shrink-0 rounded-full border border-[#C9D7C2] bg-[#F1F6F0] px-4 text-xs font-bold text-[#4F7047] transition-colors hover:bg-[#5F7D52] hover:text-white disabled:cursor-not-allowed disabled:border-[#E4DED4] disabled:bg-[#F4F1EB] disabled:text-[#9C9388]"
+                >
+                  公开入阁
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* 版块三：物理下架 */}
           <div className="space-y-2">
             <label className="block text-xs font-bold tracking-wide text-[#7C624E]">
@@ -3578,7 +3635,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
               </div>
               <button
                 onClick={handleUnbind}
-                className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-[#A64B4B] hover:text-white text-xs font-bold text-[#A64B4B] border border-red-200 transition-colors shrink-0"
+                className="min-h-[44px] px-3 py-2 rounded-xl bg-red-50 hover:bg-[#A64B4B] hover:text-white text-xs font-bold text-[#A64B4B] border border-red-200 transition-colors shrink-0"
               >
                 解绑下架
               </button>
@@ -3586,6 +3643,15 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
           </div>
         </div>
       </div>
-    </div>
+    </ReaderDialogSurface>
+    <PersonalBookPublicationDialog
+      open={publicationOpen}
+      book={book}
+      credential={publicationCredential}
+      onClose={() => setPublicationOpen(false)}
+      fallbackFocus={() => publicationTriggerRef.current}
+    />
+    </>,
+    document.body,
   );
 });

@@ -40,6 +40,9 @@ describe('PublicLibraryController multipart boundary', () => {
     publishFile: jest.fn(() =>
       Promise.resolve({ outcome: 'created', book: { id: 'public-file' } }),
     ),
+    publishPersonalSnapshot: jest.fn(() =>
+      Promise.resolve({ outcome: 'created', book: { id: 'public-personal' } }),
+    ),
     list: jest.fn(),
     getPackage: jest.fn(),
   };
@@ -186,5 +189,41 @@ describe('PublicLibraryController multipart boundary', () => {
       .attach('file', Buffer.from('第二本'), 'second.txt')
       .expect(400);
     expect(service.publishFile).not.toHaveBeenCalled();
+  });
+
+  it('accepts a bounded personal snapshot only after maintenance authentication', async () => {
+    const bytes = Buffer.from('{}');
+    await request(app.getHttpServer())
+      .post('/public-library/maintenance/personal-snapshots')
+      .set('x-public-library-maintenance-key', 'configured-key')
+      .field('category', '其他')
+      .field('rightsConfirmed', 'true')
+      .attach('snapshot', bytes, {
+        filename: 'verified-personal-snapshot.json',
+        contentType: 'application/json',
+      })
+      .expect(201);
+    expect(service.publishPersonalSnapshot).toHaveBeenCalledWith(
+      'configured-key',
+      { category: '其他', rightsConfirmed: true },
+      expect.objectContaining({
+        originalname: 'verified-personal-snapshot.json',
+        size: bytes.length,
+      }),
+    );
+  });
+
+  it('rejects x-share-token-only personal publication before buffering the snapshot', async () => {
+    await request(app.getHttpServer())
+      .post('/public-library/maintenance/personal-snapshots')
+      .set('x-share-token', 'configured-key')
+      .field('category', '其他')
+      .field('rightsConfirmed', 'true')
+      .attach('snapshot', Buffer.from('unauthorized'), {
+        filename: 'wrong.txt',
+        contentType: 'text/plain',
+      })
+      .expect(403);
+    expect(service.publishPersonalSnapshot).not.toHaveBeenCalled();
   });
 });
