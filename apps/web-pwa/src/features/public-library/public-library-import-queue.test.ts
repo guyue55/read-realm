@@ -8,8 +8,8 @@ import {
 } from "./public-library-import-queue";
 import { PublicLibraryMaintenanceError } from "./public-library-maintenance-client";
 
-function file(name: string, size: number): File {
-  return { name, size } as File;
+function file(name: string, size: number, webkitRelativePath = ""): File {
+  return { name, size, webkitRelativePath } as File;
 }
 
 describe("public library browser import queue", () => {
@@ -24,6 +24,31 @@ describe("public library browser import queue", () => {
       { status: "failed", reason: "仅支持 TXT 文件" },
       { status: "failed", reason: "单个文件超过 20 MiB" },
     ]);
+  });
+
+  it("normalizes folder paths and rejects traversal or normalized duplicates", () => {
+    const tasks = preparePublicLibraryImportTasks([
+      file("one.txt", 10, "古籍/经部/one.txt"),
+      file("book.txt", 10, "藏书/e\u0301/book.txt"),
+      file("book.txt", 10, "藏书/é/book.txt"),
+      file("escape.txt", 10, "../escape.txt"),
+    ]);
+    expect(tasks[0]).toMatchObject({
+      status: "queued",
+      relativePath: "古籍/经部/one.txt",
+    });
+    expect(tasks[1]).toMatchObject({
+      status: "failed",
+      reason: "规范化路径重复",
+    });
+    expect(tasks[2]).toMatchObject({
+      status: "failed",
+      reason: "规范化路径重复",
+    });
+    expect(tasks[3]).toMatchObject({
+      status: "failed",
+      reason: "文件夹相对路径无效",
+    });
   });
 
   it("rejects a selection beyond the file or byte hard limits", () => {

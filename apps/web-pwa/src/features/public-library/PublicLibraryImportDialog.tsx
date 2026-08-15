@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type RefObject } from "react";
-import { FileText, RotateCcw, Upload, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { FileText, FolderOpen, RotateCcw, Upload, X } from "lucide-react";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { normalizeShareToken } from "@/lib/api";
 import {
@@ -50,6 +50,8 @@ export function PublicLibraryImportDialog({
   const [tasks, setTasks] = useState<PublicLibraryImportTask[]>([]);
   const [message, setMessage] = useState("");
   const [running, setRunning] = useState(false);
+  const [folderSupported, setFolderSupported] = useState(false);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +60,14 @@ export function PublicLibraryImportDialog({
     setTasks([]);
     setMessage("");
     setRunning(false);
+    setFolderSupported("webkitdirectory" in document.createElement("input"));
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !folderSupported) return;
+    folderInputRef.current?.setAttribute("webkitdirectory", "");
+    folderInputRef.current?.setAttribute("directory", "");
+  }, [folderSupported, open]);
 
   const counts = useMemo(
     () =>
@@ -128,7 +137,12 @@ export function PublicLibraryImportDialog({
       const client = new PublicLibraryMaintenanceClient(maintenanceKey);
       const result = await runPublicLibraryImportQueue(
         sourceTasks,
-        (file) => client.publishFile(file, { category, rightsConfirmed: true }),
+        (file, relativePath) =>
+          client.publishFile(file, {
+            category,
+            relativePath,
+            rightsConfirmed: true,
+          }),
         replaceTask,
       );
       setTasks(result);
@@ -169,7 +183,7 @@ export function PublicLibraryImportDialog({
               选择 TXT 文件入阁
             </h2>
             <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-              最多 200 本，单本 20 MiB，本批总量 200 MiB。
+              最多 200 本，单本 20 MiB，本批 200 MiB，目录深度最多 12 层。
             </p>
           </div>
           <button
@@ -219,21 +233,45 @@ export function PublicLibraryImportDialog({
             </span>
           </label>
 
-          <label className="mt-4 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-dashed border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-5 text-sm font-semibold text-[var(--color-primary)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]">
-            <Upload aria-hidden="true" className="h-4 w-4" />
-            选择 TXT 文件
-            <input
-              accept=".txt,text/plain"
-              className="sr-only"
-              disabled={running}
-              multiple
-              onChange={(event) => {
-                chooseFiles(event.target.files);
-                event.target.value = "";
-              }}
-              type="file"
-            />
-          </label>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-dashed border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-5 text-sm font-semibold text-[var(--color-primary)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]">
+              <Upload aria-hidden="true" className="h-4 w-4" />
+              选择 TXT 文件
+              <input
+                accept=".txt,text/plain"
+                className="sr-only"
+                disabled={running}
+                multiple
+                onChange={(event) => {
+                  chooseFiles(event.target.files);
+                  event.target.value = "";
+                }}
+                type="file"
+              />
+            </label>
+            {folderSupported ? (
+              <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-dashed border-[var(--color-primary)] bg-white/70 px-5 text-sm font-semibold text-[var(--color-primary)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]">
+                <FolderOpen aria-hidden="true" className="h-4 w-4" />
+                选择 TXT 文件夹
+                <input
+                  accept=".txt,text/plain"
+                  className="sr-only"
+                  disabled={running}
+                  multiple
+                  onChange={(event) => {
+                    chooseFiles(event.target.files);
+                    event.target.value = "";
+                  }}
+                  ref={folderInputRef}
+                  type="file"
+                />
+              </label>
+            ) : (
+              <p className="flex min-h-11 items-center rounded-2xl border border-[var(--color-border)] bg-white/60 px-4 text-xs leading-5 text-[var(--color-muted)]">
+                当前设备请多选 TXT 文件。
+              </p>
+            )}
+          </div>
 
           {tasks.length > 0 && (
             <div className="mt-5">
@@ -258,7 +296,7 @@ export function PublicLibraryImportDialog({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {task.file.name}
+                        {task.relativePath}
                       </p>
                       {task.reason && (
                         <p className="mt-0.5 text-xs text-[var(--color-muted)]">

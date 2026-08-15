@@ -9,6 +9,7 @@ export type PublicLibraryCategory = "文学" | "经典" | "思想" | "技术" | 
 
 export interface PublicLibraryFileFields {
   category: PublicLibraryCategory;
+  relativePath?: string;
   rightsConfirmed: true;
 }
 
@@ -52,6 +53,7 @@ export class PublicLibraryMaintenanceClient {
     const body = new FormData();
     body.set("category", fields.category);
     body.set("rightsConfirmed", String(fields.rightsConfirmed));
+    if (fields.relativePath) body.set("relativePath", fields.relativePath);
     body.set("file", file, file.name);
     const response = await fetch(apiUrl("/public-library/maintenance/files"), {
       method: "POST",

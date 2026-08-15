@@ -9,7 +9,9 @@ import { parseTxtBook } from '@reader/parser-core/txt-parser';
 import { timingSafeEqual } from 'node:crypto';
 import {
   normalizePublicLibraryDirectFilename,
+  normalizePublicLibraryRelativePath,
   PUBLIC_LIBRARY_FILE_MAX_BYTES,
+  publicLibraryCollectionPath,
   type PublicLibraryFileFields,
   type PublicLibraryListQuery,
   type PublicLibraryUpload,
@@ -102,16 +104,24 @@ export class PublicLibraryService {
     }
     const title = fields.title ?? parsed.title.trim();
     if (!title) throw new BadRequestException('书名不能为空');
+    const relativePath = fields.relativePath
+      ? normalizePublicLibraryRelativePath(fields.relativePath)
+      : filename;
+    if (!relativePath || relativePath.split('/').at(-1) !== filename) {
+      throw new BadRequestException('文件夹相对路径与文件名不一致');
+    }
+    const collectionPath = publicLibraryCollectionPath(relativePath);
     return this.publishWithConflictBoundary(() =>
       this.repository.publishCandidateWithOutcome({
         title,
         author: fields.author,
         description: fields.description,
         category: fields.category,
+        collectionPath,
         source: {
           kind: 'browser_file',
-          scope: 'direct-upload',
-          relativePath: filename,
+          scope: collectionPath ? 'browser-folder' : 'direct-upload',
+          relativePath,
           bytes: Buffer.from(file.buffer),
         },
         chapters: parsed.chapters,

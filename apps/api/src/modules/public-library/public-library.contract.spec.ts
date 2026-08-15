@@ -1,5 +1,7 @@
 import {
   normalizePublicLibraryDirectFilename,
+  normalizePublicLibraryRelativePath,
+  publicLibraryCollectionPath,
   PUBLIC_LIBRARY_LEGACY_JSON_MAX_BYTES,
   PublicLibraryFileFieldsSchema,
   PublicLibraryUploadSchema,
@@ -19,6 +21,26 @@ describe('public library transport contracts', () => {
         rightsConfirmed: 'false',
       }).success,
     ).toBe(false);
+  });
+
+  it('normalizes a bounded relative TXT path and derives its collection', () => {
+    expect(normalizePublicLibraryRelativePath('古籍/e\u0301/book.txt')).toBe(
+      '古籍/é/book.txt',
+    );
+    expect(publicLibraryCollectionPath('古籍/经部/book.txt')).toBe('古籍');
+    for (const invalid of [
+      '../escape.txt',
+      '/absolute.txt',
+      'C:\\escape.txt',
+      'folder\\mixed/file.txt',
+      'folder//empty.txt',
+      'folder/./dot.txt',
+      'folder/../escape.txt',
+      `folder/${'deep/'.repeat(12)}book.txt`,
+      'folder/book.epub',
+    ]) {
+      expect(normalizePublicLibraryRelativePath(invalid)).toBeUndefined();
+    }
   });
 
   it('bounds the legacy JSON body by UTF-8 bytes, not only characters', () => {

@@ -35,6 +35,7 @@ describe("PublicLibraryMaintenanceClient", () => {
     await expect(
       client.publishFile(file(), {
         category: "经典",
+        relativePath: "古籍/经部/book.txt",
         rightsConfirmed: true,
       }),
     ).resolves.toEqual({ outcome: "created", book });
@@ -49,6 +50,9 @@ describe("PublicLibraryMaintenanceClient", () => {
     });
     expect(init?.headers).not.toHaveProperty("x-share-token");
     expect(init?.body).toBeInstanceOf(FormData);
+    expect((init?.body as FormData).get("relativePath")).toBe(
+      "古籍/经部/book.txt",
+    );
   });
 
   it("maps metadata conflict without exposing response text", async () => {
