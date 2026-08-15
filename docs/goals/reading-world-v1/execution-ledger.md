@@ -6,11 +6,11 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504 / EVID-62；A–F 已依次实现并通过独立复审，下一步只实现预登记的 TASK-0504 独立扩张检查器，从 clean 候选正式生成 EVID-62；不提前进入 TASK-0505。
-- 最近有效提交：5df9347
-- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–F 已通过，但 EVID-62 尚未生成，TASK-0504、PHASE-05、EVID-56/58 与 Goal 仍未完成。
-- 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
+- 当前入口：PHASE-05 / TASK-0505；先只读审计书架、藏经阁与移动导航的信息层级、共享状态组件和视觉一致性，再以最小可逆切片优化；不提前运行 TASK-0506 阶段总验收。
+- 最近有效提交：bcbff53
+- 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.json，SHA-256 `7dbce7835f458f194acced8a612b2d5140a623236e79e233555afe3e186bef90`，2026-08-15T12:51:35+08:00
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501~0504 已完成。PHASE-05、TASK-0505/0506、EVID-56/58 与 Goal 仍未完成。
+- 停止原因：无；从 PHASE-05 / TASK-0505 继续，EVID-02/03/04/05/07/16/17/25/57/62、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
 ## 状态转换
@@ -41,6 +41,7 @@
 - RUN-0049：保持执行中；TASK-0504 D 完成，当前入口推进至 E 已验证个人云正文快照发布。依据：实现提交 `583c306`、每次扫描物理隔离复验、完整只读 preflight、同 generation 租约恢复、事务 publication fence、sourceHash receipt 重放、来源代际单调门、390/340 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0050：保持执行中；TASK-0504 E 完成，当前入口推进至 F taxonomy/facets 四视图。依据：实现提交 `9d4a2e2`、同 token 云端 inventory/完整内容寻址 receipt、严格 Blob/hash/UTF-8 核验、本地同版传输优化、独立 maintenance 发布端口、公共失败零个人副作用、340/390 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0051：保持执行中；TASK-0504 F 实现完成，当前入口推进至 EVID-62 独立扩张检查器。依据：实现提交 `5df9347`、稳定 taxonomy ID/双层 DB 约束、版本化 catalog overlay、24 项 books/facets 分页、NFKC FTS/反向 tag 索引、catalogRevision 四视图失效、真实 Chrome 409/迟到响应/dialog 旅程与三路独立终审 READY。EVID-62 未通过前 TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0052：保持执行中；EVID-62 在 clean@`0dcae90` 正式运行并经三路独立复算 PASS，TASK-0504 完成，当前入口推进至 TASK-0505。依据：14/14 checks/records、唯一 production Chrome、16+7+1+1 混合 25 本、24+1 分页、终态 26 本/revision 27、精确 provenance/Blob、故障与离线阅读、个人事实/源树/进程/清理均闭合。该 ATTEMPT 不证明 EVID-56/58 FINAL、TASK-0505/0506、PHASE-05、VPS 或 Goal 完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -512,3 +513,11 @@
 - UI 与真实旅程：四视图切换同步清 items/revision/page 并递增 request generation，旧 HTTP 请求迟到不覆盖新查询；重复点击当前 tab/分类不陷入 loading。Catalog editor 只用 maintenance client，具备初始焦点、Tab 圈定、Escape、焦点归还；340px 对话框和 340/390/768/1440 页面无横溢出，相关触点双轴均不小于 44px，book/facet DOM 各不超过 24。
 - 验证与安全：API `141/141`、Web `202/202`、shared-types `19/19`、storage-core `82/82`；两端 TypeScript、非写入 lint、API build、禁用 PWA 写入的 Web production build、`git diff --check` 和控制包 resume 均通过。系统 Chrome 的 F taxonomy、旧文件上传、服务端扫描与个人云发布四条独立旅程各 `1/1` 通过，3100/4100 无残留监听。改动文件同源预检 19 Green、3 Yellow、0 Red；Yellow 仅为状态 setter 中的 `Open` 字样和隔离 E2E 的 `http://127.0.0.1`，人工复核无密钥落 URL/DOM、个人/公共 header 混用或新增外传。
 - 独审与下一入口：核心/DB、文件/UI 与整体边界三路最终均为 `READY_TO_COMMIT`，无 P0/P1 或假绿。F 完成，但 TASK-0504 仍等待预登记 EVID-62 独立扩张检查器的 clean 正式重放与独立复算；未通过前不进入 TASK-0505，不声称 PHASE-05、EVID-56/58、VPS 或 Goal 完成。
+
+### RUN-0052 · 2026-08-15T12:51:35+08:00 · PHASE-05 / TASK-0504 EVID-62 扩张门收束
+- 本轮边界：只新增并运行 TASK-0504 独立验证器、唯一 production Chrome 旅程和同 `now` catalogRevision 回归；所有 fixture 使用隔离公共/个人 SQLite、Blob、维护目录和浏览器目录。未连接真实馆藏、真实维护目录、个人真实云或 VPS，未 push、未部署。
+- 实现与证据提交：验证器/runner/旅程提交 `0dcae90e69b28830ecd3c9e88e0de100810abab7`；正式 EVID-62 report 与精确 14 records 提交 `bcbff5343c4e74922a145b136507ca2c29cbf719`。report SHA-256 为 `7dbce7835f458f194acced8a612b2d5140a623236e79e233555afe3e186bef90`，角色保持 `ATTEMPT`。
+- 正式结果：14/14 checks exit 0，tracked/untracked/history mutation 均为 0；唯一 system Chrome production 旅程 `1/1`。固定形成 16 本扫描 + 7 本文件夹 + 1 本直接上传 + 1 本个人云发布，匿名书籍页为 24+1；追加与 overlay 后终态为 26 books/editions/receipts、catalogRevision 27。
+- 边界与故障：26 条 source/receipt/edition 一一闭合，26 个 Blob 均满足路径 = 字节 SHA = package hash；错误凭据、公共 500、扫描 503、旧 revision 409、迟到响应、真断网均有活体反例。扫描源树 path/size/mode/mtime/SHA、个人 DB/Blob 与浏览器私有事实前后不变；3100/4100 前后空闲、orphan 0、ownership cleanup 完成。
+- 独立复算：三路审查分别重算 report/14 records SHA、分类、GATE-03 前置、公共 provenance/Blob、源树/个人哨兵和 UI 旅程，均判定 PASS、无 P0/P1 或假绿；当前证据绑定 clean@`0dcae90`，不覆盖既有 EVID-57/59 或历史不可判定记录。
+- 状态与下一入口：TASK-0504 完成，PHASE-05 与 Goal 继续执行中。下一入口严格为 TASK-0505：先审计并最小化重排书架、藏经阁、移动导航与共享状态/焦点/触控组件，收敛圆角、间距、阴影、图标、字体和文案语气；TASK-0505 独立通过前不运行 TASK-0506 总验收，不生成 EVID-56/58 FINAL，不部署 VPS。
