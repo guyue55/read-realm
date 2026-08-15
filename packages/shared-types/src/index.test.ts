@@ -3,6 +3,10 @@ import {
   AppErrorCodeSchema,
   BookSchema,
   PersonalPublicationSnapshotDescriptorSchema,
+  PUBLIC_LIBRARY_CATEGORIES,
+  PUBLIC_LIBRARY_TAGS,
+  PUBLIC_LIBRARY_TAXONOMY_VERSION,
+  PublicLibraryTagIdsSchema,
   ReadingProgressSchema,
   ReaderSettingsSchema,
   BookmarkSchema,
@@ -17,6 +21,31 @@ afterEach(() => {
 });
 
 describe("Shared Types", () => {
+  it("freezes the public-library taxonomy IDs and rejects duplicate or excess tags", () => {
+    expect(PUBLIC_LIBRARY_TAXONOMY_VERSION).toBe("public-library-taxonomy-v1");
+    expect(PUBLIC_LIBRARY_CATEGORIES.map((item) => item.id)).toEqual([
+      "literature",
+      "classics",
+      "thought",
+      "technology",
+      "other",
+    ]);
+    expect(PUBLIC_LIBRARY_TAGS).toHaveLength(12);
+    expect(PublicLibraryTagIdsSchema.safeParse(["jing", "jing"]).success).toBe(
+      false,
+    );
+    expect(
+      PublicLibraryTagIdsSchema.safeParse([
+        "jing",
+        "history",
+        "masters",
+        "collections",
+        "poetry",
+        "fiction",
+      ]).success,
+    ).toBe(false);
+  });
+
   it("serializes a personal publication descriptor without private identity", () => {
     const descriptor = PersonalPublicationSnapshotDescriptorSchema.parse({
       schemaVersion: 1,

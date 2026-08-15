@@ -6,15 +6,61 @@ import {
   PublicLibraryFileFieldsSchema,
   PublicLibraryUploadSchema,
 } from './public-library.contract';
+import {
+  PublicLibraryCatalogPatchSchema,
+  PublicLibraryFacetQuerySchema,
+} from './public-library-catalog.contract';
 
 describe('public library transport contracts', () => {
+  it('bounds all F catalog pages to 24 and accepts only stable filter IDs', () => {
+    expect(
+      PublicLibraryFacetQuerySchema.parse({
+        view: 'tags',
+        page: '1',
+        pageSize: '24',
+        tagId: undefined,
+      }),
+    ).toMatchObject({ view: 'tags', page: 1, pageSize: 24 });
+    expect(
+      PublicLibraryFacetQuerySchema.safeParse({
+        view: 'tags',
+        page: 1,
+        pageSize: 25,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires a complete versioned overlay and rejects invalid tag sets', () => {
+    const base = {
+      metadataVersion: 1,
+      categoryId: 'classics',
+      collectionPath: '古籍/经部',
+    };
+    expect(
+      PublicLibraryCatalogPatchSchema.parse({ ...base, tagIds: ['jing'] }),
+    ).toEqual({ ...base, tagIds: ['jing'] });
+    expect(
+      PublicLibraryCatalogPatchSchema.safeParse({
+        ...base,
+        tagIds: ['jing', 'jing'],
+      }).success,
+    ).toBe(false);
+    expect(
+      PublicLibraryCatalogPatchSchema.safeParse({
+        ...base,
+        categoryId: 'unknown',
+        tagIds: [],
+      }).success,
+    ).toBe(false);
+  });
+
   it('coerces the explicit multipart rights confirmation only', () => {
     expect(
       PublicLibraryFileFieldsSchema.parse({
         category: '经典',
         rightsConfirmed: 'true',
       }),
-    ).toEqual({ category: '经典', rightsConfirmed: true });
+    ).toEqual({ category: '经典', tagIds: [], rightsConfirmed: true });
     expect(
       PublicLibraryFileFieldsSchema.safeParse({
         category: '经典',

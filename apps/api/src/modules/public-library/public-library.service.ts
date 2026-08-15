@@ -3,9 +3,15 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import {
+  type PublicLibraryCatalogPatch,
+  type PublicLibraryFacetQuery,
+  PUBLIC_LIBRARY_TAXONOMY_DTO,
+} from './public-library-catalog.contract';
 import {
   serializePersonalPublicationSnapshotDescriptor,
   VerifiedPersonalPublicationSnapshotSchema,
@@ -25,6 +31,8 @@ import {
   PublicLibraryFileCandidateError,
 } from './public-library-file-candidate';
 import {
+  PublicLibraryBookNotFoundError,
+  PublicLibraryCatalogMetadataStaleError,
   PublicLibraryDuplicateMetadataError,
   PublicLibraryRepository,
 } from './public-library.repository';
@@ -117,6 +125,7 @@ export class PublicLibraryService {
         relativePath,
         bytes: file.buffer,
       });
+      candidate.tagIds = fields.tagIds;
       return this.publishWithConflictBoundary(() =>
         this.repository.publishCandidateWithOutcome(candidate),
       );
@@ -204,6 +213,7 @@ export class PublicLibraryService {
         author: snapshot.book.author,
         description: snapshot.book.description,
         category: fields.category,
+        tagIds: fields.tagIds,
         source: {
           kind: 'personal_cloud',
           scope: 'personal-cloud',
@@ -234,6 +244,50 @@ export class PublicLibraryService {
         throw new ConflictException({
           code: 'CATALOG_SNAPSHOT_STALE',
           message: '馆藏目录已更新，请从第一页重新载入',
+        });
+      }
+      throw error;
+    }
+  }
+
+  taxonomy() {
+    return PUBLIC_LIBRARY_TAXONOMY_DTO;
+  }
+
+  async listFacets(query: PublicLibraryFacetQuery) {
+    try {
+      return await this.repository.listFacets(query);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'PUBLIC_LIBRARY_CATALOG_SNAPSHOT_STALE'
+      ) {
+        throw new ConflictException({
+          code: 'CATALOG_SNAPSHOT_STALE',
+          message: '馆藏目录已更新，请从第一页重新载入',
+        });
+      }
+      throw error;
+    }
+  }
+
+  async updateCatalog(
+    key: string | undefined,
+    id: string,
+    patch: PublicLibraryCatalogPatch,
+  ) {
+    this.assertMaintenanceKey(key);
+    try {
+      return await this.repository.updateCatalog(id, patch);
+    } catch (error) {
+      if (error instanceof PublicLibraryBookNotFoundError) {
+        throw new NotFoundException('公共藏书不存在');
+      }
+      if (error instanceof PublicLibraryCatalogMetadataStaleError) {
+        throw new ConflictException({
+          code: error.code,
+          currentMetadataVersion: error.currentMetadataVersion,
+          message: '馆藏元数据已更新，请重新载入后再修改',
         });
       }
       throw error;

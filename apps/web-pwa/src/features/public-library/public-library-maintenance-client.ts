@@ -1,6 +1,10 @@
 import { apiUrl } from "@/lib/api";
 import { normalizeShareToken } from "@/lib/api";
 import type { VerifiedPersonalPublicationSnapshot } from "@reader/shared-types";
+import type {
+  PublicLibraryCategoryId,
+  PublicLibraryTagId,
+} from "@reader/shared-types";
 import {
   parsePublicLibraryBook,
   type PublicLibraryBook,
@@ -10,6 +14,7 @@ export type PublicLibraryCategory = "文学" | "经典" | "思想" | "技术" | 
 
 export interface PublicLibraryFileFields {
   category: PublicLibraryCategory;
+  tagIds?: PublicLibraryTagId[];
   relativePath?: string;
   rightsConfirmed: true;
 }
@@ -59,6 +64,7 @@ export class PublicLibraryMaintenanceError extends Error {
       | "duplicate_metadata_conflict"
       | "file_rejected"
       | "scan_already_running"
+      | "catalog_metadata_stale"
       | "service_unavailable",
     readonly existingBookId?: string,
   ) {
@@ -161,6 +167,13 @@ export class PublicLibraryMaintenanceClient {
     ) {
       throw new PublicLibraryMaintenanceError("scan_already_running");
     }
+    if (
+      response.status === 409 &&
+      isRecord(payload) &&
+      payload.code === "CATALOG_METADATA_VERSION_STALE"
+    ) {
+      throw new PublicLibraryMaintenanceError("catalog_metadata_stale");
+    }
     if (!response.ok) {
       throw new PublicLibraryMaintenanceError("service_unavailable");
     }
@@ -212,6 +225,7 @@ export class PublicLibraryMaintenanceClient {
     const body = new FormData();
     body.set("category", fields.category);
     body.set("rightsConfirmed", String(fields.rightsConfirmed));
+    body.set("tagIds", JSON.stringify(fields.tagIds ?? []));
     if (fields.relativePath) body.set("relativePath", fields.relativePath);
     body.set("file", file, file.name);
     const response = await fetch(apiUrl("/public-library/maintenance/files"), {
@@ -259,6 +273,7 @@ export class PublicLibraryMaintenanceClient {
     const body = new FormData();
     body.set("category", fields.category);
     body.set("rightsConfirmed", String(fields.rightsConfirmed));
+    body.set("tagIds", "[]");
     body.set(
       "snapshot",
       new File([JSON.stringify(snapshot)], "verified-personal-snapshot.json", {
@@ -295,5 +310,26 @@ export class PublicLibraryMaintenanceClient {
       outcome: payload.outcome,
       book: parsePublicLibraryBook(payload.book),
     };
+  }
+
+  async updateCatalog(
+    bookId: string,
+    patch: {
+      metadataVersion: number;
+      categoryId: PublicLibraryCategoryId;
+      tagIds: PublicLibraryTagId[];
+      collectionPath: string;
+    },
+  ) {
+    const response = await fetch(
+      apiUrl(`/public-library/books/${encodeURIComponent(bookId)}/catalog`),
+      {
+        method: "PATCH",
+        headers: { ...this.headers(), "content-type": "application/json" },
+        body: JSON.stringify(patch),
+      },
+    );
+    const payload = await this.parseMaintenanceResponse(response);
+    return parsePublicLibraryBook(payload);
   }
 }

@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  PublicLibraryCategoryIdSchema,
+  PublicLibraryTagIdSchema,
+  PublicLibraryTagIdsSchema,
+  type PublicLibraryCategoryId,
+  type PublicLibraryTagId,
+} from '@reader/shared-types';
+import { PUBLIC_LIBRARY_PAGE_SIZE } from './public-library-catalog.contract';
 
 export const PUBLIC_LIBRARY_FILE_MAX_BYTES = 20 * 1024 * 1024;
 export const PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES = 24 * 1024 * 1024;
@@ -95,6 +103,7 @@ export const PublicLibraryUploadSchema = z.object({
   author: z.string().trim().min(1).max(120).optional(),
   description: z.string().trim().max(2000).optional(),
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES),
+  tagIds: PublicLibraryTagIdsSchema.optional().default([]),
   content: z
     .string()
     .min(1)
@@ -113,6 +122,19 @@ export const PublicLibraryFileFieldsSchema = z.object({
   author: z.string().trim().min(1).max(120).optional(),
   description: z.string().trim().max(2000).optional(),
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES),
+  tagIds: z
+    .preprocess((value) => {
+      if (value === undefined || value === '') return [];
+      if (Array.isArray(value)) return value as unknown;
+      if (typeof value !== 'string') return value;
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        return value;
+      }
+    }, PublicLibraryTagIdsSchema)
+    .optional()
+    .default([]),
   relativePath: z
     .string()
     .max(1024)
@@ -129,25 +151,54 @@ export const PublicLibraryFileFieldsSchema = z.object({
 export const PublicLibraryListQuerySchema = z.object({
   q: z.string().trim().max(120).optional().default(''),
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES).optional(),
+  categoryId: PublicLibraryCategoryIdSchema.optional(),
+  tagId: PublicLibraryTagIdSchema.optional(),
+  maintainerId: z.string().trim().min(1).max(64).optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  pageSize: z.coerce.number().int().positive().max(48).optional().default(24),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(PUBLIC_LIBRARY_PAGE_SIZE)
+    .optional()
+    .default(PUBLIC_LIBRARY_PAGE_SIZE),
   snapshotRevision: z.coerce.number().int().nonnegative().optional(),
 });
 
-export type PublicLibraryUpload = z.infer<typeof PublicLibraryUploadSchema>;
-export type PublicLibraryFileFields = z.infer<
-  typeof PublicLibraryFileFieldsSchema
+type WithOptionalTags<T extends { tagIds: PublicLibraryTagId[] }> = Omit<
+  T,
+  'tagIds'
+> & { tagIds?: PublicLibraryTagId[] };
+
+export type PublicLibraryUpload = WithOptionalTags<
+  z.output<typeof PublicLibraryUploadSchema>
+>;
+export type PublicLibraryFileFields = WithOptionalTags<
+  z.output<typeof PublicLibraryFileFieldsSchema>
 >;
 
 export const PublicLibraryPersonalSnapshotFieldsSchema = z.object({
   category: z.enum(PUBLIC_LIBRARY_CATEGORIES),
+  tagIds: z
+    .preprocess((value) => {
+      if (value === undefined || value === '') return [];
+      if (Array.isArray(value)) return value as unknown;
+      if (typeof value !== 'string') return value;
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        return value;
+      }
+    }, PublicLibraryTagIdsSchema)
+    .optional()
+    .default([]),
   rightsConfirmed: z
     .union([z.literal('true'), z.literal(true)])
     .transform(() => true as const),
 });
 
-export type PublicLibraryPersonalSnapshotFields = z.infer<
-  typeof PublicLibraryPersonalSnapshotFieldsSchema
+export type PublicLibraryPersonalSnapshotFields = WithOptionalTags<
+  z.output<typeof PublicLibraryPersonalSnapshotFieldsSchema>
 >;
 export type PublicLibraryListQuery = z.infer<
   typeof PublicLibraryListQuerySchema
@@ -160,6 +211,12 @@ export interface PublicLibraryBookDto {
   description?: string;
   format: 'txt';
   category: (typeof PUBLIC_LIBRARY_CATEGORIES)[number];
+  taxonomyVersion: 'public-library-taxonomy-v1';
+  categoryId: PublicLibraryCategoryId;
+  tags: Array<{ id: PublicLibraryTagId; label: string }>;
+  maintainerId: string;
+  maintainerLabel: string;
+  metadataVersion: number;
   collectionPath?: string;
   chapterCount: number;
   wordCount: number;
@@ -169,6 +226,7 @@ export interface PublicLibraryBookDto {
 
 export interface PublicLibraryPackage {
   schemaVersion: 1;
+  taxonomyVersion: 'public-library-taxonomy-v1';
   book: PublicLibraryBookDto;
   chapters: Array<{
     id: string;

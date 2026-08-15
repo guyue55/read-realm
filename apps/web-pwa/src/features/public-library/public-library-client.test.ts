@@ -18,6 +18,7 @@ describe("PublicLibraryApiClient catalog snapshots", () => {
             total: 0,
             totalPages: 1,
             snapshotRevision: 7,
+            taxonomyVersion: "public-library-taxonomy-v1",
           }),
           { status: 200 },
         ),
@@ -44,5 +45,34 @@ describe("PublicLibraryApiClient catalog snapshots", () => {
         snapshotRevision: 1,
       }),
     ).rejects.toBeInstanceOf(PublicLibraryCatalogStaleError);
+  });
+
+  it("parses one bounded facet page and carries its revision", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          JSON.stringify({
+            view: "tags",
+            items: [{ id: "jing", label: "经部", bookCount: 3 }],
+            page: 1,
+            pageSize: 24,
+            total: 1,
+            totalPages: 1,
+            snapshotRevision: 9,
+            taxonomyVersion: "public-library-taxonomy-v1",
+          }),
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      new PublicLibraryApiClient().listFacets({
+        view: "tags",
+        page: 1,
+        pageSize: 24,
+      }),
+    ).resolves.toMatchObject({
+      items: [{ id: "jing", label: "经部", bookCount: 3 }],
+      snapshotRevision: 9,
+    });
   });
 });

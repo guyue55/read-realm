@@ -1,4 +1,4 @@
-import type { Client, InStatement } from '@libsql/client';
+import type { Client, InStatement, Transaction } from '@libsql/client';
 import { LocalFileBlobStorage } from '@reader/storage-core/node';
 import { parseTxtBook } from '@reader/parser-core/txt-parser';
 import { createHash, randomInt } from 'node:crypto';
@@ -9,9 +9,37 @@ import type {
   PublicLibraryUpload,
 } from './public-library.contract';
 import {
+  PUBLIC_LIBRARY_PAGE_SIZE,
+  type PublicLibraryCatalogPatch,
+  type PublicLibraryFacetQuery,
+} from './public-library-catalog.contract';
+import {
   normalizePublicLibraryRelativePath,
   publicLibraryCollectionPath,
 } from './public-library.contract';
+import {
+  PUBLIC_LIBRARY_CATEGORIES as PUBLIC_LIBRARY_CATEGORY_DEFINITIONS,
+  PUBLIC_LIBRARY_TAGS,
+  PUBLIC_LIBRARY_TAXONOMY_VERSION,
+  requireCategory,
+  requireCategoryIdFromLabel,
+  requireTagIds,
+  tagDtos,
+  type PublicLibraryCategoryId,
+  type PublicLibraryTagId,
+} from './public-library-taxonomy';
+
+function assertCatalogPage(page: number, pageSize: number) {
+  if (
+    !Number.isInteger(page) ||
+    page < 1 ||
+    !Number.isInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > PUBLIC_LIBRARY_PAGE_SIZE
+  ) {
+    throw new Error('PUBLIC_LIBRARY_CATALOG_PAGE_INVALID');
+  }
+}
 
 function sha256(value: string | Buffer) {
   return createHash('sha256').update(value).digest('hex');
@@ -61,6 +89,24 @@ export class PublicLibraryDuplicateMetadataError extends Error {
   }
 }
 
+export class PublicLibraryCatalogMetadataStaleError extends Error {
+  readonly code = 'CATALOG_METADATA_VERSION_STALE';
+
+  constructor(readonly currentMetadataVersion: number) {
+    super('PUBLIC_LIBRARY_CATALOG_METADATA_STALE');
+    this.name = 'PublicLibraryCatalogMetadataStaleError';
+  }
+}
+
+export class PublicLibraryBookNotFoundError extends Error {
+  readonly code = 'PUBLIC_LIBRARY_BOOK_NOT_FOUND';
+
+  constructor() {
+    super('PUBLIC_LIBRARY_BOOK_NOT_FOUND');
+    this.name = 'PublicLibraryBookNotFoundError';
+  }
+}
+
 export interface PublicLibraryPublicationResult {
   outcome: 'created' | 'unchanged';
   book: PublicLibraryBookDto;
@@ -74,14 +120,35 @@ function optionalText(value: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined;
 }
 
+function parseStoredTagIds(value: unknown) {
+  if (typeof value !== 'string' || !value) return [];
+  return requireTagIds(value.split('\u001f'));
+}
+
 function rowToBook(row: Record<string, unknown>): PublicLibraryBookDto {
+  const category = requireCategory(row.category_id);
+  const tags = parseStoredTagIds(row.tag_ids);
+  const maintainerId = requireString(
+    row.maintainer_id,
+    'PUBLIC_LIBRARY_MAINTAINER_ID_MISSING',
+  );
+  const maintainerLabel = requireString(
+    row.maintainer_label,
+    'PUBLIC_LIBRARY_MAINTAINER_LABEL_MISSING',
+  );
   return {
     id: String(row.id),
     title: String(row.title),
     author: optionalText(row.author),
     description: optionalText(row.description),
     format: 'txt',
-    category: String(row.category) as PublicLibraryBookDto['category'],
+    taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+    categoryId: category.id,
+    category: category.label,
+    tags: tagDtos(tags),
+    maintainerId,
+    maintainerLabel,
+    metadataVersion: Number(row.metadata_version),
     collectionPath: optionalText(row.collection_path),
     chapterCount: Number(row.chapter_count),
     wordCount: Number(row.word_count),
@@ -90,8 +157,67 @@ function rowToBook(row: Record<string, unknown>): PublicLibraryBookDto {
   };
 }
 
+const BOOK_SELECT = `SELECT b.*, m.label AS maintainer_label,
+  COALESCE(GROUP_CONCAT(t.tag_id, char(31)), '') AS tag_ids
+  FROM public_books b
+  JOIN public_maintainers m ON m.maintainer_id = b.maintainer_id
+  LEFT JOIN public_book_tags t ON t.book_id = b.id`;
+
+function ingestMetadataHash(input: {
+  title: string;
+  author?: string;
+  description?: string;
+  categoryId: PublicLibraryCategoryId;
+  collectionPath: string;
+  tagIds: readonly PublicLibraryTagId[];
+}) {
+  return sha256(
+    JSON.stringify({
+      title: input.title,
+      author: input.author ?? null,
+      description: input.description ?? null,
+      categoryId: input.categoryId,
+      collectionPath: input.collectionPath,
+      tagIds: [...input.tagIds].sort(),
+    }),
+  );
+}
+
+function buildSearchMatch(value: string) {
+  const normalized = normalizeSearchValue(value);
+  return normalized ? `"${normalized.replaceAll('"', '""')}"` : '';
+}
+
+function normalizeSearchValue(value: string) {
+  return value.normalize('NFKC').trim().toLocaleLowerCase('en-US');
+}
+
+function shortSearchTerms(...values: Array<string | undefined>) {
+  const terms = new Set<string>();
+  for (const value of values) {
+    const normalized = value?.normalize('NFKC').toLocaleLowerCase('en-US');
+    if (!normalized) continue;
+    const characters = [...normalized];
+    for (let index = 0; index < characters.length; index += 1) {
+      terms.add(characters[index] ?? '');
+      if (index + 1 < characters.length) {
+        terms.add(`${characters[index]}${characters[index + 1]}`);
+      }
+    }
+  }
+  terms.delete('');
+  return [...terms];
+}
+
+const SQL_CATEGORY_IDS = PUBLIC_LIBRARY_CATEGORY_DEFINITIONS.map(
+  ({ id }) => `'${id}'`,
+).join(', ');
+const SQL_CATEGORY_LABELS = PUBLIC_LIBRARY_CATEGORY_DEFINITIONS.map(
+  ({ label }) => `'${label}'`,
+).join(', ');
+
 async function ensureColumn(
-  client: Client,
+  client: Client | Transaction,
   table: 'public_books' | 'public_catalog_state' | 'public_sources',
   name: string,
   definition: string,
@@ -112,7 +238,7 @@ async function ensureColumn(
   }
 }
 
-async function preparePublicLibraryDatabaseOnce(client: Client) {
+async function preparePublicLibraryDatabaseOnce(client: Client | Transaction) {
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_books (
       id TEXT PRIMARY KEY,
@@ -159,6 +285,24 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
     'created_revision',
     'created_revision INTEGER NOT NULL DEFAULT 0',
   );
+  await ensureColumn(
+    client,
+    'public_books',
+    'category_id',
+    `category_id TEXT NOT NULL DEFAULT 'other' CHECK(category_id IN (${SQL_CATEGORY_IDS}))`,
+  );
+  await ensureColumn(
+    client,
+    'public_books',
+    'ingest_category_id',
+    `ingest_category_id TEXT NOT NULL DEFAULT 'other' CHECK(ingest_category_id IN (${SQL_CATEGORY_IDS}))`,
+  );
+  await ensureColumn(
+    client,
+    'public_books',
+    'ingest_metadata_hash',
+    "ingest_metadata_hash TEXT NOT NULL DEFAULT ''",
+  );
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_catalog_state (
       id INTEGER PRIMARY KEY CHECK(id = 1),
@@ -168,6 +312,90 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
   await client.execute(
     'INSERT OR IGNORE INTO public_catalog_state (id, revision) VALUES (1, 0)',
   );
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_taxonomy_state (
+      id INTEGER PRIMARY KEY CHECK(id = 1),
+      template_version TEXT NOT NULL
+    )
+  `);
+  await client.execute({
+    sql: `INSERT OR IGNORE INTO public_taxonomy_state (id, template_version)
+      VALUES (1, ?)`,
+    args: [PUBLIC_LIBRARY_TAXONOMY_VERSION],
+  });
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_categories (
+      category_id TEXT PRIMARY KEY,
+      label TEXT NOT NULL UNIQUE,
+      sort_order INTEGER NOT NULL UNIQUE,
+      template_version TEXT NOT NULL
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS public_tags (
+      tag_id TEXT PRIMARY KEY,
+      label TEXT NOT NULL UNIQUE,
+      sort_order INTEGER NOT NULL UNIQUE,
+      template_version TEXT NOT NULL
+    )
+  `);
+  for (const [
+    sortOrder,
+    category,
+  ] of PUBLIC_LIBRARY_CATEGORY_DEFINITIONS.entries()) {
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO public_categories
+        (category_id, label, sort_order, template_version) VALUES (?, ?, ?, ?)`,
+      args: [
+        category.id,
+        category.label,
+        sortOrder,
+        PUBLIC_LIBRARY_TAXONOMY_VERSION,
+      ],
+    });
+  }
+  for (const [sortOrder, tag] of PUBLIC_LIBRARY_TAGS.entries()) {
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO public_tags
+        (tag_id, label, sort_order, template_version) VALUES (?, ?, ?, ?)`,
+      args: [tag.id, tag.label, sortOrder, PUBLIC_LIBRARY_TAXONOMY_VERSION],
+    });
+  }
+  const [taxonomyState, categoryRows, tagRows] = await Promise.all([
+    client.execute(
+      'SELECT template_version FROM public_taxonomy_state WHERE id = 1',
+    ),
+    client.execute(
+      'SELECT category_id, label, sort_order, template_version FROM public_categories ORDER BY sort_order',
+    ),
+    client.execute(
+      'SELECT tag_id, label, sort_order, template_version FROM public_tags ORDER BY sort_order',
+    ),
+  ]);
+  if (
+    taxonomyState.rows[0]?.template_version !==
+      PUBLIC_LIBRARY_TAXONOMY_VERSION ||
+    JSON.stringify(categoryRows.rows) !==
+      JSON.stringify(
+        PUBLIC_LIBRARY_CATEGORY_DEFINITIONS.map((item, sortOrder) => ({
+          category_id: item.id,
+          label: item.label,
+          sort_order: sortOrder,
+          template_version: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+        })),
+      ) ||
+    JSON.stringify(tagRows.rows) !==
+      JSON.stringify(
+        PUBLIC_LIBRARY_TAGS.map((item, sortOrder) => ({
+          tag_id: item.id,
+          label: item.label,
+          sort_order: sortOrder,
+          template_version: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+        })),
+      )
+  ) {
+    throw new Error('PUBLIC_LIBRARY_TAXONOMY_DRIFT');
+  }
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_maintainers (
       id INTEGER PRIMARY KEY CHECK(id = 1),
@@ -180,18 +408,51 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
     VALUES (1, lower(hex(randomblob(16))), '本阁维护者')
   `);
   const maintainer = await client.execute(
-    'SELECT maintainer_id FROM public_maintainers WHERE id = 1',
+    'SELECT maintainer_id, label FROM public_maintainers WHERE id = 1',
   );
   const maintainerId = requireString(
     maintainer.rows[0]?.maintainer_id,
     'PUBLIC_LIBRARY_MAINTAINER_ID_MISSING',
   );
+  if (
+    !/^[a-f0-9]{32}$/u.test(maintainerId) ||
+    maintainer.rows[0]?.label !== '本阁维护者'
+  ) {
+    throw new Error('PUBLIC_LIBRARY_MAINTAINER_DRIFT');
+  }
   await client.execute({
     sql: `UPDATE public_books
       SET source_hash = COALESCE(source_hash, content_hash),
           maintainer_id = COALESCE(maintainer_id, ?)`,
     args: [maintainerId],
   });
+  const unknownLegacyCategory = await client.execute(`SELECT id
+    FROM public_books WHERE category NOT IN (${SQL_CATEGORY_LABELS}) LIMIT 1`);
+  if (unknownLegacyCategory.rows.length > 0) {
+    throw new Error('PUBLIC_LIBRARY_CATEGORY_MIGRATION_FAILED');
+  }
+  for (const category of PUBLIC_LIBRARY_CATEGORY_DEFINITIONS) {
+    await client.execute({
+      sql: `UPDATE public_books SET category_id = ?,
+        ingest_category_id = CASE WHEN ingest_metadata_hash = '' THEN ?
+          ELSE ingest_category_id END
+        WHERE category = ?`,
+      args: [category.id, category.id, category.label],
+    });
+  }
+  const invalidCategory = await client.execute(`SELECT id FROM public_books
+    WHERE category_id NOT IN (${SQL_CATEGORY_IDS})
+      OR ingest_category_id NOT IN (${SQL_CATEGORY_IDS}) OR NOT EXISTS (
+      SELECT 1 FROM public_categories c
+      WHERE c.category_id = public_books.category_id
+        AND c.label = public_books.category
+    ) OR NOT EXISTS (
+      SELECT 1 FROM public_categories ingest
+      WHERE ingest.category_id = public_books.ingest_category_id
+    ) LIMIT 1`);
+  if (invalidCategory.rows.length > 0) {
+    throw new Error('PUBLIC_LIBRARY_CATEGORY_MIGRATION_FAILED');
+  }
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_editions (
       edition_hash TEXT PRIMARY KEY,
@@ -236,10 +497,137 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_book_tags (
       book_id TEXT NOT NULL REFERENCES public_books(id),
-      tag_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL REFERENCES public_tags(tag_id),
       PRIMARY KEY(book_id, tag_id)
     )
   `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_book_tags_template_guard_insert
+    BEFORE INSERT ON public_book_tags
+    WHEN NOT EXISTS (SELECT 1 FROM public_tags WHERE tag_id = NEW.tag_id)
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_TAG_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_book_tags_template_guard_update
+    BEFORE UPDATE OF tag_id ON public_book_tags
+    WHEN NOT EXISTS (SELECT 1 FROM public_tags WHERE tag_id = NEW.tag_id)
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_TAG_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_book_tags_count_guard_insert
+    BEFORE INSERT ON public_book_tags
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_book_tags
+      WHERE book_id = NEW.book_id AND tag_id = NEW.tag_id
+    ) AND (
+      SELECT COUNT(*) FROM public_book_tags WHERE book_id = NEW.book_id
+    ) >= 5
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_TAG_LIMIT_EXCEEDED'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_book_tags_count_guard_update
+    BEFORE UPDATE OF book_id, tag_id ON public_book_tags
+    WHEN (
+      SELECT COUNT(*) FROM public_book_tags
+      WHERE book_id = NEW.book_id
+        AND NOT (book_id = OLD.book_id AND tag_id = OLD.tag_id)
+    ) >= 5
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_TAG_LIMIT_EXCEEDED'); END
+  `);
+  const excessiveTags = await client.execute(`SELECT book_id
+    FROM public_book_tags GROUP BY book_id HAVING COUNT(*) > 5 LIMIT 1`);
+  if (excessiveTags.rows.length > 0) {
+    throw new Error('PUBLIC_LIBRARY_TAG_LIMIT_MIGRATION_FAILED');
+  }
+  const invalidStoredTag = await client.execute(`SELECT bt.book_id
+    FROM public_book_tags bt
+    LEFT JOIN public_tags t ON t.tag_id = bt.tag_id
+    WHERE t.tag_id IS NULL LIMIT 1`);
+  if (invalidStoredTag.rows.length > 0) {
+    throw new Error('PUBLIC_LIBRARY_TAG_MIGRATION_FAILED');
+  }
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_category_guard_insert
+    BEFORE INSERT ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories WHERE category_id = NEW.category_id
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_CATEGORY_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_category_guard_update
+    BEFORE UPDATE OF category_id ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories WHERE category_id = NEW.category_id
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_CATEGORY_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_ingest_category_guard_insert
+    BEFORE INSERT ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories
+      WHERE category_id = NEW.ingest_category_id
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_INGEST_CATEGORY_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_ingest_category_guard_update
+    BEFORE UPDATE OF ingest_category_id ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories
+      WHERE category_id = NEW.ingest_category_id
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_INGEST_CATEGORY_INVALID'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_category_consistency_insert
+    BEFORE INSERT ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories
+      WHERE category_id = NEW.category_id AND label = NEW.category
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_CATEGORY_MISMATCH'); END
+  `);
+  await client.execute(`
+    CREATE TRIGGER IF NOT EXISTS public_books_category_consistency_update
+    BEFORE UPDATE OF category, category_id ON public_books
+    WHEN NOT EXISTS (
+      SELECT 1 FROM public_categories
+      WHERE category_id = NEW.category_id AND label = NEW.category
+    )
+    BEGIN SELECT RAISE(ABORT, 'PUBLIC_LIBRARY_CATEGORY_MISMATCH'); END
+  `);
+  const ingestRows = await client.execute(`SELECT b.id, b.title, b.author,
+    b.description, b.ingest_category_id, b.collection_path,
+    COALESCE(GROUP_CONCAT(t.tag_id, char(31)), '') AS tag_ids,
+    b.ingest_metadata_hash
+    FROM public_books b
+    LEFT JOIN public_book_tags t ON t.book_id = b.id
+    GROUP BY b.id`);
+  for (const row of ingestRows.rows) {
+    if (
+      typeof row.ingest_metadata_hash === 'string' &&
+      row.ingest_metadata_hash
+    )
+      continue;
+    const category = requireCategory(row.ingest_category_id);
+    const tagIds = parseStoredTagIds(row.tag_ids);
+    await client.execute({
+      sql: 'UPDATE public_books SET ingest_metadata_hash = ? WHERE id = ?',
+      args: [
+        ingestMetadataHash({
+          title: requireString(row.title, 'PUBLIC_LIBRARY_TITLE_MISSING'),
+          author: optionalText(row.author),
+          description: optionalText(row.description),
+          categoryId: category.id,
+          collectionPath: optionalText(row.collection_path) ?? '',
+          tagIds,
+        }),
+        requireString(row.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING'),
+      ],
+    });
+  }
   await client.execute(`
     CREATE TABLE IF NOT EXISTS public_scan_root_state (
       root_id TEXT PRIMARY KEY,
@@ -323,6 +711,61 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
   await client.execute(
     'CREATE INDEX IF NOT EXISTS public_books_category_published_idx ON public_books(category, published_at DESC, id ASC)',
   );
+  await client.execute(
+    'CREATE INDEX IF NOT EXISTS public_books_category_id_published_idx ON public_books(category_id, published_at DESC, id ASC)',
+  );
+  await client.execute(
+    'CREATE INDEX IF NOT EXISTS public_books_maintainer_published_idx ON public_books(maintainer_id, published_at DESC, id ASC)',
+  );
+  await client.execute(
+    'CREATE INDEX IF NOT EXISTS public_book_tags_tag_book_idx ON public_book_tags(tag_id, book_id)',
+  );
+  await client.execute(`CREATE VIRTUAL TABLE IF NOT EXISTS public_books_search_v3
+    USING fts5(book_id UNINDEXED, title, author, maintainer_label,
+      tokenize = 'trigram')`);
+  await client.execute(`CREATE TABLE IF NOT EXISTS public_book_search_terms (
+    book_id TEXT NOT NULL REFERENCES public_books(id) ON DELETE CASCADE,
+    term TEXT NOT NULL,
+    PRIMARY KEY(book_id, term)
+  )`);
+  await client.execute(
+    'CREATE INDEX IF NOT EXISTS public_book_search_terms_term_book_idx ON public_book_search_terms(term, book_id)',
+  );
+  await client.execute('DELETE FROM public_books_search_v3');
+  await client.execute('DELETE FROM public_book_search_terms');
+  const searchableBooks = await client.execute(`SELECT b.id,
+      b.title, b.author, m.label AS maintainer_label FROM public_books b
+      JOIN public_maintainers m ON m.maintainer_id = b.maintainer_id`);
+  for (const row of searchableBooks.rows) {
+    const bookId = requireString(row.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING');
+    await client.execute({
+      sql: `INSERT INTO public_books_search_v3
+          (book_id, title, author, maintainer_label) VALUES (?, ?, ?, ?)`,
+      args: [
+        bookId,
+        normalizeSearchValue(
+          requireString(row.title, 'PUBLIC_LIBRARY_TITLE_MISSING'),
+        ),
+        normalizeSearchValue(optionalText(row.author) ?? ''),
+        normalizeSearchValue(
+          requireString(
+            row.maintainer_label,
+            'PUBLIC_LIBRARY_MAINTAINER_LABEL_MISSING',
+          ),
+        ),
+      ],
+    });
+    for (const term of shortSearchTerms(
+      optionalText(row.title),
+      optionalText(row.author),
+      optionalText(row.maintainer_label),
+    )) {
+      await client.execute({
+        sql: 'INSERT INTO public_book_search_terms (book_id, term) VALUES (?, ?)',
+        args: [bookId, term],
+      });
+    }
+  }
   const existing = await client.execute(
     'SELECT COUNT(*) AS total FROM public_books',
   );
@@ -334,7 +777,18 @@ async function preparePublicLibraryDatabaseOnce(client: Client) {
 }
 
 export async function preparePublicLibraryDatabase(client: Client) {
-  await retrySqliteBusy(() => preparePublicLibraryDatabaseOnce(client));
+  await client.execute('PRAGMA foreign_keys = ON');
+  await retrySqliteBusy(() => client.execute('PRAGMA journal_mode = WAL'));
+  await retrySqliteBusy(async () => {
+    const transaction = await client.transaction('write');
+    try {
+      await preparePublicLibraryDatabaseOnce(transaction);
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback().catch(() => undefined);
+      throw error;
+    }
+  });
 }
 
 export type PublicLibrarySourceKind =
@@ -348,6 +802,7 @@ export interface CanonicalPublicBookCandidate {
   author?: string;
   description?: string;
   category: PublicLibraryBookDto['category'];
+  tagIds?: readonly PublicLibraryTagId[];
   collectionPath?: string;
   source: {
     kind: PublicLibrarySourceKind;
@@ -365,6 +820,9 @@ interface PreparedCandidate {
   author?: string;
   description?: string;
   category: PublicLibraryBookDto['category'];
+  categoryId: PublicLibraryCategoryId;
+  tagIds: PublicLibraryTagId[];
+  ingestMetadataHash: string;
   collectionPath: string;
   sourceHash: string;
   editionHash: string;
@@ -384,19 +842,6 @@ interface PreparedPublication {
   packageHash: string;
 }
 
-function sameMetadata(
-  book: PublicLibraryBookDto,
-  candidate: PreparedCandidate,
-) {
-  return (
-    book.title === candidate.title &&
-    book.author === candidate.author &&
-    book.description === candidate.description &&
-    book.category === candidate.category &&
-    (book.collectionPath ?? '') === candidate.collectionPath
-  );
-}
-
 export class PublicLibraryRepository {
   private readonly inFlightByEdition = new Map<
     string,
@@ -411,20 +856,20 @@ export class PublicLibraryRepository {
 
   private async findByEdition(
     editionHash: string,
-  ): Promise<PublicLibraryBookDto | undefined> {
+  ): Promise<Record<string, unknown> | undefined> {
     const result = await this.client.execute({
-      sql: 'SELECT * FROM public_books WHERE edition_hash = ? LIMIT 1',
+      sql: `${BOOK_SELECT} WHERE b.edition_hash = ? GROUP BY b.id LIMIT 1`,
       args: [editionHash],
     });
-    const row = result.rows[0] as Record<string, unknown> | undefined;
-    return row ? rowToBook(row) : undefined;
+    return result.rows[0];
   }
 
   private assertMetadata(
-    book: PublicLibraryBookDto,
+    row: Record<string, unknown>,
     candidate: PreparedCandidate,
   ) {
-    if (!sameMetadata(book, candidate)) {
+    const book = rowToBook(row);
+    if (row.ingest_metadata_hash !== candidate.ingestMetadataHash) {
       throw new PublicLibraryDuplicateMetadataError(book.id);
     }
     return book;
@@ -496,17 +941,26 @@ export class PublicLibraryRepository {
   }
 
   private async attachSourceToExisting(
-    book: PublicLibraryBookDto,
+    bookId: string,
     candidate: PreparedCandidate,
   ) {
     return retrySqliteBusy(async () => {
+      const existing = await this.findByEdition(candidate.editionHash);
+      if (
+        !existing ||
+        requireString(existing.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING') !== bookId
+      ) {
+        throw new Error('PUBLIC_LIBRARY_EDITION_NOT_FOUND');
+      }
+      this.assertMetadata(existing, candidate);
       const results = await this.client.batch(
         [
           {
-            sql: 'SELECT * FROM public_books WHERE id = ? AND edition_hash = ? LIMIT 1',
-            args: [book.id, candidate.editionHash],
+            sql: `${BOOK_SELECT} WHERE b.id = ? AND b.edition_hash = ?
+              GROUP BY b.id LIMIT 1`,
+            args: [bookId, candidate.editionHash],
           },
-          ...this.sourceFactStatements(book.id, candidate, this.now()),
+          ...this.sourceFactStatements(bookId, candidate, this.now()),
         ],
         'write',
       );
@@ -514,7 +968,7 @@ export class PublicLibraryRepository {
         | Record<string, unknown>
         | undefined;
       if (!currentRow) throw new Error('PUBLIC_LIBRARY_EDITION_NOT_FOUND');
-      const currentBook = this.assertMetadata(rowToBook(currentRow), candidate);
+      const currentBook = this.assertMetadata(currentRow, candidate);
       this.assertSourceReadback(
         results.at(-1)?.rows[0],
         currentBook.id,
@@ -538,14 +992,14 @@ export class PublicLibraryRepository {
     candidate: PreparedCandidate,
   ): Promise<PublicLibraryBookDto | undefined> {
     const legacyResult = await this.client.execute({
-      sql: 'SELECT * FROM public_books WHERE id = ? LIMIT 1',
+      sql: `${BOOK_SELECT} WHERE b.id = ? GROUP BY b.id LIMIT 1`,
       args: [legacyId],
     });
     const legacyRow = legacyResult.rows[0] as
       | Record<string, unknown>
       | undefined;
     if (!legacyRow) return undefined;
-    const legacyBook = this.assertMetadata(rowToBook(legacyRow), candidate);
+    const legacyBook = this.assertMetadata(legacyRow, candidate);
     if (legacyRow.content_hash !== candidate.sourceHash) {
       throw new Error('PUBLIC_LIBRARY_ID_CONFLICT');
     }
@@ -603,12 +1057,16 @@ export class PublicLibraryRepository {
           },
           ...this.sourceFactStatements(legacyId, candidate, publishedAt),
           {
-            sql: `SELECT b.* FROM public_books b
+            sql: `SELECT b.*, m.label AS maintainer_label,
+              COALESCE(GROUP_CONCAT(t.tag_id, char(31)), '') AS tag_ids
+              FROM public_books b
+              JOIN public_maintainers m ON m.maintainer_id = b.maintainer_id
+              LEFT JOIN public_book_tags t ON t.book_id = b.id
               JOIN public_editions e ON e.edition_hash = b.edition_hash
               JOIN public_sources s ON s.book_id = b.id
               JOIN public_ingest_receipts r ON r.book_id = b.id
               WHERE b.id = ? AND e.package_hash = ? AND r.status = 'succeeded'
-              LIMIT 1`,
+              GROUP BY b.id LIMIT 1`,
             args: [legacyId, packageHash],
           },
         ],
@@ -625,8 +1083,9 @@ export class PublicLibraryRepository {
     } catch (error) {
       const existing = await this.findByEdition(candidate.editionHash);
       if (existing) {
+        this.assertMetadata(existing, candidate);
         return this.attachSourceToExisting(
-          this.assertMetadata(existing, candidate),
+          requireString(existing.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING'),
           candidate,
         );
       }
@@ -654,6 +1113,7 @@ export class PublicLibraryRepository {
       author: input.author,
       description: input.description,
       category: input.category,
+      tagIds: input.tagIds,
       source: {
         kind: 'legacy_json',
         scope: 'gate-03-json',
@@ -704,6 +1164,8 @@ export class PublicLibraryRepository {
       throw new Error('PUBLIC_LIBRARY_CANONICAL_CANDIDATE_INVALID');
     }
     const sourceHash = sha256(input.source.bytes);
+    const categoryId = requireCategoryIdFromLabel(input.category);
+    const tagIds = requireTagIds(input.tagIds ?? []);
     const editionHash = sha256(
       JSON.stringify(
         input.chapters.map((chapter) => ({
@@ -720,6 +1182,16 @@ export class PublicLibraryRepository {
       author: input.author,
       description: input.description,
       category: input.category,
+      categoryId,
+      tagIds,
+      ingestMetadataHash: ingestMetadataHash({
+        title: input.title,
+        author: input.author,
+        description: input.description,
+        categoryId,
+        collectionPath,
+        tagIds,
+      }),
       collectionPath,
       sourceHash,
       editionHash,
@@ -740,10 +1212,11 @@ export class PublicLibraryRepository {
     };
     const existing = await this.findByEdition(editionHash);
     if (existing) {
+      this.assertMetadata(existing, candidate);
       return {
         outcome: 'unchanged',
         book: await this.attachSourceToExisting(
-          this.assertMetadata(existing, candidate),
+          requireString(existing.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING'),
           candidate,
         ),
       };
@@ -763,7 +1236,7 @@ export class PublicLibraryRepository {
       return {
         outcome: 'unchanged',
         book: await this.attachSourceToExisting(
-          this.assertMetadata(pendingResult.book, candidate),
+          pendingResult.book.id,
           candidate,
         ),
       };
@@ -780,13 +1253,30 @@ export class PublicLibraryRepository {
     bookId: string,
   ): Promise<PublicLibraryPublicationResult> {
     const publishedAt = this.now();
+    const maintainerResult = await this.client.execute(
+      'SELECT maintainer_id, label FROM public_maintainers WHERE id = 1',
+    );
+    const maintainerId = requireString(
+      maintainerResult.rows[0]?.maintainer_id,
+      'PUBLIC_LIBRARY_MAINTAINER_ID_MISSING',
+    );
+    const maintainerLabel = requireString(
+      maintainerResult.rows[0]?.label,
+      'PUBLIC_LIBRARY_MAINTAINER_LABEL_MISSING',
+    );
     const book: PublicLibraryBookDto = {
       id: bookId,
       title: candidate.title,
       author: candidate.author,
       description: candidate.description,
       format: 'txt',
+      taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+      categoryId: candidate.categoryId,
       category: candidate.category,
+      tags: tagDtos(candidate.tagIds),
+      maintainerId,
+      maintainerLabel,
+      metadataVersion: 1,
       collectionPath: candidate.collectionPath || undefined,
       chapterCount: candidate.chapters.length,
       wordCount: candidate.wordCount,
@@ -795,6 +1285,7 @@ export class PublicLibraryRepository {
     };
     const bundle: PublicLibraryPackage = {
       schemaVersion: 1,
+      taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
       book: { ...book, collectionPath: undefined },
       chapters: candidate.chapters,
     };
@@ -824,12 +1315,15 @@ export class PublicLibraryRepository {
               id, title, author, description, format, category, chapter_count,
               word_count, content_hash, package_hash, published_at,
               edition_hash, source_hash, maintainer_id, collection_path,
-              metadata_version, created_revision
+              metadata_version, created_revision, category_id,
+              ingest_category_id,
+              ingest_metadata_hash
             ) VALUES (
               ?, ?, ?, ?, 'txt', ?, ?, ?, ?, ?, ?, ?, ?,
               (SELECT maintainer_id FROM public_maintainers WHERE id = 1),
               ?, 1,
-              (SELECT revision + 1 FROM public_catalog_state WHERE id = 1)
+              (SELECT revision + 1 FROM public_catalog_state WHERE id = 1),
+              ?, ?, ?
             )`,
             args: [
               book.id,
@@ -845,6 +1339,9 @@ export class PublicLibraryRepository {
               candidate.editionHash,
               candidate.sourceHash,
               candidate.collectionPath,
+              candidate.categoryId,
+              candidate.categoryId,
+              candidate.ingestMetadataHash,
             ],
           },
           {
@@ -862,24 +1359,51 @@ export class PublicLibraryRepository {
             ],
           },
           ...this.sourceFactStatements(book.id, candidate, publishedAt),
+          ...candidate.tagIds.map((tagId) => ({
+            sql: 'INSERT INTO public_book_tags (book_id, tag_id) VALUES (?, ?)',
+            args: [book.id, tagId],
+          })),
+          {
+            sql: `INSERT INTO public_books_search_v3
+              (book_id, title, author, maintainer_label) VALUES (?, ?, ?, ?)`,
+            args: [
+              book.id,
+              normalizeSearchValue(book.title),
+              normalizeSearchValue(book.author ?? ''),
+              normalizeSearchValue(book.maintainerLabel),
+            ],
+          },
+          ...shortSearchTerms(
+            book.title,
+            book.author,
+            book.maintainerLabel,
+          ).map((term) => ({
+            sql: 'INSERT INTO public_book_search_terms (book_id, term) VALUES (?, ?)',
+            args: [book.id, term],
+          })),
           {
             sql: 'UPDATE public_catalog_state SET revision = revision + 1 WHERE id = 1',
             args: [],
           },
           {
-            sql: `SELECT b.*, e.package_hash AS edition_package_hash,
+            sql: `SELECT b.*, m.label AS maintainer_label,
+              COALESCE(GROUP_CONCAT(t.tag_id, char(31)), '') AS tag_ids,
+              e.package_hash AS edition_package_hash,
               s.source_hash AS saved_source_hash, r.status AS receipt_status
               FROM public_books b
+              JOIN public_maintainers m ON m.maintainer_id = b.maintainer_id
+              LEFT JOIN public_book_tags t ON t.book_id = b.id
               JOIN public_editions e ON e.edition_hash = b.edition_hash
               JOIN public_sources s ON s.book_id = b.id
               JOIN public_ingest_receipts r ON r.book_id = b.id
-              WHERE b.id = ? AND s.source_id = ? AND r.receipt_key = ? LIMIT 1`,
+              WHERE b.id = ? AND s.source_id = ? AND r.receipt_key = ?
+              GROUP BY b.id LIMIT 1`,
             args: [book.id, candidate.sourceId, candidate.receiptKey],
           },
         ],
         'write',
       );
-      this.assertSourceReadback(results.at(-3)?.rows[0], book.id, candidate);
+      this.assertSourceReadback(results[4]?.rows[0], book.id, candidate);
       const row = results.at(-1)?.rows[0] as
         | Record<string, unknown>
         | undefined;
@@ -895,10 +1419,11 @@ export class PublicLibraryRepository {
     } catch (error) {
       const existing = await this.findByEdition(candidate.editionHash);
       if (existing) {
+        this.assertMetadata(existing, candidate);
         return {
           outcome: 'unchanged',
           book: await this.attachSourceToExisting(
-            this.assertMetadata(existing, candidate),
+            requireString(existing.id, 'PUBLIC_LIBRARY_BOOK_ID_MISSING'),
             candidate,
           ),
         };
@@ -908,6 +1433,7 @@ export class PublicLibraryRepository {
   }
 
   async list(query: PublicLibraryListQuery) {
+    assertCatalogPage(query.page, query.pageSize);
     const transaction = await this.client.transaction('read');
     try {
       const state = await transaction.execute(
@@ -923,24 +1449,49 @@ export class PublicLibraryRepository {
       const clauses: string[] = [];
       const args: Array<string | number> = [];
       if (query.q) {
-        clauses.push("(title LIKE ? ESCAPE '\\' OR author LIKE ? ESCAPE '\\')");
-        const escaped = query.q.replace(/[\\%_]/g, (value) => `\\${value}`);
-        args.push(`%${escaped}%`, `%${escaped}%`);
+        const match = buildSearchMatch(query.q);
+        const normalizedQuery = query.q
+          .normalize('NFKC')
+          .toLocaleLowerCase('en-US');
+        clauses.push(
+          [...normalizedQuery].length <= 2
+            ? 'b.id IN (SELECT book_id FROM public_book_search_terms WHERE term = ?)'
+            : match
+              ? 'b.id IN (SELECT book_id FROM public_books_search_v3 WHERE public_books_search_v3 MATCH ?)'
+              : '0 = 1',
+        );
+        if (match) {
+          args.push([...normalizedQuery].length <= 2 ? normalizedQuery : match);
+        }
       }
       if (query.category) {
-        clauses.push('category = ?');
+        clauses.push('b.category = ?');
         args.push(query.category);
+      }
+      if (query.categoryId) {
+        clauses.push('b.category_id = ?');
+        args.push(query.categoryId);
+      }
+      if (query.maintainerId) {
+        clauses.push('b.maintainer_id = ?');
+        args.push(query.maintainerId);
+      }
+      if (query.tagId) {
+        clauses.push(
+          'b.id IN (SELECT book_id FROM public_book_tags WHERE tag_id = ?)',
+        );
+        args.push(query.tagId);
       }
       const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
       const count = await transaction.execute({
-        sql: `SELECT COUNT(*) AS total FROM public_books ${where}`,
+        sql: `SELECT COUNT(DISTINCT b.id) AS total FROM public_books b ${where}`,
         args,
       });
       const total = Number(count.rows[0]?.total ?? 0);
       const offset = (query.page - 1) * query.pageSize;
       const rows = await transaction.execute({
-        sql: `SELECT * FROM public_books ${where}
-          ORDER BY published_at DESC, id ASC LIMIT ? OFFSET ?`,
+        sql: `${BOOK_SELECT} ${where} GROUP BY b.id
+          ORDER BY b.published_at DESC, b.id ASC LIMIT ? OFFSET ?`,
         args: [...args, query.pageSize, offset],
       });
       await transaction.commit();
@@ -953,6 +1504,7 @@ export class PublicLibraryRepository {
         total,
         totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
         snapshotRevision,
+        taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
       };
     } catch (error) {
       await transaction.rollback().catch(() => undefined);
@@ -960,15 +1512,163 @@ export class PublicLibraryRepository {
     }
   }
 
+  async listFacets(query: PublicLibraryFacetQuery) {
+    assertCatalogPage(query.page, query.pageSize);
+    const transaction = await this.client.transaction('read');
+    try {
+      const state = await transaction.execute(
+        'SELECT revision FROM public_catalog_state WHERE id = 1',
+      );
+      const snapshotRevision = Number(state.rows[0]?.revision ?? 0);
+      if (
+        query.snapshotRevision !== undefined &&
+        query.snapshotRevision !== snapshotRevision
+      ) {
+        throw new Error('PUBLIC_LIBRARY_CATALOG_SNAPSHOT_STALE');
+      }
+      const normalizedFacetQuery = query.q
+        .normalize('NFKC')
+        .trim()
+        .toLocaleLowerCase('en-US');
+      const escaped = normalizedFacetQuery.replace(
+        /[\\%_]/g,
+        (value) => `\\${value}`,
+      );
+      const args: Array<string | number> = normalizedFacetQuery
+        ? [`${escaped}%`]
+        : [];
+      const labelFilter = normalizedFacetQuery
+        ? "AND LOWER(label) LIKE ? ESCAPE '\\'"
+        : '';
+      let from = '';
+      let idColumn = '';
+      let order = '';
+      if (query.view === 'categories') {
+        from = `FROM (
+          SELECT c.category_id AS id, c.label AS label, c.sort_order AS rank,
+            COUNT(b.id) AS book_count
+          FROM public_categories c
+          JOIN public_books b ON b.category_id = c.category_id
+          GROUP BY c.category_id, c.label, c.sort_order
+        ) facets WHERE book_count > 0 ${labelFilter}`;
+        idColumn = 'id';
+        order = 'rank ASC, id ASC';
+      } else if (query.view === 'tags') {
+        from = `FROM (
+          SELECT t.tag_id AS id, t.label AS label, t.sort_order AS rank,
+            COUNT(bt.book_id) AS book_count
+          FROM public_tags t
+          JOIN public_book_tags bt ON bt.tag_id = t.tag_id
+          GROUP BY t.tag_id, t.label, t.sort_order
+        ) facets WHERE book_count > 0 ${labelFilter}`;
+        idColumn = 'id';
+        order = 'rank ASC, id ASC';
+      } else {
+        from = `FROM (
+          SELECT m.maintainer_id AS id, m.label AS label, 0 AS rank,
+            COUNT(b.id) AS book_count
+          FROM public_maintainers m
+          JOIN public_books b ON b.maintainer_id = m.maintainer_id
+          GROUP BY m.maintainer_id, m.label
+        ) facets WHERE book_count > 0 ${labelFilter}`;
+        idColumn = 'id';
+        order = 'book_count DESC, id ASC';
+      }
+      const count = await transaction.execute({
+        sql: `SELECT COUNT(*) AS total ${from}`,
+        args,
+      });
+      const total = Number(count.rows[0]?.total ?? 0);
+      const rows = await transaction.execute({
+        sql: `SELECT ${idColumn} AS id, label, book_count ${from}
+          ORDER BY ${order} LIMIT ? OFFSET ?`,
+        args: [...args, query.pageSize, (query.page - 1) * query.pageSize],
+      });
+      await transaction.commit();
+      return {
+        view: query.view,
+        items: rows.rows.map((row) => ({
+          id: requireString(row.id, 'PUBLIC_LIBRARY_FACET_ID_MISSING'),
+          label: requireString(row.label, 'PUBLIC_LIBRARY_FACET_LABEL_MISSING'),
+          bookCount: Number(row.book_count),
+        })),
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
+        snapshotRevision,
+        taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+      };
+    } catch (error) {
+      await transaction.rollback().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async updateCatalog(id: string, patch: PublicLibraryCatalogPatch) {
+    const category = requireCategory(patch.categoryId);
+    const tagIds = requireTagIds(patch.tagIds);
+    const statements: InStatement[] = [
+      {
+        sql: `DELETE FROM public_book_tags WHERE book_id = ? AND EXISTS (
+          SELECT 1 FROM public_books WHERE id = ? AND metadata_version = ?
+        )`,
+        args: [id, id, patch.metadataVersion],
+      },
+      ...tagIds.map((tagId) => ({
+        sql: `INSERT INTO public_book_tags (book_id, tag_id)
+          SELECT ?, ? WHERE EXISTS (
+            SELECT 1 FROM public_books WHERE id = ? AND metadata_version = ?
+          )`,
+        args: [id, tagId, id, patch.metadataVersion],
+      })),
+      {
+        sql: `UPDATE public_catalog_state SET revision = revision + 1
+          WHERE id = 1 AND EXISTS (
+            SELECT 1 FROM public_books WHERE id = ? AND metadata_version = ?
+          )`,
+        args: [id, patch.metadataVersion],
+      },
+      {
+        sql: `UPDATE public_books SET category_id = ?, category = ?,
+          collection_path = ?, metadata_version = metadata_version + 1
+          WHERE id = ? AND metadata_version = ?`,
+        args: [
+          category.id,
+          category.label,
+          patch.collectionPath,
+          id,
+          patch.metadataVersion,
+        ],
+      },
+      {
+        sql: `${BOOK_SELECT} WHERE b.id = ? GROUP BY b.id LIMIT 1`,
+        args: [id],
+      },
+    ];
+    const results = await retrySqliteBusy(() =>
+      this.client.batch(statements, 'write'),
+    );
+    const updateResult = results.at(-2);
+    const row = results.at(-1)?.rows[0] as Record<string, unknown> | undefined;
+    if (Number(updateResult?.rowsAffected ?? 0) !== 1) {
+      if (!row) throw new PublicLibraryBookNotFoundError();
+      throw new PublicLibraryCatalogMetadataStaleError(
+        Number(row.metadata_version),
+      );
+    }
+    if (!row) throw new Error('PUBLIC_LIBRARY_CATALOG_READBACK_FAILED');
+    return rowToBook(row);
+  }
+
   async getPackage(id: string): Promise<PublicLibraryPackage> {
     const result = await this.client.execute({
-      sql: `SELECT package_hash, collection_path
-            FROM public_books WHERE id = ? LIMIT 1`,
+      sql: 'SELECT package_hash FROM public_books WHERE id = ? LIMIT 1',
       args: [id],
     });
     const packageHash = result.rows[0]?.package_hash;
     if (typeof packageHash !== 'string') {
-      throw new Error('PUBLIC_LIBRARY_BOOK_NOT_FOUND');
+      throw new PublicLibraryBookNotFoundError();
     }
     const bytes = await this.blobs.getObject(packageHash);
     if (sha256(bytes) !== packageHash) {
@@ -977,6 +1677,8 @@ export class PublicLibraryRepository {
     const bundle = JSON.parse(bytes.toString('utf8')) as PublicLibraryPackage;
     if (
       bundle.schemaVersion !== 1 ||
+      (bundle.taxonomyVersion !== undefined &&
+        bundle.taxonomyVersion !== PUBLIC_LIBRARY_TAXONOMY_VERSION) ||
       bundle.book.id !== id ||
       bundle.book.chapterCount !== bundle.chapters.length ||
       bundle.chapters.some(
@@ -987,12 +1689,16 @@ export class PublicLibraryRepository {
     ) {
       throw new Error('PUBLIC_LIBRARY_PACKAGE_INVALID');
     }
+    const current = await this.client.execute({
+      sql: `${BOOK_SELECT} WHERE b.id = ? GROUP BY b.id LIMIT 1`,
+      args: [id],
+    });
+    const currentRow = current.rows[0] as Record<string, unknown> | undefined;
+    if (!currentRow) throw new PublicLibraryBookNotFoundError();
     return {
       ...bundle,
-      book: {
-        ...bundle.book,
-        collectionPath: optionalText(result.rows[0]?.collection_path),
-      },
+      taxonomyVersion: PUBLIC_LIBRARY_TAXONOMY_VERSION,
+      book: rowToBook(currentRow),
     };
   }
 }
