@@ -64,7 +64,7 @@ describe('PublicLibraryRepository', () => {
     const second = await repository.publishTxt(input);
     expect(second).toEqual(first);
     await expect(
-      repository.list({ q: '', page: 1, pageSize: 48 }),
+      repository.list({ q: '', page: 1, pageSize: 24 }),
     ).resolves.toMatchObject({
       total: 1,
       totalPages: 1,
@@ -521,5 +521,369 @@ describe('PublicLibraryRepository', () => {
     } finally {
       legacyClient.close();
     }
+  });
+
+  it('updates catalog overlays without changing the package or replay baseline', async () => {
+    const input = {
+      title: '目录覆盖样本',
+      category: '经典' as const,
+      tagIds: ['jing' as const],
+      content: '第一章\n不会随目录修改的正文',
+      rightsConfirmed: true as const,
+    };
+    const created = await repository.publishTxt(input);
+    const before = await client.execute({
+      sql: 'SELECT package_hash, ingest_metadata_hash FROM public_books WHERE id = ?',
+      args: [created.id],
+    });
+    const updated = await repository.updateCatalog(created.id, {
+      metadataVersion: 1,
+      categoryId: 'technology',
+      tagIds: ['programming', 'product'],
+      collectionPath: '工程藏书',
+    });
+    expect(updated).toMatchObject({
+      categoryId: 'technology',
+      category: '技术',
+      collectionPath: '工程藏书',
+      metadataVersion: 2,
+      tags: [
+        { id: 'programming', label: '编程' },
+        { id: 'product', label: '产品' },
+      ],
+    });
+    await expect(repository.getPackage(created.id)).resolves.toMatchObject({
+      book: updated,
+    });
+    await expect(repository.publishTxt(input)).resolves.toMatchObject({
+      id: created.id,
+      metadataVersion: 2,
+      categoryId: 'technology',
+    });
+    const after = await client.execute({
+      sql: 'SELECT package_hash, ingest_metadata_hash FROM public_books WHERE id = ?',
+      args: [created.id],
+    });
+    expect(after.rows).toEqual(before.rows);
+    await expect(
+      repository.updateCatalog(created.id, {
+        metadataVersion: 1,
+        categoryId: 'thought',
+        tagIds: [],
+        collectionPath: '',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CATALOG_METADATA_VERSION_STALE',
+      currentMetadataVersion: 2,
+    });
+    await expect(
+      client.execute({
+        sql: "UPDATE public_books SET category_id = 'unknown' WHERE id = ?",
+        args: [created.id],
+      }),
+    ).rejects.toThrow();
+    for (const tagId of ['jing', 'history', 'masters']) {
+      await client.execute({
+        sql: 'INSERT INTO public_book_tags (book_id, tag_id) VALUES (?, ?)',
+        args: [created.id, tagId],
+      });
+    }
+    await expect(
+      client.execute({
+        sql: "INSERT INTO public_book_tags (book_id, tag_id) VALUES (?, 'collections')",
+        args: [created.id],
+      }),
+    ).rejects.toThrow('PUBLIC_LIBRARY_TAG_LIMIT_EXCEEDED');
+    await expect(
+      client.execute({
+        sql: "INSERT INTO public_book_tags (book_id, tag_id) VALUES (?, 'unknown')",
+        args: [created.id],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      client.execute({
+        sql: "UPDATE public_book_tags SET tag_id = 'unknown' WHERE book_id = ? AND tag_id = 'programming'",
+        args: [created.id],
+      }),
+    ).rejects.toThrow('PUBLIC_LIBRARY_TAG_INVALID');
+    const source = await repository.publishTxt({
+      title: '标签迁移来源',
+      category: '其他',
+      tagIds: ['fiction'],
+      content: '独立正文',
+      rightsConfirmed: true,
+    });
+    await expect(
+      client.execute({
+        sql: `UPDATE public_book_tags SET book_id = ?
+          WHERE book_id = ? AND tag_id = 'fiction'`,
+        args: [created.id, source.id],
+      }),
+    ).rejects.toThrow('PUBLIC_LIBRARY_TAG_LIMIT_EXCEEDED');
+    await expect(
+      client.execute({
+        sql: "UPDATE public_books SET ingest_category_id = 'unknown' WHERE id = ?",
+        args: [created.id],
+      }),
+    ).rejects.toThrow('PUBLIC_LIBRARY_INGEST_CATEGORY_INVALID');
+    await expect(repository.getPackage(created.id)).resolves.toMatchObject({
+      book: { metadataVersion: 2, categoryId: 'technology' },
+    });
+  });
+
+  it('paginates facets under the same catalog revision gate', async () => {
+    const classics = await repository.publishTxt({
+      title: '经部索引',
+      category: '经典',
+      tagIds: ['jing'],
+      content: '正文一',
+      rightsConfirmed: true,
+    });
+    const first = await repository.list({
+      q: '',
+      page: 1,
+      pageSize: 1,
+    });
+    expect(first).toMatchObject({ total: 1, snapshotRevision: 1 });
+    await repository.publishTxt({
+      title: '编程索引',
+      category: '技术',
+      tagIds: ['programming', 'masters'],
+      content: '正文二',
+      rightsConfirmed: true,
+    });
+    await repository.updateCatalog(classics.id, {
+      metadataVersion: 1,
+      categoryId: 'literature',
+      tagIds: ['poetry'],
+      collectionPath: '',
+    });
+    await expect(
+      repository.list({
+        q: '',
+        page: 2,
+        pageSize: 1,
+        snapshotRevision: first.snapshotRevision,
+      }),
+    ).rejects.toThrow('PUBLIC_LIBRARY_CATALOG_SNAPSHOT_STALE');
+    for (const view of ['maintainers', 'categories', 'tags'] as const) {
+      await expect(
+        repository.listFacets({
+          view,
+          q: '',
+          page: 2,
+          pageSize: 1,
+          snapshotRevision: first.snapshotRevision,
+        }),
+      ).rejects.toThrow('PUBLIC_LIBRARY_CATALOG_SNAPSHOT_STALE');
+    }
+    const restartedFirst = await repository.list({
+      q: '',
+      page: 1,
+      pageSize: 1,
+    });
+    const restartedSecond = await repository.list({
+      q: '',
+      page: 2,
+      pageSize: 1,
+      snapshotRevision: restartedFirst.snapshotRevision,
+    });
+    expect(restartedFirst).toMatchObject({ total: 2, snapshotRevision: 3 });
+    expect(restartedSecond.total).toBe(2);
+    expect(
+      new Set(
+        [...restartedFirst.items, ...restartedSecond.items].map(
+          (book) => book.id,
+        ),
+      ).size,
+    ).toBe(2);
+    for (const view of ['maintainers', 'categories', 'tags'] as const) {
+      const facetFirst = await repository.listFacets({
+        view,
+        q: '',
+        page: 1,
+        pageSize: 1,
+      });
+      const ids = [...facetFirst.items.map((item) => item.id)];
+      for (let page = 2; page <= facetFirst.totalPages; page += 1) {
+        const next = await repository.listFacets({
+          view,
+          q: '',
+          page,
+          pageSize: 1,
+          snapshotRevision: facetFirst.snapshotRevision,
+        });
+        ids.push(...next.items.map((item) => item.id));
+      }
+      expect(new Set(ids).size).toBe(facetFirst.total);
+      expect(facetFirst.snapshotRevision).toBe(3);
+    }
+    await expect(
+      repository.listFacets({
+        view: 'tags',
+        q: '⼦',
+        page: 1,
+        pageSize: 24,
+      }),
+    ).resolves.toMatchObject({
+      items: [{ id: 'masters', label: '子部', bookCount: 1 }],
+    });
+  });
+
+  it('linearizes competing metadata versions with one winner and one revision', async () => {
+    const created = await repository.publishTxt({
+      title: '目录并发样本',
+      category: '其他',
+      content: '并发正文',
+      rightsConfirmed: true,
+    });
+    const results = await Promise.allSettled([
+      repository.updateCatalog(created.id, {
+        metadataVersion: 1,
+        categoryId: 'literature',
+        tagIds: ['fiction'],
+        collectionPath: '甲',
+      }),
+      repository.updateCatalog(created.id, {
+        metadataVersion: 1,
+        categoryId: 'thought',
+        tagIds: ['masters'],
+        collectionPath: '乙',
+      }),
+    ]);
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toHaveLength(1);
+    expect(
+      results.find((result) => result.status === 'rejected'),
+    ).toMatchObject({
+      reason: { code: 'CATALOG_METADATA_VERSION_STALE' },
+    });
+    await expect(
+      client.execute('SELECT revision FROM public_catalog_state WHERE id = 1'),
+    ).resolves.toMatchObject({ rows: [{ revision: 2 }] });
+    await expect(repository.getPackage(created.id)).resolves.toMatchObject({
+      book: { metadataVersion: 2 },
+    });
+  });
+
+  it('does not attach losing provenance from an in-process metadata race', async () => {
+    const canonical = {
+      title: '同进程目录竞态',
+      category: '经典' as const,
+      chapters: [{ index: 0, title: '正文', content: '同一正文' }],
+      wordCount: 4,
+    };
+    const results = await Promise.allSettled([
+      repository.publishCandidate({
+        ...canonical,
+        source: {
+          kind: 'browser_file',
+          scope: 'left',
+          relativePath: '甲/book.txt',
+          bytes: Buffer.from('左来源'),
+        },
+      }),
+      repository.publishCandidate({
+        ...canonical,
+        source: {
+          kind: 'browser_file',
+          scope: 'right',
+          relativePath: '乙/book.txt',
+          bytes: Buffer.from('右来源'),
+        },
+      }),
+    ]);
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toHaveLength(1);
+    await expect(
+      client.execute('SELECT COUNT(*) AS total FROM public_sources'),
+    ).resolves.toMatchObject({ rows: [{ total: 1 }] });
+    await expect(
+      client.execute('SELECT COUNT(*) AS total FROM public_ingest_receipts'),
+    ).resolves.toMatchObject({ rows: [{ total: 1 }] });
+  });
+
+  it('uses the same NFKC shadow text for short and trigram searches', async () => {
+    await repository.publishTxt({
+      title: 'ＡＢＣ测试',
+      category: '其他',
+      content: '规范化正文',
+      rightsConfirmed: true,
+    });
+    for (const q of ['ＡＢ', 'AB', 'ＡＢＣ', 'ABC']) {
+      await expect(
+        repository.list({ q, page: 1, pageSize: 24 }),
+      ).resolves.toMatchObject({ total: 1 });
+    }
+  });
+
+  it('uses the reverse tag index before reading matching books', async () => {
+    const tagged = await repository.publishTxt({
+      title: '反向索引样本',
+      category: '技术',
+      tagIds: ['product'],
+      content: '索引正文',
+      rightsConfirmed: true,
+    });
+    await expect(
+      repository.list({
+        q: '',
+        tagId: 'product',
+        page: 1,
+        pageSize: 24,
+      }),
+    ).resolves.toMatchObject({ items: [{ id: tagged.id }], total: 1 });
+    const plan = await client.execute({
+      sql: `EXPLAIN QUERY PLAN SELECT b.id FROM public_books b
+        WHERE b.id IN (
+          SELECT book_id FROM public_book_tags WHERE tag_id = ?
+        )`,
+      args: ['product'],
+    });
+    expect(
+      plan.rows
+        .map((row) => (typeof row.detail === 'string' ? row.detail : ''))
+        .join('\n'),
+    ).toContain('public_book_tags_tag_book_idx');
+  });
+
+  it('fails closed when legacy category or maintainer identity drifts', async () => {
+    const legacyPath = join(root, 'invalid-legacy.sqlite');
+    const legacyClient = createClient({ url: `file:${legacyPath}` });
+    try {
+      await legacyClient.execute(`CREATE TABLE public_books (
+        id TEXT PRIMARY KEY, title TEXT NOT NULL, author TEXT, description TEXT,
+        format TEXT NOT NULL, category TEXT NOT NULL, chapter_count INTEGER NOT NULL,
+        word_count INTEGER NOT NULL, content_hash TEXT NOT NULL,
+        package_hash TEXT NOT NULL UNIQUE, published_at TEXT NOT NULL
+      )`);
+      await legacyClient.execute(
+        `INSERT INTO public_books (
+        id, title, format, category, chapter_count, word_count,
+        content_hash, package_hash, published_at
+      ) VALUES ('legacy', '旧书', 'txt', '未分类', 1, 2, ?, ?, ?)`,
+        ['a'.repeat(64), 'b'.repeat(64), '2026-08-15T00:00:00.000Z'],
+      );
+      await expect(preparePublicLibraryDatabase(legacyClient)).rejects.toThrow(
+        'PUBLIC_LIBRARY_CATEGORY_MIGRATION_FAILED',
+      );
+    } finally {
+      legacyClient.close();
+    }
+
+    await client.execute(
+      "UPDATE public_maintainers SET label = '伪装账号' WHERE id = 1",
+    );
+    await expect(preparePublicLibraryDatabase(client)).rejects.toThrow(
+      'PUBLIC_LIBRARY_MAINTAINER_DRIFT',
+    );
   });
 });

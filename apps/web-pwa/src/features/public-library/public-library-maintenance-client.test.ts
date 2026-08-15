@@ -9,7 +9,13 @@ const book = {
   id: "public-1",
   title: "入阁样本",
   format: "txt",
+  taxonomyVersion: "public-library-taxonomy-v1",
+  categoryId: "classics",
   category: "经典",
+  tags: [],
+  maintainerId: "maintainer-1",
+  maintainerLabel: "本阁维护者",
+  metadataVersion: 1,
   chapterCount: 1,
   wordCount: 2,
   contentHash: "a".repeat(64),
@@ -96,6 +102,32 @@ describe("PublicLibraryMaintenanceClient", () => {
     const uploaded = body.get("snapshot") as File;
     expect(await uploaded.text()).not.toContain("private-a");
     expect(await uploaded.text()).not.toContain("book-1");
+  });
+
+  it("patches only the catalog overlay with the maintenance credential snapshot", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ ...book, metadataVersion: 2 }), {
+          status: 200,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new PublicLibraryMaintenanceClient("catalog-key");
+    await client.updateCatalog(book.id, {
+      metadataVersion: 1,
+      categoryId: "technology",
+      tagIds: ["programming"],
+      collectionPath: "工程",
+    });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain(`/public-library/books/${book.id}/catalog`);
+    expect(init?.method).toBe("PATCH");
+    expect(init?.headers).toEqual({
+      "x-public-library-maintenance-key": "catalog-key",
+      "content-type": "application/json",
+    });
+    expect(init?.headers).not.toHaveProperty("x-share-token");
+    expect(String(init?.body)).not.toContain("catalog-key");
   });
 
   it("maps metadata conflict without exposing response text", async () => {

@@ -44,6 +44,17 @@ describe('PublicLibraryController multipart boundary', () => {
       Promise.resolve({ outcome: 'created', book: { id: 'public-personal' } }),
     ),
     list: jest.fn(),
+    taxonomy: jest.fn(() => ({
+      taxonomyVersion: 'public-library-taxonomy-v1',
+      categories: [],
+      tags: [],
+    })),
+    listFacets: jest.fn(() =>
+      Promise.resolve({ items: [], page: 1, pageSize: 24 }),
+    ),
+    updateCatalog: jest.fn(() =>
+      Promise.resolve({ id: 'public-file', metadataVersion: 2 }),
+    ),
     getPackage: jest.fn(),
   };
 
@@ -83,6 +94,7 @@ describe('PublicLibraryController multipart boundary', () => {
       'configured-key',
       {
         category: '经典',
+        tagIds: [],
         rightsConfirmed: true,
         title: '浏览器直传',
       },
@@ -90,6 +102,47 @@ describe('PublicLibraryController multipart boundary', () => {
         originalname: '藏书.txt',
         size: Buffer.byteLength('第一章\n完整正文'),
       }),
+    );
+  });
+
+  it('serves anonymous taxonomy and bounded facets without either credential header', async () => {
+    await request(app.getHttpServer())
+      .get('/public-library/taxonomy')
+      .expect(200)
+      .expect('Content-Type', /json/u);
+    await request(app.getHttpServer())
+      .get('/public-library/facets?view=tags&page=1&pageSize=24')
+      .expect(200);
+    expect(service.listFacets).toHaveBeenCalledWith({
+      view: 'tags',
+      q: '',
+      page: 1,
+      pageSize: 24,
+    });
+  });
+
+  it('guards and validates catalog overlay writes before the service call', async () => {
+    const body = {
+      metadataVersion: 1,
+      categoryId: 'technology',
+      tagIds: ['programming'],
+      collectionPath: '工程',
+    };
+    await request(app.getHttpServer())
+      .patch('/public-library/books/public-file/catalog')
+      .send(body)
+      .expect(403);
+    expect(service.updateCatalog).not.toHaveBeenCalled();
+
+    await request(app.getHttpServer())
+      .patch('/public-library/books/public-file/catalog')
+      .set('x-public-library-maintenance-key', 'configured-key')
+      .send(body)
+      .expect(200);
+    expect(service.updateCatalog).toHaveBeenCalledWith(
+      'configured-key',
+      'public-file',
+      body,
     );
   });
 
@@ -205,7 +258,7 @@ describe('PublicLibraryController multipart boundary', () => {
       .expect(201);
     expect(service.publishPersonalSnapshot).toHaveBeenCalledWith(
       'configured-key',
-      { category: '其他', rightsConfirmed: true },
+      { category: '其他', tagIds: [], rightsConfirmed: true },
       expect.objectContaining({
         originalname: 'verified-personal-snapshot.json',
         size: bytes.length,

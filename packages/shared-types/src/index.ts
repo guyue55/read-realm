@@ -317,6 +317,75 @@ export const LocalChapterSchema = z.object({
 
 export type LocalChapter = z.infer<typeof LocalChapterSchema>;
 
+export const PUBLIC_LIBRARY_TAXONOMY_VERSION =
+  "public-library-taxonomy-v1" as const;
+
+export const PUBLIC_LIBRARY_CATEGORIES = [
+  { id: "literature", label: "文学" },
+  { id: "classics", label: "经典" },
+  { id: "thought", label: "思想" },
+  { id: "technology", label: "技术" },
+  { id: "other", label: "其他" },
+] as const;
+
+export const PUBLIC_LIBRARY_TAGS = [
+  { id: "jing", label: "经部" },
+  { id: "history", label: "史部" },
+  { id: "masters", label: "子部" },
+  { id: "collections", label: "集部" },
+  { id: "poetry", label: "诗词" },
+  { id: "fiction", label: "小说" },
+  { id: "biography", label: "传记" },
+  { id: "essay", label: "随笔" },
+  { id: "science", label: "科学" },
+  { id: "programming", label: "编程" },
+  { id: "product", label: "产品" },
+  { id: "other", label: "其他" },
+] as const;
+
+export const PublicLibraryCategoryIdSchema = z.enum([
+  "literature",
+  "classics",
+  "thought",
+  "technology",
+  "other",
+]);
+export const PublicLibraryTagIdSchema = z.enum([
+  "jing",
+  "history",
+  "masters",
+  "collections",
+  "poetry",
+  "fiction",
+  "biography",
+  "essay",
+  "science",
+  "programming",
+  "product",
+  "other",
+]);
+export const PublicLibraryTagIdsSchema = z
+  .array(PublicLibraryTagIdSchema)
+  .max(5)
+  .refine((items) => new Set(items).size === items.length, "标签不能重复");
+
+export type PublicLibraryCategoryId = z.infer<
+  typeof PublicLibraryCategoryIdSchema
+>;
+export type PublicLibraryTagId = z.infer<typeof PublicLibraryTagIdSchema>;
+
+export function publicLibraryCategoryById(id: PublicLibraryCategoryId) {
+  return PUBLIC_LIBRARY_CATEGORIES.find((item) => item.id === id)!;
+}
+
+export function publicLibraryCategoryByLabel(label: string) {
+  return PUBLIC_LIBRARY_CATEGORIES.find((item) => item.label === label);
+}
+
+export function publicLibraryTagById(id: PublicLibraryTagId) {
+  return PUBLIC_LIBRARY_TAGS.find((item) => item.id === id)!;
+}
+
 const Sha256HexSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 
 export const PersonalPublicationBookSchema = z.object({

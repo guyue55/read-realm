@@ -4,6 +4,7 @@ import type { PublicLibraryPackage } from "./public-library-client";
 
 const bundle: PublicLibraryPackage = {
   schemaVersion: 1,
+  taxonomyVersion: "public-library-taxonomy-v1",
   book: {
     id: "public-1",
     title: "公共书",

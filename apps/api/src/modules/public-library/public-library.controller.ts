@@ -5,6 +5,7 @@ import {
   Get,
   Headers,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -22,6 +23,10 @@ import {
   PublicLibraryPersonalSnapshotFieldsSchema,
   PublicLibraryUploadSchema,
 } from './public-library.contract';
+import {
+  PublicLibraryCatalogPatchSchema,
+  PublicLibraryFacetQuerySchema,
+} from './public-library-catalog.contract';
 import {
   type PublicLibraryUploadedFile,
   PublicLibraryService,
@@ -50,6 +55,34 @@ export class PublicLibraryController {
     if (!parsed.success)
       throw new BadRequestException(parsed.error.issues[0]?.message);
     return this.service.list(parsed.data);
+  }
+
+  @Get('taxonomy')
+  taxonomy() {
+    return this.service.taxonomy();
+  }
+
+  @Get('facets')
+  listFacets(@Query() query: unknown) {
+    const parsed = PublicLibraryFacetQuerySchema.safeParse(query);
+    if (!parsed.success)
+      throw new BadRequestException(parsed.error.issues[0]?.message);
+    return this.service.listFacets(parsed.data);
+  }
+
+  @Patch('books/:id/catalog')
+  @UseGuards(PublicLibraryMaintenanceGuard)
+  updateCatalog(
+    @Headers('x-public-library-maintenance-key')
+    maintenanceKey: string | undefined,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.updateCatalog(
+      maintenanceKey,
+      id,
+      parseBody(PublicLibraryCatalogPatchSchema, body),
+    );
   }
 
   @Get('books/:id/package')
