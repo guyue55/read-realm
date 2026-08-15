@@ -6,10 +6,10 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504 / F；A–E 已依次通过独立复审，下一步只实现固定 taxonomy、catalog overlay、facets 分页与书籍/上传者标记/分类/标签四视图，不扩张账号、审核、配额或治理平台。
-- 最近有效提交：9d4a2e2
+- 当前入口：PHASE-05 / TASK-0504 / EVID-62；A–F 已依次实现并通过独立复审，下一步只实现预登记的 TASK-0504 独立扩张检查器，从 clean 候选正式生成 EVID-62；不提前进入 TASK-0505。
+- 最近有效提交：5df9347
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–E 已通过、F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–F 已通过，但 EVID-62 尚未生成，TASK-0504、PHASE-05、EVID-56/58 与 Goal 仍未完成。
 - 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
@@ -40,6 +40,7 @@
 - RUN-0048：保持执行中；TASK-0504 C 完成，当前入口推进至 D allowlisted 服务端目录扫描。依据：实现提交 `0a87a02`、安全 relativePath/顶层 collectionPath、规范化重名拒绝、immutable package overlay 分层、双 client 异目录冲突与两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0049：保持执行中；TASK-0504 D 完成，当前入口推进至 E 已验证个人云正文快照发布。依据：实现提交 `583c306`、每次扫描物理隔离复验、完整只读 preflight、同 generation 租约恢复、事务 publication fence、sourceHash receipt 重放、来源代际单调门、390/340 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0050：保持执行中；TASK-0504 E 完成，当前入口推进至 F taxonomy/facets 四视图。依据：实现提交 `9d4a2e2`、同 token 云端 inventory/完整内容寻址 receipt、严格 Blob/hash/UTF-8 核验、本地同版传输优化、独立 maintenance 发布端口、公共失败零个人副作用、340/390 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0051：保持执行中；TASK-0504 F 实现完成，当前入口推进至 EVID-62 独立扩张检查器。依据：实现提交 `5df9347`、稳定 taxonomy ID/双层 DB 约束、版本化 catalog overlay、24 项 books/facets 分页、NFKC FTS/反向 tag 索引、catalogRevision 四视图失效、真实 Chrome 409/迟到响应/dialog 旅程与三路独立终审 READY。EVID-62 未通过前 TASK-0504、PHASE-05 与 Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -502,3 +503,12 @@
 - 验证与失败因果：API 全量 `130/130`、Web 全量 `200/200`、shared-types `18/18`、storage-core `82/82`；两端 TypeScript、非写入 lint、API/shared/storage build、禁用 PWA 写入的 Web production build 与 `git diff --check` 全通过，系统 Chrome E 旅程 `1/1`。首次浏览器命令未指定系统 Chrome channel，缺少 Playwright bundled shell；首次 Web build 复用了受并发/开发运行污染的 `.next` 并在 page collection 缺 `_document`，两者均在未进入产品失败判据时归 `VALIDATOR_INDETERMINATE`，改用系统 Chrome与 fresh `.next` 串行重放后通过，不计 GATE 设计失败。
 - 安全与独审：31 个改动文件启发式预检为 26 Green、5 Yellow、0 Red；Yellow 仅为本机 `http://127.0.0.1`、IndexedDB `open`、治理状态 setter 名称与安全路径内的文件 `open`，人工逐行复核无凭据落 URL/DOM、个人公共 header 混用或新增外传。三路独立终审均 `READY_TO_COMMIT`，P0/P1 为 0；未运行 formal TASK-0504 verifier。
 - 状态与下一入口：TASK-0504 E 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 F：固定 category/tag 模板、版本化 catalog overlay、匿名 publishers/categories/tags facets 分页与书籍/上传者标记/分类/标签四视图；继续保持 24 项 DOM/分页上界和 catalogRevision 失效语义。F 独立通过前不运行 formal TASK-0504 verifier，也不进入 TASK-0505。
+
+### RUN-0051 · 2026-08-15T11:53:15+08:00 · PHASE-05 / TASK-0504 F taxonomy、facets 与四视图
+- 本轮边界：只完成冻结的 `public-library-taxonomy-v1`、catalog overlay、书籍/维护者/分类/标签四视图与 24 项服务端分页；未新增账号、审核、配额、上下架或治理平台。实现提交 `5df9347bcf41acd6d0fc183f108209d902c6512f`，未 push、未部署、未读写真实个人云或公共馆藏。
+- 稳定事实源：category/tag 使用稳定 ID、中文 label 和单一 taxonomyVersion；SQLite 准备在单个 WAL write transaction 中串行，精确回读 taxonomy/维护者身份。current category、ingest category 和 tag relation 均有 DB 门；未知、重复、第 6 标签及 `UPDATE book_id/tag_id` 旁路均 fail-closed。
+- overlay 与重放：不可变 ingest metadata 与可编辑 current category/tags/collectionPath 分层；PATCH 在同一 write batch 中令 metadataVersion/catalogRevision 各加一，旧版单胜者。package GET 先核验 immutable Blob/章节 hash，再叠加当前目录信息；重复扫描不回退 overlay，也不改 package/content/edition/source hash。
+- 检索与快照：书名、作者、维护者用 NFKC shadow FTS v3/短词索引，tag 精确过滤用 `(tag_id, book_id)` 反向索引；无 `%LIKE%` 全表搜索。同一固定 `now` 下 page1 后连续 publish + PATCH，旧 books 与三类 facets page2 全部 409，重启分页在 revision 3 下无重无漏。并发 prepare 10/10 线性化，索引重建未提交期间旧 reader 始终看到完整旧快照。
+- UI 与真实旅程：四视图切换同步清 items/revision/page 并递增 request generation，旧 HTTP 请求迟到不覆盖新查询；重复点击当前 tab/分类不陷入 loading。Catalog editor 只用 maintenance client，具备初始焦点、Tab 圈定、Escape、焦点归还；340px 对话框和 340/390/768/1440 页面无横溢出，相关触点双轴均不小于 44px，book/facet DOM 各不超过 24。
+- 验证与安全：API `141/141`、Web `202/202`、shared-types `19/19`、storage-core `82/82`；两端 TypeScript、非写入 lint、API build、禁用 PWA 写入的 Web production build、`git diff --check` 和控制包 resume 均通过。系统 Chrome 的 F taxonomy、旧文件上传、服务端扫描与个人云发布四条独立旅程各 `1/1` 通过，3100/4100 无残留监听。改动文件同源预检 19 Green、3 Yellow、0 Red；Yellow 仅为状态 setter 中的 `Open` 字样和隔离 E2E 的 `http://127.0.0.1`，人工复核无密钥落 URL/DOM、个人/公共 header 混用或新增外传。
+- 独审与下一入口：核心/DB、文件/UI 与整体边界三路最终均为 `READY_TO_COMMIT`，无 P0/P1 或假绿。F 完成，但 TASK-0504 仍等待预登记 EVID-62 独立扩张检查器的 clean 正式重放与独立复算；未通过前不进入 TASK-0505，不声称 PHASE-05、EVID-56/58、VPS 或 Goal 完成。
