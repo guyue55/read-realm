@@ -1,0 +1,16 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node scripts/check-gate-03-final-prerequisite.mjs
+started_at=2026-08-15T04:50:20.976Z
+ended_at=2026-08-15T04:50:21.011Z
+duration_ms=35
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+{"gateId":"GATE-03","result":"PASS","currentRecords":11,"historyRecords":11}
+
+[stderr]

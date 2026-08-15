@@ -1,0 +1,27 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/task-0504-fixture-contract.test.mjs
+started_at=2026-08-15T04:50:21.085Z
+ended_at=2026-08-15T04:50:21.159Z
+duration_ms=74
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+✔ freezes one production journey and the exact executed marker (0.571083ms)
+✔ freezes the mixed 16 plus 7 plus 1 plus 1 fixture (0.57825ms)
+✔ keeps public, anonymous, and personal request credentials separated (0.186334ms)
+✔ binds the same-now publication plus overlay revision regression (0.209625ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 46.365625
+
+[stderr]

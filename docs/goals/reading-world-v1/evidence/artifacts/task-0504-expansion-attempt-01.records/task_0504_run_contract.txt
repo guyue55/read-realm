@@ -1,0 +1,39 @@
+$ $HOME/.nvm/versions/node/v24.13.0/bin/node --test scripts/task-0504-expansion-run.test.mjs scripts/task-0504-fixture-contract.test.mjs scripts/verify-public-library-expansion-contract.test.mjs
+started_at=2026-08-15T04:50:57.468Z
+ended_at=2026-08-15T04:50:57.580Z
+duration_ms=112
+exit_code=0
+tracked_worktree_mutated=false
+unexpected_untracked_mutation=false
+archived_history_mutated=false
+tracked_status_before=[]
+tracked_status_after=[]
+untracked_outside_before=[]
+untracked_outside_after=[]
+[stdout]
+✔ distinguishes a reliable product failure from an inconsistent live exit (0.478791ms)
+✔ rejects symlink evidence roots and any record outside the exact set (1.665792ms)
+✔ freezes the exact 14 check record identities (0.419208ms)
+✔ accepts exactly one executed product marker and rejects source frames (0.2415ms)
+✔ parses one observation and rejects missing or duplicate observations (0.209708ms)
+✔ parses exactly one outer runner observation (0.134375ms)
+✔ separates validator indeterminate from reliable product failure (0.194167ms)
+✔ validates all isolated paths including the maintenance root (0.72275ms)
+✔ freezes the 16+7+1+1 fixture and evidence roots (0.292791ms)
+✔ freezes one production journey and the exact executed marker (0.546084ms)
+✔ freezes the mixed 16 plus 7 plus 1 plus 1 fixture (0.795833ms)
+✔ keeps public, anonymous, and personal request credentials separated (0.168167ms)
+✔ binds the same-now publication plus overlay revision regression (0.250583ms)
+✔ rejects an invalid command before the clean-worktree or evidence write gates (34.876375ms)
+✔ freezes exact task, output, fourteen checks, and ATTEMPT-only boundary (0.184416ms)
+✔ requires a clean worktree and validates an existing report-record pair before archive (0.085375ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84.392791
+
+[stderr]
