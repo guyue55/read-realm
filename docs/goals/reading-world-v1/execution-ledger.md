@@ -6,10 +6,10 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504 / E；A–D 已依次通过独立复审，下一步只实现 PersonalBookExportPort → PublicLibraryMaintenancePort 的已验证个人云正文快照发布，不并行扩张 taxonomy/facets 四视图。
-- 最近有效提交：583c306
+- 当前入口：PHASE-05 / TASK-0504 / F；A–E 已依次通过独立复审，下一步只实现固定 taxonomy、catalog overlay、facets 分页与书籍/上传者标记/分类/标签四视图，不扩张账号、审核、配额或治理平台。
+- 最近有效提交：9d4a2e2
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–D 已通过、E–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–E 已通过、F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
 - 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
@@ -39,6 +39,7 @@
 - RUN-0047：保持执行中；TASK-0504 B 完成，当前入口推进至 C 文件夹队列。依据：实现提交 `acd609a..0fc92de`、有界 multipart/浏览器队列、真实系统 Chrome 上传与匿名浏览回归、两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0048：保持执行中；TASK-0504 C 完成，当前入口推进至 D allowlisted 服务端目录扫描。依据：实现提交 `0a87a02`、安全 relativePath/顶层 collectionPath、规范化重名拒绝、immutable package overlay 分层、双 client 异目录冲突与两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0049：保持执行中；TASK-0504 D 完成，当前入口推进至 E 已验证个人云正文快照发布。依据：实现提交 `583c306`、每次扫描物理隔离复验、完整只读 preflight、同 generation 租约恢复、事务 publication fence、sourceHash receipt 重放、来源代际单调门、390/340 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0050：保持执行中；TASK-0504 E 完成，当前入口推进至 F taxonomy/facets 四视图。依据：实现提交 `9d4a2e2`、同 token 云端 inventory/完整内容寻址 receipt、严格 Blob/hash/UTF-8 核验、本地同版传输优化、独立 maintenance 发布端口、公共失败零个人副作用、340/390 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -490,3 +491,14 @@
 - API 与 UI：三个 maintenance endpoint 全部先过既有 Guard，只携带 `x-public-library-maintenance-key`；items 分页最多 50，响应不返回 sourceHash、bookId、leaseOwner、fingerprint 或主机路径。入阁面板增加“服务端目录”，390px 完成扫描/重放，340px 下关闭、扫描按钮均 ≥44px、无横向溢出，Escape 关闭并归还焦点；扫描请求不触发个人 `/books`。
 - 验证与审查：最终 API 全量 `111/111`、Web 全量 `186/186`，两端 TypeScript、非写入 lint、API build 与禁用 PWA 写入的 Web production build、控制包 resume、`git diff --check` 全通过；系统 Chrome D 旅程 `1/1`。27 个改动文件安全预检为 25 Green、2 Yellow，Yellow 仅为只读 `open(O_NOFOLLOW)` 与本机 `http://127.0.0.1` E2E 地址，人工复核无凭据、执行下载或新增外传。三路独立终审均 `READY_TO_COMMIT`，无 P0/P1 或假绿；未运行 formal TASK-0504 verifier。
 - 状态与下一入口：TASK-0504 D 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 E：PersonalBookExportPort → PublicLibraryMaintenancePort；必须先用同一私有 token 验证云端 inventory/章节 hash/完整代际，本地缓存只能作为同版传输优化，公共模块仍不得读取个人 DB/repository。E 独立通过前不进入 F taxonomy/facets/四视图。
+
+### RUN-0050 · 2026-08-15T10:39:08+08:00 · PHASE-05 / TASK-0504 E 已验证个人云正文发布
+- 本轮边界：只完成 PersonalBookExportPort → PublicLibraryMaintenancePort 的单书发布链与既有治理菜单入口；未实现 taxonomy/facets 四视图、catalog overlay 编辑、账号/审核/配额/治理平台或 VPS 操作。实现提交 `9d4a2e2`，未 push、未部署、未连接真实个人云、真实馆藏或维护目录。
+- 私人快照：私人 API 新增只读 publication export 边界，仅接受一次性快照的非默认 `x-share-token`；精确读取 token-scoped book 与有序章节 manifest，以个人域持久随机 salt 生成不透明 sourceRef。首次核验只做一次 O(N) 数据库快照、N 次 Blob 大小检查和顺序 N 次 SHA-256/严格 UTF-8 验证，整书超过 20 MiB 在正文加载前返回 413。
+- Receipt 与代际：最多 8 条、5 分钟滑动 TTL 的 receipt 只缓存 descriptor/byteLengths，不缓存正文，并同时绑定 scopedBookId 与 snapshotHash；后续 manifest/final 页不再重复扫描整书，content 页只读并重验当前页。进程内远端换代不会撤销已证明的内容寻址版本；cache miss、TTL 后或进程重启会对当前事实重算，旧 hash 不匹配明确 409。401 章三页反例固定为 DB snapshot `1`、stat `401`、Blob read `601`，消除 O(N×pages) 放大。极端 20,000 章 receipt 元数据预算留给 TASK-0506 压力门，不把本切片外推为压力终局。
+- 本地优化与公共发布：浏览器先证明同 token 私有云 inventory 与完整 manifest；仅当 Dexie 的 `chapters_full/full_cached` 章节数量、标题和逐章 hash 与 receipt 全等时才用本地正文代传，否则读取同一 receipt 的远端内容。本地/远端形成 immutable verified snapshot 后，独立 maintenance client 只发送 `x-public-library-maintenance-key`；公共端重新计算 manifest、snapshot 与正文 hash，再以 `personal_cloud` candidate 进入唯一 canonical publisher。公共 DTO/DB/Blob 不保存 share token、个人原始 bookId、进度、笔记或本地路径，公共模块不读取个人 repository。
+- 交互与零副作用：书架卡片不新增常驻按钮，发布入口只位于既有单书治理菜单；无密钥时禁用并解释，非 TXT 明确不可用。确认文案固定说明会创建公共明文副本且私人原书/进度/笔记不变；created 显示“公共明文副本已入阁”，unchanged 显示“已在阁中”，413/422/409/公共 500 分别进入可重试的真实错误态。治理与发布 dialog 均具背景 inert、焦点圈定、Escape/焦点归还；340/390 下关闭、选择、缓存、解绑、公开及展开建箧三控件双轴均 ≥44px，无横向溢出。
+- 活体反例：系统 Chrome 在导出首请求暂停后把 localStorage 从 token A 改为 B，后续私人请求仍只携带 A、公共请求仍只携带操作开始时的 maintenance A，任一请求都不同时携带两种 header。旅程依次通过 created、unchanged 与注入公共 500；失败后远端个人 DB/Blob、Dexie book/chapters/progress/bookmark-note 与 `reader-active-sync-tasks` 均和发布前一致，失败态不显示成功。
+- 验证与失败因果：API 全量 `130/130`、Web 全量 `200/200`、shared-types `18/18`、storage-core `82/82`；两端 TypeScript、非写入 lint、API/shared/storage build、禁用 PWA 写入的 Web production build 与 `git diff --check` 全通过，系统 Chrome E 旅程 `1/1`。首次浏览器命令未指定系统 Chrome channel，缺少 Playwright bundled shell；首次 Web build 复用了受并发/开发运行污染的 `.next` 并在 page collection 缺 `_document`，两者均在未进入产品失败判据时归 `VALIDATOR_INDETERMINATE`，改用系统 Chrome与 fresh `.next` 串行重放后通过，不计 GATE 设计失败。
+- 安全与独审：31 个改动文件启发式预检为 26 Green、5 Yellow、0 Red；Yellow 仅为本机 `http://127.0.0.1`、IndexedDB `open`、治理状态 setter 名称与安全路径内的文件 `open`，人工逐行复核无凭据落 URL/DOM、个人公共 header 混用或新增外传。三路独立终审均 `READY_TO_COMMIT`，P0/P1 为 0；未运行 formal TASK-0504 verifier。
+- 状态与下一入口：TASK-0504 E 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 F：固定 category/tag 模板、版本化 catalog overlay、匿名 publishers/categories/tags facets 分页与书籍/上传者标记/分类/标签四视图；继续保持 24 项 DOM/分页上界和 catalogRevision 失效语义。F 独立通过前不运行 formal TASK-0504 verifier，也不进入 TASK-0505。
