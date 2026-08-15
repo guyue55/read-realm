@@ -17,7 +17,9 @@ const input = {
 describe('PublicLibraryService maintenance boundary', () => {
   const repository = {
     publishTxt: jest.fn(() => Promise.resolve({ id: 'public-1' })),
-    publishCandidate: jest.fn(() => Promise.resolve({ id: 'public-file' })),
+    publishCandidateWithOutcome: jest.fn(() =>
+      Promise.resolve({ outcome: 'created', book: { id: 'public-file' } }),
+    ),
     list: jest.fn(),
     getPackage: jest.fn(),
   };
@@ -97,8 +99,8 @@ describe('PublicLibraryService maintenance boundary', () => {
           buffer: content,
         },
       ),
-    ).resolves.toEqual({ id: 'public-file' });
-    expect(repository.publishCandidate).toHaveBeenCalledWith({
+    ).resolves.toEqual({ outcome: 'created', book: { id: 'public-file' } });
+    expect(repository.publishCandidateWithOutcome).toHaveBeenCalledWith({
       title: '浏览器直传',
       author: undefined,
       description: undefined,
@@ -131,7 +133,7 @@ describe('PublicLibraryService maintenance boundary', () => {
         },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(repository.publishCandidate).not.toHaveBeenCalled();
+    expect(repository.publishCandidateWithOutcome).not.toHaveBeenCalled();
   });
 
   it('rejects a TXT whose first explicit chapter has no body', async () => {
@@ -152,7 +154,7 @@ describe('PublicLibraryService maintenance boundary', () => {
         },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(repository.publishCandidate).not.toHaveBeenCalled();
+    expect(repository.publishCandidateWithOutcome).not.toHaveBeenCalled();
   });
 
   it.each(['../escape.txt', '   .txt', 'line\nbreak.txt'])(
@@ -175,7 +177,7 @@ describe('PublicLibraryService maintenance boundary', () => {
           },
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(repository.publishCandidate).not.toHaveBeenCalled();
+      expect(repository.publishCandidateWithOutcome).not.toHaveBeenCalled();
     },
   );
 

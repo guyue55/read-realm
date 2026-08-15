@@ -37,6 +37,7 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
   await page.getByRole("link", { name: "公共藏书" }).click();
   await expect(page).toHaveURL(/#\/public-library$/);
   await expect(page.getByRole("heading", { name: "藏经阁" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "入阁" })).toBeDisabled();
 
   const rejectedHeaders: Array<Record<string, string>> = [
     {},

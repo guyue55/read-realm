@@ -37,7 +37,9 @@ describe('PublicLibraryController multipart boundary', () => {
       }
     }),
     publish: jest.fn(),
-    publishFile: jest.fn(() => Promise.resolve({ id: 'public-file' })),
+    publishFile: jest.fn(() =>
+      Promise.resolve({ outcome: 'created', book: { id: 'public-file' } }),
+    ),
     list: jest.fn(),
     getPackage: jest.fn(),
   };
@@ -71,7 +73,7 @@ describe('PublicLibraryController multipart boundary', () => {
         contentType: 'text/plain',
       })
       .expect(201)
-      .expect({ id: 'public-file' });
+      .expect({ outcome: 'created', book: { id: 'public-file' } });
 
     expect(service.publishFile).toHaveBeenCalledTimes(1);
     expect(service.publishFile).toHaveBeenCalledWith(

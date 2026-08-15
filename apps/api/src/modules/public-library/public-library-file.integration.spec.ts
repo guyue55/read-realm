@@ -52,10 +52,11 @@ describe('public library direct TXT publication', () => {
     const first = await service.publishFile('configured-key', fields, file);
     const second = await service.publishFile('configured-key', fields, file);
 
-    expect(second).toEqual(first);
+    expect(first.outcome).toBe('created');
+    expect(second).toEqual({ outcome: 'unchanged', book: first.book });
     expect(original).toEqual(before);
-    await expect(repository.getPackage(first.id)).resolves.toMatchObject({
-      book: { id: first.id, title: '直传整书' },
+    await expect(repository.getPackage(first.book.id)).resolves.toMatchObject({
+      book: { id: first.book.id, title: '直传整书' },
       chapters: [
         { index: 0, content: '浏览器正文一' },
         { index: 1, content: '浏览器正文二' },
