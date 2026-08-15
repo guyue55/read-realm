@@ -645,13 +645,14 @@ describe('PublicLibraryRepository', () => {
       pageSize: 1,
     });
     expect(first).toMatchObject({ total: 1, snapshotRevision: 1 });
-    await repository.publishTxt({
+    const programming = await repository.publishTxt({
       title: '编程索引',
       category: '技术',
       tagIds: ['programming', 'masters'],
       content: '正文二',
       rightsConfirmed: true,
     });
+    expect(programming.publishedAt).toBe(classics.publishedAt);
     await repository.updateCatalog(classics.id, {
       metadataVersion: 1,
       categoryId: 'literature',
