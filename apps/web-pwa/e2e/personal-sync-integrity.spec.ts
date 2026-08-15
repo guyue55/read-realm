@@ -474,8 +474,8 @@ test("clearing a key during recovery preflight cancels the stale download", asyn
   try {
     await page.goto("/library");
     await recoverySeen;
-    await page.getByRole("button", { name: /同步管理与首选项/ }).click();
-    await page.getByRole("button", { name: /断开共享/ }).click();
+    await page.getByRole("button", { name: /私人云同步设置/ }).click();
+    await page.getByRole("button", { name: /移除此设备的口令/ }).click();
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem("reader-share-token")))
       .toBeNull();

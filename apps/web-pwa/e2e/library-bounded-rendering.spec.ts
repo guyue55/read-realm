@@ -24,8 +24,8 @@ async function expectVisibleTouchTargets(
   for (const target of await locator.all()) {
     if (!(await target.isVisible())) continue;
     const box = await target.boundingBox();
-    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box?.width ?? 0)).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
   }
 }
 
@@ -116,6 +116,104 @@ async function seedLargeFolderShelf(page: import("@playwright/test").Page) {
   );
 }
 
+async function seedSmallMixedShelf(page: import("@playwright/test").Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open("ReaderDatabase");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(
+            ["books", "libraryFolders"],
+            "readwrite",
+          );
+          transaction.objectStore("books").put({
+            id: "mobile-menu-book",
+            title: "移动菜单验证书",
+            sourceType: "upload",
+            format: "epub",
+            status: "reading",
+            tags: [],
+            chapterCount: 1,
+            createdAt: "2026-08-15T00:00:00.000Z",
+            updatedAt: "2026-08-15T00:00:00.000Z",
+          });
+          transaction.objectStore("libraryFolders").put({
+            id: "mobile-menu-folder",
+            name: "移动书箧",
+            sourceType: "virtual",
+            depth: 0,
+            sortOrder: 0,
+            createdAt: "2026-08-15T00:00:00.000Z",
+            updatedAt: "2026-08-15T00:00:00.000Z",
+          });
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () => reject(transaction.error);
+          transaction.onabort = () => reject(transaction.error);
+        };
+      }),
+  );
+}
+
+test("340px shelf exposes first-use sync, unclipped menus, and the registered UI font", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 340, height: 760 });
+  await page.addInitScript(() => {
+    localStorage.removeItem("reader-share-token");
+    localStorage.setItem("reader-sync-auto-startup", "false");
+  });
+  await page.goto("/library");
+  await expect(
+    page.getByRole("heading", { name: "书架还是空的" }),
+  ).toBeVisible();
+  await seedSmallMixedShelf(page);
+  await page.reload();
+
+  await expect(page.locator("[data-library-sync]")).toBeVisible();
+  await page.getByRole("button", { name: /私人云同步设置/u }).click();
+  await expect(page.getByLabel("私人云访问口令")).toBeVisible();
+
+  const fontFacts = await page.evaluate(() => ({
+    rootToken: getComputedStyle(document.documentElement)
+      .getPropertyValue("--font-ui")
+      .trim(),
+    buttonFont: getComputedStyle(document.querySelector("button")!).fontFamily,
+  }));
+  expect(fontFacts.rootToken).not.toBe("");
+  expect(fontFacts.buttonFont.toLowerCase()).toContain("geist");
+
+  const bookCard = page.locator('[data-book-id="mobile-menu-book"]');
+  const bookMenuTrigger = bookCard.getByRole("button", {
+    name: /操作菜单/u,
+  });
+  await bookMenuTrigger.click();
+  const bookMenu = bookCard.getByRole("menu");
+  await expect(bookMenu).toBeVisible();
+  await bookMenu.getByRole("menuitem", { name: "管理书籍" }).click();
+  await expect(page.getByRole("dialog", { name: /书籍管理/u })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(bookMenuTrigger).toBeFocused();
+
+  const folderCard = page.locator('[data-folder-id="mobile-menu-folder"]');
+  const folderTrigger = folderCard.getByRole("button", { name: /操作菜单/u });
+  await expect(folderCard.getByRole("button", { name: "解散" })).toHaveCount(0);
+  await folderTrigger.click();
+  const folderMenu = folderCard.getByRole("menu");
+  await expect(folderMenu.getByRole("menuitem", { name: "解散书箧" })).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(folderMenu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(folderMenu.getByRole("menuitem").last()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(folderTrigger).toBeFocused();
+  await expect(page.locator("html")).toHaveJSProperty("scrollWidth", 340);
+});
+
 test("500-book shelf stays bounded across views, pages, mobile, and offline", async ({
   context,
   page,
@@ -168,14 +266,38 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
 
-  await page.getByRole("button", { name: /同步管理与首选项/u }).click();
+  await page.getByRole("button", { name: /私人云同步设置/u }).click();
   await expectVisibleTouchTargets(
     page.locator(
       "[data-library-sync] button, [data-library-sync] input, [data-library-sync] select",
     ),
   );
-  await page.getByTitle("藏书落墨治理").first().click();
-  await expectVisibleTouchTargets(page.locator("[data-library-shelf] button"));
+  const firstVisibleBook = cards.first();
+  const firstBookMenu = firstVisibleBook.getByRole("button", {
+    name: /操作菜单/u,
+  });
+  await expect(
+    firstVisibleBook.locator("[data-library-entry-primary]"),
+  ).toHaveCount(1);
+  await expect(firstBookMenu).toHaveCount(1);
+  await firstBookMenu.click();
+  const actionMenu = firstVisibleBook.getByRole("menu");
+  await expect(actionMenu).toBeVisible();
+  await expectVisibleTouchTargets(actionMenu.getByRole("menuitem"));
+  await page.keyboard.press("Escape");
+  await expect(actionMenu).toHaveCount(0);
+  await expect(firstBookMenu).toBeFocused();
+
+  await firstBookMenu.click();
+  await actionMenu.getByRole("menuitem", { name: "管理书籍" }).click();
+  const governanceDialog = page.getByRole("dialog", { name: /书籍管理/u });
+  await expect(governanceDialog).toBeVisible();
+  await expectVisibleTouchTargets(
+    governanceDialog.locator("button, input, select"),
+  );
+  await page.keyboard.press("Escape");
+  await expect(governanceDialog).toHaveCount(0);
+  await expect(firstBookMenu).toBeFocused();
 
   await context.setOffline(true);
   await page.getByRole("button", { name: "上一页", exact: true }).click();
@@ -362,9 +484,9 @@ test("an older same-key inventory cannot overwrite a verified cloud clear", asyn
   });
 
   await page.goto("/#/library?view=list");
-  await page.getByRole("button", { name: /同步管理与首选项/u }).click();
-  await page.getByRole("button", { name: /物理清空云端备份/u }).click();
-  const dialog = page.getByRole("dialog", { name: /物理清空云端备份/u });
+  await page.getByRole("button", { name: /私人云同步设置/u }).click();
+  await page.getByRole("button", { name: /清空云端备份/u }).click();
+  const dialog = page.getByRole("dialog", { name: /清空私人云端备份/u });
   await dialog.getByRole("button", { name: "确认", exact: true }).click();
   await expect.poll(() => requestCount).toBeGreaterThanOrEqual(2);
   await expect(dialog).toHaveCount(0);

@@ -26,12 +26,19 @@ describe("library truth contract", () => {
   it("does not continue a remote delete unless the local command applied", () => {
     expect(source).toContain('if (result.status !== "applied")');
     expect(source).toContain("未发起云端删除");
-    expect(source).toContain("throw e;");
+    expect(source).toContain("已从本机移除；私人云删除");
+    expect(source).toContain(
+      "previous.filter((cloudBook) => cloudBook.id !== bookId)",
+    );
+    expect(source).not.toContain(
+      "删除未完成，本地书籍与云端副本均按原状态保留",
+    );
   });
 
   it("does not claim an unverified cloud difference", () => {
     expect(source).not.toContain("发现本地与云端存在数据微澜");
-    expect(source).toContain("currentShareToken || isSyncing");
+    expect(source).toContain("data-library-sync");
+    expect(source).toContain("上次核验有云端副本");
   });
 
   it("reads shelf metadata through one library query boundary", () => {
@@ -51,6 +58,22 @@ describe("library truth contract", () => {
     expect(source).toContain("libraryCommandService.removeBook");
     expect(source).toContain("operation.service.offloadVerifiedBook");
     expect(source).not.toContain("await db.libraryFolders.add(");
+  });
+
+  it("rechecks the shared write mutex at local mutation execution points", () => {
+    expect(source.match(/tryAcquireLibraryMutation\(\)/gu)?.length).toBeGreaterThanOrEqual(
+      5,
+    );
+    expect(source.match(/tryAcquireMutation\(\)/gu)?.length).toBeGreaterThanOrEqual(
+      4,
+    );
+    expect(source).toContain("同步操作尚未完成，暂不解除原文件关联");
+    expect(source).toContain("同步操作尚未完成，暂不从本机移除这本书");
+  });
+
+  it("reports only changed files that were actually marked for reparse", () => {
+    expect(source).toContain("reconciliation.changed.filter");
+    expect(source).toContain("indexedFile.bookId");
   });
 
   it("keeps legacy private sync transport out of the page", () => {
@@ -104,10 +127,11 @@ describe("library truth contract", () => {
   });
 
   it("keeps confirmations open for typed non-applied maintenance outcomes", () => {
-    expect(source).toContain("DISCONNECT_FOLDER_${result.status}");
-    expect(source).toContain("DISCONNECT_BOOK_${result.status}");
-    expect(source).toContain("RECONSTRUCT_BOOK_${result.status}");
-    expect(source).toContain("DISSOLVE_FOLDER_${result.status}");
+    expect(source).toContain('throw new Error("\u89e3\u9664\u76ee\u5f55\u5173\u8054\u5931\u8d25');
+    expect(source).toContain('throw new Error("\u89e3\u9664\u539f\u6587\u4ef6\u5173\u8054\u5931\u8d25');
+    expect(source).toContain('throw new Error("\u91cd\u65b0\u5bfc\u5165\u51c6\u5907\u5931\u8d25');
+    expect(source).toContain('throw new Error("\u89e3\u6563\u4e66\u7ba7\u5931\u8d25');
+    expect(source).not.toContain("DISCONNECT_FOLDER_");
     expect(source).toContain("canClampLibraryRoutePage({");
     expect(source).toContain("canCommitCloudInventory({");
     expect(source).toContain(

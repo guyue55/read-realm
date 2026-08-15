@@ -123,6 +123,18 @@ test("taxonomy views, bounded pages and catalog overlay stay coherent", async ({
 
   await search.fill("");
   await page.getByRole("button", { name: "检索", exact: true }).click();
+  const booksTab = page.getByRole("tab", { name: "书籍" });
+  await booksTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "维护者" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(
+    page.getByRole("tabpanel", { name: "维护者标识内容" }),
+  ).toBeVisible();
+  await page.keyboard.press("ArrowLeft");
+  await expect(booksTab).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "分类" }).click();
   await expect(page.locator("[data-public-library-facet]")).toHaveCount(2);
   await page.getByRole("button", { name: /经典/ }).last().click();

@@ -62,7 +62,8 @@ export const strings = {
     aiInputPlaceholder: "问问 AI 助手...",
     send: "发送",
     aiError: "AI 总结失败，请检查后端服务是否启动。",
-    aiNotConfigured: "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。",
+    aiNotConfigured:
+      "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。",
     questionCharacters: "解释本章的关键人物关系",
     questionPlots: "这章有哪些重要的情节伏笔？",
     chapterIndexLabel: "第 {index} 章",
@@ -104,24 +105,25 @@ export const strings = {
     saved: "已保存",
   },
   network: {
-    offlineToast: "已断开网络，已自动启用离线阅读与导入模式",
-    onlineToast: "网络已恢复，云端服务同步就绪",
+    offlineToast: "设备当前离线；已下载内容和本地导入仍可使用。",
+    onlineToast: "设备网络已恢复；云端服务将在实际操作时重新核验。",
     offlineLabel: "离线模式",
     onlineLabel: "在线模式",
-    offlineImportHint: "⚠️ 当前处于离线状态，URL 解析暂不可用。建议一键导入本地 TXT 或 EPUB 书籍，支持 100% 离线解析。",
-    offlineSearchHint: "⚠️ 当前处于离线状态，云端搜索暂不可用。已自动为您检索本地书架。",
-    offlineDownloadHint: "当前处于离线状态，暂无法同步云端书籍，网络恢复后即可畅快拉取。",
-    offlineAiHint: "当前处于离线状态，暂无法连接 AI 云端服务。网络恢复后即可展卷为您分析本章概要。",
+    offlineImportHint:
+      "设备当前离线，不能解析网络地址；仍可导入本机 TXT 或 EPUB 文件。",
+    offlineSearchHint: "设备当前离线，不能检索云端；以下结果仅来自本地书架。",
+    offlineDownloadHint: "设备当前离线，暂时不能下载云端正文。",
+    offlineAiHint: "设备当前离线，暂时不能使用在线 AI 服务。",
   },
   sync: {
-    title: "云同步中心",
-    syncedDesc: "您的本地藏书与云端处于同步最新状态",
-    diffDesc: "已连接多端同步，可按需同步本地与云端数据",
-    offlineDesc: "🌧️ 当前处于离线状态，同步中心已静默暂缓工作",
+    title: "私人云同步",
+    syncedDesc: "上次同步完成；下次操作仍会重新核验云端状态。",
+    diffDesc: "设备已联网，可以尝试核对本机与私人云数据。",
+    offlineDesc: "设备当前离线，私人云操作暂不可用；本机内容不受影响。",
     syncBtn: "立即双向同步",
     syncing: "正在双向同步中...",
-    syncSuccess: "🍃 书阁已纳天光，双向同步圆满！",
-    syncFailed: "💡 同步通道繁忙，请确认云端服务是否启动",
+    syncSuccess: "本次同步完成，并已重新读取云端书目。",
+    syncFailed: "同步未完成，请检查私人云服务后重试。",
     uploading: "正在备份「{title}」至云端... {progress}%",
     downloading: "正在拉取「{title}」到本地... {progress}%",
     localOnly: "本地专享",
@@ -130,53 +132,61 @@ export const strings = {
     backupBtn: "备份",
     downloadBtn: "拉取",
     offloadBtn: "释放",
-    offloadSuccess: "🍃 已物理释放「{title}」本地空间，保留云端索引。",
-    offloadConfirm: "确定要物理释放「{title}」的本地章节内容吗？\n（该操作将清除本地缓存并节省空间，您随时可以从云端一键重新拉取）",
-    
+    offloadSuccess:
+      "已删除《{title}》的本机章节正文；书目、进度和已核验云端副本保留。",
+    offloadConfirm:
+      "确认删除《{title}》的本机章节正文以释放空间吗？书目与进度会保留，之后可从已核验的私人云副本重新下载。",
+
     // 自动同步与设置控制
-    syncSettingsTitle: "同步管理与首选项",
-    autoSyncStartupLabel: "启动时自动云同步",
-    autoSyncStartupDesc: "冷启动进入书阁时，自动检测两端差异并默默双向对撞",
+    syncSettingsTitle: "私人云同步设置",
+    autoSyncStartupLabel: "启动时尝试同步",
+    autoSyncStartupDesc:
+      "进入书架时核对本机与私人云数据；服务不可用时保留本机内容。",
     autoSyncProgressLabel: "阅读翻页自动备份",
-    autoSyncProgressDesc: "翻开书本翻阅时，在后台以 3 秒防抖自动将进度备份至云阁",
-    
+    autoSyncProgressDesc: "阅读时延迟 3 秒备份进度，减少频繁写入。",
+
     // 进度防丢安全网
-    progressRollbackBtn: "🍃 找回本地历史阅读痕迹",
-    progressRollbackSuccess: "🍃 已成功唤醒上一次本地阅读痕迹（已恢复至：第 {chapter} 章）",
-    progressRollbackEmpty: "💡 当前藏书在本地暂无历史覆盖备份，无法回弹",
-    
+    progressRollbackBtn: "恢复本地历史阅读进度",
+    progressRollbackSuccess: "已恢复到本地保存的第 {chapter} 章。",
+    progressRollbackEmpty: "本机没有可恢复的历史阅读进度。",
+
     // 安全卸载校验
-    offloadNoCloudError: "💡 无法物理释放：此藏书尚未在云端创建索引，请先点击「备份」",
-    offloadCountMismatchError: "💡 无法物理释放：检测到云阁中的章节数（{cloudCount}章）与本地（{localCount}章）不匹配，请先执行「备份」覆盖更新云端，以免数据丢失！",
+    offloadNoCloudError:
+      "尚未核验这本书的私人云副本，不能删除本机正文。请先备份并核验。",
+    offloadCountMismatchError:
+      "私人云章节数（{cloudCount} 章）与本机（{localCount} 章）不一致，不能删除本机正文。",
 
     // 多端共享
-    shareTitle: "墨问密阁 · 多端共享",
-    shareDesc: "在不同设备和浏览器中输入同一「展卷秘钥」，即可打破浏览器壁垒，共享属于您的密阁藏书与阅读心流进度。",
-    shareKeyLabel: "密阁展卷秘钥 / 共享令牌",
-    shareKeyPlaceholder: "请输入共享秘钥，例如：松风阅心-1008",
-    shareGenerateBtn: "感念天机 · 生成秘钥",
-    shareBindBtn: "一键绑定并同步",
-    shareClearBtn: "断开共享",
-    shareBindSuccess: "✨ 秘钥绑定成功！正在拉取专属密阁藏书...",
-    shareClearSuccess: "🍃 已断开共享，自动恢复为独立单机书阁。",
-    shareCopySuccess: "📋 秘钥已复制到剪贴板，快去其他设备上绑定吧！",
+    shareTitle: "私人云同步（旧版）",
+    shareDesc:
+      "同一访问口令会访问同一组私人云数据。当前旧同步不是端到端加密，服务器会保存明文正文；请只用于你信任的服务。",
+    shareKeyLabel: "私人云访问口令",
+    shareKeyPlaceholder: "输入访问口令，例如：松风阅心-1008",
+    shareGenerateBtn: "生成访问口令",
+    shareBindBtn: "保存访问口令",
+    shareClearBtn: "移除此设备的口令",
+    shareBindSuccess: "访问口令已保存，正在核对云端书目。",
+    shareClearSuccess: "已从本设备移除访问口令；本机书架未删除。",
+    shareCopySuccess: "访问口令已复制，请像密码一样保管。",
   },
 };
 
 export type Strings = typeof strings;
 
 /**
- * 🏮 把 shared-types 中的 `AppErrorCode` 翻译成可读中文文案。
+ * 把 shared-types 中的 `AppErrorCode` 翻译成可读中文文案。
  * 解析、网络、AI、同步等链路抛出的 Error.message 若刚好是 AppErrorCode，
  * UI 层用 `describeAppError(err)` 就能拿到一句友好提示；否则原样返回 message。
  */
 const APP_ERROR_MESSAGES: Record<string, string> = {
   FILE_TOO_LARGE: "文件超出本地处理上限，请尝试拆分后再导入。",
   UNSUPPORTED_FORMAT: "暂不支持该格式，目前仅支持 TXT 与 EPUB。",
-  ENCODING_DETECT_FAILED: "无法识别文本编码，请尝试转码为 UTF-8 或 GBK 后再导入。",
+  ENCODING_DETECT_FAILED:
+    "无法识别文本编码，请尝试转码为 UTF-8 或 GBK 后再导入。",
   CHAPTER_PARSE_FAILED: "章节切分失败，原文档可能没有规范的章节结构。",
   EPUB_PARSE_FAILED: "EPUB 解析失败，文件可能已损坏或加密。",
-  URL_CORS_BLOCKED: "目标站点拒绝跨域抓取，可尝试改用后端兜底解析或导出原文后再导入。",
+  URL_CORS_BLOCKED:
+    "目标站点拒绝跨域抓取，可尝试改用后端兜底解析或导出原文后再导入。",
   URL_DYNAMIC_RENDER_REQUIRED: "页面依赖前端渲染，静态抓取拿不到正文。",
   SOURCE_RATE_LIMITED: "源站访问过于频繁，请稍后再试。",
   AI_QUOTA_EXCEEDED: "AI 配额已用尽，请检查账户余额或更换密钥。",
@@ -185,12 +195,15 @@ const APP_ERROR_MESSAGES: Record<string, string> = {
   NETWORK_OFFLINE: "网络不可用，请检查后再试。",
   TASK_TIMEOUT: "任务执行超时，已自动中止。",
   TASK_CANCELLED: "任务已被取消。",
-  FORCED_WORKER_TERMINATION: "后台解析引擎已中断。请先点击“立即重试”；若再次失败，请重新选择原文件。",
+  FORCED_WORKER_TERMINATION:
+    "后台解析引擎已中断。请先点击“立即重试”；若再次失败，请重新选择原文件。",
 };
 
 const BROWSER_ERROR_MESSAGES: Record<string, string> = {
-  QuotaExceededError: "本地存储空间不足。请释放浏览器空间或删除不需要的本地缓存，然后使用原草稿重试。",
-  NotAllowedError: "本地目录权限已拒绝或失效。请重新选择并授权原目录，任务草稿会继续保留。",
+  QuotaExceededError:
+    "本地存储空间不足。请释放浏览器空间或删除不需要的本地缓存，然后使用原草稿重试。",
+  NotAllowedError:
+    "本地目录权限已拒绝或失效。请重新选择并授权原目录，任务草稿会继续保留。",
 };
 
 export function describeAppError(err: unknown): string {

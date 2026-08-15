@@ -254,7 +254,7 @@ export function AppShell({
       </aside>
 
       <main
-        className="h-full min-w-0 flex-1 overflow-y-auto pb-[calc(78px+env(safe-area-inset-bottom))] md:pb-0"
+        className="h-full min-w-0 flex-1 overflow-y-auto pb-[calc(104px+env(safe-area-inset-bottom))] md:pb-0"
         data-app-main
         ref={mainRef}
         tabIndex={-1}
@@ -296,7 +296,7 @@ export function AppShell({
                   )}
                 </h1>
                 {subtitle && (
-                  <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                  <p className="mt-1 line-clamp-2 text-xs leading-4 text-[var(--color-muted)]">
                     {subtitle}
                   </p>
                 )}
@@ -330,7 +330,7 @@ export function AppShell({
             <Link
               aria-current={active ? "page" : undefined}
               aria-label={item.term.plain}
-              className={`ui-focus-ring flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 text-[11px] font-semibold transition-colors ${
+              className={`ui-focus-ring flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 text-xs font-semibold transition-colors ${
                 active
                   ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                   : "text-[var(--color-muted)] hover:text-[var(--color-text)]"

@@ -16,7 +16,7 @@ describe("public library page expansion boundary", () => {
     expect(source).toContain("PublicLibraryImportDialog");
     expect(source).toContain("入阁");
     expect(source).not.toContain("上传文件");
-    expect(source).toContain('label: "维护者"');
+    expect(source).toContain('label: "维护者标识"');
     expect(source).toContain('label: "分类"');
     expect(source).toContain('label: "标签"');
     expect(source).toContain("PublicLibraryCatalogEditorDialog");
