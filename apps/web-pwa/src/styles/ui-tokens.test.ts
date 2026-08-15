@@ -4,7 +4,7 @@ import { APP_NAV_ITEMS } from "../components/app-shell/nav-items";
 import { UI_TOKENS } from "./ui-tokens";
 
 describe("UI design system", () => {
-  it("颜色角色完整且卡片圆角不超过 8px", () => {
+  it("颜色角色完整且采用固定的自然圆角层级", () => {
     expect(Object.keys(UI_TOKENS.color)).toEqual([
       "background",
       "surface",
@@ -14,7 +14,13 @@ describe("UI design system", () => {
       "info",
       "danger",
     ]);
-    expect(UI_TOKENS.radius.card).toBe(8);
+    expect(UI_TOKENS.radius).toEqual({
+      control: 10,
+      field: 12,
+      card: 16,
+      panel: 22,
+      round: 999,
+    });
   });
 
   it("主导航包含六个真实页面", () => {

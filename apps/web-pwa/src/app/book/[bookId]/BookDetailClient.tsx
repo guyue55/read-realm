@@ -46,7 +46,9 @@ export default function BookDetailPage({
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+      window.location.replace(
+        `/#${window.location.pathname}${window.location.search}`,
+      );
     }
   }, []);
 
@@ -66,13 +68,13 @@ export default function BookDetailPage({
   // 1. 实时获取真实阅读进度
   const progress = useLiveQuery(
     () => db.progress.get(params.bookId),
-    [params.bookId]
+    [params.bookId],
   );
 
   // 2. 实时查询本地书签和笔记的总数
   const bookmarkCount = useLiveQuery(
     () => db.bookmarks.where("bookId").equals(params.bookId).count(),
-    [params.bookId]
+    [params.bookId],
   );
 
   // Toast 自动消退
@@ -86,11 +88,15 @@ export default function BookDetailPage({
   const checkUrlSource = async (trigger: "manual" | "scheduled") => {
     if (!book?.sourceUrl || book.sourceType !== "url" || sourceChecking) return;
     if (!book.sourceRightsConfirmedAt) {
-      setSourceCheckMessage("此旧来源没有权利确认记录，请重新从导入页添加后再检查。");
+      setSourceCheckMessage(
+        "此旧来源没有权利确认记录，请重新从导入页添加后再检查。",
+      );
       return;
     }
     setSourceChecking(true);
-    setSourceCheckMessage(trigger === "scheduled" ? "按已启用周期检查来源…" : "检查公开来源…");
+    setSourceCheckMessage(
+      trigger === "scheduled" ? "按已启用周期检查来源…" : "检查公开来源…",
+    );
     try {
       const remote = await parseAuthorizedUrlSource(book.sourceUrl, true);
       const preview = createUrlSourceCheckPreview(book, remote);
@@ -102,9 +108,11 @@ export default function BookDetailPage({
       };
       await db.books.put(nextBook);
       setBook(nextBook);
-      setSourceCheckMessage(preview.status === "current"
-        ? `已检查：来源仍为 ${preview.remoteChapterCount} 章，本地内容未改动。`
-        : `发现 ${preview.differences.join("；")}。这只是预览，本地内容未改动。`);
+      setSourceCheckMessage(
+        preview.status === "current"
+          ? `已检查：来源仍为 ${preview.remoteChapterCount} 章，本地内容未改动。`
+          : `发现 ${preview.differences.join("；")}。这只是预览，本地内容未改动。`,
+      );
     } catch (error) {
       setSourceCheckMessage(`检查已停止：${describeAppError(error)}`);
     } finally {
@@ -114,7 +122,8 @@ export default function BookDetailPage({
 
   useEffect(() => {
     if (!book || sourceChecking || book.sourceType !== "url") return;
-    const preference = book.sourceCheckPreference ?? createDefaultSourceCheckPreference();
+    const preference =
+      book.sourceCheckPreference ?? createDefaultSourceCheckPreference();
     if (!isSourceCheckDue(preference, book.sourceLastCheckedAt)) return;
     void checkUrlSource("scheduled");
     // 一本书每次进入详情只会在到期时触发；成功写入时间会使下一轮不再到期。
@@ -126,14 +135,17 @@ export default function BookDetailPage({
     book?.sourceCheckPreference?.intervalHours,
   ]);
 
-  const updateSourceCheckPreference = async (preference: SourceCheckPreference) => {
+  const updateSourceCheckPreference = async (
+    preference: SourceCheckPreference,
+  ) => {
     if (!book || book.sourceType !== "url") return;
     const nextBook: Book = { ...book, sourceCheckPreference: preference };
     await db.books.put(nextBook);
     setBook(nextBook);
-    setSourceCheckMessage(preference.enabled
-      ? `已启用：打开本书详情且间隔到期时检查，每 ${preference.intervalHours} 小时最多一次。`
-      : "定时检查已关闭；仍可手动检查。",
+    setSourceCheckMessage(
+      preference.enabled
+        ? `已启用：打开本书详情且间隔到期时检查，每 ${preference.intervalHours} 小时最多一次。`
+        : "定时检查已关闭；仍可手动检查。",
     );
   };
 
@@ -151,18 +163,19 @@ export default function BookDetailPage({
   const colors = extractColorsFromTitle(book.title);
 
   // 进度换算
-  const progressPercent = progress && book.chapterCount > 0
-    ? Math.max(
-        0,
-        Math.min(
-          100,
-          Math.round(
-            progress.percentage ||
-              ((progress.chapterIndex + 1) / book.chapterCount) * 100
-          )
+  const progressPercent =
+    progress && book.chapterCount > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              progress.percentage ||
+                ((progress.chapterIndex + 1) / book.chapterCount) * 100,
+            ),
+          ),
         )
-      )
-    : 0;
+      : 0;
   const sourceLabels: Record<Book["sourceType"], string> = {
     upload: "本地导入",
     url: "网页导入",
@@ -174,7 +187,11 @@ export default function BookDetailPage({
     local_backend_directory: "服务端目录",
     cloud_cache: "云端缓存",
   };
-  const canClearCache = ["folder_index", "folder_multi_file_book", "cloud_cache"].includes(book.sourceType);
+  const canClearCache = [
+    "folder_index",
+    "folder_multi_file_book",
+    "cloud_cache",
+  ].includes(book.sourceType);
 
   // 清除本地缓存核心处理
   const handleClearCache = () => {
@@ -191,8 +208,7 @@ export default function BookDetailPage({
         } catch (e) {
           console.error("清空章节正文缓存发生故障:", e);
           setToastMsg("💡 本地存储繁忙，清理缓存失败。");
-        } finally {
-          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+          throw e;
         }
       },
     });
@@ -225,8 +241,8 @@ export default function BookDetailPage({
             {book.title}
           </h1>
           <p className="mb-8 text-sm" style={{ color: colors.muted }}>
-            {book.author ? `作者：${book.author} · ` : ""}{sourceLabels[book.sourceType]} ·{" "}
-            {book.format.toUpperCase()}
+            {book.author ? `作者：${book.author} · ` : ""}
+            {sourceLabels[book.sourceType]} · {book.format.toUpperCase()}
           </p>
 
           <div className="flex flex-wrap gap-4 mb-10">
@@ -262,7 +278,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 阅读进度
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {progressPercent}%
               </p>
             </div>
@@ -270,7 +289,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 章节数
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {book.chapterCount}
               </p>
             </div>
@@ -278,7 +300,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 字数
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {book.wordCount
                   ? `${(book.wordCount / 10000).toFixed(1)}万`
                   : "-"}
@@ -288,7 +313,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 书签与笔记
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {bookmarkCount ?? 0}
               </p>
             </div>
@@ -296,7 +324,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 来源
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {book.sourceType}
               </p>
             </div>
@@ -304,7 +335,10 @@ export default function BookDetailPage({
               <p className="text-xs mb-1" style={{ color: colors.muted }}>
                 导入时间
               </p>
-              <p className="font-bold font-serif text-lg" style={{ color: colors.text }}>
+              <p
+                className="font-bold font-serif text-lg"
+                style={{ color: colors.text }}
+              >
                 {new Date(book.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -321,16 +355,25 @@ export default function BookDetailPage({
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 id="source-check-title" className="font-bold" style={{ color: colors.text }}>
+                  <h2
+                    id="source-check-title"
+                    className="font-bold"
+                    style={{ color: colors.text }}
+                  >
                     公开来源检查
                   </h2>
-                  <p className="mt-1 text-xs leading-5" style={{ color: colors.muted }}>
+                  <p
+                    className="mt-1 text-xs leading-5"
+                    style={{ color: colors.muted }}
+                  >
                     只比较书名与章节数，不自动覆盖本地正文。遇到登录、付费、验证码或反爬会停止。
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => { void checkUrlSource("manual"); }}
+                  onClick={() => {
+                    void checkUrlSource("manual");
+                  }}
                   disabled={sourceChecking}
                   className="ui-focus-ring min-h-10 shrink-0 rounded-full border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
                   style={{ borderColor: colors.border, color: colors.text }}
@@ -339,28 +382,53 @@ export default function BookDetailPage({
                 </button>
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 text-sm" style={{ color: colors.muted }}>
+              <div
+                className="mt-4 flex flex-col gap-3 text-sm"
+                style={{ color: colors.muted }}
+              >
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).enabled}
-                    onChange={(event) => { void updateSourceCheckPreference({
-                      ...(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()),
-                      enabled: event.currentTarget.checked,
-                    }); }}
+                    checked={
+                      (
+                        book.sourceCheckPreference ??
+                        createDefaultSourceCheckPreference()
+                      ).enabled
+                    }
+                    onChange={(event) => {
+                      void updateSourceCheckPreference({
+                        ...(book.sourceCheckPreference ??
+                          createDefaultSourceCheckPreference()),
+                        enabled: event.currentTarget.checked,
+                      });
+                    }}
                     className="h-4 w-4 accent-[var(--ui-accent)]"
                   />
-                  <span>按周期检查（默认关闭，仅在打开本书详情且到期时执行）</span>
+                  <span>
+                    按周期检查（默认关闭，仅在打开本书详情且到期时执行）
+                  </span>
                 </label>
-                {(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).enabled && (
+                {(
+                  book.sourceCheckPreference ??
+                  createDefaultSourceCheckPreference()
+                ).enabled && (
                   <label className="flex items-center gap-3 pl-7">
                     <span>最短间隔</span>
                     <select
-                      value={(book.sourceCheckPreference ?? createDefaultSourceCheckPreference()).intervalHours}
-                      onChange={(event) => { void updateSourceCheckPreference({
-                        enabled: true,
-                        intervalHours: Number(event.currentTarget.value) as SourceCheckPreference["intervalHours"],
-                      }); }}
+                      value={
+                        (
+                          book.sourceCheckPreference ??
+                          createDefaultSourceCheckPreference()
+                        ).intervalHours
+                      }
+                      onChange={(event) => {
+                        void updateSourceCheckPreference({
+                          enabled: true,
+                          intervalHours: Number(
+                            event.currentTarget.value,
+                          ) as SourceCheckPreference["intervalHours"],
+                        });
+                      }}
                       className="rounded-full border bg-white/80 px-3 py-1.5"
                       style={{ borderColor: colors.border, color: colors.text }}
                     >
@@ -372,7 +440,11 @@ export default function BookDetailPage({
                     </select>
                   </label>
                 )}
-                {sourceCheckMessage && <p role="status" className="leading-6">{sourceCheckMessage}</p>}
+                {sourceCheckMessage && (
+                  <p role="status" className="leading-6">
+                    {sourceCheckMessage}
+                  </p>
+                )}
               </div>
             </section>
           )}
@@ -417,7 +489,8 @@ export default function BookDetailPage({
                   </span>
                 </div>
                 <p className="text-[10px] text-[#9C9388] mt-3 font-serif leading-relaxed">
-                  * 字数以中文 UTF-8 编码 1 字符 ≈ 3 字节换算数据库中正文物理体积。
+                  * 字数以中文 UTF-8 编码 1 字符 ≈ 3
+                  字节换算数据库中正文物理体积。
                 </p>
               </div>
 
@@ -429,7 +502,8 @@ export default function BookDetailPage({
                   🗑️ 清空章节本地正文缓存
                 </button>
                 <p className="text-[11px] text-[#9C9388] leading-relaxed font-serif px-1">
-                  🍂 说明：此操作仅清除本地书阁中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
+                  🍂
+                  说明：此操作仅清除本地书阁中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
                 </p>
               </div>
             </div>

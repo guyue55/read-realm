@@ -27,10 +27,13 @@ import {
 import { publicLibraryJoinService } from "@/features/public-library/dexie-public-library-local";
 import { PublicLibraryImportDialog } from "@/features/public-library/PublicLibraryImportDialog";
 import { PublicLibraryCatalogEditorDialog } from "@/features/public-library/PublicLibraryCatalogEditorDialog";
+import {
+  parsePublicLibraryRouteContext,
+  serializePublicLibraryRouteContext,
+  type PublicLibraryCatalogView,
+} from "@/features/public-library/public-library-route-context";
 import { normalizeShareToken } from "@/lib/api";
-import { useVirtualRouter } from "@/lib/route-store";
-
-type CatalogView = "books" | "maintainers" | "categories" | "tags";
+import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
 
 const views = [
   { id: "books", label: "书籍", icon: BookOpen },
@@ -41,16 +44,27 @@ const views = [
 
 export default function PublicLibraryPage() {
   const router = useVirtualRouter();
-  const [queryInput, setQueryInput] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
-  const [reloadNonce, setReloadNonce] = useState(0);
-  const [view, setView] = useState<CatalogView>("books");
-  const [categoryId, setCategoryId] = useState<PublicLibraryCategoryId | "">(
-    "",
+  const [initialRouteContext] = useState(() =>
+    parsePublicLibraryRouteContext(
+      typeof window === "undefined" ? "/public-library" : window.location.hash,
+    ),
   );
-  const [tagId, setTagId] = useState<PublicLibraryTagId | "">("");
-  const [maintainerId, setMaintainerId] = useState("");
-  const [page, setPage] = useState(1);
+  const [queryInput, setQueryInput] = useState(initialRouteContext.query);
+  const [appliedQuery, setAppliedQuery] = useState(initialRouteContext.query);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const [view, setView] = useState<PublicLibraryCatalogView>(
+    initialRouteContext.view,
+  );
+  const [categoryId, setCategoryId] = useState<PublicLibraryCategoryId | "">(
+    initialRouteContext.categoryId,
+  );
+  const [tagId, setTagId] = useState<PublicLibraryTagId | "">(
+    initialRouteContext.tagId,
+  );
+  const [maintainerId, setMaintainerId] = useState(
+    initialRouteContext.maintainerId,
+  );
+  const [page, setPage] = useState(initialRouteContext.page);
   const [books, setBooks] = useState<PublicLibraryBook[]>([]);
   const [facets, setFacets] = useState<PublicLibraryFacet[]>([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -74,6 +88,42 @@ export default function PublicLibraryPage() {
         `/#${window.location.pathname}${window.location.search}`,
       );
     }
+  }, []);
+
+  useEffect(() => {
+    const location = serializePublicLibraryRouteContext({
+      view,
+      query: appliedQuery,
+      categoryId,
+      tagId,
+      maintainerId,
+      page,
+    });
+    const targetHash = `#${location}`;
+    if (window.location.hash !== targetHash) {
+      window.history.replaceState(window.history.state, "", targetHash);
+    }
+  }, [appliedQuery, categoryId, maintainerId, page, tagId, view]);
+
+  useEffect(() => {
+    const restoreRouteContext = () => {
+      const context = parsePublicLibraryRouteContext(window.location.hash);
+      requestGeneration.current += 1;
+      catalogSnapshotRef.current = undefined;
+      setQueryInput(context.query);
+      setAppliedQuery(context.query);
+      setView(context.view);
+      setCategoryId(context.categoryId);
+      setTagId(context.tagId);
+      setMaintainerId(context.maintainerId);
+      setPage(context.page);
+    };
+    window.addEventListener("popstate", restoreRouteContext);
+    window.addEventListener(ROUTE_CONTEXT_EVENT, restoreRouteContext);
+    return () => {
+      window.removeEventListener("popstate", restoreRouteContext);
+      window.removeEventListener(ROUTE_CONTEXT_EVENT, restoreRouteContext);
+    };
   }, []);
 
   useEffect(() => {
@@ -180,21 +230,18 @@ export default function PublicLibraryPage() {
 
   return (
     <>
-      <div
-        aria-hidden={importOpen || Boolean(editingBook) || undefined}
-        inert={importOpen || Boolean(editingBook) || undefined}
-      >
+      <div>
         <AppShell
           title="藏经阁"
           subtitle={
             maintenanceAvailable
               ? "公共明文馆藏 · 加入后保存在本机"
-              : "公共明文馆藏 · 入阁需先在书架设置私有云密钥"
+              : "可匿名浏览 · 入阁需先在书架设置私有云密钥"
           }
           rightNodes={
             <div className="flex items-center gap-2">
               <button
-                className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
+                className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
                 disabled={!maintenanceAvailable}
                 onClick={() => setImportOpen(true)}
                 ref={importButtonRef}
@@ -209,7 +256,7 @@ export default function PublicLibraryPage() {
                 入阁
               </button>
               <button
-                className="ui-focus-ring hidden min-h-11 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold sm:inline-flex sm:items-center"
+                className="ui-focus-ring hidden min-h-11 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold sm:inline-flex sm:items-center"
                 onClick={() => router.push("/library")}
                 type="button"
               >
@@ -221,7 +268,7 @@ export default function PublicLibraryPage() {
           <section className="ui-card rounded-[var(--radius-card)] p-4 sm:p-5">
             <div
               aria-label="藏经阁视图"
-              className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1"
+              className="mb-4 grid grid-cols-4 gap-2"
               role="tablist"
             >
               {views.map((item) => {
@@ -229,7 +276,7 @@ export default function PublicLibraryPage() {
                 return (
                   <button
                     aria-selected={view === item.id}
-                    className={`ui-focus-ring inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold ${
+                    className={`ui-focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-2 text-sm font-semibold ${
                       view === item.id
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] bg-white/70 text-[var(--color-muted)]"
@@ -252,13 +299,13 @@ export default function PublicLibraryPage() {
               })}
             </div>
             <form
-              className="flex flex-col gap-3 sm:flex-row"
+              className="grid grid-cols-[minmax(0,1fr)_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
                 beginCatalogTransition();
                 catalogSnapshotRef.current = undefined;
                 setPage(1);
-                setAppliedQuery(queryInput.trim());
+                setAppliedQuery(queryInput.normalize("NFKC").trim());
                 setReloadNonce((value) => value + 1);
               }}
             >
@@ -269,8 +316,9 @@ export default function PublicLibraryPage() {
                   className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]"
                 />
                 <input
-                  className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--color-border)] bg-white/80 pl-11 pr-4 text-sm"
+                  className="ui-focus-ring min-h-11 w-full rounded-[var(--radius-field)] border border-[var(--color-border)] bg-white/80 pl-11 pr-4 text-sm"
                   onChange={(event) => setQueryInput(event.target.value)}
+                  maxLength={120}
                   placeholder={
                     view === "books"
                       ? "按书名、作者或维护者检索"
@@ -280,21 +328,27 @@ export default function PublicLibraryPage() {
                 />
               </label>
               <button
-                className="ui-focus-ring min-h-11 rounded-full bg-[var(--color-primary)] px-5 text-sm font-semibold text-white"
+                aria-label="检索"
+                className="ui-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-primary)] text-sm font-semibold text-white sm:px-5"
                 type="submit"
               >
-                检索
+                <Search
+                  aria-hidden="true"
+                  className="h-[18px] w-[18px] sm:hidden"
+                  strokeWidth={1.75}
+                />
+                <span className="hidden sm:inline">检索</span>
               </button>
             </form>
             {view === "books" && (
               <div
                 aria-label="馆藏分类"
-                className="mt-4 flex gap-2 overflow-x-auto pb-1"
+                className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:overflow-x-auto sm:pb-1"
                 role="group"
               >
                 <button
                   aria-pressed={!categoryId}
-                  className={`ui-focus-ring min-h-11 rounded-full border px-4 text-xs font-semibold ${
+                  className={`ui-focus-ring min-h-11 rounded-[var(--radius-control)] border px-3 text-xs font-semibold ${
                     !categoryId
                       ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                       : "border-[var(--color-border)] bg-white/70 text-[var(--color-muted)]"
@@ -315,7 +369,7 @@ export default function PublicLibraryPage() {
                 {PUBLIC_LIBRARY_CATEGORIES.map((item) => (
                   <button
                     aria-pressed={categoryId === item.id}
-                    className={`ui-focus-ring min-h-11 shrink-0 rounded-full border px-4 text-xs font-semibold ${
+                    className={`ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border px-3 text-xs font-semibold ${
                       categoryId === item.id
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] bg-white/70 text-[var(--color-muted)]"
@@ -452,7 +506,7 @@ export default function PublicLibraryPage() {
                     </p>
                     <div className="mt-auto flex flex-wrap gap-2 pt-3">
                       <button
-                        className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full border border-[var(--color-primary)] px-4 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
+                        className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-4 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
                         disabled={Boolean(joiningId)}
                         onClick={() => void joinBook(book)}
                         type="button"
@@ -463,7 +517,7 @@ export default function PublicLibraryPage() {
                       {maintenanceAvailable && (
                         <button
                           aria-label={`整理《${book.title}》目录`}
-                          className="ui-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-muted)]"
+                          className="ui-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)]"
                           onClick={(event) => {
                             editButtonRef.current = event.currentTarget;
                             setEditingBook(book);

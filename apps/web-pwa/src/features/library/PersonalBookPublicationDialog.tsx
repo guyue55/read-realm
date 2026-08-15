@@ -4,7 +4,6 @@ import type { Book } from "@reader/shared-types";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
-import { useDocumentModalIsolation } from "@/components/reader/useDocumentModalIsolation";
 import { PublicLibraryMaintenanceError } from "@/features/public-library/public-library-maintenance-client";
 import { PersonalBookExportError } from "./personal-book-export";
 import { createPersonalBookPublicationService } from "./personal-book-publication";
@@ -67,7 +66,6 @@ export function PersonalBookPublicationDialog({
     setState("confirm");
     setMessage(CONFIRMATION);
   }, [open, book.id]);
-  useDocumentModalIsolation(open, '[data-personal-publication-dialog="true"]');
 
   if (!open || typeof document === "undefined") return null;
 

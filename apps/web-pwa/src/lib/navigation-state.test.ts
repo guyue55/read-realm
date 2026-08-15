@@ -1,11 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
+  isRouteState,
   normalizeRouteState,
   parseAppLocation,
   serializeAppLocation,
 } from "./navigation-state";
 
 describe("navigation-state", () => {
+  it("拒绝 Next.js 写入的非路由 history state", () => {
+    expect(
+      isRouteState({ __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: {} }),
+    ).toBe(false);
+    expect(
+      isRouteState({
+        currentView: "reader",
+        activeBookId: "book-1",
+        activeChapterIndex: null,
+        activePanel: null,
+        activeTaskId: null,
+      }),
+    ).toBe(true);
+    expect(isRouteState({ currentView: "reader" })).toBe(false);
+  });
+
   it("往返保留阅读章节与面板", () => {
     const state = parseAppLocation("#/reader/book%201?chapter=3&panel=toc");
     expect(state).toMatchObject({

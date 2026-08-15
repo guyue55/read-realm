@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useVirtualRouter } from "@/lib/route-store";
+import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
 import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import type { Book } from "@reader/shared-types";
@@ -21,37 +21,86 @@ import {
   searchLocalBooks,
   type LocalSearchFilter,
 } from "@/features/search/search-results";
+import {
+  parseSearchRouteContext,
+  serializeSearchRouteContext,
+} from "@/features/search/search-route-context";
 
 export default function SearchPage() {
   const isOnline = useOnlineStatus();
   const router = useVirtualRouter();
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<LocalSearchFilter>("综合");
+  const [initialRouteContext] = useState(() =>
+    parseSearchRouteContext(
+      typeof window === "undefined" ? "/search" : window.location.hash,
+    ),
+  );
+  const [searchQuery, setSearchQuery] = useState(initialRouteContext.query);
+  const [activeFilter, setActiveFilter] = useState<LocalSearchFilter>(
+    initialRouteContext.filter,
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+      window.location.replace(
+        `/#${window.location.pathname}${window.location.search}`,
+      );
     }
   }, []);
+
+  useEffect(() => {
+    const targetHash = `#${serializeSearchRouteContext({
+      query: searchQuery,
+      filter: activeFilter,
+    })}`;
+    if (window.location.hash !== targetHash) {
+      window.history.replaceState(window.history.state, "", targetHash);
+    }
+  }, [activeFilter, searchQuery]);
+
   const [inventoryGeneration, setInventoryGeneration] = useState(0);
   const [globalResults, setGlobalResults] = useState<LegacyRemoteBook[]>([]);
-  const [remoteStatus, setRemoteStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [remoteStatus, setRemoteStatus] = useState<
+    "idle" | "loading" | "ready" | "failed"
+  >("idle");
   const [isSearching, setIsSearching] = useState(false);
   const [status, setStatus] = useState("");
   const [statusTone, setStatusTone] = useState<"info" | "error">("info");
   const [toastMsg, setToastMsg] = useState("");
   const searchGenerationRef = useRef(0);
 
-  // 记录每个云端书籍的下载同步百分比与正在同步状态
-  const [importProgress, setImportProgress] = useState<Record<string, number>>({});
-  const [importingBookIds, setImportingBookIds] = useState<Set<string>>(new Set());
+  const invalidateRemoteSearchResults = useCallback(() => {
+    const generation = searchGenerationRef.current + 1;
+    searchGenerationRef.current = generation;
+    setGlobalResults([]);
+    setRemoteStatus("idle");
+    setIsSearching(false);
+    setStatus("");
+    setStatusTone("info");
+    return generation;
+  }, []);
 
-  const PRESET_RECOMMENDS = [
-    { q: "庄子内篇", label: "庄子内篇 · 逍遥无待" },
-    { q: "清静经", label: "清静经 · 澄心静神" },
-    { q: "瓦尔登湖", label: "瓦尔登湖 · 荒野宁静" },
-    { q: "黑客与画家", label: "黑客与画家 · 极客心智" },
-  ];
+  useEffect(() => {
+    const restoreRouteContext = () => {
+      const context = parseSearchRouteContext(window.location.hash);
+      invalidateRemoteSearchResults();
+      setSearchQuery(context.query);
+      setActiveFilter(context.filter);
+    };
+    window.addEventListener("popstate", restoreRouteContext);
+    window.addEventListener(ROUTE_CONTEXT_EVENT, restoreRouteContext);
+    return () => {
+      window.removeEventListener("popstate", restoreRouteContext);
+      window.removeEventListener(ROUTE_CONTEXT_EVENT, restoreRouteContext);
+    };
+  }, [invalidateRemoteSearchResults]);
+
+  // 记录每个云端书籍的下载同步百分比与正在同步状态
+  const [importProgress, setImportProgress] = useState<Record<string, number>>(
+    {},
+  );
+  const [importingBookIds, setImportingBookIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Toast 优雅毛玻璃自动淡出
   useEffect(() => {
@@ -115,7 +164,8 @@ export default function SearchPage() {
   );
 
   useEffect(() => {
-    const refresh = () => setInventoryGeneration((generation) => generation + 1);
+    const refresh = () =>
+      setInventoryGeneration((generation) => generation + 1);
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -142,8 +192,11 @@ export default function SearchPage() {
 
   // 只搜索已绑定分享密钥的私人旧云端；公共馆藏留给 GATE-03。
   const handleGlobalSearch = async (overrideQuery?: string) => {
-    const queryToSearch = overrideQuery !== undefined ? overrideQuery : searchQuery;
+    const queryToSearch =
+      overrideQuery !== undefined ? overrideQuery : searchQuery;
     if (!queryToSearch.trim()) return;
+
+    const generation = invalidateRemoteSearchResults();
 
     if (!isOnline) {
       setStatusTone("info");
@@ -163,19 +216,20 @@ export default function SearchPage() {
       return;
     }
 
-    const generation = ++searchGenerationRef.current;
     setIsSearching(true);
     setRemoteStatus("loading");
     setStatusTone("info");
     setStatus(strings.shelf.searchingGlobal);
     try {
-      const results = await createLegacyPersonalSyncApiClient(
-        shareToken,
-      ).searchBooks(queryToSearch);
+      const results =
+        await createLegacyPersonalSyncApiClient(shareToken).searchBooks(
+          queryToSearch,
+        );
       if (
         generation !== searchGenerationRef.current ||
-        normalizeShareToken(window.localStorage.getItem("reader-share-token")) !==
-          shareToken
+        normalizeShareToken(
+          window.localStorage.getItem("reader-share-token"),
+        ) !== shareToken
       ) {
         return;
       }
@@ -197,12 +251,6 @@ export default function SearchPage() {
     } finally {
       if (generation === searchGenerationRef.current) setIsSearching(false);
     }
-  };
-
-  // 快捷探索胶囊点击联动：填充并自动秒级触发云端与本地检索
-  const handleQuickSearch = (q: string) => {
-    setSearchQuery(q);
-    handleGlobalSearch(q);
   };
 
   const handleImportBook = async (book: LegacyRemoteBook) => {
@@ -257,22 +305,24 @@ export default function SearchPage() {
         return;
       }
       setImportProgress((prev) => ({ ...prev, [book.id]: 100 }));
-      setToastMsg(`「${book.title}」共 ${outcome.chapterCount} 章已完整下载到本地。`);
+      setToastMsg(
+        `「${book.title}」共 ${outcome.chapterCount} 章已完整下载到本地。`,
+      );
     } catch (err) {
       console.error("同步云端书籍章节失败:", err);
       setToastMsg("本地存储或云端通道繁忙，请稍后再试。");
     } finally {
       setImportingBookIds((prev) => {
-         const next = new Set(prev);
-         next.delete(book.id);
-         return next;
+        const next = new Set(prev);
+        next.delete(book.id);
+        return next;
       });
     }
   };
 
   return (
     <AppShell
-      title="发现"
+      title="搜索"
       subtitle="本地书架搜索与已绑定的私人云端"
       rightNodes={
         <button
@@ -284,22 +334,26 @@ export default function SearchPage() {
       }
     >
       {/* 搜索/分类 核心框 */}
-      <section className="ui-card rounded-[18px] p-5.5 shadow-[0_12px_32px_rgba(80,65,45,0.05)] bg-[rgba(255,255,255,0.6)] backdrop-blur-md">
-        <div className="relative flex gap-2">
+      <section className="ui-card rounded-[var(--radius-card)] p-4 sm:p-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <input
             id="search-input-field"
             type="text"
             placeholder={`${strings.shelf.searchPlaceholder} (按 '/' 键聚焦)`}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              invalidateRemoteSearchResults();
+              setSearchQuery(e.target.value);
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleGlobalSearch()}
-            className="ui-focus-ring w-full rounded-full border border-[var(--ui-border)] bg-white px-5 py-3 pr-32 text-[var(--ui-text)] shadow-sm physics-spring focus:scale-[1.015] focus:shadow-[0_15px_35px_rgba(95,125,82,0.12)] focus:border-[var(--ui-accent)]"
+            maxLength={120}
+            className="ui-focus-ring min-h-11 w-full rounded-[var(--radius-field)] border border-[var(--ui-border)] bg-white px-4 text-sm text-[var(--ui-text)] focus:border-[var(--ui-accent)]"
             autoFocus
           />
           <button
             onClick={() => handleGlobalSearch()}
             disabled={isSearching || !searchQuery.trim()}
-            className="ui-focus-ring absolute bottom-1.5 right-1.5 top-1.5 rounded-full bg-[var(--ui-accent)] px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
+            className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-4 text-sm font-semibold text-white disabled:opacity-45"
           >
             {isSearching ? "搜索中" : "搜索私人云端"}
           </button>
@@ -307,62 +361,47 @@ export default function SearchPage() {
 
         {/* 托管高亮的分类胶囊栏 */}
         <div className="mt-4.5 flex flex-wrap gap-2.5">
-          {["综合", "书名", "作者", "标签", "连载中", "已完结"].map(
-            (label) => {
-              const isActive = activeFilter === label;
-              return (
-                <button
-                  key={label}
-                  onClick={() => setActiveFilter(label as LocalSearchFilter)}
-                  className={`ui-focus-ring min-h-11 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors duration-200 shadow-sm ${
-                    isActive
-                      ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)] font-bold"
-                      : "border-[var(--ui-border)] bg-white/60 text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            },
-          )}
+          {["综合", "书名", "作者", "标签", "连载中", "已完结"].map((label) => {
+            const isActive = activeFilter === label;
+            return (
+              <button
+                key={label}
+                onClick={() => {
+                  if (activeFilter === label) return;
+                  invalidateRemoteSearchResults();
+                  setActiveFilter(label as LocalSearchFilter);
+                }}
+                className={`ui-focus-ring min-h-11 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors duration-200 shadow-sm ${
+                  isActive
+                    ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)] font-bold"
+                    : "border-[var(--ui-border)] bg-white/60 text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* 首屏冷启动：每日书签 · 长笺墨语 */}
+      {/* 空查询只解释真实搜索范围，不注入推荐书源。 */}
       {!searchQuery.trim() && (
-        <section className="mt-6 flex flex-col items-center justify-center">
-          <div className="ui-card w-full rounded-[20px] p-6 md:p-8 bg-[linear-gradient(135deg,#FFFDF9_0%,#F5F1E8_100%)] border border-white/60 shadow-[0_12px_36px_rgba(80,65,45,0.04)] relative overflow-hidden flex flex-col items-center justify-center text-center gap-5">
-            {/* 拟物淡雅圆圈背景装饰 */}
-            <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full border border-[rgba(95,125,82,0.06)] pointer-events-none select-none" />
-            <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full border border-[rgba(95,125,82,0.06)] pointer-events-none select-none" />
-
-            <div className="px-3 py-0.5 rounded bg-[var(--ui-accent-soft)] text-[var(--ui-accent)] font-bold text-[10px] uppercase tracking-wider">
-              每日书签 · Curated Quote
-            </div>
-
-            <h3 className="font-reading-title text-base md:text-[19px] font-semibold leading-[2.2] text-[var(--ui-text)] max-w-xl tracking-[0.12em] select-none py-1">
-              “ 书卷多情似故人，晨昏忧乐每相亲。
-              <br />
-              一窗昏晓送流年，万卷古书消永日。 ”
-            </h3>
-
-            <div className="mt-2 flex flex-col items-center gap-3 w-full max-w-md">
-              <p className="text-xs text-[var(--ui-muted)] font-medium">
-                寻章摘句，您可以一键探索以下精选名著：
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {PRESET_RECOMMENDS.map((rec) => (
-                  <button
-                    key={rec.q}
-                    onClick={() => handleQuickSearch(rec.q)}
-                    className="ui-focus-ring min-h-11 px-3.5 py-2 rounded-full border border-[rgba(80,65,45,0.12)] bg-white/70 text-xs font-semibold text-[var(--ui-text)] hover:border-[var(--ui-accent)] hover:text-[var(--ui-accent)] hover:bg-white transition-colors"
-                  >
-                    {rec.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <section className="ui-card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <h2 className="[font-family:var(--font-display)] text-lg font-semibold text-[var(--ui-text)]">
+              搜索自己的书
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--ui-muted)]">
+              本地书架始终可搜索；绑定私有云密钥后，还可以检索自己的云端副本。
+            </p>
           </div>
+          <button
+            className="ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 text-sm font-semibold text-[var(--ui-text)]"
+            onClick={() => router.push("/public-library")}
+            type="button"
+          >
+            浏览藏经阁
+          </button>
         </section>
       )}
 
@@ -422,10 +461,13 @@ export default function SearchPage() {
                             {book.title}
                           </h3>
                           <p className="mt-1 text-sm text-[var(--ui-muted)]">
-                            {book.author || "佚名"} · {book.format.toUpperCase()}
+                            {book.author || "佚名"} ·{" "}
+                            {book.format.toUpperCase()}
                           </p>
                         </div>
-                        <span className="text-xs font-semibold text-[var(--ui-muted)]">私人云端</span>
+                        <span className="text-xs font-semibold text-[var(--ui-muted)]">
+                          私人云端
+                        </span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-md bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
@@ -447,10 +489,29 @@ export default function SearchPage() {
                           去阅读
                         </button>
                       ) : isImporting ? (
-                        <div role="status" className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[rgba(95,125,82,0.18)] bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto">
-                          <svg className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <div
+                          role="status"
+                          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[rgba(95,125,82,0.18)] bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
+                        >
+                          <svg
+                            className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           <span>正在同步 {pct}%</span>
                         </div>
@@ -469,7 +530,8 @@ export default function SearchPage() {
             </div>
           </div>
         ) : (
-          !isSearching && remoteStatus !== "failed" &&
+          !isSearching &&
+          remoteStatus !== "failed" &&
           searchQuery.trim() &&
           localResults.length === 0 && (
             <div className="ui-card mt-8 rounded-[16px] py-20 text-center text-[var(--ui-muted)] shadow-sm">
@@ -481,7 +543,11 @@ export default function SearchPage() {
 
       {/* 优雅宣纸毛玻璃 Toast */}
       {toastMsg && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center rounded-2xl border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.9)] px-5 py-3 text-xs font-bold text-[var(--ui-text)] shadow-lg backdrop-blur-md">
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center rounded-2xl border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.9)] px-5 py-3 text-xs font-bold text-[var(--ui-text)] shadow-lg backdrop-blur-md"
+        >
           {toastMsg}
         </div>
       )}

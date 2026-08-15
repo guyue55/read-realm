@@ -42,6 +42,7 @@
 - RUN-0050：保持执行中；TASK-0504 E 完成，当前入口推进至 F taxonomy/facets 四视图。依据：实现提交 `9d4a2e2`、同 token 云端 inventory/完整内容寻址 receipt、严格 Blob/hash/UTF-8 核验、本地同版传输优化、独立 maintenance 发布端口、公共失败零个人副作用、340/390 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0051：保持执行中；TASK-0504 F 实现完成，当前入口推进至 EVID-62 独立扩张检查器。依据：实现提交 `5df9347`、稳定 taxonomy ID/双层 DB 约束、版本化 catalog overlay、24 项 books/facets 分页、NFKC FTS/反向 tag 索引、catalogRevision 四视图失效、真实 Chrome 409/迟到响应/dialog 旅程与三路独立终审 READY。EVID-62 未通过前 TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0052：保持执行中；EVID-62 在 clean@`0dcae90` 正式运行并经三路独立复算 PASS，TASK-0504 完成，当前入口推进至 TASK-0505。依据：14/14 checks/records、唯一 production Chrome、16+7+1+1 混合 25 本、24+1 分页、终态 26 本/revision 27、精确 provenance/Blob、故障与离线阅读、个人事实/源树/进程/清理均闭合。该 ATTEMPT 不证明 EVID-56/58 FINAL、TASK-0505/0506、PHASE-05、VPS 或 Goal 完成。
+- RUN-0053：保持执行中；TASK-0505 合同已冻结，A 真相/返回上下文与 B 共享交互候选经真实 500 本旅程和独立复审放行提交。当前入口推进至 C 信息层级/视觉语言，随后才执行 D 单一响应式阅读器子树；TASK-0505、TASK-0506、PHASE-05 与 Goal 均未完成，不引入 GSAP，不运行阶段总验收。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -521,3 +522,11 @@
 - 边界与故障：26 条 source/receipt/edition 一一闭合，26 个 Blob 均满足路径 = 字节 SHA = package hash；错误凭据、公共 500、扫描 503、旧 revision 409、迟到响应、真断网均有活体反例。扫描源树 path/size/mode/mtime/SHA、个人 DB/Blob 与浏览器私有事实前后不变；3100/4100 前后空闲、orphan 0、ownership cleanup 完成。
 - 独立复算：三路审查分别重算 report/14 records SHA、分类、GATE-03 前置、公共 provenance/Blob、源树/个人哨兵和 UI 旅程，均判定 PASS、无 P0/P1 或假绿；当前证据绑定 clean@`0dcae90`，不覆盖既有 EVID-57/59 或历史不可判定记录。
 - 状态与下一入口：TASK-0504 完成，PHASE-05 与 Goal 继续执行中。下一入口严格为 TASK-0505：先审计并最小化重排书架、藏经阁、移动导航与共享状态/焦点/触控组件，收敛圆角、间距、阴影、图标、字体和文案语气；TASK-0505 独立通过前不运行 TASK-0506 总验收，不生成 EVID-56/58 FINAL，不部署 VPS。
+
+### RUN-0053 · 2026-08-15T14:15:00+08:00 · PHASE-05 / TASK-0505 A/B 真相、返回上下文与共享交互
+- 本轮边界：先完成只读视觉/交互审计并冻结 `reports/task-0505-ui-contract.md`，随后仅实现 A 真相/返回上下文与 B 共享交互基建；未宣称 C 信息层级/视觉语言或 D 阅读器单一响应式子树完成，未运行 TASK-0506、VPS 部署或 formal verifier。
+- 真相与危险操作：删除会写入个人书架的硬编码“精选”路径和伪推荐入口；本地/源文件/云端状态只按现有事实源陈述。删除必须先得到 typed `applied` 才请求远端；ConfirmDialog 改为 portal + ReaderDialogSurface，异步失败保留并显示，不再使用原生 `confirm()`。
+- 返回上下文：书架 `{folder,page,sort,view}`、藏经阁 `{view,q,category,tag,maintainer,page}`、搜索 `{q,filter}` 均进入有界 typed route，popstate/同视图跳转可重放，非法值 fail-closed。书架滚动和来源卡焦点使用 session 级事实源；离开视图后的布局滚动不再覆盖已记位置，返回与刷新在书目可渲染后恢复。
+- 共享交互：`tokens.css` 收敛为运行时权威的 control/card/panel 圆角、两档阴影与 44px 触控；ReaderDialogSurface 关闭态不渲染，打开态使用栈式 document modal isolation，嵌套层只让顶层交互并最终恢复原背景。AppShell 主内容可作为稳定焦点 fallback；书卡/书箧支持 Enter/Space，关键同步、密钥、治理、备份、下载、释放和删除触点显式不小于 44×44。
+- 验证：Web 全量 `56 files / 223 tests`、TypeScript、定向非写入 ESLint、禁用 PWA 写入的 production build 与 `git diff --check` 全通过。系统 Chrome 的 `library-bounded-rendering + search-route-context` 五条旅程 `5/5`：500 本第 8 页以普通点击与 Enter 开书后，在 Next `__NA` history state 下 browser back 与 reload 仍恢复 URL、页码、排序、列表视图、滚动和来源焦点；500 根书箧保持 48 项 DOM 上界；延迟私有云 inventory 不会把深页提前夹到第一页；同一密钥下清空云端后旧 inventory 响应不能回流；搜索条件切换后旧私有云响应不能覆盖新结果。390px computed 探针覆盖 17 个同步/密钥/书箧菜单/书卡控件，最小 44×44 且无横溢；1440px hover 态治理/备份/删除同样合格。藏经阁 taxonomy 旅程 `1/1` 与 340/390/768/1440 回归由独立审查复算通过。
+- 独立复审与状态：A/B 最新稳定候选终审 `READY_TO_COMMIT`，无 P0/P1；该结论只放行本切片提交，不等于 TASK-0505 完成。下一入口严格为 C：用现有领域入口拆分书架信息层级、统一 Lucide/字体/直白文案和共享状态/toast，再进入 D 阅读器单一响应式子树；仍不运行 TASK-0506 或部署 VPS。

@@ -53,7 +53,7 @@ textarea,
     border: 1px solid var(--ui-border);
     border-radius: var(--radius-card);
     background: var(--ui-surface);
-    box-shadow: 0 10px 30px rgba(80, 65, 45, 0.045);
+    box-shadow: var(--shadow-paper);
   }
 
   .ui-soft-card {
@@ -70,6 +70,18 @@ textarea,
     border-color: var(--ui-accent);
     outline: 2px solid var(--ui-accent);
     outline-offset: 2px;
+  }
+
+  [data-library-shelf] button,
+  [data-library-sync] button,
+  [data-library-sync] input,
+  [data-library-sync] select {
+    min-height: var(--touch-target);
+  }
+
+  [data-library-shelf] button,
+  [data-library-sync] button {
+    min-width: var(--touch-target);
   }
 
   .reader-scrollbar {

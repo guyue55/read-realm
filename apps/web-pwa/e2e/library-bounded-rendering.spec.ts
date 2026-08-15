@@ -3,6 +3,32 @@ import { expect, test } from "@playwright/test";
 const BOOK_COUNT = 500;
 const PAGE_SIZE = 48;
 
+function remoteBook(index: number) {
+  const suffix = String(index).padStart(3, "0");
+  return {
+    id: `cloud-book-${suffix}`,
+    title: `云端藏书 ${suffix}`,
+    sourceType: "cloud_cache",
+    format: "txt",
+    status: "reading",
+    tags: [],
+    chapterCount: 2,
+    createdAt: "2026-08-15T00:00:00.000Z",
+    updatedAt: "2026-08-15T00:00:00.000Z",
+  };
+}
+
+async function expectVisibleTouchTargets(
+  locator: import("@playwright/test").Locator,
+) {
+  for (const target of await locator.all()) {
+    if (!(await target.isVisible())) continue;
+    const box = await target.boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+}
+
 async function seedLargeShelf(page: import("@playwright/test").Page) {
   await page.evaluate(
     ({ bookCount }) =>
@@ -94,8 +120,15 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
   context,
   page,
 }) => {
+  test.setTimeout(60_000);
+  await page.addInitScript(() => {
+    localStorage.setItem("reader-share-token", "bounded-render-key");
+    localStorage.setItem("reader-sync-auto-startup", "false");
+  });
   await page.goto("/library");
-  await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "书架还是空的" }),
+  ).toBeVisible();
   await seedLargeShelf(page);
   await page.reload();
 
@@ -112,13 +145,19 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
 
   await page.getByRole("button", { name: "下一页", exact: true }).click();
   await expect(pagination).toContainText("第 2 / 11 页");
-  await expect(page.locator('[data-book-id="bounded-book-048"]')).toHaveCount(1);
-  await expect(page.locator('[data-book-id="bounded-book-000"]')).toHaveCount(0);
+  await expect(page.locator('[data-book-id="bounded-book-048"]')).toHaveCount(
+    1,
+  );
+  await expect(page.locator('[data-book-id="bounded-book-000"]')).toHaveCount(
+    0,
+  );
 
   await page.getByRole("button", { name: "末页", exact: true }).click();
   await expect(cards).toHaveCount(BOOK_COUNT - PAGE_SIZE * 10);
   await expect(pagination).toContainText("当前 481–500 项，共 500 项");
-  await expect(page.locator('[data-book-id="bounded-book-499"]')).toHaveCount(1);
+  await expect(page.locator('[data-book-id="bounded-book-499"]')).toHaveCount(
+    1,
+  );
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(cards).toHaveCount(20);
@@ -129,6 +168,15 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
 
+  await page.getByRole("button", { name: /同步管理与首选项/u }).click();
+  await expectVisibleTouchTargets(
+    page.locator(
+      "[data-library-sync] button, [data-library-sync] input, [data-library-sync] select",
+    ),
+  );
+  await page.getByTitle("藏书落墨治理").first().click();
+  await expectVisibleTouchTargets(page.locator("[data-library-shelf] button"));
+
   await context.setOffline(true);
   await page.getByRole("button", { name: "上一页", exact: true }).click();
   await expect(pagination).toContainText("第 10 / 11 页");
@@ -137,12 +185,74 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
 
   await page.getByRole("button", { name: "书名", exact: true }).click();
   await expect(pagination).toContainText("第 1 / 11 页");
-  await expect(page.locator('[data-book-id="bounded-book-000"]')).toHaveCount(1);
+  await expect(page.locator('[data-book-id="bounded-book-000"]')).toHaveCount(
+    1,
+  );
+
+  await page.goto("/#/library?page=8&sort=title&view=list");
+  await expect(pagination).toContainText("第 8 / 11 页");
+  const sourceCard = page.locator('[data-book-id="bounded-book-342"]');
+  await expect(sourceCard).toHaveCount(1);
+  const main = page.locator("[data-app-main]");
+  await sourceCard.evaluate((element) => {
+    element.scrollIntoView({ block: "center" });
+    element.closest("[data-app-main]")?.dispatchEvent(new Event("scroll"));
+  });
+  const rememberedScroll = await main.evaluate((element) => element.scrollTop);
+  expect(rememberedScroll).toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    history.replaceState(
+      { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: {} },
+      "",
+      location.href,
+    );
+  });
+
+  const sourcePrimary = sourceCard.locator("[data-library-entry-primary]");
+  await sourcePrimary.click();
+  await expect(page).toHaveURL(/#\/reader\/bounded-book-342$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/library\?page=8&sort=title&view=list$/u);
+  await expect(pagination).toContainText("第 8 / 11 页");
+  await expect(sourcePrimary).toBeFocused();
+
+  await sourcePrimary.press("Enter");
+  await expect(page).toHaveURL(/#\/reader\/bounded-book-342$/u);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/library\?page=8&sort=title&view=list$/u);
+  await expect(pagination).toContainText("第 8 / 11 页");
+  await expect(
+    sourceCard.locator("[data-library-entry-primary]"),
+  ).toBeFocused();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        sessionStorage.getItem("reading_world_view_scroll:library"),
+      ),
+    )
+    .toBe(String(rememberedScroll));
+  await expect
+    .poll(() => main.evaluate((element) => element.scrollTop))
+    .toBe(rememberedScroll);
+
+  await page.reload();
+  await expect(pagination).toContainText("第 8 / 11 页");
+  await expect(
+    sourceCard.locator("[data-library-entry-primary]"),
+  ).toBeFocused();
+  await expect
+    .poll(() => main.evaluate((element) => element.scrollTop))
+    .toBe(rememberedScroll);
 });
 
-test("500 root folders share the same hard DOM bound as books", async ({ page }) => {
+test("500 root folders share the same hard DOM bound as books", async ({
+  page,
+}) => {
   await page.goto("/library");
-  await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "书架还是空的" }),
+  ).toBeVisible();
   await seedLargeFolderShelf(page);
   await page.reload();
 
@@ -151,20 +261,120 @@ test("500 root folders share the same hard DOM bound as books", async ({ page })
   );
   const pagination = page.locator("[data-library-pagination]");
   await expect(shelfEntries).toHaveCount(PAGE_SIZE);
-  await expect(page.locator("[data-library-shelf] [data-folder-id]")).toHaveCount(
-    PAGE_SIZE,
+  await expect(
+    page.locator("[data-library-shelf] [data-folder-id]"),
+  ).toHaveCount(PAGE_SIZE);
+  await expect(page.locator("[data-library-shelf] [data-book-id]")).toHaveCount(
+    0,
   );
-  await expect(page.locator("[data-library-shelf] [data-book-id]")).toHaveCount(0);
   await expect(pagination).toContainText("第 1 / 11 页");
 
   await page.locator('[data-folder-id="bounded-folder-000"]').click();
   await expect(page.locator('[data-book-id="folder-book-000"]')).toHaveCount(1);
   await expect(page.locator("[data-library-pagination]")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "📖 私人藏书" }).click();
+  await page.getByRole("button", { name: "我的书架", exact: true }).click();
   await expect(shelfEntries).toHaveCount(PAGE_SIZE);
   await page.getByRole("button", { name: "下一页", exact: true }).click();
   await expect(pagination).toContainText("第 2 / 11 页");
-  await expect(page.locator('[data-folder-id="bounded-folder-048"]')).toHaveCount(1);
-  await expect(page.locator('[data-folder-id="bounded-folder-000"]')).toHaveCount(0);
+  await expect(
+    page.locator('[data-folder-id="bounded-folder-048"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-folder-id="bounded-folder-000"]'),
+  ).toHaveCount(0);
+});
+
+test("deep page waits for the matching private-cloud inventory before clamping", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("reader-share-token", "delayed-cloud-key");
+    localStorage.setItem("reader-sync-auto-startup", "false");
+  });
+
+  let releaseInventory: () => void = () => undefined;
+  const inventoryGate = new Promise<void>((resolve) => {
+    releaseInventory = resolve;
+  });
+  await page.route("**/books", async (route) => {
+    await inventoryGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        Array.from({ length: 120 }, (_, index) => remoteBook(index)),
+      ),
+    });
+  });
+
+  await page.goto("/#/library?page=3&sort=title&view=list");
+  await page.waitForTimeout(250);
+  await expect(page).toHaveURL(/#\/library\?page=3&sort=title&view=list$/u);
+
+  releaseInventory();
+  const pagination = page.locator("[data-library-pagination]");
+  await expect(pagination).toContainText("第 3 / 3 页");
+  await expect(pagination).toContainText("当前 97–120 项，共 120 项");
+  await expect(page.locator('[data-book-id="cloud-book-096"]')).toHaveCount(1);
+  await expect(page).toHaveURL(/#\/library\?page=3&sort=title&view=list$/u);
+});
+
+test("an older same-key inventory cannot overwrite a verified cloud clear", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("reader-share-token", "same-key-generation");
+    localStorage.setItem("reader-sync-auto-startup", "false");
+  });
+
+  let releaseOldInventory: () => void = () => undefined;
+  const oldInventoryGate = new Promise<void>((resolve) => {
+    releaseOldInventory = resolve;
+  });
+  let requestCount = 0;
+  await page.route("**/books", async (route) => {
+    if (route.request().method() === "DELETE") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true }),
+      });
+      return;
+    }
+    requestCount += 1;
+    if (requestCount === 1) {
+      await oldInventoryGate;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          Array.from({ length: 120 }, (_, index) => remoteBook(index)),
+        ),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "[]",
+    });
+  });
+
+  await page.goto("/#/library?view=list");
+  await page.getByRole("button", { name: /同步管理与首选项/u }).click();
+  await page.getByRole("button", { name: /物理清空云端备份/u }).click();
+  const dialog = page.getByRole("dialog", { name: /物理清空云端备份/u });
+  await dialog.getByRole("button", { name: "确认", exact: true }).click();
+  await expect.poll(() => requestCount).toBeGreaterThanOrEqual(2);
+  await expect(dialog).toHaveCount(0);
+
+  releaseOldInventory();
+  await page.waitForTimeout(250);
+  await expect(page.locator("[data-library-shelf] [data-book-id]")).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("heading", { name: "书架还是空的" }),
+  ).toBeVisible();
 });

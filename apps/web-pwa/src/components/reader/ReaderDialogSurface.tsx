@@ -6,6 +6,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
+import { useDocumentModalIsolation } from "./useDocumentModalIsolation";
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -60,6 +61,7 @@ export function ReaderDialogSurface({
 
   onCloseRef.current = onClose;
   fallbackFocusRef.current = fallbackFocus;
+  useDocumentModalIsolation(open, surfaceRef);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -134,16 +136,16 @@ export function ReaderDialogSurface({
     };
   }, [open]);
 
+  if (!open) return null;
+
   return (
     <div
       {...surfaceProps}
       ref={surfaceRef}
-      aria-hidden={!open}
-      aria-label={open ? label : undefined}
-      aria-modal={open || undefined}
-      inert={!open ? true : undefined}
-      role={open ? "dialog" : undefined}
-      tabIndex={open ? -1 : undefined}
+      aria-label={label}
+      aria-modal="true"
+      role="dialog"
+      tabIndex={-1}
     >
       {children}
     </div>

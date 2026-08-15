@@ -4,7 +4,7 @@
   --color-surface-muted: #eeeee7;
   --color-text: #262824;
   --color-muted: #686e68;
-  --color-quiet: #92958e;
+  --color-quiet: #6f746c;
   --color-primary: #315e4e;
   --color-primary-strong: #24483c;
   --color-primary-soft: #e4ede7;
@@ -15,7 +15,8 @@
   --color-stamp: #a04439;
   --color-border: #d8d5ca;
   --color-border-soft: #e8e5db;
-  --shadow-raised: 0 12px 32px rgba(38, 40, 36, 0.08);
+  --shadow-paper: 0 2px 12px rgba(38, 40, 36, 0.05);
+  --shadow-raised: 0 16px 44px rgba(38, 40, 36, 0.14);
 
   --font-ui: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -25,8 +26,11 @@
     var(--font-display);
   --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
 
-  --radius-control: 4px;
-  --radius-card: 8px;
+  --radius-control: 10px;
+  --radius-field: 12px;
+  --radius-card: 16px;
+  --radius-panel: 22px;
+  --touch-target: 44px;
   --shell-sidebar-width: 148px;
   --content-max-width: 1240px;
 
@@ -41,12 +45,15 @@
   --ui-soft-border: var(--color-border-soft);
   --ui-text: var(--color-text);
   --ui-muted: var(--color-muted);
+  --ui-text-secondary: var(--color-muted);
   --ui-quiet: var(--color-quiet);
   --ui-accent: var(--color-primary);
+  --ui-accent-hover: var(--color-primary-strong);
   --ui-accent-soft: var(--color-primary-soft);
   --ui-warm: #8a5b3d;
   --ui-danger: var(--color-danger);
   --ui-shadow: var(--shadow-raised);
+  --ui-shadow-sm: var(--shadow-paper);
   --font-kaiti: var(--font-accent);
   --font-songti: var(--font-display);
   --font-heiti: var(--font-ui);
