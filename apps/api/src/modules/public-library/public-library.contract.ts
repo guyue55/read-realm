@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const PUBLIC_LIBRARY_FILE_MAX_BYTES = 20 * 1024 * 1024;
+export const PUBLIC_LIBRARY_PERSONAL_SNAPSHOT_MAX_BYTES = 24 * 1024 * 1024;
 export const PUBLIC_LIBRARY_LEGACY_JSON_MAX_BYTES = 8 * 1024 * 1024;
 
 function decodeMultipartFilename(value: string) {
@@ -136,6 +137,17 @@ export const PublicLibraryListQuerySchema = z.object({
 export type PublicLibraryUpload = z.infer<typeof PublicLibraryUploadSchema>;
 export type PublicLibraryFileFields = z.infer<
   typeof PublicLibraryFileFieldsSchema
+>;
+
+export const PublicLibraryPersonalSnapshotFieldsSchema = z.object({
+  category: z.enum(PUBLIC_LIBRARY_CATEGORIES),
+  rightsConfirmed: z
+    .union([z.literal('true'), z.literal(true)])
+    .transform(() => true as const),
+});
+
+export type PublicLibraryPersonalSnapshotFields = z.infer<
+  typeof PublicLibraryPersonalSnapshotFieldsSchema
 >;
 export type PublicLibraryListQuery = z.infer<
   typeof PublicLibraryListQuerySchema

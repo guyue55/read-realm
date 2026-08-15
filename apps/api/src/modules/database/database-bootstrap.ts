@@ -58,6 +58,14 @@ const CORE_TABLE_STATEMENTS = [
     );
   `,
   `
+    CREATE TABLE IF NOT EXISTS personal_export_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      scope_salt TEXT NOT NULL CHECK (
+        length(scope_salt) = 64 AND scope_salt NOT GLOB '*[^0-9a-f]*'
+      )
+    );
+  `,
+  `
     CREATE TABLE IF NOT EXISTS ai_views (
       id TEXT PRIMARY KEY,
       book_id TEXT NOT NULL,
@@ -296,6 +304,11 @@ export async function prepareDatabase(
   for (const statement of CORE_TABLE_STATEMENTS) {
     await client.execute(statement);
   }
+
+  await client.execute(`
+    INSERT OR IGNORE INTO personal_export_state (id, scope_salt)
+    VALUES (1, lower(hex(randomblob(32))));
+  `);
 
   await ensureBookColumns(client);
   const integrity = await ensureChapterIntegrity(client);

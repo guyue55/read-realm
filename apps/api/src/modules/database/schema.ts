@@ -67,6 +67,11 @@ export const storageObjects = sqliteTable('storage_objects', {
   mimeType: text('mime_type').notNull(),
 });
 
+export const personalExportState = sqliteTable('personal_export_state', {
+  id: integer('id').primaryKey(),
+  scopeSalt: text('scope_salt').notNull(),
+});
+
 export const aiViews = sqliteTable(
   'ai_views',
   {

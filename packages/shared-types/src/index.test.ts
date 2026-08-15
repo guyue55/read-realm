@@ -2,12 +2,14 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   AppErrorCodeSchema,
   BookSchema,
+  PersonalPublicationSnapshotDescriptorSchema,
   ReadingProgressSchema,
   ReaderSettingsSchema,
   BookmarkSchema,
   createId,
   generateAiSigKeyAsync,
   parseAIReadingIntent,
+  serializePersonalPublicationSnapshotDescriptor,
 } from "./index";
 
 afterEach(() => {
@@ -15,6 +17,39 @@ afterEach(() => {
 });
 
 describe("Shared Types", () => {
+  it("serializes a personal publication descriptor without private identity", () => {
+    const descriptor = PersonalPublicationSnapshotDescriptorSchema.parse({
+      schemaVersion: 1,
+      sourceRef: "b".repeat(64),
+      book: {
+        title: " 云上书 ",
+        author: "作者",
+        format: "txt",
+        chapterCount: 1,
+      },
+      chapters: [{ index: 0, title: " 第一章 ", contentHash: "a".repeat(64) }],
+    });
+
+    const serialized =
+      serializePersonalPublicationSnapshotDescriptor(descriptor);
+    expect(serialized).toBe(
+      JSON.stringify({
+        schemaVersion: 1,
+        sourceRef: "b".repeat(64),
+        book: {
+          title: "云上书",
+          author: "作者",
+          description: null,
+          format: "txt",
+          chapterCount: 1,
+        },
+        chapters: [{ index: 0, title: "第一章", contentHash: "a".repeat(64) }],
+      }),
+    );
+    expect(serialized).not.toContain("share-token");
+    expect(serialized).not.toContain("book-id");
+  });
+
   it("should validate AppErrorCode", () => {
     expect(AppErrorCodeSchema.parse("FILE_TOO_LARGE")).toBe("FILE_TOO_LARGE");
     expect(() => AppErrorCodeSchema.parse("INVALID_ERROR")).toThrow();
@@ -94,8 +129,18 @@ describe("generateAiSigKeyAsync", () => {
   });
 
   it("isolates different reading intents", async () => {
-    const summary = await generateAiSigKeyAsync("hash", "model", "reader-ai-v3:summary", "book");
-    const terms = await generateAiSigKeyAsync("hash", "model", "reader-ai-v3:terms", "book");
+    const summary = await generateAiSigKeyAsync(
+      "hash",
+      "model",
+      "reader-ai-v3:summary",
+      "book",
+    );
+    const terms = await generateAiSigKeyAsync(
+      "hash",
+      "model",
+      "reader-ai-v3:terms",
+      "book",
+    );
     expect(summary).not.toBe(terms);
   });
 });

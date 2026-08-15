@@ -1,4 +1,4 @@
-import { link, open, readFile, mkdir, unlink } from "fs/promises";
+import { link, open, readFile, mkdir, stat, unlink } from "fs/promises";
 import { randomUUID } from "crypto";
 import { dirname, resolve } from "path";
 
@@ -49,6 +49,12 @@ export class LocalFileBlobStorage {
   async getObject(key: string): Promise<Buffer> {
     const fullPath = this.getSafePath(key);
     return await readFile(fullPath);
+  }
+
+  async getObjectSize(key: string): Promise<number> {
+    const metadata = await stat(this.getSafePath(key));
+    if (!metadata.isFile()) throw new Error("INVALID_BLOB_OBJECT");
+    return metadata.size;
   }
 
   async deleteObject(key: string): Promise<void> {
