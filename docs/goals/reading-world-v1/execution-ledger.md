@@ -6,10 +6,10 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504 / D；A–C 已依次通过独立复审，下一步只实现 allowlisted 服务端目录扫描、sourceHash receipt 与可恢复 scan generation，不并行扩张个人云快照发布或 taxonomy/facets 四视图。
-- 最近有效提交：0a87a02
+- 当前入口：PHASE-05 / TASK-0504 / E；A–D 已依次通过独立复审，下一步只实现 PersonalBookExportPort → PublicLibraryMaintenancePort 的已验证个人云正文快照发布，不并行扩张 taxonomy/facets 四视图。
+- 最近有效提交：583c306
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–C 已通过、D–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–D 已通过、E–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
 - 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
@@ -38,6 +38,7 @@
 - RUN-0046：保持执行中；TASK-0504 A 完成，当前入口推进至 B 单文件 multipart adapter。依据：实现提交 `e9aa8bc`、零延迟双 client 竞态 12/12、旧 GATE-03 package 重放、异来源同 edition、API/storage 全量测试、无 PWA 写入全工作区构建与独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0047：保持执行中；TASK-0504 B 完成，当前入口推进至 C 文件夹队列。依据：实现提交 `acd609a..0fc92de`、有界 multipart/浏览器队列、真实系统 Chrome 上传与匿名浏览回归、两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0048：保持执行中；TASK-0504 C 完成，当前入口推进至 D allowlisted 服务端目录扫描。依据：实现提交 `0a87a02`、安全 relativePath/顶层 collectionPath、规范化重名拒绝、immutable package overlay 分层、双 client 异目录冲突与两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0049：保持执行中；TASK-0504 D 完成，当前入口推进至 E 已验证个人云正文快照发布。依据：实现提交 `583c306`、每次扫描物理隔离复验、完整只读 preflight、同 generation 租约恢复、事务 publication fence、sourceHash receipt 重放、来源代际单调门、390/340 系统 Chrome 旅程与三路独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -479,3 +480,13 @@
 - 活体与门禁：API 全量 `90/90`、Web 全量 `185/185`，两端 TypeScript、定向非写入 lint、API production build、禁用 PWA 写入的 Web production build 与 `git diff --check` 均通过。`CI=1` 强制新启 API/Web，以系统 Chrome 390x844 从 `webkitRelativePath` 经队列、FormData、真实 API、SQLite 与 Blob 完成文件夹入阁 `1/1`；3100/4100 结束后均 free。
 - 安全与独审：18 个改动文件按 Guyue 同源规则精确扫描 0 命中；全仓 scanner 仍为 PHASE-01 已登记的历史 Red，本轮不声称全仓安全通过。文件边界与核心并发两路独立复审均 `READY_TO_COMMIT`，无 P0/P1 或假绿；未运行 formal TASK-0504 verifier。
 - 状态与下一入口：TASK-0504 C 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 D：只实现运维配置 rootId 的 allowlisted 服务端目录扫描、realpath/symlink/regular-file/TOCTOU 边界、sourceHash receipt、单 root generation lease/恢复和 2 GiB/5000 项硬上限；D 独立通过前不进入 E 个人云快照或 F taxonomy/facets 四视图。
+
+### RUN-0049 · 2026-08-15T09:22:53+08:00 · PHASE-05 / TASK-0504 D 服务端维护目录扫描
+- 本轮边界：只增加运维 allowlist 目录扫描、持久 generation/lease、sourceHash receipt 重放与移动入阁反馈；未实现个人云正文发布、taxonomy/facets、catalog overlay 编辑或四视图，未连接真实维护目录、个人真实云、VPS，未 push 或部署。实现提交 `583c306`。
+- 配置与物理隔离：API 只接受 `rootId`，匿名与维护 DTO 仅返回安全 label；绝对/Windows 路径型 label 直接拒绝。启动和每次 scan start 都重新解析维护根与个人/公共 DB、Blob 的 physical realpath，任一相等、互含、symlink alias、root inode/fingerprint 变化均 fail-closed，错误不暴露绝对路径。
+- 只读预检：完整 manifest 在首本发布前验证 NFC 相对路径、深度 32、候选 5000、单本 20 MiB、累计 2 GiB，部署只能向下收紧；不跟随 symlink，不读取特殊文件或 hardlink。正文通过 `O_NOFOLLOW` fd 分块读取，前后复核 dev/ino/nlink/size/mtime/ctime 与 realpath containment；目录 manifest 改变使 generation 失败，源文件 bytes/mode/mtime 保持不变。
+- 租约与恢复：每 root 唯一 running generation；过期 owner 不能 heartbeat、落 item、finish 或通过 publication fence 写新/既有 edition。新 owner 先将旧租约置 interrupted，再复用同 scanId/generation 并清 item journal，以 canonical ingest receipt 重放。`publisher 成功→item heartbeat 前崩溃` 的真实 SQLite/Blob 反例恢复为 unchanged，book/edition/source/receipt 与 catalogRevision 不重复增长。
+- 来源真相：只有完整 completed generation 才更新 active/missing；`generation > lastCompletedGeneration` 单调门阻止旧 completed 迟到回滚新代。失败、partial、权限/上界/目录变化均保留上一完整代际，原件删除后既有 immutable package 仍可匿名读取。
+- API 与 UI：三个 maintenance endpoint 全部先过既有 Guard，只携带 `x-public-library-maintenance-key`；items 分页最多 50，响应不返回 sourceHash、bookId、leaseOwner、fingerprint 或主机路径。入阁面板增加“服务端目录”，390px 完成扫描/重放，340px 下关闭、扫描按钮均 ≥44px、无横向溢出，Escape 关闭并归还焦点；扫描请求不触发个人 `/books`。
+- 验证与审查：最终 API 全量 `111/111`、Web 全量 `186/186`，两端 TypeScript、非写入 lint、API build 与禁用 PWA 写入的 Web production build、控制包 resume、`git diff --check` 全通过；系统 Chrome D 旅程 `1/1`。27 个改动文件安全预检为 25 Green、2 Yellow，Yellow 仅为只读 `open(O_NOFOLLOW)` 与本机 `http://127.0.0.1` E2E 地址，人工复核无凭据、执行下载或新增外传。三路独立终审均 `READY_TO_COMMIT`，无 P0/P1 或假绿；未运行 formal TASK-0504 verifier。
+- 状态与下一入口：TASK-0504 D 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 E：PersonalBookExportPort → PublicLibraryMaintenancePort；必须先用同一私有 token 验证云端 inventory/章节 hash/完整代际，本地缓存只能作为同版传输优化，公共模块仍不得读取个人 DB/repository。E 独立通过前不进入 F taxonomy/facets/四视图。
