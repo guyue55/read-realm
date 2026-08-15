@@ -20,4 +20,22 @@ describe("public library browser boundary", () => {
     expect(source).not.toContain("reader-active-sync-tasks");
     expect(source).not.toMatch(/apiUrl\([`'"]\/books/u);
   });
+
+  it("keeps public maintenance isolated from personal sync and task facts", () => {
+    const maintenance = readFileSync(
+      new URL("./public-library-maintenance-client.ts", import.meta.url),
+      "utf8",
+    );
+    const queue = readFileSync(
+      new URL("./public-library-import-queue.ts", import.meta.url),
+      "utf8",
+    );
+    const maintenanceSource = `${maintenance}\n${queue}`;
+    expect(maintenanceSource).toContain("x-public-library-maintenance-key");
+    expect(maintenanceSource).not.toContain("x-share-token");
+    expect(maintenanceSource).not.toContain("reader-active-sync-tasks");
+    expect(maintenanceSource).not.toContain("LegacyPersonalSyncApiClient");
+    expect(maintenanceSource).not.toContain("PersonalSyncService");
+    expect(maintenanceSource).not.toMatch(/apiUrl\([`'"]\/books/u);
+  });
 });

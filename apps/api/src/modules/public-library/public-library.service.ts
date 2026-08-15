@@ -10,7 +10,6 @@ import { timingSafeEqual } from 'node:crypto';
 import {
   normalizePublicLibraryDirectFilename,
   PUBLIC_LIBRARY_FILE_MAX_BYTES,
-  type PublicLibraryBookDto,
   type PublicLibraryFileFields,
   type PublicLibraryListQuery,
   type PublicLibraryUpload,
@@ -51,9 +50,7 @@ export class PublicLibraryService {
     }
   }
 
-  private async publishWithConflictBoundary(
-    operation: () => Promise<PublicLibraryBookDto>,
-  ) {
+  private async publishWithConflictBoundary<T>(operation: () => Promise<T>) {
     try {
       return await operation();
     } catch (error) {
@@ -106,7 +103,7 @@ export class PublicLibraryService {
     const title = fields.title ?? parsed.title.trim();
     if (!title) throw new BadRequestException('书名不能为空');
     return this.publishWithConflictBoundary(() =>
-      this.repository.publishCandidate({
+      this.repository.publishCandidateWithOutcome({
         title,
         author: fields.author,
         description: fields.description,

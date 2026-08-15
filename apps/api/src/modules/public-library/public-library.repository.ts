@@ -57,6 +57,11 @@ export class PublicLibraryDuplicateMetadataError extends Error {
   }
 }
 
+export interface PublicLibraryPublicationResult {
+  outcome: 'created' | 'unchanged';
+  book: PublicLibraryBookDto;
+}
+
 function canonicalPackage(value: PublicLibraryPackage) {
   return JSON.stringify(value);
 }
@@ -299,7 +304,7 @@ function sameMetadata(
 export class PublicLibraryRepository {
   private readonly inFlightByEdition = new Map<
     string,
-    Promise<PublicLibraryBookDto>
+    Promise<PublicLibraryPublicationResult>
   >();
 
   constructor(
@@ -569,6 +574,12 @@ export class PublicLibraryRepository {
   async publishCandidate(
     input: CanonicalPublicBookCandidate,
   ): Promise<PublicLibraryBookDto> {
+    return (await this.publishCandidateWithOutcome(input)).book;
+  }
+
+  async publishCandidateWithOutcome(
+    input: CanonicalPublicBookCandidate,
+  ): Promise<PublicLibraryPublicationResult> {
     if (
       !input.title ||
       input.source.bytes.length === 0 ||
@@ -619,10 +630,13 @@ export class PublicLibraryRepository {
     };
     const existing = await this.findByEdition(editionHash);
     if (existing) {
-      return this.attachSourceToExisting(
-        this.assertMetadata(existing, candidate),
-        candidate,
-      );
+      return {
+        outcome: 'unchanged',
+        book: await this.attachSourceToExisting(
+          this.assertMetadata(existing, candidate),
+          candidate,
+        ),
+      };
     }
     if (input.source.kind === 'legacy_json') {
       const legacyIdentityHash = sha256(`${input.title}\0${sourceHash}`);
@@ -630,15 +644,19 @@ export class PublicLibraryRepository {
         `public-${legacyIdentityHash.slice(0, 24)}`,
         candidate,
       );
-      if (legacy) return legacy;
+      if (legacy) return { outcome: 'unchanged', book: legacy };
     }
 
     const pending = this.inFlightByEdition.get(editionHash);
     if (pending) {
-      return this.attachSourceToExisting(
-        this.assertMetadata(await pending, candidate),
-        candidate,
-      );
+      const pendingResult = await pending;
+      return {
+        outcome: 'unchanged',
+        book: await this.attachSourceToExisting(
+          this.assertMetadata(pendingResult.book, candidate),
+          candidate,
+        ),
+      };
     }
     const operation = this.publishPrepared(candidate, bookId).finally(() => {
       this.inFlightByEdition.delete(editionHash);
@@ -650,7 +668,7 @@ export class PublicLibraryRepository {
   private async publishPrepared(
     candidate: PreparedCandidate,
     bookId: string,
-  ): Promise<PublicLibraryBookDto> {
+  ): Promise<PublicLibraryPublicationResult> {
     const publishedAt = this.now();
     const book: PublicLibraryBookDto = {
       id: bookId,
@@ -683,7 +701,7 @@ export class PublicLibraryRepository {
 
   private async publishPreparedOnce(
     publication: PreparedPublication,
-  ): Promise<PublicLibraryBookDto> {
+  ): Promise<PublicLibraryPublicationResult> {
     const { candidate, book, packageHash } = publication;
     const publishedAt = book.publishedAt;
 
@@ -761,14 +779,17 @@ export class PublicLibraryRepository {
       ) {
         throw new Error('PUBLIC_LIBRARY_TRANSACTION_READBACK_FAILED');
       }
-      return rowToBook(row);
+      return { outcome: 'created', book: rowToBook(row) };
     } catch (error) {
       const existing = await this.findByEdition(candidate.editionHash);
       if (existing) {
-        return this.attachSourceToExisting(
-          this.assertMetadata(existing, candidate),
-          candidate,
-        );
+        return {
+          outcome: 'unchanged',
+          book: await this.attachSourceToExisting(
+            this.assertMetadata(existing, candidate),
+            candidate,
+          ),
+        };
       }
       throw error;
     }

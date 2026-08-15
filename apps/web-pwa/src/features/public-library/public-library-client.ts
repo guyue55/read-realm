@@ -25,11 +25,18 @@ export interface PublicLibraryPackage {
   }>;
 }
 
+export class PublicLibraryCatalogStaleError extends Error {
+  constructor() {
+    super("PUBLIC_LIBRARY_CATALOG_SNAPSHOT_STALE");
+    this.name = "PublicLibraryCatalogStaleError";
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseBook(value: unknown): PublicLibraryBook {
+export function parsePublicLibraryBook(value: unknown): PublicLibraryBook {
   if (!isRecord(value)) throw new Error("PUBLIC_LIBRARY_RESPONSE_INVALID");
   if (
     typeof value.id !== "string" ||
@@ -56,6 +63,7 @@ export class PublicLibraryApiClient {
     category?: string;
     page: number;
     pageSize: number;
+    snapshotRevision?: number;
   }) {
     const params = new URLSearchParams({
       page: String(input.page),
@@ -63,7 +71,11 @@ export class PublicLibraryApiClient {
     });
     if (input.q) params.set("q", input.q);
     if (input.category) params.set("category", input.category);
+    if (input.snapshotRevision !== undefined) {
+      params.set("snapshotRevision", String(input.snapshotRevision));
+    }
     const response = await fetch(apiUrl(`/public-library/books?${params}`));
+    if (response.status === 409) throw new PublicLibraryCatalogStaleError();
     if (!response.ok) throw new Error("PUBLIC_LIBRARY_UNAVAILABLE");
     const payload: unknown = await response.json();
     if (
@@ -73,16 +85,19 @@ export class PublicLibraryApiClient {
       !Number.isSafeInteger(payload.pageSize) ||
       !Number.isSafeInteger(payload.total) ||
       !Number.isSafeInteger(payload.totalPages) ||
+      !Number.isSafeInteger(payload.snapshotRevision) ||
+      Number(payload.snapshotRevision) < 0 ||
       payload.items.length > 48
     ) {
       throw new Error("PUBLIC_LIBRARY_RESPONSE_INVALID");
     }
     return {
-      items: payload.items.map(parseBook),
+      items: payload.items.map(parsePublicLibraryBook),
       page: Number(payload.page),
       pageSize: Number(payload.pageSize),
       total: Number(payload.total),
       totalPages: Number(payload.totalPages),
+      snapshotRevision: Number(payload.snapshotRevision),
     };
   }
 
@@ -99,7 +114,7 @@ export class PublicLibraryApiClient {
     ) {
       throw new Error("PUBLIC_LIBRARY_PACKAGE_INVALID");
     }
-    const book = parseBook(payload.book);
+    const book = parsePublicLibraryBook(payload.book);
     const chapters = payload.chapters.map((chapter) => {
       if (
         !isRecord(chapter) ||
