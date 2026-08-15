@@ -92,7 +92,7 @@ export function AIReaderPanel({
               <span className="hidden sm:inline">拂尘</span>
             </button>
           )}
-          {isMobileDrawer && onClose && (
+          {onClose && (
             <button
               onClick={onClose}
               aria-label="关闭伴读"
@@ -210,22 +210,6 @@ export function AIReaderPanel({
           </button>
         </div>
       </div>
-
-      {/* 大拇指黄金触控悬浮一键收纳胶囊 */}
-      {isMobileDrawer && onClose && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            data-reader-control
-            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] px-5 text-xs font-bold text-[#2F2A24] shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-md dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(45,45,45,0.92)] dark:text-[#CFCFCF]"
-          >
-            <X aria-hidden="true" size={18} strokeWidth={1.8} /> 收起助手
-          </button>
-        </div>
-      )}
 
       {/* 🧹 国风朱砂红拂尘确认弹窗 */}
       <ConfirmDialog

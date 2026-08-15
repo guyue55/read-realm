@@ -80,7 +80,7 @@ export function TocDrawer({
           >
             {strings.reader.bookmarks}
           </button>
-          {isMobileDrawer && onClose && (
+          {onClose && (
             <button
               aria-label="关闭目录"
               onClick={onClose}

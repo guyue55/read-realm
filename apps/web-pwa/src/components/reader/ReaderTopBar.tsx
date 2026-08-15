@@ -207,8 +207,8 @@ export function ReaderTopBar({
             onClick={onToggleAi}
             data-reader-control
             className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] flex items-center justify-center gap-2"
-            title="智能阅读助手"
-            aria-label="智能阅读助手"
+            title="伴读"
+            aria-label="伴读"
           >
             <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} />
             <span className="hidden lg:inline">{strings.reader.aiSummary}</span>

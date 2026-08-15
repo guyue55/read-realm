@@ -48,24 +48,22 @@ export function SettingsSheet({
 
   return (
     <div className={containerClasses}>
-      {isMobileSheet && (
+      {onClose && (
         <div
-          className={`flex justify-between items-center mb-4 p-4 pb-0 ${bgClass}`}
+          className={`flex items-center justify-between ${isMobileSheet ? `mb-4 p-4 pb-0 ${bgClass}` : "mb-4"}`}
         >
           <h3 className={`font-bold ${textColor}`}>
             {strings.reader.settings}
           </h3>
-          {onClose && (
-            <button
-              aria-label="关闭阅读设置"
-              onClick={onClose}
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring ${mutedText} flex h-11 w-11 items-center justify-center rounded-xl`}
-            >
-              <X aria-hidden="true" size={20} strokeWidth={1.8} />
-            </button>
-          )}
+          <button
+            aria-label="关闭阅读设置"
+            onClick={onClose}
+            data-icon-only="true"
+            data-reader-control
+            className={`reader-control-press reader-focus-ring ${mutedText} flex h-11 w-11 items-center justify-center rounded-xl`}
+          >
+            <X aria-hidden="true" size={20} strokeWidth={1.8} />
+          </button>
         </div>
       )}
 

@@ -121,13 +121,13 @@ export function ReaderBottomBar({
       data-reader-toolbar="bottom"
       inert={!isVisible || backgroundDisabled ? true : undefined}
       style={{ willChange: "transform" }}
-      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-4 pb-4 pt-3 backdrop-blur-xl reader-panel-motion sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 ${shellClass} ${
+      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-3 pb-3 pt-3 backdrop-blur-xl reader-panel-motion sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 sm:px-4 sm:pb-4 ${shellClass} ${
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-6 opacity-0 pointer-events-none"
       }`}
     >
-      <div className="mb-3 grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px_42px] items-center gap-2">
+      <div className="mb-2 grid grid-cols-[44px_44px_minmax(44px,1fr)_44px_44px] items-center gap-1 sm:mb-3 sm:gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -190,12 +190,9 @@ export function ReaderBottomBar({
         >
           <ChevronsRight aria-hidden="true" size={19} strokeWidth={1.8} />
         </button>
-        <span className={`text-right text-xs font-semibold ${mutedClass}`}>
-          {Math.round(tempProgress)}%
-        </span>
       </div>
 
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-6 gap-1 sm:gap-2">
         {actions.map((action) => {
           const Icon = action.icon;
           return (
@@ -204,7 +201,7 @@ export function ReaderBottomBar({
             onClick={action.onClick}
             aria-pressed={action.active}
             data-reader-control
-            className={`reader-control-press reader-focus-ring flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold ${
+            className={`reader-control-press reader-focus-ring flex min-h-[52px] min-w-11 flex-col items-center justify-center gap-1 rounded-[14px] text-[11px] font-semibold ${
               action.active
                 ? activeClass
                 : `${mutedClass} hover:bg-[rgba(80,65,45,0.05)]`
