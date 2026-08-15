@@ -6,10 +6,10 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0504 / B；A 层 canonical publisher、additive schema、原子对象写和 edition/source/receipt 已通过独立复审，下一步只接单文件 multipart adapter，不并行扩张文件夹、扫描、个人发布或多视图。
-- 最近有效提交：e9aa8bc
+- 当前入口：PHASE-05 / TASK-0504 / D；A–C 已依次通过独立复审，下一步只实现 allowlisted 服务端目录扫描、sourceHash receipt 与可恢复 scan generation，不并行扩张个人云快照发布或 taxonomy/facets 四视图。
+- 最近有效提交：0a87a02
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/gate-03-final.json，SHA-256 `58b732862ea4f0172d13bfc0a56d66ff209cd58a8645c05bf3bb008b5eb916ce`，2026-08-15T06:25:33+08:00
-- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A 已通过、B–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
+- 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501/0502/0503 已完成。TASK-0504 A–C 已通过、D–F 仍待实施，PHASE-05、EVID-56/58 与 Goal 仍未完成。
 - 停止原因：无；从 PHASE-05 / TASK-0504 继续，EVID-02/03/04/05/07/16/17/25/57、PHASE-04 失败归档、GATE-03 首轮不可判定证据、旧 `NOT_READY` 审查与历史 ATTEMPT 均不可覆盖。
 - 完成判定：未完成
 
@@ -36,6 +36,8 @@
 - RUN-0044：保持执行中；EVID-57 FINAL 从 clean@`cf1f061` 生成并独立复算 PASS，GATE-03/RISK-05/TASK-0503 完成，当前入口推进至 TASK-0504。该结论只放行公共域扩张，不证明 TASK-0504~0506、PHASE-05 整体、VPS 部署或 Goal 完成。
 - RUN-0045：保持执行中；TASK-0504 扩张规格与 EVID-62 槽冻结，当前入口为 A：canonical publisher、additive schema、原子对象写、edition/source/receipt 和并发/崩溃/重放反例。A 未通过前不并行扩张四个入口。
 - RUN-0046：保持执行中；TASK-0504 A 完成，当前入口推进至 B 单文件 multipart adapter。依据：实现提交 `e9aa8bc`、零延迟双 client 竞态 12/12、旧 GATE-03 package 重放、异来源同 edition、API/storage 全量测试、无 PWA 写入全工作区构建与独立终审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0047：保持执行中；TASK-0504 B 完成，当前入口推进至 C 文件夹队列。依据：实现提交 `acd609a..0fc92de`、有界 multipart/浏览器队列、真实系统 Chrome 上传与匿名浏览回归、两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
+- RUN-0048：保持执行中；TASK-0504 C 完成，当前入口推进至 D allowlisted 服务端目录扫描。依据：实现提交 `0a87a02`、安全 relativePath/顶层 collectionPath、规范化重名拒绝、immutable package overlay 分层、双 client 异目录冲突与两路独立复审 READY；TASK-0504、PHASE-05 与 Goal 仍未完成。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -468,3 +470,12 @@
 - 验证与失败因果：parser-core 11/11、API 80/80、Web 183/183，API/Web typecheck、非写入 lint、API 构建与 `READING_WORLD_VERIFY_NO_PWA_WRITE=1` Web 生产构建均通过。系统 Chrome 上新上传旅程 1/1 与旧 GATE-03 匿名分页/真断网加入 1/1 通过；一次早期回放因跨轮正文相同而正确命中书目冲突，归为 fixture `VALIDATOR_INDETERMINATE`，改为每轮唯一正文后重放通过，不计任何 GATE 设计失败。
 - 独立复审与状态：canonical outcome 与完整 B 边界两路均 `READY_TO_COMMIT`，无 P0/P1 或假绿。TASK-0504 B 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。
 - 下一入口：TASK-0504 C；在现有单文件队列上增加文件夹选择的安全 relativePath/collectionPath、规范化重名拒绝与部分结果。C 独立通过前不进入 D 服务端目录扫描、E 个人云快照或 F 四视图。
+
+### RUN-0048 · 2026-08-15T08:25:40+08:00 · PHASE-05 / TASK-0504 C 文件夹来源与目录归属
+- 本轮边界：只在 B 的有界浏览器队列上增加文件夹选择、规范化 relativePath、顶层 collectionPath 与逐项真实结果；未实现服务端目录扫描、个人云快照发布、taxonomy/facets、四视图或 VPS 操作。实现提交 `0a87a02`，未 push、未部署、未连接真实维护目录或真实馆藏。
+- 路径与设备能力：前后端一致执行 NFC 规范化，拒绝绝对路径、盘符、反斜杠、控制字符、空段、`.`/`..`、超 12 层目录、非 TXT 与上传 basename 不一致；文件夹默认只以第一层目录作为 collectionPath，同时完整 relativePath 作为来源定位保留。浏览器支持 `webkitdirectory` 时读取嵌套 FileList；不支持时明确提示多选 TXT，不虚构文件夹成功。
+- 重名与有界队列：NFC/大小写规范化后相同的路径全部逐项失败，不让遍历顺序决定胜者；既有 200 文件、200 MiB 总量、20 MiB 单本、并发 2 与任务 DOM 50 行上界未回退。安全文件夹条目仍逐本进入 B 的 canonical multipart adapter，部分成功、已存在、冲突和失败继续分别呈现。
+- 目录元数据与不可变正文：collectionPath 纳入同 edition 的元数据冲突判定；direct→folder 或不同顶层目录不再静默 unchanged。双 client 异顶层 12/12 均只有一方 created、另一方 typed conflict，失败方不留下 source/receipt，revision 只增一次；同顶层异深层/来源 12/12 均复用一个 edition 并保留两套来源事实。collectionPath 不进入 immutable package Blob，匿名读取在完整哈希校验后才叠加 DB 当前目录值。
+- 活体与门禁：API 全量 `90/90`、Web 全量 `185/185`，两端 TypeScript、定向非写入 lint、API production build、禁用 PWA 写入的 Web production build 与 `git diff --check` 均通过。`CI=1` 强制新启 API/Web，以系统 Chrome 390x844 从 `webkitRelativePath` 经队列、FormData、真实 API、SQLite 与 Blob 完成文件夹入阁 `1/1`；3100/4100 结束后均 free。
+- 安全与独审：18 个改动文件按 Guyue 同源规则精确扫描 0 命中；全仓 scanner 仍为 PHASE-01 已登记的历史 Red，本轮不声称全仓安全通过。文件边界与核心并发两路独立复审均 `READY_TO_COMMIT`，无 P0/P1 或假绿；未运行 formal TASK-0504 verifier。
+- 状态与下一入口：TASK-0504 C 完成，但 TASK-0504、PHASE-05、EVID-56/58 和 Goal 均未完成。下一入口严格为 D：只实现运维配置 rootId 的 allowlisted 服务端目录扫描、realpath/symlink/regular-file/TOCTOU 边界、sourceHash receipt、单 root generation lease/恢复和 2 GiB/5000 项硬上限；D 独立通过前不进入 E 个人云快照或 F taxonomy/facets 四视图。
