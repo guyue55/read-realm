@@ -112,6 +112,21 @@ export function normalizeRouteState(input: unknown): RouteState {
   return { ...defaultRouteState(), currentView: view as AppView };
 }
 
+export function isRouteState(input: unknown): input is RouteState {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return false;
+  }
+  const candidate = input as Record<string, unknown>;
+  if (
+    typeof candidate.currentView !== "string" ||
+    !APP_VIEWS.has(candidate.currentView as AppView)
+  ) {
+    return false;
+  }
+  const normalized = normalizeRouteState(candidate);
+  return normalized.currentView === candidate.currentView;
+}
+
 export function parseAppLocation(raw: string): RouteState {
   const location = raw.startsWith("#") ? raw.slice(1) : raw;
   if (!location || location === "/" || location === "/library") {

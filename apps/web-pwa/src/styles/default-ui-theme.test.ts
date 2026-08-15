@@ -4,8 +4,8 @@ import { THEMES } from "./themes";
 
 describe("defaultUiTheme", () => {
   it("keeps the prototype UI shell separate from reader page themes", () => {
-    expect(defaultUiTheme.shell.background).toBe("#F8F6F0");
-    expect(defaultUiTheme.shell.sidebarWidth).toBe(128);
+    expect(defaultUiTheme.shell.background).toBe("#F6F4EE");
+    expect(defaultUiTheme.shell.sidebarWidth).toBe(148);
     expect(defaultUiTheme.readerWorkspace.columns).toEqual({
       toc: 240,
       reader: 700,

@@ -9,8 +9,10 @@ export const UI_TOKENS = {
     danger: "#A04439",
   },
   radius: {
-    control: 4,
-    card: 8,
+    control: 10,
+    field: 12,
+    card: 16,
+    panel: 22,
     round: 999,
   },
   space: {

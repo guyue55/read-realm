@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { virtualRouter, RouteState, parseHash } from "@/lib/route-store";
+import { isRouteState } from "@/lib/navigation-state";
 import {
   checkAndRestoreFromBackup,
   db,
@@ -12,8 +13,11 @@ import {
 
 interface SafeWindow {
   requestIdleCallback?: (
-    callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void,
-    options?: { timeout?: number }
+    callback: (deadline: {
+      didTimeout: boolean;
+      timeRemaining: () => number;
+    }) => void,
+    options?: { timeout?: number },
   ) => number;
   cancelIdleCallback?: (id: number) => void;
 }
@@ -53,13 +57,15 @@ export function useRouteStore(): RouteState {
   return useSyncExternalStore(
     virtualRouter.subscribe,
     virtualRouter.getSnapshot,
-    getServerSnapshot
+    getServerSnapshot,
   );
 }
 
 // 虚拟路由副作用容器，接管 popstate、持久特权申请与防蒸发降卷自愈
 export function RouteProvider({ children }: { children: React.ReactNode }) {
-  const [storageState, setStorageState] = useState<"opening" | "ready" | "failed">("opening");
+  const [storageState, setStorageState] = useState<
+    "opening" | "ready" | "failed"
+  >("opening");
   const [storageError, setStorageError] = useState("");
   const [storageNotice, setStorageNotice] = useState("");
   const [storageAttempt, setStorageAttempt] = useState(0);
@@ -83,10 +89,16 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
       }
 
       // A. 自动申请 navigator.storage.persist() 存储持久化特权 (E07-S03)
-      if (typeof navigator !== "undefined" && navigator.storage && navigator.storage.persist) {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.storage &&
+        navigator.storage.persist
+      ) {
         try {
           const isPersisted = await navigator.storage.persist();
-          console.log(`[Storage] 首次冷启动持久化特权状态: ${isPersisted ? "已获得物理保护 (Persisted)" : "未批准物理保护 (Best Effort)"}`);
+          console.log(
+            `[Storage] 首次冷启动持久化特权状态: ${isPersisted ? "已获得物理保护 (Persisted)" : "未批准物理保护 (Best Effort)"}`,
+          );
         } catch (err) {
           console.warn("[Storage] 持久化特权申请受限:", err);
         }
@@ -96,7 +108,9 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
       try {
         const restoreResult = await checkAndRestoreFromBackup();
         if (restoreResult.status === "complete" && active) {
-          console.log(`[Storage] 冷启动自愈完成：已核验恢复 ${restoreResult.restoredBookCount} 本书的全量元数据镜像。`);
+          console.log(
+            `[Storage] 冷启动自愈完成：已核验恢复 ${restoreResult.restoredBookCount} 本书的全量元数据镜像。`,
+          );
         } else if (restoreResult.status === "partial" && active) {
           const message = `检测到本地书架曾被清空。已从轻量应急备份恢复 ${restoreResult.restoredBookCount} / ${restoreResult.expectedBookCount} 本；其余内容需从您的完整备份恢复。`;
           setStorageNotice(message);
@@ -106,7 +120,9 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
           setStorageNotice(message);
           console.warn(`[Storage] ${message}`);
         } else if (restoreResult.status === "failed" && active) {
-          setStorageNotice("检测到本地书架恢复失败，没有把不完整数据标记为成功。请前往数据管理使用完整备份恢复。");
+          setStorageNotice(
+            "检测到本地书架恢复失败，没有把不完整数据标记为成功。请前往数据管理使用完整备份恢复。",
+          );
         }
       } catch (err) {
         console.error("[Storage] 冷启动双轨自愈判定异常:", err);
@@ -133,10 +149,10 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
 
     // D. 挂载浏览器 popstate 拦截桥
     const handlePopState = (e: PopStateEvent) => {
-      if (e.state) {
+      if (isRouteState(e.state)) {
         virtualRouter.emitChange(e.state);
       } else {
-        // 后退到了无状态节点，再次高灵敏读取 Hash 匹配
+        // Next.js 会在 history.state 写入自己的字段；那不是虚拟路由真相。
         const hash = window.location.hash;
         const matchedState = parseHash(hash);
         virtualRouter.emitChange(matchedState);
@@ -147,22 +163,33 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
 
     // E. 挂载断联/切后台即时物理自愈 GC 垃圾回收器 (E07-S06-1)
     const handleVisibilityChange = async () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
         if (!db.isOpen.call(db)) return;
         try {
           const now = Date.now();
           const minimumAgeMs = 2 * 60 * 1000; // 2分钟安全期，避免误杀正在流式导入的活跃任务
           const ghosts = await db.importTasks
-            .filter((task) => shouldSweepLegacyImportTask({
-              createdAt: task.createdAt,
-              chapterCount: task.chapters.length,
-              hasLifecycle: Boolean(task.lifecycle),
-              lifecycleState: task.lifecycle?.state,
-            }, now, minimumAgeMs))
+            .filter((task) =>
+              shouldSweepLegacyImportTask(
+                {
+                  createdAt: task.createdAt,
+                  chapterCount: task.chapters.length,
+                  hasLifecycle: Boolean(task.lifecycle),
+                  lifecycleState: task.lifecycle?.state,
+                },
+                now,
+                minimumAgeMs,
+              ),
+            )
             .toArray();
           if (ghosts.length > 0) {
-            await db.importTasks.bulkDelete(ghosts.map(g => g.id));
-            console.log(`[Storage GC] 🧹 离场清算！在切后台/断联瞬间物理驱逐了 ${ghosts.length} 个空壳草稿任务。`);
+            await db.importTasks.bulkDelete(ghosts.map((g) => g.id));
+            console.log(
+              `[Storage GC] 🧹 离场清算！在切后台/断联瞬间物理驱逐了 ${ghosts.length} 个空壳草稿任务。`,
+            );
           }
         } catch (err) {
           console.warn("[Storage GC] 离场静默清扫遭遇意外阻碍:", err);
@@ -178,7 +205,10 @@ export function RouteProvider({ children }: { children: React.ReactNode }) {
       active = false;
       window.removeEventListener("popstate", handlePopState);
       if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange,
+        );
       }
     };
   }, [storageAttempt]);

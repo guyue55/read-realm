@@ -37,7 +37,7 @@ export function IconButton({
       {...buttonProps}
       aria-busy={loading || undefined}
       aria-label={label}
-      className={`ui-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:h-[18px] [&>svg]:w-[18px] ${TONE_CLASSES[tone]} ${className}`}
+      className={`ui-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:h-[18px] [&>svg]:w-[18px] [&>svg]:stroke-[1.75] ${TONE_CLASSES[tone]} ${className}`}
       disabled={disabled || loading}
       title={tooltip}
       type={type}

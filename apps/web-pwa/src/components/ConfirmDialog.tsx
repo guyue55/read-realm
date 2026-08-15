@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 
 export interface ConfirmDialogProps {
@@ -22,13 +23,10 @@ export interface ConfirmDialogProps {
   onCancel?: () => void;
   /** 关闭弹窗的物理动作 */
   onClose: () => void;
+  /** 触发控件消失时的安全焦点落点 */
+  fallbackFocus?: () => HTMLElement | null;
 }
 
-/**
- * ConfirmDialog - 极奢雅致国风拟物多端定制弹窗
- * 四周环绕古典双线折页边框，背景高斯模糊与暖米宣纸。
- * 针对 PC 宽屏及 PWA 移动端视口进行了 100% 物理自适应避让，支持触屏边缘安全距离。
- */
 export function ConfirmDialog({
   isOpen,
   title,
@@ -40,20 +38,25 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   onClose,
+  fallbackFocus,
 }: ConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) setErrorMessage("");
+  }, [isOpen]);
 
-  // 物理执行确认，捕获异步状态，引入防抖
   const handleConfirm = async () => {
     if (loading) return;
     try {
+      setErrorMessage("");
       setLoading(true);
       await onConfirm();
       onClose();
     } catch (err) {
       console.error("弹窗确认操作执行异常:", err);
+      setErrorMessage("操作未完成，请检查当前状态后重试。");
     } finally {
       setLoading(false);
     }
@@ -65,78 +68,65 @@ export function ConfirmDialog({
     onClose();
   };
 
-  // 根据设计系统和操作危险等级，调配中式典雅配色
-  const themeStyles = isDanger
-    ? {
-        accentColor: "bg-[#B86B5C] hover:bg-[#A64B3B] text-white shadow-[0_4px_12px_rgba(184,107,92,0.2)]",
-        badgeBg: "bg-[#FFF0EC] text-[#B86B5C] border-[#FCE0DA]",
-        badgeIcon: "印",
-        defaultConfirmText: "决定",
-        defaultCancelText: "作罢",
-      }
-    : {
-        accentColor: "bg-[#5F7D52] hover:bg-[#4A6B40] text-white shadow-[0_4px_12px_rgba(95,125,82,0.2)]",
-        badgeBg: "bg-[#EEF2E9] text-[#5F7D52] border-[#CDD8C5]",
-        badgeIcon: "卷",
-        defaultConfirmText: "善也",
-        defaultCancelText: "免去",
-      };
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <ReaderDialogSurface
       open={isOpen}
       label={title}
       onClose={handleCancel}
-      fallbackFocus={() => null}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2C2621]/45 backdrop-blur-sm animate-in fade-in duration-300"
+      fallbackFocus={
+        fallbackFocus ??
+        (() => document.querySelector<HTMLElement>("main, [data-app-main]"))
+      }
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-[#25231f]/40 p-3 backdrop-blur-[2px] sm:items-center sm:p-6"
+      data-ui-confirm-dialog="true"
       onClick={handleCancel}
     >
       <div
-        className="relative max-w-md w-full bg-[#FAF6EE] dark:bg-[#1E1B18] rounded-[24px] border border-[#DFD1BF] dark:border-[#3E352E] shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-300 flex flex-col gap-5 text-left"
+        className="flex max-h-[min(78vh,560px)] w-full max-w-md flex-col gap-5 overflow-y-auto rounded-[var(--radius-panel)] border border-[var(--ui-border)] bg-[var(--ui-surface)] p-5 text-left shadow-[var(--shadow-raised)] sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 🏮 古典双线细描折页边框 */}
-        <div className="absolute inset-3 rounded-[18px] border border-[#E9DCC8]/60 dark:border-[#2D2620]/60 pointer-events-none" />
-
-        <div className="flex items-center gap-4 relative z-10">
-          {/* 中式典雅印章 */}
-          <div className={`w-11 h-11 rounded-full border flex items-center justify-center font-serif text-sm font-bold shadow-inner shrink-0 ${themeStyles.badgeBg}`}>
-            <span>{themeStyles.badgeIcon}</span>
-          </div>
-          <div>
-            <h3 className="text-lg font-bold font-serif text-[#2F2A24] dark:text-[#E8DFD8]">
-              {title}
-            </h3>
-          </div>
-        </div>
-
-        {/* 弹窗核心说明正文 */}
-        <p className="text-sm font-serif text-[#5C5446] dark:text-[#C5B9AD] leading-relaxed pl-1 whitespace-pre-line relative z-10">
+        <h2 className="[font-family:var(--font-display)] text-lg font-semibold text-[var(--ui-text)]">
+          {title}
+        </h2>
+        <p className="whitespace-pre-line text-sm leading-6 text-[var(--ui-muted)]">
           {message}
         </p>
+        {errorMessage && (
+          <p className="rounded-[var(--radius-control)] border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] p-3 text-sm text-[var(--color-danger)]" role="alert">
+            {errorMessage}
+          </p>
+        )}
 
-        {/* 底部按钮栏 */}
-        <div className="flex gap-3 justify-end mt-2 relative z-10">
+        <div className="mt-1 flex justify-end gap-3">
           {!isAlert && (
             <button
               onClick={handleCancel}
               disabled={loading}
               data-reader-control
-              className="reader-focus-ring min-h-11 px-5 py-2 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] border border-[rgba(80,65,45,0.08)] text-[#6F665B] dark:text-[#A89F95] text-sm font-semibold rounded-full transition-all font-serif active:scale-95 disabled:opacity-50"
+              className="ui-focus-ring min-h-11 min-w-11 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-5 text-sm font-semibold text-[var(--ui-muted)] disabled:opacity-50"
+              type="button"
             >
-              {cancelText || themeStyles.defaultCancelText}
+              {cancelText || "取消"}
             </button>
           )}
           <button
             onClick={handleConfirm}
             disabled={loading}
             data-reader-control
-            className={`reader-focus-ring min-h-11 px-6 py-2.5 text-sm font-semibold rounded-full transition-all font-serif active:scale-95 flex items-center justify-center min-w-[72px] disabled:opacity-50 ${themeStyles.accentColor}`}
+            className={`ui-focus-ring inline-flex min-h-11 min-w-20 items-center justify-center rounded-[var(--radius-control)] px-5 text-sm font-semibold text-white disabled:opacity-50 ${
+              isDanger
+                ? "bg-[var(--color-danger)]"
+                : "bg-[var(--ui-accent)]"
+            }`}
+            type="button"
           >
-            {loading ? "雕印中..." : (confirmText || (isAlert ? "知晓" : themeStyles.defaultConfirmText))}
+            {loading ? "处理中…" : (confirmText || (isAlert ? "知道了" : "确认"))}
           </button>
         </div>
       </div>
-    </ReaderDialogSurface>
+    </ReaderDialogSurface>,
+    document.body,
   );
 }

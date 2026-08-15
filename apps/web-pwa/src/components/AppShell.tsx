@@ -4,11 +4,20 @@ import Link from "next/link";
 import React, { useEffect, useRef } from "react";
 import { ArrowLeft, Wifi, WifiOff } from "lucide-react";
 import { useRouteStore } from "@/components/RouteProvider";
-import { APP_NAV_ITEMS, type AppNavItem } from "@/components/app-shell/nav-items";
+import {
+  APP_NAV_ITEMS,
+  type AppNavItem,
+} from "@/components/app-shell/nav-items";
 import { IconButton } from "@/components/ui/IconButton";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { PRODUCT_LANGUAGE } from "@/lib/product-language";
-import { useVirtualRouter, viewScrollMemory } from "@/lib/route-store";
+import {
+  readViewScrollPosition,
+  readViewSourceFocus,
+  rememberViewScrollPosition,
+  parseHash,
+  useVirtualRouter,
+} from "@/lib/route-store";
 import type { AppView } from "@/lib/navigation-state";
 
 export interface AppShellProps {
@@ -50,7 +59,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
     <span
       aria-hidden="true"
       className={`flex shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-stamp)] bg-[var(--color-primary)] [font-family:var(--font-display)] font-semibold text-white ${
-        compact ? "h-9 w-9 text-base" : "h-10 w-10 text-lg"
+        compact ? "h-11 w-11 text-base" : "h-10 w-10 text-lg"
       }`}
     >
       墨
@@ -72,6 +81,7 @@ export function AppShell({
   const activeTaskId = routeStore?.activeTaskId ?? "";
   const router = useVirtualRouter();
   const mainRef = useRef<HTMLElement | null>(null);
+  const restoringScrollRef = useRef(true);
   const isOnline = useOnlineStatus();
   const scrollKey = getScrollKey(currentView, activeBookId, activeTaskId);
 
@@ -79,10 +89,37 @@ export function AppShell({
     const container = mainRef.current;
     if (!container) return;
 
-    const timer = window.setTimeout(() => {
-      container.scrollTop = viewScrollMemory[scrollKey] ?? 0;
-    }, 60);
-    return () => window.clearTimeout(timer);
+    restoringScrollRef.current = true;
+    const desiredScrollTop = readViewScrollPosition(scrollKey);
+    let attempts = 0;
+    let cancelled = false;
+    let timer = 0;
+    const restoreScroll = () => {
+      if (cancelled) return;
+      container.scrollTop = desiredScrollTop;
+      attempts += 1;
+      const availableScroll = Math.max(
+        0,
+        container.scrollHeight - container.clientHeight,
+      );
+      if (
+        desiredScrollTop === 0 ||
+        availableScroll >= desiredScrollTop ||
+        attempts >= 40
+      ) {
+        window.requestAnimationFrame(() => {
+          restoringScrollRef.current = false;
+        });
+        return;
+      }
+      timer = window.setTimeout(restoreScroll, 50);
+    };
+    timer = window.setTimeout(restoreScroll, 60);
+    return () => {
+      cancelled = true;
+      restoringScrollRef.current = true;
+      window.clearTimeout(timer);
+    };
   }, [scrollKey]);
 
   useEffect(() => {
@@ -90,11 +127,42 @@ export function AppShell({
     if (!container) return;
 
     const handleScroll = () => {
-      viewScrollMemory[scrollKey] = container.scrollTop;
+      if (restoringScrollRef.current) return;
+      if (parseHash(window.location.hash).currentView !== currentView) return;
+      rememberViewScrollPosition(scrollKey, container.scrollTop);
     };
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [scrollKey]);
+  }, [currentView, scrollKey]);
+
+  useEffect(() => {
+    if (currentView !== "library") return;
+    const sourceId = readViewSourceFocus("library");
+    if (!sourceId) return;
+
+    let attempts = 0;
+    let cancelled = false;
+    const restoreFocus = () => {
+      if (cancelled) return;
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-book-id]"),
+      ).find((element) => element.dataset.bookId === sourceId);
+      if (target) {
+        const focusTarget =
+          target.querySelector<HTMLElement>("[data-library-entry-primary]") ??
+          target;
+        focusTarget.focus({ preventScroll: true });
+        return;
+      }
+      attempts += 1;
+      if (attempts < 40) window.setTimeout(restoreFocus, 50);
+    };
+    const timer = window.setTimeout(restoreFocus, 80);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [currentView, scrollKey]);
 
   const navigate = (href: string) => {
     router.push(href);
@@ -145,7 +213,11 @@ export function AppShell({
                 }}
                 title={item.term.plain}
               >
-                <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" strokeWidth={1.7} />
+                <Icon
+                  aria-hidden="true"
+                  className="h-[18px] w-[18px] shrink-0"
+                  strokeWidth={1.7}
+                />
                 <span>{item.term.label}</span>
               </Link>
             );
@@ -155,9 +227,15 @@ export function AppShell({
         <div className="border-t border-[var(--color-border-soft)] px-1 pt-4">
           <div className="flex items-start gap-2 text-[var(--color-muted)]">
             {isOnline ? (
-              <Wifi aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-info)]" />
+              <Wifi
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-info)]"
+              />
             ) : (
-              <WifiOff aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-danger)]" />
+              <WifiOff
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-danger)]"
+              />
             )}
             <span className="min-w-0">
               <span className="block text-xs font-semibold text-[var(--color-text)]">
@@ -177,7 +255,9 @@ export function AppShell({
 
       <main
         className="h-full min-w-0 flex-1 overflow-y-auto pb-[calc(78px+env(safe-area-inset-bottom))] md:pb-0"
+        data-app-main
         ref={mainRef}
+        tabIndex={-1}
       >
         <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-background)]">
           <div className="mx-auto flex min-h-16 w-full max-w-[var(--content-max-width)] items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
@@ -224,7 +304,9 @@ export function AppShell({
             </div>
 
             {rightNodes && (
-              <div className="flex shrink-0 items-center gap-2">{rightNodes}</div>
+              <div className="flex shrink-0 items-center gap-2">
+                {rightNodes}
+              </div>
             )}
           </div>
         </header>
@@ -261,7 +343,11 @@ export function AppShell({
               }}
               title={item.term.plain}
             >
-              <Icon aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              <Icon
+                aria-hidden="true"
+                className="h-[18px] w-[18px]"
+                strokeWidth={1.8}
+              />
               <span className="max-w-full truncate">{item.term.label}</span>
             </Link>
           );
