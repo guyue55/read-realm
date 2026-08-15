@@ -18,6 +18,9 @@ import {
 } from "@reader/shared-types";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { StatePanel } from "@/components/ui/StatePanel";
+import { StatusNotice } from "@/components/ui/StatusNotice";
 import {
   PublicLibraryCatalogStaleError,
   publicLibraryApiClient,
@@ -37,7 +40,7 @@ import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
 
 const views = [
   { id: "books", label: "书籍", icon: BookOpen },
-  { id: "maintainers", label: "维护者", icon: Users },
+  { id: "maintainers", label: "维护者标识", icon: Users },
   { id: "categories", label: "分类", icon: FolderTree },
   { id: "tags", label: "标签", icon: Tags },
 ] as const;
@@ -69,7 +72,10 @@ export default function PublicLibraryPage() {
   const [facets, setFacets] = useState<PublicLibraryFacet[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<{
+    text: string;
+    tone: "neutral" | "success" | "warning" | "danger";
+  } | null>(null);
   const [loadError, setLoadError] = useState("");
   const [joiningId, setJoiningId] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -187,7 +193,10 @@ export default function PublicLibraryPage() {
         setLoadError("");
         if (catalogRestartNoticeRef.current) {
           catalogRestartNoticeRef.current = false;
-          setMessage("馆藏刚刚有更新，已从第一页重新整理。");
+          setNotice({
+            text: "馆藏刚刚有更新，已从第一页重新整理。",
+            tone: "warning",
+          });
         }
       })
       .catch((error: unknown) => {
@@ -211,18 +220,21 @@ export default function PublicLibraryPage() {
     setBooks([]);
     setFacets([]);
     setLoadError("");
-    setMessage("");
+    setNotice(null);
   };
 
   const joinBook = async (book: PublicLibraryBook) => {
     if (joiningId) return;
     setJoiningId(book.id);
-    setMessage("");
+    setNotice(null);
     try {
       const result = await publicLibraryJoinService.join(book.id);
       router.push(`/reader/${result.localBookId}`);
     } catch {
-      setMessage("整本正文未能完整加入，本地书架没有留下半本书。请稍后重试。");
+      setNotice({
+        text: "整本正文未能完整加入，本地书架没有留下半本书。请稍后重试。",
+        tone: "danger",
+      });
     } finally {
       setJoiningId("");
     }
@@ -235,8 +247,8 @@ export default function PublicLibraryPage() {
           title="藏经阁"
           subtitle={
             maintenanceAvailable
-              ? "公共明文馆藏 · 加入后保存在本机"
-              : "可匿名浏览 · 入阁需先在书架设置私有云密钥"
+              ? "公共明文馆藏 · 匿名可浏览；上传需要维护口令"
+              : "公共明文馆藏 · 匿名可浏览；上传前请在书架设置私有云访问口令"
           }
           rightNodes={
             <div className="flex items-center gap-2">
@@ -248,7 +260,7 @@ export default function PublicLibraryPage() {
                 title={
                   maintenanceAvailable
                     ? "选择 TXT 文件入阁"
-                    : "请先在书架设置私有云密钥"
+                    : "请先在书架设置私人云访问口令"
                 }
                 type="button"
               >
@@ -266,38 +278,25 @@ export default function PublicLibraryPage() {
           }
         >
           <section className="ui-card rounded-[var(--radius-card)] p-4 sm:p-5">
-            <div
-              aria-label="藏经阁视图"
-              className="mb-4 grid grid-cols-4 gap-2"
-              role="tablist"
-            >
-              {views.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    aria-selected={view === item.id}
-                    className={`ui-focus-ring inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-2 text-sm font-semibold ${
-                      view === item.id
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-                        : "border-[var(--color-border)] bg-white/70 text-[var(--color-muted)]"
-                    }`}
-                    key={item.id}
-                    onClick={() => {
-                      if (view === item.id) return;
-                      beginCatalogTransition();
-                      catalogSnapshotRef.current = undefined;
-                      setView(item.id);
-                      setPage(1);
-                    }}
-                    role="tab"
-                    type="button"
-                  >
-                    <Icon aria-hidden="true" className="h-4 w-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentedControl
+              className="mb-4"
+              label="藏经阁视图"
+              onChange={(nextView) => {
+                if (view === nextView) return;
+                beginCatalogTransition();
+                catalogSnapshotRef.current = undefined;
+                setView(nextView);
+                setPage(1);
+              }}
+              options={views.map((item) => ({
+                icon: <item.icon aria-hidden="true" />,
+                label: item.label,
+                value: item.id,
+              }))}
+              panelId="public-library-catalog-panel"
+              semantics="tabs"
+              value={view}
+            />
             <form
               className="grid grid-cols-[minmax(0,1fr)_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
               onSubmit={(event) => {
@@ -321,7 +320,7 @@ export default function PublicLibraryPage() {
                   maxLength={120}
                   placeholder={
                     view === "books"
-                      ? "按书名、作者或维护者检索"
+                      ? "按书名、作者或维护者标识检索"
                       : "检索当前视图"
                   }
                   value={queryInput}
@@ -397,7 +396,7 @@ export default function PublicLibraryPage() {
                 <span>当前筛选：</span>
                 {tagId && (
                   <button
-                    className="ui-focus-ring min-h-11 rounded-full border border-[var(--color-border)] px-4"
+                    className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border border-[var(--color-border)] px-4"
                     onClick={() => {
                       beginCatalogTransition();
                       setTagId("");
@@ -410,7 +409,7 @@ export default function PublicLibraryPage() {
                 )}
                 {maintainerId && (
                   <button
-                    className="ui-focus-ring min-h-11 rounded-full border border-[var(--color-border)] px-4"
+                    className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border border-[var(--color-border)] px-4"
                     onClick={() => {
                       beginCatalogTransition();
                       setMaintainerId("");
@@ -418,196 +417,215 @@ export default function PublicLibraryPage() {
                     }}
                     type="button"
                   >
-                    清除维护者筛选
+                    清除维护者标识筛选
                   </button>
                 )}
               </div>
             )}
           </section>
 
-          {message && (
-            <p
-              className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white/75 p-4 text-sm"
-              role="alert"
-            >
-              {message}
-            </p>
-          )}
-          {loadError && (
-            <p
-              className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white/75 p-4 text-sm"
-              role="alert"
-            >
-              {loadError}
-            </p>
-          )}
-          {state === "loading" ? (
-            <p
-              className="py-16 text-center text-sm text-[var(--color-muted)]"
-              role="status"
-            >
-              正在整理馆藏…
-            </p>
-          ) : state === "error" ? (
-            <div className="ui-card mt-5 rounded-[var(--radius-card)] py-12 text-center">
-              <p className="text-sm text-[var(--color-muted)]">
-                当前视图没有载入，私人书架与已加入正文不受影响。
-              </p>
-              <button
-                className="ui-focus-ring mt-4 min-h-11 rounded-full border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)]"
-                onClick={() => {
-                  beginCatalogTransition();
-                  setReloadNonce((value) => value + 1);
-                }}
-                type="button"
-              >
-                重新载入
-              </button>
-            </div>
-          ) : state === "ready" &&
-            (view === "books" ? books.length === 0 : facets.length === 0) ? (
-            <div className="ui-card mt-5 rounded-[var(--radius-card)] py-16 text-center">
-              <BookOpen
-                aria-hidden="true"
-                className="mx-auto h-7 w-7 text-[var(--color-muted)]"
+          <div
+            aria-label={`${views.find((item) => item.id === view)?.label ?? "馆藏"}内容`}
+            id="public-library-catalog-panel"
+            role="tabpanel"
+            tabIndex={0}
+          >
+          {notice && (
+            <StatusNotice className="mt-4" tone={notice.tone}>
+              {notice.text}
+              </StatusNotice>
+            )}
+            {state === "loading" ? (
+              <StatePanel kind="loading" title="正在整理馆藏" />
+            ) : state === "error" ? (
+              <StatePanel
+                action={
+                  <button
+                    className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)]"
+                    onClick={() => {
+                      beginCatalogTransition();
+                      setReloadNonce((value) => value + 1);
+                    }}
+                    type="button"
+                  >
+                    重新载入
+                  </button>
+                }
+                description={`${loadError || "公共馆藏暂时不可用。"} 私人书架与已经加入的正文不受影响。`}
+                kind="error"
+                title="当前视图未能载入"
               />
-              <p className="mt-3 text-sm text-[var(--color-muted)]">
-                当前视图暂时没有匹配内容
-              </p>
-            </div>
-          ) : view === "books" ? (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {books.map((book) => (
-                <article
-                  className="ui-card flex min-w-0 gap-4 rounded-[var(--radius-card)] p-4"
-                  data-public-library-book
-                  key={book.id}
-                >
-                  <BookCover
-                    className="h-24 w-16 shrink-0"
-                    compact
-                    title={book.title}
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-xs font-semibold text-[var(--color-primary)]">
-                      {book.category}
-                    </span>
-                    <h2 className="mt-1 line-clamp-2 [font-family:var(--font-display)] text-base font-semibold">
-                      {book.title}
-                    </h2>
-                    <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                      {book.author || "佚名"} · {book.chapterCount} 章
-                    </p>
-                    <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                      {book.maintainerLabel || "本阁维护者"}
-                      {book.tags?.length
-                        ? ` · ${book.tags.map((tag) => tag.label).join(" / ")}`
-                        : ""}
-                    </p>
-                    <div className="mt-auto flex flex-wrap gap-2 pt-3">
-                      <button
-                        className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-4 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
-                        disabled={Boolean(joiningId)}
-                        onClick={() => void joinBook(book)}
-                        type="button"
-                      >
-                        <Download aria-hidden="true" className="h-4 w-4" />
-                        {joiningId === book.id ? "正在完整加入" : "加入书架"}
-                      </button>
-                      {maintenanceAvailable && (
+            ) : state === "ready" &&
+              (view === "books" ? books.length === 0 : facets.length === 0) ? (
+              <StatePanel
+                action={
+                  appliedQuery || categoryId || tagId || maintainerId ? (
+                    <button
+                      className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-5 text-sm font-semibold text-[var(--color-primary)]"
+                      onClick={() => {
+                        beginCatalogTransition();
+                        catalogSnapshotRef.current = undefined;
+                        setQueryInput("");
+                        setAppliedQuery("");
+                        setCategoryId("");
+                        setTagId("");
+                        setMaintainerId("");
+                        setPage(1);
+                      }}
+                      type="button"
+                    >
+                      清除筛选
+                    </button>
+                  ) : undefined
+                }
+                description={
+                  appliedQuery || categoryId || tagId || maintainerId
+                    ? "可以修改检索词或清除当前筛选。"
+                    : "这里暂时还没有可浏览的公共内容。"
+                }
+                kind="empty"
+                title={
+                  appliedQuery || categoryId || tagId || maintainerId
+                    ? "没有符合当前条件的内容"
+                    : view === "books"
+                      ? "藏经阁暂无馆藏"
+                      : "当前视图暂无内容"
+                }
+              />
+            ) : view === "books" ? (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {books.map((book) => (
+                  <article
+                    className="ui-card flex min-w-0 gap-4 rounded-[var(--radius-card)] p-4"
+                    data-public-library-book
+                    key={book.id}
+                  >
+                    <BookCover
+                      className="h-24 w-16 shrink-0"
+                      compact
+                      title={book.title}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-xs font-semibold text-[var(--color-primary)]">
+                        {book.category}
+                      </span>
+                      <h2 className="mt-1 line-clamp-2 [font-family:var(--font-display)] text-base font-semibold">
+                        {book.title}
+                      </h2>
+                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                        {book.author || "佚名"} · {book.chapterCount} 章
+                      </p>
+                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                        {book.maintainerLabel || "维护来源未标注"}
+                        {book.tags?.length
+                          ? ` · ${book.tags.map((tag) => tag.label).join(" / ")}`
+                          : ""}
+                      </p>
+                      <div className="mt-auto flex flex-wrap gap-2 pt-3">
                         <button
-                          aria-label={`整理《${book.title}》目录`}
-                          className="ui-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)]"
-                          onClick={(event) => {
-                            editButtonRef.current = event.currentTarget;
-                            setEditingBook(book);
-                          }}
+                          className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-4 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
+                          disabled={Boolean(joiningId)}
+                          onClick={() => void joinBook(book)}
                           type="button"
                         >
-                          <Settings2 aria-hidden="true" className="h-4 w-4" />
+                          <Download aria-hidden="true" className="h-4 w-4" />
+                          {joiningId === book.id ? "正在完整加入" : "加入书架"}
                         </button>
-                      )}
+                        {maintenanceAvailable && (
+                          <button
+                            aria-label={`整理《${book.title}》目录`}
+                            className="ui-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)]"
+                            onClick={(event) => {
+                              editButtonRef.current = event.currentTarget;
+                              setEditingBook(book);
+                            }}
+                            type="button"
+                          >
+                            <Settings2 aria-hidden="true" className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {facets.map((facet) => (
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {facets.map((facet) => (
+                  <button
+                    className="ui-card ui-focus-ring flex min-h-24 min-w-0 items-center justify-between gap-4 rounded-[var(--radius-card)] p-5 text-left"
+                    data-public-library-facet
+                    key={facet.id}
+                    onClick={() => {
+                      beginCatalogTransition();
+                      catalogSnapshotRef.current = undefined;
+                      if (view === "categories") {
+                        setCategoryId(facet.id as PublicLibraryCategoryId);
+                        setTagId("");
+                        setMaintainerId("");
+                      } else if (view === "tags") {
+                        setCategoryId("");
+                        setTagId(facet.id as PublicLibraryTagId);
+                        setMaintainerId("");
+                      } else {
+                        setCategoryId("");
+                        setTagId("");
+                        setMaintainerId(facet.id);
+                      }
+                      setView("books");
+                      setPage(1);
+                    }}
+                    type="button"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate [font-family:var(--font-display)] text-base font-semibold">
+                        {facet.label}
+                      </span>
+                      <span className="mt-1 block text-xs text-[var(--color-muted)]">
+                        点击查看馆藏
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-sm font-semibold text-[var(--color-primary)]">
+                      {facet.bookCount}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <nav
+                aria-label="馆藏分页"
+                className="mt-6 flex items-center justify-center gap-3"
+              >
                 <button
-                  className="ui-card ui-focus-ring flex min-h-24 min-w-0 items-center justify-between gap-4 rounded-[var(--radius-card)] p-5 text-left"
-                  data-public-library-facet
-                  key={facet.id}
+                  className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border px-4 text-sm disabled:opacity-40"
+                  disabled={page <= 1}
                   onClick={() => {
                     beginCatalogTransition();
-                    catalogSnapshotRef.current = undefined;
-                    if (view === "categories") {
-                      setCategoryId(facet.id as PublicLibraryCategoryId);
-                      setTagId("");
-                      setMaintainerId("");
-                    } else if (view === "tags") {
-                      setCategoryId("");
-                      setTagId(facet.id as PublicLibraryTagId);
-                      setMaintainerId("");
-                    } else {
-                      setCategoryId("");
-                      setTagId("");
-                      setMaintainerId(facet.id);
-                    }
-                    setView("books");
-                    setPage(1);
+                    setPage((value) => value - 1);
                   }}
                   type="button"
                 >
-                  <span className="min-w-0">
-                    <span className="block truncate [font-family:var(--font-display)] text-base font-semibold">
-                      {facet.label}
-                    </span>
-                    <span className="mt-1 block text-xs text-[var(--color-muted)]">
-                      点击查看馆藏
-                    </span>
-                  </span>
-                  <span className="shrink-0 rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-sm font-semibold text-[var(--color-primary)]">
-                    {facet.bookCount}
-                  </span>
+                  上一页
                 </button>
-              ))}
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <nav
-              aria-label="馆藏分页"
-              className="mt-6 flex items-center justify-center gap-3"
-            >
-              <button
-                className="ui-focus-ring min-h-11 rounded-full border px-4 text-sm disabled:opacity-40"
-                disabled={page <= 1}
-                onClick={() => {
-                  beginCatalogTransition();
-                  setPage((value) => value - 1);
-                }}
-                type="button"
-              >
-                上一页
-              </button>
-              <span className="text-sm text-[var(--color-muted)]">
-                {page} / {totalPages}
-              </span>
-              <button
-                className="ui-focus-ring min-h-11 rounded-full border px-4 text-sm disabled:opacity-40"
-                disabled={page >= totalPages}
-                onClick={() => {
-                  beginCatalogTransition();
-                  setPage((value) => value + 1);
-                }}
-                type="button"
-              >
-                下一页
-              </button>
-            </nav>
-          )}
+                <span className="text-sm text-[var(--color-muted)]">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border px-4 text-sm disabled:opacity-40"
+                  disabled={page >= totalPages}
+                  onClick={() => {
+                    beginCatalogTransition();
+                    setPage((value) => value + 1);
+                  }}
+                  type="button"
+                >
+                  下一页
+                </button>
+              </nav>
+            )}
+          </div>
         </AppShell>
       </div>
       <PublicLibraryImportDialog
@@ -629,7 +647,10 @@ export default function PublicLibraryPage() {
           catalogSnapshotRef.current = undefined;
           setPage(1);
           setReloadNonce((value) => value + 1);
-          setMessage("目录信息已更新，正文包保持不变。");
+          setNotice({
+            text: "目录信息已更新，正文包保持不变。",
+            tone: "success",
+          });
           setBooks((current) =>
             current.map((book) => (book.id === updated.id ? updated : book)),
           );

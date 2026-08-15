@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { AppToastProvider } from "@/components/ui/AppToast";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -35,14 +36,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        <ServiceWorkerRegistration />
-        <OfflineBadge />
-        {children}
+    <html
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      lang="zh-CN"
+      suppressHydrationWarning
+    >
+      <body className="antialiased" suppressHydrationWarning>
+        <AppToastProvider>
+          <ServiceWorkerRegistration />
+          <OfflineBadge />
+          {children}
+        </AppToastProvider>
       </body>
     </html>
   );

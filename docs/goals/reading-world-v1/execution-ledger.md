@@ -6,7 +6,7 @@
 - Goal ID：GOAL-READING-WORLD-V1
 - 当前状态：执行中
 - 当前阶段 ID：PHASE-05
-- 当前入口：PHASE-05 / TASK-0505；先只读审计书架、藏经阁与移动导航的信息层级、共享状态组件和视觉一致性，再以最小可逆切片优化；不提前运行 TASK-0506 阶段总验收。
+- 当前入口：PHASE-05 / TASK-0505 D；仅收敛阅读器 desktop/mobile chrome 为当前 viewport 的单一响应式子树，保持语义锚点、面板、焦点和 AI effect 唯一；不提前运行 TASK-0506 阶段总验收。
 - 最近有效提交：bcbff53
 - 最近新鲜证据：docs/goals/reading-world-v1/evidence/artifacts/task-0504-expansion-attempt-01.json，SHA-256 `7dbce7835f458f194acced8a612b2d5140a623236e79e233555afe3e186bef90`，2026-08-15T12:51:35+08:00
 - 当前阻塞：无；PHASE-02/03/04、GATE-00/01/03 与 RISK-03/05 已通过，TASK-0501~0504 已完成。PHASE-05、TASK-0505/0506、EVID-56/58 与 Goal 仍未完成。
@@ -43,6 +43,7 @@
 - RUN-0051：保持执行中；TASK-0504 F 实现完成，当前入口推进至 EVID-62 独立扩张检查器。依据：实现提交 `5df9347`、稳定 taxonomy ID/双层 DB 约束、版本化 catalog overlay、24 项 books/facets 分页、NFKC FTS/反向 tag 索引、catalogRevision 四视图失效、真实 Chrome 409/迟到响应/dialog 旅程与三路独立终审 READY。EVID-62 未通过前 TASK-0504、PHASE-05 与 Goal 仍未完成。
 - RUN-0052：保持执行中；EVID-62 在 clean@`0dcae90` 正式运行并经三路独立复算 PASS，TASK-0504 完成，当前入口推进至 TASK-0505。依据：14/14 checks/records、唯一 production Chrome、16+7+1+1 混合 25 本、24+1 分页、终态 26 本/revision 27、精确 provenance/Blob、故障与离线阅读、个人事实/源树/进程/清理均闭合。该 ATTEMPT 不证明 EVID-56/58 FINAL、TASK-0505/0506、PHASE-05、VPS 或 Goal 完成。
 - RUN-0053：保持执行中；TASK-0505 合同已冻结，A 真相/返回上下文与 B 共享交互候选经真实 500 本旅程和独立复审放行提交。当前入口推进至 C 信息层级/视觉语言，随后才执行 D 单一响应式阅读器子树；TASK-0505、TASK-0506、PHASE-05 与 Goal 均未完成，不引入 GSAP，不运行阶段总验收。
+- RUN-0054：保持执行中；TASK-0505 C 信息层级/视觉语言候选经全量 Web 门、production build、真实 340/500 本 Chrome 旅程与三路独立复审放行。当前入口推进至 D 单一响应式阅读器子树；TASK-0505、TASK-0506、PHASE-05、EVID-56/58 与 Goal 均未完成，未运行 formal、未部署 VPS。
 
 ## 设计门失败记录
 | 尝试 ID | 控制修订 ID | 风险门 ID | 假设 ID | 实验 ID | 差异说明 | 失败证据 ID | 结论 |
@@ -530,3 +531,11 @@
 - 共享交互：`tokens.css` 收敛为运行时权威的 control/card/panel 圆角、两档阴影与 44px 触控；ReaderDialogSurface 关闭态不渲染，打开态使用栈式 document modal isolation，嵌套层只让顶层交互并最终恢复原背景。AppShell 主内容可作为稳定焦点 fallback；书卡/书箧支持 Enter/Space，关键同步、密钥、治理、备份、下载、释放和删除触点显式不小于 44×44。
 - 验证：Web 全量 `56 files / 223 tests`、TypeScript、定向非写入 ESLint、禁用 PWA 写入的 production build 与 `git diff --check` 全通过。系统 Chrome 的 `library-bounded-rendering + search-route-context` 五条旅程 `5/5`：500 本第 8 页以普通点击与 Enter 开书后，在 Next `__NA` history state 下 browser back 与 reload 仍恢复 URL、页码、排序、列表视图、滚动和来源焦点；500 根书箧保持 48 项 DOM 上界；延迟私有云 inventory 不会把深页提前夹到第一页；同一密钥下清空云端后旧 inventory 响应不能回流；搜索条件切换后旧私有云响应不能覆盖新结果。390px computed 探针覆盖 17 个同步/密钥/书箧菜单/书卡控件，最小 44×44 且无横溢；1440px hover 态治理/备份/删除同样合格。藏经阁 taxonomy 旅程 `1/1` 与 340/390/768/1440 回归由独立审查复算通过。
 - 独立复审与状态：A/B 最新稳定候选终审 `READY_TO_COMMIT`，无 P0/P1；该结论只放行本切片提交，不等于 TASK-0505 完成。下一入口严格为 C：用现有领域入口拆分书架信息层级、统一 Lucide/字体/直白文案和共享状态/toast，再进入 D 阅读器单一响应式子树；仍不运行 TASK-0506 或部署 VPS。
+
+### RUN-0054 · 2026-08-15T16:18:00+08:00 · PHASE-05 / TASK-0505 C 信息层级与视觉语言
+- 本轮边界：只完成冻结合同 C；书架与藏经阁仍组合既有查询、同步、入阁与维护领域入口，未重写数据契约、阅读器、TASK-0504 公共域或个人同步事实源。未运行 TASK-0506/formal，未连接真实私人云、维护目录或 VPS，未 push/部署。
+- 共享视觉与状态：移除两套仅测试引用的死 TypeScript token，`tokens.css` 继续是唯一运行时权威，control/card/panel 为 10/16/22px。Geist 变量下沉至 html，真实 computed `--font-ui` 生效；页标题/书名用 display 角色，操作图标收敛 Lucide。新增唯一 `AppToastProvider`、typed tone、`StatePanel/StatusNotice`与共享 `SegmentedControl`，离线与书架不再叠加两个 presenter/live region。
+- 信息层级与交互：书卡/书箧都以真实主 button 与一个 44px 操作菜单呈现，治理、备份、移除等次级操作不再平铺；菜单具备初始焦点、Arrow/Home/End、Escape 与归焦，340px 封面菜单不被裁剪。藏经阁四视图在 340px 改为 2×2，保留 tab/tabpanel 语义和方向键模型；副标题完整说明匿名浏览与入阁密钥去向。
+- 事实与稳定性收口：首次无访问口令时同步设置可达，云端仅称“上次核验”。目录扫描、解除关联、重新导入、解散与治理移动/建箧/缓存/移除在真正写入点共用同一 `syncMutexRef` fail-closed，静默恢复不能绕过。删除按本机、远端、重试登记与回读分流陈述；远端已删时先失效代际并移除旧 cloud item，失败分支不再生成幽灵书或假称两端未变。扫描 changed 只统计真正有 bookId 且已标待解析的文件。
+- 验证：Web 全量 `60 files / 232 tests`、TypeScript、全 `src` 非写入 ESLint、禁用 PWA 写入的 production build 14/14 页与 `git diff --check` 通过。系统 Chrome `library-bounded-rendering` `5/5`：含 340px 无口令入口、真实 Geist、不裁剪菜单、治理 Escape 精确归回原 trigger、500 本/500 书箧有界窗口、深页恢复、离线与同钥旧 inventory 抑制；藏经阁 taxonomy 四视图/340–1440 旅程 `1/1` 保持通过。三路独立终审均 `READY_TO_COMMIT`，P0/P1=0。
+- 状态与下一入口：TASK-0505 C 完成，但 TASK-0505、TASK-0506、PHASE-05、EVID-56/58 与 Goal 均未完成。下一入口严格为 D：只将阅读器 desktop/mobile chrome 收敛为当前 viewport 的单一响应式子树，回归 340↔1440 锚点、TOC/AI/Settings 各一实例、焦点和 AI effect 唯一；D 未独立通过前不运行 TASK-0506。

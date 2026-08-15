@@ -1,26 +1,23 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { APP_NAV_ITEMS } from "../components/app-shell/nav-items";
-import { UI_TOKENS } from "./ui-tokens";
 
 describe("UI design system", () => {
-  it("颜色角色完整且采用固定的自然圆角层级", () => {
-    expect(Object.keys(UI_TOKENS.color)).toEqual([
-      "background",
-      "surface",
-      "text",
-      "muted",
-      "primary",
-      "info",
-      "danger",
-    ]);
-    expect(UI_TOKENS.radius).toEqual({
-      control: 10,
-      field: 12,
-      card: 16,
-      panel: 22,
-      round: 999,
-    });
+  it("直接锁定运行时 tokens.css 的字体、圆角和阴影", async () => {
+    const source = await readFile(
+      new URL("./tokens.css", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("--font-ui:");
+    expect(source).toContain("--font-display:");
+    expect(source).toContain("--font-accent:");
+    expect(source).toContain("--radius-control: 10px");
+    expect(source).toContain("--radius-field: var(--radius-control)");
+    expect(source).toContain("--radius-card: 16px");
+    expect(source).toContain("--radius-panel: 22px");
+    expect(source).toContain("--shadow-paper: 0 2px 12px");
+    expect(source).toContain("--shadow-raised: 0 16px 44px");
   });
 
   it("主导航包含六个真实页面", () => {

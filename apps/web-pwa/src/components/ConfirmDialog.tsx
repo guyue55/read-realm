@@ -56,7 +56,13 @@ export function ConfirmDialog({
       onClose();
     } catch (err) {
       console.error("弹窗确认操作执行异常:", err);
-      setErrorMessage("操作未完成，请检查当前状态后重试。");
+      setErrorMessage(
+        err instanceof Error &&
+          err.message &&
+          !/^[A-Z0-9_]+$/u.test(err.message)
+          ? err.message
+          : "操作未完成，请检查当前状态后重试。",
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +100,10 @@ export function ConfirmDialog({
           {message}
         </p>
         {errorMessage && (
-          <p className="rounded-[var(--radius-control)] border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] p-3 text-sm text-[var(--color-danger)]" role="alert">
+          <p
+            className="rounded-[var(--radius-control)] border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] p-3 text-sm text-[var(--color-danger)]"
+            role="alert"
+          >
             {errorMessage}
           </p>
         )}
@@ -116,13 +125,11 @@ export function ConfirmDialog({
             disabled={loading}
             data-reader-control
             className={`ui-focus-ring inline-flex min-h-11 min-w-20 items-center justify-center rounded-[var(--radius-control)] px-5 text-sm font-semibold text-white disabled:opacity-50 ${
-              isDanger
-                ? "bg-[var(--color-danger)]"
-                : "bg-[var(--ui-accent)]"
+              isDanger ? "bg-[var(--color-danger)]" : "bg-[var(--ui-accent)]"
             }`}
             type="button"
           >
-            {loading ? "处理中…" : (confirmText || (isAlert ? "知道了" : "确认"))}
+            {loading ? "处理中…" : confirmText || (isAlert ? "知道了" : "确认")}
           </button>
         </div>
       </div>

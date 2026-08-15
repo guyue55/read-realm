@@ -10,6 +10,8 @@
   --color-primary-soft: #e4ede7;
   --color-info: #3e6c78;
   --color-info-soft: #e5eef0;
+  --color-warning: #704729;
+  --color-warning-soft: #f8f0e5;
   --color-danger: #a04439;
   --color-danger-soft: #f6e8e4;
   --color-stamp: #a04439;
@@ -18,16 +20,16 @@
   --shadow-paper: 0 2px 12px rgba(38, 40, 36, 0.05);
   --shadow-raised: 0 16px 44px rgba(38, 40, 36, 0.14);
 
-  --font-ui: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --font-display: "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun",
-    Georgia, serif;
-  --font-accent: "Kaiti SC", "STKaiti", "KaiTi", "SimKai",
-    var(--font-display);
+  --font-ui:
+    var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-display:
+    "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun", Georgia, serif;
+  --font-accent: "Kaiti SC", "STKaiti", "KaiTi", "SimKai", var(--font-display);
   --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
 
   --radius-control: 10px;
-  --radius-field: 12px;
+  --radius-field: var(--radius-control);
   --radius-card: 16px;
   --radius-panel: 22px;
   --touch-target: 44px;

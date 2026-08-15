@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
 
-type StatusTone = "neutral" | "info" | "warning" | "danger";
+type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 export interface StatusNoticeProps {
   children: ReactNode;
@@ -14,8 +14,10 @@ const TONE_STYLES: Record<StatusTone, string> = {
   neutral:
     "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text)]",
   info: "border-[var(--color-info)]/30 bg-[var(--color-info-soft)] text-[var(--color-info)]",
+  success:
+    "border-[var(--color-primary)]/30 bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
   warning:
-    "border-[#C08A52]/40 bg-[#F8F0E5] text-[#7A4E2D]",
+    "border-[var(--color-warning)]/30 bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
   danger:
     "border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
 };
@@ -23,6 +25,7 @@ const TONE_STYLES: Record<StatusTone, string> = {
 const TONE_ICONS = {
   neutral: CircleCheck,
   info: Info,
+  success: CircleCheck,
   warning: TriangleAlert,
   danger: CircleAlert,
 } satisfies Record<StatusTone, typeof Info>;
@@ -44,7 +47,9 @@ export function StatusNotice({
     >
       <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0 leading-6">
-        {title && <p className="font-semibold text-[var(--color-text)]">{title}</p>}
+        {title && (
+          <p className="font-semibold text-[var(--color-text)]">{title}</p>
+        )}
         <div>{children}</div>
       </div>
     </div>
