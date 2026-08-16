@@ -101,8 +101,10 @@ describe("Dexie pre-upgrade backup", () => {
       .toContain("保留备份");
   });
 
-  it("rejects corrupted settings instead of silently replacing user data", () => {
-    expect(() => buildPreUpgradeSnapshot({
+  it("falls back to default settings instead of failing the upgrade on corrupted settings", () => {
+    // 🏮 [FIX] settings 是 localStorage 中的次要数据；若损坏（非法 JSON），
+    // 回退默认设置而非抛错，避免整个 IndexedDB 升级失败、书架打不开。
+    const snapshot = buildPreUpgradeSnapshot({
       databaseVersion: 9,
       createdAt: "2026-08-13T10:10:00+08:00",
       books: [],
@@ -112,6 +114,49 @@ describe("Dexie pre-upgrade backup", () => {
       indexedFiles: [],
       sources: [],
       settingsValue: "{broken-json",
-    })).toThrow("LOCAL_DATA_MIGRATION_SETTINGS_INVALID");
+    });
+    expect(snapshot.data.settings.fontFamily).toBe("system-ui");
+  });
+
+  it("tolerates orphan chapters/progress and malformed legacy records instead of failing the upgrade", () => {
+    // 🏮 [FIX] 旧库中字段不全或引用悬空的脏记录不应阻断升级：
+    // 快照宽松清洗，只保留合法记录，书架照常打开。
+    const now = "2026-08-13T10:10:00+08:00";
+    const snapshot = buildPreUpgradeSnapshot({
+      databaseVersion: 9,
+      createdAt: now,
+      books: [{
+        id: "book-1",
+        title: "测试书",
+        sourceType: "upload",
+        format: "txt",
+        status: "reading",
+        tags: [],
+        chapterCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      }],
+      chapters: [
+        { id: "ch-1", bookId: "book-1", index: 0, title: "第一章", content: "正文" },
+        { id: "orphan-ch", bookId: "deleted-book", index: 1, title: "孤儿章", content: "x" },
+      ],
+      progress: [{
+        bookId: "book-1",
+        chapterId: "ch-1",
+        chapterIndex: 0,
+        offset: 0,
+        percentage: 0,
+        updatedAt: now,
+      }],
+      bookmarks: [{ id: "malformed-bm", bookId: "deleted-book", chapterIndex: 0, offset: 0 }], // 缺 createdAt → 不合 schema → 过滤
+      indexedFiles: [],
+      sources: [],
+      settingsValue: null,
+    });
+    expect(snapshot.data.books).toHaveLength(1);
+    expect(snapshot.data.chapters).toHaveLength(1);
+    expect(snapshot.data.chapters[0].id).toBe("ch-1");
+    expect(snapshot.data.progress).toHaveLength(1);
+    expect(snapshot.data.bookmarks).toHaveLength(0);
   });
 });

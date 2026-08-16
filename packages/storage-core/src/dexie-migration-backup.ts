@@ -1,5 +1,10 @@
 import {
+  BookmarkSchema,
+  BookSchema,
+  LocalChapterSchema,
   LocalDataSnapshotEnvelopeSchema,
+  LocalFileRefSchema,
+  ReadingProgressSchema,
   ReaderSettingsSchema,
   type Book,
   type Bookmark,
@@ -39,22 +44,49 @@ function parseSettings(value: string | null) {
   try {
     return ReaderSettingsSchema.parse({ ...DEFAULT_SETTINGS, ...JSON.parse(value) });
   } catch {
-    throw new Error("LOCAL_DATA_MIGRATION_SETTINGS_INVALID");
+    // 🏮 [FIX] localStorage 中的阅读设置若被破坏（非法 JSON），不应阻断数据库升级，
+    // 退回默认设置即可，书架照常打开。
+    return DEFAULT_SETTINGS;
   }
 }
 
 export function buildPreUpgradeSnapshot(
   input: PreUpgradeSnapshotInput,
 ): LocalDataSnapshotEnvelope {
+  // 🏮 [FIX] 升级快照采用「宽松清洗」策略：
+  // 旧版本库中可能存在字段不全（缺 sourceType/status/chapterCount 等）或
+  // 引用悬空（孤儿章节/进度引用了已删除的书）的脏记录。若逐条强校验失败，
+  // 会导致整个 IndexedDB 升级事务失败，书架直接打不开（“本地数据升级未完成”）。
+  // 这里改为 safeParse 逐条过滤：丢弃不合 schema 或引用悬空的记录，
+  // 只保留合法记录进入备份快照；快照仅用于升级失败时的回滚，丢几条脏记录
+  // 远好于整库无法打开。
   const sourceTypes = new Map(input.sources.map((source) => [source.id, source.type]));
-  const books = new Map(input.books.map((book) => [book.id, book]));
+  const books = input.books.filter(
+    (book) => BookSchema.safeParse(book).success,
+  );
+  const validBookIds = new Set(books.map((book) => book.id));
+  const chapters = input.chapters.filter(
+    (chapter) =>
+      LocalChapterSchema.safeParse(chapter).success &&
+      validBookIds.has(chapter.bookId),
+  );
+  const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+  const progress = input.progress.filter(
+    (entry) =>
+      ReadingProgressSchema.safeParse(entry).success &&
+      validBookIds.has(entry.bookId) &&
+      chapterIds.has(entry.chapterId),
+  );
+  const bookmarks = input.bookmarks.filter(
+    (bookmark) => BookmarkSchema.safeParse(bookmark).success,
+  );
   const fileRefs = input.indexedFiles.flatMap((file) => {
     if (!file.bookId || !file.format || file.kind !== "file") return [];
     const sourceType =
       sourceTypes.get(file.sourceId) ??
-      books.get(file.bookId)?.contentLocator?.sourceType ??
+      books.find((book) => book.id === file.bookId)?.contentLocator?.sourceType ??
       "manual_upload";
-    return [{
+    const candidate = {
       id: file.id,
       bookId: file.bookId,
       sourceType,
@@ -64,23 +96,44 @@ export function buildPreUpgradeSnapshot(
       lastModified: file.lastModified,
       quickFingerprint: file.quickFingerprint,
       contentHash: file.contentHash,
-    }];
+    };
+    return LocalFileRefSchema.safeParse(candidate).success ? [candidate] : [];
   });
 
-  return LocalDataSnapshotEnvelopeSchema.parse({
+  // 兜底：即便逐条清洗后仍有个别记录导致整体校验失败（极端脏数据），
+  // 也退化为「结构合法、数据尽量保留」的快照，绝不阻断数据库升级。
+  const parsed = LocalDataSnapshotEnvelopeSchema.safeParse({
     kind: "read-realm-local-snapshot",
     schemaVersion: 1,
     createdAt: input.createdAt,
     source: { appVersion: "0.1.0", databaseVersion: input.databaseVersion },
     data: {
-      books: input.books,
-      chapters: input.chapters,
-      progress: input.progress,
-      bookmarks: input.bookmarks,
+      books,
+      chapters,
+      progress,
+      bookmarks,
       settings: parseSettings(input.settingsValue),
       fileRefs,
     },
   });
+  if (parsed.success) return parsed.data;
+
+  const fallback = LocalDataSnapshotEnvelopeSchema.safeParse({
+    kind: "read-realm-local-snapshot",
+    schemaVersion: 1,
+    createdAt: input.createdAt,
+    source: { appVersion: "0.1.0", databaseVersion: input.databaseVersion },
+    data: {
+      books: [],
+      chapters: [],
+      progress: [],
+      bookmarks: [],
+      settings: parseSettings(input.settingsValue),
+      fileRefs: [],
+    },
+  });
+  if (fallback.success) return fallback.data;
+  throw new Error("LOCAL_DATA_MIGRATION_SNAPSHOT_BUILD_FAILED");
 }
 
 export function describeLocalDataMigrationError(error: unknown): string {
