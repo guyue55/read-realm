@@ -244,7 +244,9 @@ describe('PublicLibraryScanner', () => {
   });
 
   it('reclaims the same generation and replays a publication missing its item heartbeat', async () => {
-    let fakeNow = new Date('2026-08-15T08:30:00.000Z');
+    // 以当前系统时间为基准推进，避免过去固定时间使发布围栏（lease_expires_at > now）
+    // 与 SQLite 真实时钟比较恒为假而误判 fence 失效。
+    let fakeNow = new Date();
     let identity = 0;
     const recoveryScans = new PublicLibraryScanRepository(
       client,
