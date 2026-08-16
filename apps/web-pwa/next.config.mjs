@@ -19,6 +19,12 @@ const isExportMode = process.env.EXPORT_MODE === "true";
 
 const nextConfig = {
   output: isExportMode ? "export" : undefined,
+  // Next 15 dev 模式：局域网其他设备访问 /_next/* 资源会被拦截，
+  // 由一键启动脚本（scripts/start-app.sh）在局域网模式设 READING_WORLD_LAN=1 时放行；
+  // 生产 next start 不受此限制。默认保持收紧（不放行），控制边界。
+  ...(process.env.READING_WORLD_LAN === "1"
+    ? { allowedDevOrigins: ["*"] }
+    : {}),
   devIndicators:
     process.env.READING_WORLD_DISABLE_DEV_INDICATORS === "1"
       ? false
