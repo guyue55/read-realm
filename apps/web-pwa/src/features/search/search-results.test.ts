@@ -54,4 +54,22 @@ describe("searchLocalBooks", () => {
     expect(searchLocalBooks(many, "样本", "综合")).toHaveLength(12);
     expect(many).toHaveLength(30);
   });
+
+  it("does not crash when legacy books lack tags or status", () => {
+    const legacy = [
+      { id: "legacy-1", title: "旧书甲" },
+      { id: "legacy-2", title: "旧书乙", tags: null },
+    ] as unknown as Book[];
+
+    expect(() => searchLocalBooks(legacy, "旧书", "综合")).not.toThrow();
+    expect(
+      searchLocalBooks(legacy, "旧书", "综合").map((book) => book.id),
+    ).toEqual(["legacy-1", "legacy-2"]);
+    expect(searchLocalBooks(legacy, "旧书", "标签")).toEqual([]);
+    // 无 status 的旧书按“连载中”（非已完结）处理，不崩溃。
+    expect(
+      searchLocalBooks(legacy, "旧书", "连载中").map((book) => book.id),
+    ).toEqual(["legacy-1", "legacy-2"]);
+    expect(searchLocalBooks(legacy, "旧书", "已完结")).toEqual([]);
+  });
 });
