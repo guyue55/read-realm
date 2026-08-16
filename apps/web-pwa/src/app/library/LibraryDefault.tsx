@@ -1052,7 +1052,8 @@ export function LibraryDefault({
       const verifiedBooks = await operation.api.listBooks();
       commitCloudInventory(shareToken, inventoryGeneration, verifiedBooks);
     } catch (e) {
-      console.error("拉取云端书籍元数据失败:", e);
+      // 云端状态核验失败（如本机 API 未启动）属常见情形，本地书架不受影响，降级为警告日志。
+      console.warn("拉取云端书籍元数据失败（可稍后重试）:", e);
       setToastMsg("云端状态暂时无法核验，本地书架与阅读不受影响。", "warning");
     }
   }, [
@@ -1524,7 +1525,13 @@ export function LibraryDefault({
           verifiedBooks,
         );
       } catch (e) {
-        console.error("一键双向同步过程遭遇异常:", e);
+        // 自动同步失败（服务暂不可用）为常见情形，降级为警告日志；
+        // 手动同步失败保留 error 级（用户已通过 toast 感知）。
+        if (isSilent) {
+          console.warn("一键双向同步过程遭遇异常（服务暂不可用）:", e);
+        } else {
+          console.error("一键双向同步过程遭遇异常:", e);
+        }
         if (!isSilent) {
           setToastMsg(strings.sync.syncFailed, "danger");
         }
@@ -1863,7 +1870,16 @@ export function LibraryDefault({
       ) {
         console.log("[Sync Self-healing] 触发冷启动静默自动同步...");
         sessionStorage.setItem("reader-session-auto-synced", "true");
-        await handleDualSync(true);
+        // 自动同步失败（如本机 API 服务未启动/地址不匹配）是常见情形，
+        // 应温和降级而非未捕获抛错：不影响书架加载，仅记录警告。
+        try {
+          await handleDualSync(true);
+        } catch (syncError) {
+          console.warn(
+            "[Sync Self-healing] 冷启动自动同步未完成（服务暂不可用，可稍后手动同步）:",
+            syncError,
+          );
+        }
       }
 
       // 2. 重新核验并恢复持久化任务。
