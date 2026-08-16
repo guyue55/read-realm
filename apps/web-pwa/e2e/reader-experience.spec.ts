@@ -1105,7 +1105,11 @@ test("reader note dialog contains focus and uses touch-safe actions", async ({ p
   ))).toBe(true);
   await page.keyboard.press("Escape");
   await expect(noteDialog).toBeHidden();
-  await expect(canvas).toBeFocused();
+  // 分页模式下 Escape 后焦点有意回到 PaginatedReader 的滚动容器（继续阅读），
+  // 该容器位于外层 canvas 之内，故接受「焦点在 canvas 内」而非要求 canvas 本身聚焦。
+  await expect.poll(async () => page.evaluate(() => (
+    Boolean(document.activeElement?.closest?.('[data-reader-content-canvas="mobile"]'))
+  ))).toBe(true);
 });
 
 test("desktop reader drawers trap focus, close with Escape, and restore their triggers", async ({ page }) => {

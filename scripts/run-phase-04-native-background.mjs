@@ -401,11 +401,11 @@ async function runNativeBackground() {
   } finally {
     if (chrome.pid) {
       try { process.kill(-chrome.pid, "SIGTERM"); } catch (error) {
-        if (error?.code !== "ESRCH") throw error;
+        if (error?.code !== "ESRCH" && error?.code !== "EPERM") throw error;
       }
       await delay(500);
       try { process.kill(-chrome.pid, "SIGKILL"); } catch (error) {
-        if (error?.code !== "ESRCH") throw error;
+        if (error?.code !== "ESRCH" && error?.code !== "EPERM") throw error;
       }
     }
     rmSync(profile, { recursive: true, force: true });
