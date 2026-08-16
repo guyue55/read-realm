@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ErrorInfo, ReactNode } from "react";
-import { Component } from "react";
+import { Component, useEffect } from "react";
 import { AlertTriangle, Library, RotateCcw } from "lucide-react";
 import { RouteProvider, useRouteStore } from "@/components/RouteProvider";
 import { ViewLoading } from "@/components/ViewLoading";
@@ -213,6 +213,34 @@ function ActiveView() {
 }
 
 export default function Page() {
+  // 首屏挂载后静默预热全部业务视图分块，避免首次切换菜单时出现“正在打开…”占位闪烁。
+  useEffect(() => {
+    let cancelled = false;
+    const preload = async () => {
+      if (cancelled) return;
+      try {
+        await Promise.all([
+          import("./library/page"),
+          import("./search/page"),
+          import("./notes/page"),
+          import("./settings/page"),
+          import("./import/page"),
+          import("./public-library/page"),
+          import("./reader/[bookId]/ReaderClient"),
+          import("./book/[bookId]/BookDetailClient"),
+          import("./import/preview/[taskId]/PreviewClient"),
+        ]);
+      } catch (error) {
+        console.error("视图分块预热失败（不影响正常使用）", error);
+      }
+    };
+    const timer = window.setTimeout(preload, 600);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <GlobalErrorBoundary>
       <RouteProvider>
