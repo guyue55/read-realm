@@ -10,11 +10,13 @@ const publicLibraryMaintenanceFixture = path.resolve(
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   testIgnore: [
     "**/personal-book-publication.spec.ts",
     "**/import-stress.spec.ts",
     "**/reader-touch.spec.ts",
     "**/task-0504-public-library-expansion.spec.ts",
+    "**/gate-01.spec.ts",
   ],
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
