@@ -49,14 +49,18 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
   await page.getByRole("button", { name: "加入书架" }).click();
   await expect(page.getByText("short-novel", { exact: true })).toBeVisible();
 
-  await page.getByText("short-novel", { exact: true }).click();
-  await expect(page.locator(".reader-content:visible")).toContainText("清晨，林舟");
+  await page.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
+  await expect(page.locator(".reader-content:visible").first()).toContainText("清晨，林舟");
   await page.locator('button[aria-label="添加书签"]:visible').click();
+
+  // 桌面端进度滑块位于「阅读进度」面板内，先点击顶部栏进度徽标打开面板
+  await page.locator('button[title^="拖动阅读进度"]').click();
+  await expect(page.locator('input[aria-label="拖动阅读进度"]:visible')).toBeVisible();
 
   const slider = page.locator('input[aria-label="拖动阅读进度"]:visible');
   const saveStartedAt = Date.now();
   await slider.fill("60");
-  await slider.dispatchEvent("mouseup");
+  await slider.dispatchEvent("pointerup", { pointerType: "mouse" });
 
   let savedProgress: StoredProgress | undefined;
   await expect
@@ -72,7 +76,7 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
   expect(saveDurationMs).toBeLessThanOrEqual(1_000);
 
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
 
@@ -86,11 +90,11 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
       timeout: 15_000,
     })
     .toBe(true);
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟");
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟");
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   await expect(page.getByText("离线", { exact: true }).first()).toBeVisible();
@@ -152,8 +156,8 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
     ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
-    await restorePage.getByText("short-novel", { exact: true }).click();
-    await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    await restorePage.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
+    await expect(restorePage.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
       timeout: 15_000,
     });
   } finally {
@@ -179,8 +183,8 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
   await page.getByRole("button", { name: "加入书架" }).click();
   await expect(page.getByText("short-novel", { exact: true })).toBeVisible();
 
-  await page.getByText("short-novel", { exact: true }).click();
-  await expect(page.locator(".reader-content:visible")).toContainText("清晨，林舟");
+  await page.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
+  await expect(page.locator(".reader-content:visible").first()).toContainText("清晨，林舟");
   await page.locator('button[aria-label="添加书签"]:visible').click();
 
   const saveStartedAt = Date.now();
@@ -192,10 +196,10 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
     )
     .toBe(1);
   expect(Date.now() - saveStartedAt).toBeLessThanOrEqual(1_000);
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟");
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟");
 
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
 
@@ -212,7 +216,7 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   await expect(page.getByText("离线", { exact: true }).first()).toBeVisible();
@@ -254,8 +258,8 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
     ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
-    await restorePage.getByText("short-novel", { exact: true }).click();
-    await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    await restorePage.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
+    await expect(restorePage.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
       timeout: 15_000,
     });
   } finally {
@@ -287,8 +291,8 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
   await page.getByRole("button", { name: "加入书架" }).click();
   await expect(page.getByText("固定 EPUB", { exact: true })).toBeVisible();
 
-  await page.getByText("固定 EPUB", { exact: true }).click();
-  await expect(page.locator(".reader-content:visible")).toContainText("清晨，林舟");
+  await page.getByRole("button", { name: "打开《固定 EPUB》", exact: true }).click();
+  await expect(page.locator(".reader-content:visible").first()).toContainText("清晨，林舟");
   await page.locator('button[aria-label="添加书签"]:visible').click();
 
   const saveStartedAt = Date.now();
@@ -300,10 +304,10 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
     )
     .toBe(1);
   expect(Date.now() - saveStartedAt).toBeLessThanOrEqual(1_000);
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟");
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟");
 
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   const isControlled = await page.evaluate(async () => {
@@ -319,7 +323,7 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   await expect(page.getByText("离线", { exact: true }).first()).toBeVisible();
@@ -361,8 +365,8 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
     ).toEqual(restoredSnapshot.data.settings);
 
     await restorePage.goto("/#/library");
-    await restorePage.getByText("固定 EPUB", { exact: true }).click();
-    await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    await restorePage.getByRole("button", { name: "打开《固定 EPUB》", exact: true }).click();
+    await expect(restorePage.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
       timeout: 15_000,
     });
   } finally {
@@ -398,7 +402,7 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
   const importedCard = page.locator(`[data-book-id="${importedBook.id}"]`);
   await expect(importedCard).toHaveCount(1);
   await importedCard.click();
-  await expect(page.locator(".reader-content:visible")).toContainText("清晨，林舟");
+  await expect(page.locator(".reader-content:visible").first()).toContainText("清晨，林舟");
   await page.locator('button[aria-label="添加书签"]:visible').click();
 
   const saveStartedAt = Date.now();
@@ -410,10 +414,10 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
     )
     .toBe(1);
   expect(Date.now() - saveStartedAt).toBeLessThanOrEqual(1_000);
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟");
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟");
 
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   const isControlled = await page.evaluate(async () => {
@@ -429,7 +433,7 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+  await expect(page.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
     timeout: 15_000,
   });
   await expect(page.getByText("离线", { exact: true }).first()).toBeVisible();
@@ -478,7 +482,7 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
     const restoredCard = restorePage.locator(`[data-book-id="${restoredBookId}"]`);
     await expect(restoredCard).toHaveCount(1);
     await restoredCard.click();
-    await expect(restorePage.locator(".reader-content:visible")).toContainText("傍晚，林舟", {
+    await expect(restorePage.getByText("傍晚，林舟").first()).toContainText("傍晚，林舟", {
       timeout: 15_000,
     });
   } finally {
