@@ -39,7 +39,7 @@ test("EXP-01 fixed TXT survives progress, refresh, true offline, backup and isol
   await page.goto("/#/library");
   await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
 
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles(
     path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
   );
@@ -169,7 +169,7 @@ test("EXP-02 worker stream and session adapter survive the same user outcomes", 
   await page.goto("/#/library");
   await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
 
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles(
     path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
   );
@@ -275,7 +275,7 @@ test("EXP-03 fixed EPUB through compatible storage survives the same user outcom
 
   await page.goto("/#/library");
   await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles({
     name: "fixed-two-chapter.epub",
     mimeType: "application/epub+zip",
@@ -382,7 +382,7 @@ test("EXP-09 fixed EPUB uses the restored book ID for the complete vertical slic
 
   await page.goto("/#/library");
   await expect(page.getByRole("heading", { name: "书架还是空的" })).toBeVisible();
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles({
     name: "fixed-two-chapter.epub",
     mimeType: "application/epub+zip",

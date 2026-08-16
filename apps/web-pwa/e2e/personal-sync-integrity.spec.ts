@@ -4,6 +4,17 @@ const apiBase = "http://127.0.0.1:4100";
 
 test.use({ serviceWorkers: "block" });
 
+/**
+ * 从书卡的操作菜单中触发指定动作（如"备份到私人云端"/"删除本机章节正文"）。
+ * 当前书卡操作集中在 `LibraryBookActionsMenu` 下拉菜单内，不再是旧版直接按钮。
+ */
+async function runBookAction(page: Page, bookId: string, itemName: RegExp) {
+  const card = page.locator(`[data-book-id="${bookId}"]`);
+  await expect(card).toHaveCount(1);
+  await card.locator('[aria-haspopup="menu"]').first().click();
+  await page.getByRole("menuitem", { name: itemName }).click();
+}
+
 function remotePayload(id: string, title: string, chapterCount: number, storedCount: number) {
   const now = "2026-08-15T00:00:00.000Z";
   return {
@@ -194,7 +205,9 @@ test("partial remote chapters never create a half-book and keep a retry fact", a
     const card = page.locator(`[data-book-id="${bookId}"]`);
     await expect(card).toHaveCount(1);
     await card.click();
-    await expect(page.getByText("拉取失败，该书籍可能在云端已被清除。")).toBeVisible();
+    await expect(
+      page.getByText("下载未完成，请检查网络、私人云服务和正文完整性后重试。"),
+    ).toBeVisible();
 
     await expect.poll(() => readLocalBundle(page, bookId)).toEqual({
       book: undefined,
@@ -249,7 +262,7 @@ test("cold-start recovery replays multiple retained downloads serially", async (
   try {
     await page.goto("/library");
     await expect(page).toHaveURL(/\/#\/library$/);
-    await expect(page.getByRole("button", { name: /私人藏书/ })).toBeVisible();
+    await expect(page.locator("[data-library-shelf]")).toBeVisible();
     for (const bookId of bookIds) {
       await expect
         .poll(() => readLocalBundle(page, bookId))
@@ -296,7 +309,7 @@ test("a retained task never replays under a different private key", async ({
   try {
     await page.goto("/library");
     await expect(page).toHaveURL(/\/#\/library$/);
-    await expect(page.getByRole("button", { name: /私人藏书/ })).toBeVisible();
+    await expect(page.locator("[data-library-shelf]")).toBeVisible();
     await expect(page.locator(`[data-book-id="${bookId}"]`)).toHaveCount(1);
     await page.waitForTimeout(600);
     await expect.poll(() => readLocalBundle(page, bookId)).toEqual({
@@ -330,14 +343,14 @@ test("private upload is read-back verified before local chapters can be offloade
   try {
     await page.goto("/library");
     await expect(page).toHaveURL(/\/#\/library$/);
-    await expect(page.getByRole("button", { name: /私人藏书/ })).toBeVisible();
+    await expect(page.locator("[data-library-shelf]")).toBeVisible();
     await seedLocalBundle(page, bookId, title);
     await page.reload();
 
     const card = page.locator(`[data-book-id="${bookId}"]`);
     await expect(card).toHaveCount(1);
-    await card.getByRole("button", { name: "备份" }).click();
-    await expect(page.getByText(`🍃 「${title}」云端完整副本已读回核验。`)).toBeVisible();
+    await runBookAction(page, bookId, /备份到私人云端/);
+    await expect(page.getByText(`「${title}」的云端副本已完整核验。`)).toBeVisible();
 
     const remoteChapters = await request.get(
       `${apiBase}/books/${bookId}/chapters?offset=0&limit=80`,
@@ -354,8 +367,8 @@ test("private upload is read-back verified before local chapters can be offloade
       .poll(() => page.evaluate(() => localStorage.getItem("reader-active-sync-tasks")))
       .toBe("{}");
 
-    await card.getByRole("button", { name: "释放" }).click();
-    await page.getByRole("button", { name: "善也" }).click();
+    await runBookAction(page, bookId, /删除本机章节正文/);
+    await page.getByRole("button", { name: "确认" }).click();
     await expect
       .poll(() => readLocalBundle(page, bookId))
       .toMatchObject({
@@ -385,7 +398,7 @@ test("an in-flight upload keeps its original private key across every readback",
   try {
     await page.goto("/library");
     await expect(page).toHaveURL(/\/#\/library$/);
-    await expect(page.getByRole("button", { name: /私人藏书/ })).toBeVisible();
+    await expect(page.locator("[data-library-shelf]")).toBeVisible();
     await seedLocalBundle(page, bookId, title);
     await page.reload();
 
@@ -398,11 +411,9 @@ test("an in-flight upload keeps its original private key across every readback",
       await route.continue();
     });
 
-    const card = page.locator(`[data-book-id="${bookId}"]`);
-    await expect(card).toHaveCount(1);
-    await card.getByRole("button", { name: "备份" }).click();
+    await runBookAction(page, bookId, /备份到私人云端/);
     await expect(
-      page.getByText(`🍃 「${title}」云端完整副本已读回核验。`),
+      page.getByText(`「${title}」的云端副本已完整核验。`),
     ).toBeVisible();
 
     expect(importToken).toBe(originalToken);
@@ -458,13 +469,16 @@ test("clearing a key during recovery preflight cancels the stale download", asyn
   const recoverySeen = new Promise<void>((resolve) => {
     markRecoverySeen = resolve;
   });
+  // 页面加载会先触发初始书目的 2 次 /books 请求（路由 context 解析 + 云书目核验），
+  // 恢复流程的 listBooks() 是其后的第 3 次 /books —— 只有阻塞这一次，
+  // 才保证清除口令发生在恢复下载真正开始之前，从而验证「清除口令取消恢复」。
   await page.route("**/books", async (route) => {
     if (route.request().url() !== `${apiBase}/books`) {
       await route.continue();
       return;
     }
     listRequestCount += 1;
-    if (listRequestCount === 2) {
+    if (listRequestCount === 3) {
       markRecoverySeen();
       await recoveryGate;
     }
