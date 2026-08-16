@@ -2,18 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as express from 'express';
 
-function getAllowedOrigins() {
-  const configured = process.env.CORS_ORIGIN?.split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  if (configured && configured.length > 0) return configured;
+const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
-  return [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-  ];
+function isAllowedOrigin(origin: string): boolean {
+  // 显式配置优先：CORS_ORIGIN 逗号分隔，覆盖默认策略。
+  const configured = process.env.CORS_ORIGIN?.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (configured && configured.length > 0) {
+    return configured.includes(origin);
+  }
+  // 默认策略：只放行本机来源（任意端口），远程跨域来源一律拒绝。
+  // 本地优先的 PWA 会在不同端口（3000/3001/3100/8080 等）被访问，
+  // 固定白名单会导致「藏经阁」等云端接口被 CORS 拦截而显示离线。
+  return LOCALHOST_ORIGIN.test(origin);
 }
 
 async function bootstrap() {
@@ -29,7 +31,7 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (error: Error | null, allow?: boolean) => void,
     ) {
-      if (!origin || getAllowedOrigins().includes(origin)) {
+      if (!origin || isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
