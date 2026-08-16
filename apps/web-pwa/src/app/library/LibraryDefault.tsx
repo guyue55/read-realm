@@ -3197,7 +3197,7 @@ export function LibraryDefault({
                     data-library-entry-primary
                     aria-label={`打开《${book.title}》`}
                     onClick={() => openLibraryBook(book, isCloudOnly)}
-                    className="ui-focus-ring absolute inset-x-0 top-0 z-10 h-24 rounded-[inherit]"
+                    className="ui-focus-ring absolute inset-0 z-10 rounded-[inherit]"
                   >
                     <span className="sr-only">打开《{book.title}》</span>
                   </button>
