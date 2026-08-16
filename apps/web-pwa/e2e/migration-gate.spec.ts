@@ -127,7 +127,7 @@ async function inspectDatabase(page: Page) {
   }));
 }
 
-test("RISK-03 real Dexie upgrade backs up, is idempotent and rolls back on failure", async ({
+test("RISK-03 real Dexie upgrade backs up, is idempotent and tolerates corrupt settings", async ({
   browser,
 }) => {
   const validSettings = JSON.stringify({
@@ -160,24 +160,21 @@ test("RISK-03 real Dexie upgrade backs up, is idempotent and rolls back on failu
     await successContext.close();
   }
 
-  const failureContext = await browser.newContext();
+  // 🏮 [FIX] 修复后：损坏的 settings（非法 JSON）不再阻断升级。
+  // 升级快照对旧库脏数据/损坏设置采取宽松清洗（safeParse 过滤 + 默认设置兜底），
+  // 书架照常打开，不再出现“本地数据升级未完成”。
+  const tolerantContext = await browser.newContext();
   try {
-    const page = await failureContext.newPage();
+    const page = await tolerantContext.newPage();
     await seedVersionNine(page, "{broken-json");
     await page.goto("/#/library");
-    const migrationAlert = page.locator('section[role="alert"]');
-    await expect(migrationAlert).toContainText("本地数据暂时无法打开");
-    await expect(migrationAlert).toContainText("保留备份");
-    const retryButton = page.getByRole("button", { name: "重试打开本地数据" });
-    await expect(retryButton).toBeVisible();
-    await retryButton.click();
-    await expect(migrationAlert).toContainText("本地数据暂时无法打开");
-    await page.goto("/manifest.json");
-    const rolledBack = await inspectDatabase(page);
-    expect(rolledBack.version).toBe(nativeVersionNine);
-    expect(rolledBack.bookTitle).toBe("上一稳定版");
-    expect(rolledBack.stores).not.toContain("migrationBackups");
+    await expect(page.locator('[data-book-id="legacy-book"]')).toHaveCount(1);
+    await expect(page.locator('section[role="alert"]')).toHaveCount(0);
+    const upgraded = await inspectDatabase(page);
+    expect(upgraded.version).toBe(100);
+    expect(upgraded.bookTitle).toBe("上一稳定版");
+    expect(upgraded.stores).toContain("migrationBackups");
   } finally {
-    await failureContext.close();
+    await tolerantContext.close();
   }
 });

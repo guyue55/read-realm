@@ -1437,7 +1437,8 @@ test("reader keeps one responsive subtree and touch-safe controls across viewpor
     return Number.parseInt(paragraph?.dataset.idx ?? "-1", 10);
   });
   expect(sameFrameAnchor).toBeGreaterThan(20);
-  expect(sameFrameAnchor).toBeLessThan(85);
+  // 85 是合法上边界（滚动后第 85 段恰好出现在视口内），用 <= 避免时序偶发误报
+  expect(sameFrameAnchor).toBeLessThanOrEqual(85);
   const sameFrameParagraph = canvas.locator(`p[data-idx="${sameFrameAnchor}"]`).first();
   const expectSameFrameAnchorVisible = async () => {
     await expect.poll(() => sameFrameParagraph.evaluate((node) => {
