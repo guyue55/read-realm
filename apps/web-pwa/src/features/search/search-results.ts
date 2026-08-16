@@ -27,17 +27,20 @@ export function searchLocalBooks(
       const authorMatch = book.author
         ?.toLocaleLowerCase("zh-CN")
         .includes(query) ?? false;
-      const tagsMatch = book.tags.some((tag) =>
+      // 历史导入或备份恢复的书籍可能缺少 tags / status 字段，缺失时按空处理，避免整页崩溃。
+      const tags = Array.isArray(book.tags) ? book.tags : [];
+      const status = book.status ?? "";
+      const tagsMatch = tags.some((tag) =>
         tag.toLocaleLowerCase("zh-CN").includes(query),
       );
       if (filter === "书名") return titleMatch;
       if (filter === "作者") return authorMatch;
       if (filter === "标签") return tagsMatch;
       if (filter === "已完结") {
-        return (titleMatch || authorMatch || tagsMatch) && book.status === "finished";
+        return (titleMatch || authorMatch || tagsMatch) && status === "finished";
       }
       if (filter === "连载中") {
-        return (titleMatch || authorMatch || tagsMatch) && book.status !== "finished";
+        return (titleMatch || authorMatch || tagsMatch) && status !== "finished";
       }
       return titleMatch || authorMatch || tagsMatch;
     })
