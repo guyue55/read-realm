@@ -54,13 +54,13 @@ test("portable backup rejects tampering, previews without writes, then restores 
   page,
 }) => {
   await page.goto("/#/library");
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles(
     path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
   );
   await expect(page.getByRole("heading", { name: "解析预览" })).toBeVisible();
   await page.getByRole("button", { name: "加入书架" }).click();
-  await page.getByText("short-novel", { exact: true }).click();
+  await page.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
   await page.locator('button[aria-label="添加书签"]:visible').click();
   await page.locator('button[aria-label="下一章"]:visible').click();
 
@@ -144,13 +144,13 @@ test("portable backup rejects tampering, previews without writes, then restores 
 
 test("merge requires explicit conflict choices and notes export stays human-readable", async ({ page }) => {
   await page.goto("/#/library");
-  await page.getByRole("button", { name: "导入第一本书" }).click();
+  await page.getByRole("button", { name: /导入本地书籍/ }).click();
   await page.getByLabel("选择 TXT 或 EPUB 文件").setInputFiles(
     path.join(process.cwd(), "e2e/fixtures/short-novel.txt"),
   );
   await expect(page.getByRole("heading", { name: "解析预览" })).toBeVisible();
   await page.getByRole("button", { name: "加入书架" }).click();
-  await page.getByText("short-novel", { exact: true }).click();
+  await page.getByRole("button", { name: "打开《short-novel》", exact: true }).click();
   await page.locator('button[aria-label="添加书签"]:visible').click();
 
   await page.goto("/#/settings");
