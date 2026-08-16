@@ -603,6 +603,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onSettings={() => togglePanel("settings")}
             onToggleToc={isDesktopViewport ? () => togglePanel("toc") : undefined}
             onToggleAi={isDesktopViewport ? () => void handleSummarize() : undefined}
+            onToggleProgress={isDesktopViewport ? () => togglePanel("progress") : undefined}
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
             backgroundDisabled={Boolean(activePanel || showNoteDialog)}
