@@ -31,12 +31,12 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
   });
   await page.goto("/#/library");
   await expect(
-    page.getByText("私人藏书", { exact: false }).first(),
+    page.getByText("私人云同步", { exact: false }).first(),
   ).toBeVisible();
   console.log("GATE03_PRODUCT_STAGE_ENTERED=EXP-14");
   await page.getByRole("link", { name: "公共藏书" }).click();
   await expect(page).toHaveURL(/#\/public-library$/);
-  await expect(page.getByRole("heading", { name: "藏经阁" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "藏经阁", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "入阁" })).toBeDisabled();
 
   const rejectedHeaders: Array<Record<string, string>> = [
@@ -161,13 +161,15 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
   );
   await context.setOffline(true);
   await page.getByRole("button", { name: "返回书架" }).click();
-  await expect(page.locator("body")).toContainText(/私人藏书|页面暂时无法打开/);
+  await expect(page.locator("body")).toContainText(/私人云同步|页面暂时无法打开/);
   const appError = page.getByRole("alert", { name: "页面暂时无法打开" });
   if (await appError.isVisible()) {
     await page.getByText("查看错误信息").click();
     throw new Error(`offline shelf error: ${await appError.innerText()}`);
   }
-  await page.getByText(selectedTitle, { exact: true }).first().click();
+  await page
+    .getByRole("button", { name: `打开《${selectedTitle}》`, exact: true })
+    .click();
   await expect(page.getByText(`公共正文第一章 ${selectedTitle}`)).toBeVisible();
   await page.getByRole("button", { name: "下一章" }).click();
   await expect(page.getByText(`公共正文第二章 ${selectedTitle}`)).toBeVisible();

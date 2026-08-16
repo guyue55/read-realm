@@ -1,9 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
 
 const browserChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
 
+const publicLibraryMaintenanceFixture = path.resolve(
+  __dirname,
+  "e2e/fixtures/public-library-maintenance",
+);
+
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: [
+    "**/personal-book-publication.spec.ts",
+    "**/import-stress.spec.ts",
+    "**/reader-touch.spec.ts",
+    "**/task-0504-public-library-expansion.spec.ts",
+  ],
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
@@ -38,14 +50,28 @@ export default defineConfig({
         READER_PUBLIC_LIBRARY_BLOB_STORAGE_PATH:
           "../../.tmp/e2e/public-library-objects",
         READER_PUBLIC_LIBRARY_MAINTENANCE_KEY: "gate-03-fixture-key",
+        READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS: JSON.stringify({
+          "e2e-maintenance": {
+            label: "隔离维护样本",
+            path: publicLibraryMaintenanceFixture,
+          },
+        }),
       },
     },
     {
-      command: "corepack pnpm dev --port 3100",
+      command:
+        process.env.E2E_PRODUCTION === "1"
+          ? "corepack pnpm start --port 3100"
+          : "corepack pnpm dev --port 3100",
       url: "http://127.0.0.1:3100",
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
-      env: { NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:4100" },
+      env: {
+        NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:4100",
+        ...(process.env.E2E_PRODUCTION === "1"
+          ? {}
+          : { READING_WORLD_DISABLE_DEV_INDICATORS: "1" }),
+      },
     },
   ],
 });

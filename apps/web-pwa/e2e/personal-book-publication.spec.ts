@@ -191,19 +191,20 @@ test("verified personal cloud book publishes without changing private facts", as
 
   const card = page.locator(`[data-book-id="${bookId}"]`);
   await expect(card).toBeVisible();
-  const governanceTrigger = card.getByRole("button", { name: /治理/ });
+  const governanceTrigger = card.getByRole("button", { name: /操作菜单/ });
   await expectTouchSafe(governanceTrigger);
   await governanceTrigger.click();
-  let governance = page.getByRole("dialog", { name: /藏书治理/ });
+  await page.getByRole("menuitem", { name: "管理书籍" }).click();
+  let governance = page.getByRole("dialog", { name: /书籍管理/ });
   await expect(governance).toBeVisible();
-  const publishTrigger = governance.getByRole("button", { name: "公开入阁" });
+  const publishTrigger = governance.getByRole("button", { name: "发布公共副本" });
   await expect(publishTrigger).toBeDisabled();
   await expectTouchSafe(publishTrigger);
   await expectTouchSafe(
-    governance.getByRole("button", { name: "关闭藏书治理" }),
+    governance.getByRole("button", { name: "关闭书籍管理" }),
   );
-  await expectTouchSafe(governance.getByRole("button", { name: "一键缓存" }));
-  await expectTouchSafe(governance.getByRole("button", { name: "解绑下架" }));
+  await expectTouchSafe(governance.getByRole("button", { name: "保存到本机" }));
+  await expectTouchSafe(governance.getByRole("button", { name: "移除" }));
   const folderSelect = governance.getByRole("combobox");
   await expectTouchSafe(folderSelect);
   await folderSelect.selectOption("__create__");
@@ -273,11 +274,12 @@ test("verified personal cloud book publishes without changing private facts", as
 
   const freshCard = page.locator(`[data-book-id="${bookId}"]`);
   const freshGovernanceTrigger = freshCard.getByRole("button", {
-    name: /治理/,
+    name: /操作菜单/,
   });
   await freshGovernanceTrigger.click();
-  governance = page.getByRole("dialog", { name: /藏书治理/ });
-  await governance.getByRole("button", { name: "公开入阁" }).click();
+  await page.getByRole("menuitem", { name: "管理书籍" }).click();
+  governance = page.getByRole("dialog", { name: /书籍管理/ });
+  await governance.getByRole("button", { name: "发布公共副本" }).click();
   const publication = page.getByRole("dialog", { name: /发布.*到藏经阁/ });
   await expect(publication.getByText(/将创建公共明文副本/)).toBeVisible();
   const confirmButton = publication.getByRole("button", {
@@ -306,9 +308,9 @@ test("verified personal cloud book publishes without changing private facts", as
 
   await publication.getByRole("button", { name: "完成" }).click();
   await expect(
-    governance.getByRole("button", { name: "公开入阁" }),
+    governance.getByRole("button", { name: "发布公共副本" }),
   ).toBeFocused();
-  await governance.getByRole("button", { name: "公开入阁" }).click();
+  await governance.getByRole("button", { name: "发布公共副本" }).click();
   await publication.getByRole("button", { name: "确认公开入阁" }).click();
   await expect(publication.getByText("已在阁中", { exact: true })).toBeVisible({
     timeout: 20_000,
@@ -316,7 +318,7 @@ test("verified personal cloud book publishes without changing private facts", as
 
   await publication.getByRole("button", { name: "完成" }).click();
   await expect(
-    governance.getByRole("button", { name: "公开入阁" }),
+    governance.getByRole("button", { name: "发布公共副本" }),
   ).toBeFocused();
   await page.route(
     "**/public-library/maintenance/personal-snapshots",
@@ -328,7 +330,7 @@ test("verified personal cloud book publishes without changing private facts", as
       }),
     { times: 1 },
   );
-  await governance.getByRole("button", { name: "公开入阁" }).click();
+  await governance.getByRole("button", { name: "发布公共副本" }).click();
   await publication.getByRole("button", { name: "确认公开入阁" }).click();
   await expect(
     publication.getByRole("alert").filter({ hasText: "私人原书没有改动" }),
