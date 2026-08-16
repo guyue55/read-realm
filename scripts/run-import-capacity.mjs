@@ -61,13 +61,13 @@ try {
     emit("verify", verify);
     list = command([
       "corepack", "pnpm", "--filter", "web-pwa", "exec", "playwright", "test",
-      "e2e/import-stress.spec.ts", "--project=chromium-chrome", "--list",
+      "e2e/import-stress.spec.ts", "--config=playwright.import-stress.config.ts", "--project=chromium-chrome", "--list",
     ], { PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" });
     emit("list", list);
     if (verify.status === 0 && list.status === 0) {
       testResult = command([
         "corepack", "pnpm", "--filter", "web-pwa", "exec", "playwright", "test",
-        "e2e/import-stress.spec.ts", "--project=chromium-chrome", "--timeout=600000", "--reporter=line",
+        "e2e/import-stress.spec.ts", "--config=playwright.import-stress.config.ts", "--project=chromium-chrome", "--timeout=600000", "--reporter=line",
       ], { CI: "1", PLAYWRIGHT_BROWSER_CHANNEL: process.env.PLAYWRIGHT_BROWSER_CHANNEL ?? "chrome" });
       emit("test", testResult);
     }

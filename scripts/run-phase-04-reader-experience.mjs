@@ -70,7 +70,7 @@ let nativeBackgroundResult = { status: 1, stdout: "", stderr: "" };
 let orphanProcessCount = 0;
 
 try {
-  if (portFreeBefore && list.status === 0 && listedTestCount === 15) {
+  if (portFreeBefore && list.status === 0 && listedTestCount === 18) {
     server = spawn(
       process.execPath,
       [resolve(webRoot, "node_modules/next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)],
