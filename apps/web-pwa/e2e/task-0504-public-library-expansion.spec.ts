@@ -133,6 +133,13 @@ async function expectTouchSafe(locator: ReturnType<Page["locator"]>) {
   expect(box!.height).toBeGreaterThanOrEqual(44);
 }
 
+async function dismissAnyToast(page: Page) {
+  const dismiss = page.locator('button[aria-label="关闭提示"]').first();
+  if (await dismiss.count()) {
+    await dismiss.click({ force: true });
+  }
+}
+
 async function readJoinedBookThroughShelf(page: Page, bookId: string) {
   await page.goto("/#/library");
   await page.evaluate(
@@ -155,12 +162,17 @@ async function readJoinedBookThroughShelf(page: Page, bookId: string) {
   );
   const card = page.locator(`[data-book-id="${bookId}"]`);
   await expect(card).toBeVisible();
-  await card.getByText(directTitle, { exact: true }).click();
+  await card
+    .getByRole("button", { name: `打开《${directTitle}》`, exact: true })
+    .click();
   await expect(page.getByText("TASK-0504 直接正文一")).toBeVisible();
+  await dismissAnyToast(page);
   await page.getByRole("button", { name: "下一章" }).click();
   await expect(page.getByText("TASK-0504 直接正文二")).toBeVisible();
   await page.goto("/#/library");
-  await expect(page).toHaveURL(/#\/library$/u);
+  await expect(
+    page.getByRole("heading", { name: "书架" }).first(),
+  ).toBeVisible();
 }
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -220,7 +232,7 @@ test("TASK-0504 mixed-source production expansion journey", async ({
   });
   await page.goto("/#/library");
   await expect(
-    page.getByText("私人藏书", { exact: false }).first(),
+    page.getByText("私人云同步", { exact: false }).first(),
   ).toBeVisible();
   await seedLocalPersonalBook(page);
   await page.reload();
@@ -228,7 +240,7 @@ test("TASK-0504 mixed-source production expansion journey", async ({
   console.log("TASK0504_PRODUCT_STAGE_ENTERED=TASK-0504");
 
   await page.getByRole("link", { name: "公共藏书" }).click();
-  await expect(page.getByRole("heading", { name: "藏经阁" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "藏经阁", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "入阁" })).toBeDisabled();
   const invalidCredentialHeaders: Array<Record<string, string>> = [
     {},
@@ -432,9 +444,10 @@ test("TASK-0504 mixed-source production expansion journey", async ({
   await page.goto("/#/library");
   const personalCard = page.locator(`[data-book-id="${personalBookId}"]`);
   await expect(personalCard).toBeVisible();
-  await personalCard.getByRole("button", { name: /治理/ }).click();
-  const governance = page.getByRole("dialog", { name: /藏书治理/ });
-  await governance.getByRole("button", { name: "公开入阁" }).click();
+  await personalCard.getByRole("button", { name: /操作菜单/ }).click();
+  await page.getByRole("menuitem", { name: "管理书籍" }).click();
+  const governance = page.getByRole("dialog", { name: /书籍管理/ });
+  await governance.getByRole("button", { name: "发布公共副本" }).click();
   const publication = page.getByRole("dialog", { name: /发布.*到藏经阁/ });
   await page.route(
     "**/public-library/maintenance/personal-snapshots",
@@ -457,12 +470,13 @@ test("TASK-0504 mixed-source production expansion journey", async ({
   const personalCardAfterFailure = page.locator(
     `[data-book-id="${personalBookId}"]`,
   );
-  await personalCardAfterFailure.getByRole("button", { name: /治理/ }).click();
+  await personalCardAfterFailure.getByRole("button", { name: /操作菜单/ }).click();
+  await page.getByRole("menuitem", { name: "管理书籍" }).click();
   const governanceAfterFailure = page.getByRole("dialog", {
-    name: /藏书治理/,
+    name: /书籍管理/,
   });
   await governanceAfterFailure
-    .getByRole("button", { name: "公开入阁" })
+    .getByRole("button", { name: "发布公共副本" })
     .click();
   const publicationRetry = page.getByRole("dialog", {
     name: /发布.*到藏经阁/,
@@ -490,7 +504,7 @@ test("TASK-0504 mixed-source production expansion journey", async ({
 
   for (const width of [340, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
-    await expect(page.getByRole("heading", { name: "藏经阁" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "藏经阁", exact: true })).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
@@ -664,9 +678,10 @@ test("TASK-0504 mixed-source production expansion journey", async ({
   );
   await page
     .locator(`[data-book-id="${joinedBookId}"]`)
-    .getByText(directTitle, { exact: true })
+    .getByRole("button", { name: `打开《${directTitle}》`, exact: true })
     .click();
   await expect(page.getByText("TASK-0504 直接正文一")).toBeVisible();
+  await dismissAnyToast(page);
   await page.getByRole("button", { name: "下一章" }).click();
   await expect(page.getByText("TASK-0504 直接正文二")).toBeVisible();
 
