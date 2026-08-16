@@ -2867,6 +2867,7 @@ export function LibraryDefault({
                 <div
                   key={book.id}
                   data-book-id={book.id}
+                  onClick={() => openLibraryBook(book, isCloudOnly)}
                   onTouchStart={
                     isLocal ? handleTouchStart(book.id, book.title) : undefined
                   }
@@ -2887,7 +2888,10 @@ export function LibraryDefault({
                     type="button"
                     data-library-entry-primary
                     aria-label={`打开《${book.title}》`}
-                    onClick={() => openLibraryBook(book, isCloudOnly)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openLibraryBook(book, isCloudOnly);
+                    }}
                     className="ui-focus-ring relative z-10 flex min-w-0 flex-1 items-center gap-5 rounded-[var(--radius-control)] pl-3 text-left"
                   >
                     {/* 实体比例微型 3D 封面 */}
@@ -3179,6 +3183,7 @@ export function LibraryDefault({
                 <div
                   key={book.id}
                   data-book-id={book.id}
+                  onClick={() => openLibraryBook(book, isCloudOnly)}
                   onTouchStart={
                     isLocal ? handleTouchStart(book.id, book.title) : undefined
                   }
@@ -3196,8 +3201,11 @@ export function LibraryDefault({
                     type="button"
                     data-library-entry-primary
                     aria-label={`打开《${book.title}》`}
-                    onClick={() => openLibraryBook(book, isCloudOnly)}
-                    className="ui-focus-ring absolute inset-0 z-10 rounded-[inherit]"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openLibraryBook(book, isCloudOnly);
+                    }}
+                    className="ui-focus-ring absolute inset-x-0 top-0 z-10 h-24 rounded-[inherit]"
                   >
                     <span className="sr-only">打开《{book.title}》</span>
                   </button>

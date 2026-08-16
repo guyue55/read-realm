@@ -21,6 +21,7 @@ export interface ReaderTopBarProps {
   isDark?: boolean;
   onToggleToc?: () => void;
   onToggleAi?: () => void;
+  onToggleProgress?: () => void;
   onPrevChapter?: () => void;
   onNextChapter?: () => void;
   progress?: number;
@@ -45,6 +46,7 @@ export function ReaderTopBar({
   currentChapterIndex,
   totalChapters,
   backgroundDisabled = false,
+  onToggleProgress,
 }: ReaderTopBarProps) {
   const isOnline = useOnlineStatus();
   // Mobile Top Bar (Overlay)
@@ -146,7 +148,22 @@ export function ReaderTopBar({
           <span className="text-sm font-bold font-serif max-w-[200px] truncate opacity-85">
             {title}
           </span>
-          {typeof progress === "number" && (
+          {typeof progress === "number" && onToggleProgress ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleProgress();
+              }}
+              className="flex items-center gap-1.5 backdrop-blur-md bg-[rgba(103,128,85,0.08)] border border-[#678055]/15 text-[#678055] px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide hover:bg-[rgba(103,128,85,0.16)] transition-colors"
+              title={`拖动阅读进度: 当前 ${Math.round(progress)}%`}
+            >
+              <span>{Math.round(progress)}%</span>
+              {typeof currentChapterIndex === "number" && typeof totalChapters === "number" && (
+                <span className="opacity-60 font-normal">({currentChapterIndex + 1}/{totalChapters})</span>
+              )}
+            </button>
+          ) : typeof progress === "number" ? (
             <div 
               className="flex items-center gap-1.5 backdrop-blur-md bg-[rgba(103,128,85,0.08)] border border-[#678055]/15 text-[#678055] px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide"
               title={`阅读进度: ${Math.round(progress)}%`}
@@ -156,7 +173,7 @@ export function ReaderTopBar({
                 <span className="opacity-60 font-normal">({currentChapterIndex + 1}/{totalChapters})</span>
               )}
             </div>
-          )}
+          ) : null}
           {!isOnline && (
             <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#FAF4EB] border border-[#E5C9A6]/50 text-[#8C6239] uppercase tracking-wider select-none shrink-0 leading-none">
               离线
