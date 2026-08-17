@@ -21,6 +21,7 @@ import { BookCover } from "@/components/BookCover";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatePanel } from "@/components/ui/StatePanel";
 import { StatusNotice } from "@/components/ui/StatusNotice";
+import { useAppToast } from "@/components/ui/AppToast";
 import {
   PublicLibraryCatalogStaleError,
   publicLibraryApiClient,
@@ -47,6 +48,7 @@ const views = [
 
 export default function PublicLibraryPage() {
   const router = useVirtualRouter();
+  const toast = useAppToast();
   const [initialRouteContext] = useState(() =>
     parsePublicLibraryRouteContext(
       typeof window === "undefined" ? "/public-library" : window.location.hash,
@@ -270,14 +272,28 @@ export default function PublicLibraryPage() {
           rightNodes={
             <div className="flex items-center gap-2">
               <button
-                className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
-                disabled={!maintenanceAvailable}
-                onClick={() => setImportOpen(true)}
+                className={`ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white ${
+                  maintenanceAvailable
+                    ? ""
+                    : "cursor-not-allowed opacity-45"
+                }`}
+                aria-disabled={!maintenanceAvailable}
+                onClick={() => {
+                  if (!maintenanceAvailable) {
+                    // 点击始终有反馈：未满足条件时给出引导，而非静默无反应。
+                    toast.showToast(
+                      "入阁需要开启无限制入阁，或在「设置 → 同步口令」填入实例维护口令（一键启动会打印）。",
+                      "warning",
+                    );
+                    return;
+                  }
+                  setImportOpen(true);
+                }}
                 ref={importButtonRef}
                 title={
                   maintenanceAvailable
                     ? "选择 TXT 文件入阁"
-                    : "请先在书架设置私人云访问口令"
+                    : "入阁需开启无限制模式，或在设置页填入维护口令"
                 }
                 type="button"
               >

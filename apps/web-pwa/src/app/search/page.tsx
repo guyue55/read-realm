@@ -353,6 +353,11 @@ export default function SearchPage() {
           <button
             onClick={() => handleGlobalSearch()}
             disabled={isSearching || !searchQuery.trim()}
+            title={
+              !searchQuery.trim()
+                ? "请输入书名、作者或标签关键词"
+                : "搜索私人云端书架"
+            }
             className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-4 text-sm font-semibold text-white disabled:opacity-45"
           >
             {isSearching ? "搜索中" : "搜索私人云端"}

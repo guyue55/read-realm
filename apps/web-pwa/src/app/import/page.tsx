@@ -1017,7 +1017,15 @@ export default function ImportPage() {
   // ==========================================
   const handleUrlImport = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!urlInput.trim() || isProcessing) return;
+    if (isProcessing) return;
+    if (!urlInput.trim()) {
+      setStatus("请先粘贴小说目录页或章节页链接。");
+      return;
+    }
+    if (!isOnline) {
+      setStatus("当前离线，联网后再解析 URL。");
+      return;
+    }
 
     let url: string;
     try {
@@ -1398,7 +1406,14 @@ export default function ImportPage() {
                 />
                 <button
                   type="submit"
-                  disabled={isProcessing || !urlInput.trim() || !urlRightsConfirmed || !isOnline}
+                  disabled={isProcessing}
+                  title={
+                    !urlInput.trim()
+                      ? "请先粘贴小说目录页或章节页链接"
+                      : !urlRightsConfirmed
+                        ? "请先勾选「我确认有权访问和保存此公开来源」"
+                        : "解析 URL"
+                  }
                   className="ui-focus-ring min-h-12 rounded-full bg-[var(--ui-accent)] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#527047] disabled:cursor-not-allowed disabled:bg-[rgba(80,65,45,0.2)] physics-spring hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isProcessing ? "解析中" : "解析 URL"}
