@@ -148,7 +148,7 @@ export class PublicLibraryMaintenanceClient {
     this.credentialSnapshot = normalizeShareToken(maintenanceKey);
   }
 
-  private headers() {
+  private headers(): Record<string, string> {
     return this.credentialSnapshot
       ? { "x-public-library-maintenance-key": this.credentialSnapshot }
       : {};

@@ -80,6 +80,11 @@ export default function NotesPage() {
               type="button"
               onClick={() => void downloadNotes("markdown")}
               disabled={notes.length === 0 || exporting}
+              title={
+                notes.length === 0
+                  ? "暂无笔记可导出"
+                  : "导出全部笔记为 Markdown"
+              }
               className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
             >
               {exporting ? "正在导出…" : "导出 Markdown"}
@@ -88,6 +93,11 @@ export default function NotesPage() {
               type="button"
               onClick={() => void downloadNotes("json")}
               disabled={notes.length === 0 || exporting}
+              title={
+                notes.length === 0
+                  ? "暂无笔记可导出"
+                  : "导出全部笔记为 JSON"
+              }
               className="ui-focus-ring min-h-11 rounded-md border border-[var(--ui-border)] bg-white/80 px-3 text-sm font-semibold disabled:opacity-50"
             >
               {exporting ? "正在导出…" : "导出 JSON"}

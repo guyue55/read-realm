@@ -518,13 +518,27 @@ export function PublicLibraryImportDialog({
             </button>
           )}
           <button
-            className="ui-focus-ring min-h-11 rounded-full bg-[var(--color-primary)] px-6 text-sm font-semibold text-white disabled:opacity-40"
-            disabled={
-              busy ||
-              !rightsConfirmed ||
-              !tasks.some((task) => task.status === "queued")
-            }
-            onClick={() => void runQueue(false)}
+            className={`ui-focus-ring min-h-11 rounded-full bg-[var(--color-primary)] px-6 text-sm font-semibold text-white ${
+              busy
+                ? "disabled:opacity-40"
+                : !rightsConfirmed ||
+                    !tasks.some((task) => task.status === "queued")
+                  ? "opacity-45"
+                  : ""
+            }`}
+            disabled={busy}
+            onClick={() => {
+              if (busy) return;
+              if (!rightsConfirmed) {
+                setMessage("请先勾选「将创建公共明文副本，本实例访客可读取」后再开始入阁。");
+                return;
+              }
+              if (!tasks.some((task) => task.status === "queued")) {
+                setMessage("请先选择至少一个 TXT 文件再开始入阁。");
+                return;
+              }
+              void runQueue(false);
+            }}
             type="button"
           >
             {running ? "正在入阁…" : "开始入阁"}

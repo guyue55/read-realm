@@ -2578,6 +2578,11 @@ export function LibraryDefault({
                     <button
                       onClick={handleBindShareToken}
                       disabled={!shareTokenInput.trim()}
+                      title={
+                        !shareTokenInput.trim()
+                          ? "请先在上方输入同步口令"
+                          : "绑定并启用私人云同步"
+                      }
                       className={`ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--ui-accent-hover)] ${
                         !shareTokenInput.trim()
                           ? "opacity-40 cursor-not-allowed"

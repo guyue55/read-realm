@@ -55,13 +55,12 @@ export default function PreviewPage({
         setError("任务未找到或已过期");
         return;
       }
-      const clonedTask = {
-        ...t,
-        bookMetadata: { ...t.bookMetadata },
-        chapters: t.chapters.map((chapter) => ({ ...chapter })),
-      };
+      // 顶层浅拷贝保持 task/draft 引用独立；chapters 数组共享只读引用。
+      // 所有后续编辑（书名/章节标题）都走不可变 setDraft 更新，不会原地改动，
+      // 因此无需对整本（尤其千章巨制）做深拷贝，避免大书导入预览时
+      // 主线程被全量克隆阻塞、页面长时间停留在空白加载态。
       setTask(t);
-      setDraft(clonedTask);
+      setDraft({ ...t, chapters: t.chapters });
     });
   }, [params.taskId]);
 
@@ -229,9 +228,14 @@ export default function PreviewPage({
 
   if (!task || !draft) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--ui-bg)] p-8">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-[rgba(95,125,82,0.18)] border-t-[var(--ui-accent)]" />
-      </div>
+      <AppShell title="解析预览" subtitle="正在展开预览…">
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 p-8">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[rgba(95,125,82,0.18)] border-t-[var(--ui-accent)]" />
+          <p className="text-sm font-medium text-[var(--ui-muted)]">
+            正在展开解析预览，大书稍候片刻…
+          </p>
+        </div>
+      </AppShell>
     );
   }
 
