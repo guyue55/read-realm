@@ -50,9 +50,17 @@ export class PublicLibraryService {
     private readonly repository: PublicLibraryRepository,
     private readonly maintenanceKey = process.env
       .READER_PUBLIC_LIBRARY_MAINTENANCE_KEY ?? '',
+    private readonly allowAnyMaintenance =
+      process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY === '1',
   ) {}
 
+  /** 无限制模式：任何人都可入阁/维护，跳过凭据校验（默认开启）。 */
+  isAllowAnyMaintenance() {
+    return this.allowAnyMaintenance;
+  }
+
   assertMaintenanceKey(key: string | undefined) {
+    if (this.allowAnyMaintenance) return;
     const expected = this.maintenanceKey.trim();
     if (!expected || expected.toLowerCase() === 'default') {
       throw new ServiceUnavailableException('公共馆藏维护写入尚未配置');

@@ -67,7 +67,10 @@ fi
 # 藏经阁维护口令：默认提供一个本机/局域网自用口令，可用
 # READER_PUBLIC_LIBRARY_MAINTENANCE_KEY 环境变量覆盖。
 # 前端「藏经阁 → 入阁」需要把「设置 → 同步口令」填成同一个值才会放行。
+# 「无限制入阁」默认开启：任何人都可入阁（跳过口令校验），可用
+# READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY=0 关闭。
 MAINTENANCE_KEY="${READER_PUBLIC_LIBRARY_MAINTENANCE_KEY:-reader-lan-maintenance}"
+ALLOW_ANY="${READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY:-1}"
 
 echo "🟢 阅读世界 · 一键启动（$MODE 模式）"
 if [ "$LAN_ENABLED" = "1" ]; then
@@ -78,6 +81,9 @@ else
   echo "  💻 本机访问 → ${PUBLIC_BASE}（未检测到局域网 IP，仅本机可访问）"
 fi
 echo "  🔑 藏经阁入阁口令 → ${MAINTENANCE_KEY}（请在设置页把同步口令填成此值即可入阁）"
+if [ "$ALLOW_ANY" = "1" ]; then
+  echo "  🚪 无限制入阁已开启 → 任何人都可入阁（关闭：READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY=0）"
+fi
 echo "  日志 → ${LOG_DIR}/app-{api,web}.log"
 
 # ---- 清理可能残留的旧进程 ----
@@ -100,7 +106,9 @@ cleanup() {
 trap cleanup INT TERM
 
 # ---- 启动 API（监听 0.0.0.0 / 127.0.0.1）----
-PORT="$API_PORT" API_HOST="$HOST" READER_PUBLIC_LIBRARY_MAINTENANCE_KEY="$MAINTENANCE_KEY" \
+PORT="$API_PORT" API_HOST="$HOST" \
+  READER_PUBLIC_LIBRARY_MAINTENANCE_KEY="$MAINTENANCE_KEY" \
+  READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY="$ALLOW_ANY" \
   corepack pnpm --dir "$ROOT/apps/api" dev >"$API_LOG" 2>&1 &
 API_PID=$!
 

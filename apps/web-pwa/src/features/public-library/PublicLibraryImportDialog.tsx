@@ -159,13 +159,11 @@ export function PublicLibraryImportDialog({
 
   const runQueue = async (retryOnly = false) => {
     if (running || !rightsConfirmed) return;
+    // 允许空密钥：无限制模式（服务端 ALLOW_ANY=1）下匿名访客也可入阁，
+    // 权限交给服务端判定；无权限时服务端返回 403，前端会提示填入同步口令。
     const maintenanceKey = normalizeShareToken(
       window.localStorage.getItem("reader-share-token"),
     );
-    if (!maintenanceKey) {
-      setMessage("请先在书架设置私有云密钥，再尝试入阁。");
-      return;
-    }
     const sourceTasks = tasks.map((task) =>
       retryOnly && task.status === "failed" && task.retryable
         ? { ...task, status: "queued" as const, reason: undefined }
