@@ -83,6 +83,7 @@ export default function PublicLibraryPage() {
     null,
   );
   const [maintenanceAvailable, setMaintenanceAvailable] = useState(false);
+  const [ingressAllowAny, setIngressAllowAny] = useState(false);
   const importButtonRef = useRef<HTMLButtonElement>(null);
   const editButtonRef = useRef<HTMLElement | null>(null);
   const catalogSnapshotRef = useRef<number | undefined>(undefined);
@@ -133,13 +134,29 @@ export default function PublicLibraryPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void publicLibraryApiClient
+      .fetchStatus()
+      .then((status) => {
+        if (!cancelled) setIngressAllowAny(status.allowAny);
+      })
+      .catch(() => {
+        if (!cancelled) setIngressAllowAny(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const refreshMaintenanceAvailability = () => {
       setMaintenanceAvailable(
-        Boolean(
-          normalizeShareToken(
-            window.localStorage.getItem("reader-share-token"),
+        ingressAllowAny ||
+          Boolean(
+            normalizeShareToken(
+              window.localStorage.getItem("reader-share-token"),
+            ),
           ),
-        ),
       );
     };
     refreshMaintenanceAvailability();
@@ -149,7 +166,7 @@ export default function PublicLibraryPage() {
       window.removeEventListener("focus", refreshMaintenanceAvailability);
       window.removeEventListener("storage", refreshMaintenanceAvailability);
     };
-  }, []);
+  }, [ingressAllowAny]);
 
   const requestGeneration = useRef(0);
 

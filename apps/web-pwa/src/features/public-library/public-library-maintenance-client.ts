@@ -143,16 +143,15 @@ export class PublicLibraryMaintenanceClient {
   private readonly credentialSnapshot: string;
 
   constructor(maintenanceKey: string) {
+    // 允许空密钥：无限制模式下（服务端 READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY=1）
+    // 匿名访客也可入阁，权限由服务端判定，客户端不在此拦截。
     this.credentialSnapshot = normalizeShareToken(maintenanceKey);
-    if (!this.credentialSnapshot) {
-      throw new PublicLibraryMaintenanceError("credential_rejected");
-    }
   }
 
   private headers() {
-    return {
-      "x-public-library-maintenance-key": this.credentialSnapshot,
-    };
+    return this.credentialSnapshot
+      ? { "x-public-library-maintenance-key": this.credentialSnapshot }
+      : {};
   }
 
   private async parseMaintenanceResponse(response: Response) {

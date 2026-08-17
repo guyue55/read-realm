@@ -49,6 +49,14 @@ export class PublicLibraryController {
     );
   }
 
+  /** 公开状态：前端据此决定是否开放「入阁」入口（无限制模式默认开启）。 */
+  @Get('status')
+  status() {
+    return {
+      maintenance: { allowAny: this.service.isAllowAnyMaintenance() },
+    };
+  }
+
   @Get('books')
   list(@Query() query: unknown) {
     const parsed = PublicLibraryListQuerySchema.safeParse(query);

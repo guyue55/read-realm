@@ -205,14 +205,17 @@ describe("PublicLibraryMaintenanceClient", () => {
   });
 
   it.each(["", "default", "bad key"])(
-    "rejects an invalid credential snapshot before fetch: %p",
+    "allows an empty credential snapshot (server decides) and omits the key header: %p",
     async (key) => {
-      const fetchMock = vi.fn();
-      vi.stubGlobal("fetch", fetchMock);
-      expect(() => new PublicLibraryMaintenanceClient(key)).toThrowError(
-        new PublicLibraryMaintenanceError("credential_rejected"),
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ items: [] }), { status: 200 }),
       );
-      expect(fetchMock).not.toHaveBeenCalled();
+      vi.stubGlobal("fetch", fetchMock);
+      const client = new PublicLibraryMaintenanceClient(key);
+      await client.listScanRoots();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0][1] as RequestInit | undefined;
+      expect(init?.headers).not.toHaveProperty("x-public-library-maintenance-key");
     },
   );
 });

@@ -109,6 +109,32 @@ export function parsePublicLibraryBook(value: unknown): PublicLibraryBook {
 }
 
 export class PublicLibraryApiClient {
+  /** 拉取公开状态（无限制入阁开关），失败时按关闭处理（前端仍按口令判断）。 */
+  async fetchStatus(): Promise<{ allowAny: boolean }> {
+    try {
+      const response = await fetch(apiUrl("/public-library/status"));
+      if (!response.ok) return { allowAny: false };
+      const payload: unknown = await response.json();
+      if (
+        isRecord(payload) &&
+        isRecord((payload as { maintenance?: unknown }).maintenance) &&
+        typeof (
+          (payload as { maintenance: { allowAny?: unknown } }).maintenance
+            .allowAny
+        ) === "boolean"
+      ) {
+        return {
+          allowAny: (
+            payload as { maintenance: { allowAny: boolean } }
+          ).maintenance.allowAny,
+        };
+      }
+      return { allowAny: false };
+    } catch {
+      return { allowAny: false };
+    }
+  }
+
   async list(input: {
     q?: string;
     category?: string;
