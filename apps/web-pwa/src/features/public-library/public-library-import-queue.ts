@@ -117,7 +117,8 @@ function failureTask(
       return {
         ...task,
         status: "failed",
-        reason: "当前密钥没有此实例的入阁权限",
+        reason:
+          "暂无入阁权限：同步口令与本实例维护口令不一致。请在「设置 → 同步口令」填入启动时打印的口令后重试。",
         retryable: false,
       };
     }
