@@ -3,7 +3,10 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { PublicLibraryController } from './public-library.controller';
-import { PublicLibraryMaintenanceGuard } from './public-library-maintenance.guard';
+import {
+  PublicLibraryMaintenanceGuard,
+  PublicLibraryMaintenanceAllowAnyGuard,
+} from './public-library-maintenance.guard';
 import { PublicLibraryService } from './public-library.service';
 
 function multipartWithRawFilename(filename: string) {
@@ -56,6 +59,7 @@ describe('PublicLibraryController multipart boundary', () => {
       Promise.resolve({ id: 'public-file', metadataVersion: 2 }),
     ),
     getPackage: jest.fn(),
+    isAllowAnyMaintenance: jest.fn(() => false),
   };
 
   beforeEach(async () => {
@@ -65,6 +69,7 @@ describe('PublicLibraryController multipart boundary', () => {
       providers: [
         { provide: PublicLibraryService, useValue: service },
         PublicLibraryMaintenanceGuard,
+        PublicLibraryMaintenanceAllowAnyGuard,
       ],
     }).compile();
     app = moduleRef.createNestApplication();

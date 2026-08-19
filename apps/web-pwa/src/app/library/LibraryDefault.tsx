@@ -1318,6 +1318,9 @@ export function LibraryDefault({
               `[Sync] 备份本地典籍「${book.title}」遭遇错误，已断路保护:`,
               singleBookErr,
             );
+            if (book.sourceType === "cloud_cache") {
+              clearActiveSyncTask(book.id, syncShareToken);
+            }
             hasSyncFailures = true;
           } finally {
             completedSteps++;
@@ -1611,24 +1614,37 @@ export function LibraryDefault({
   };
 
   // 单书快捷备份 (细粒度隔离进度状态)
-  const handleSingleUpload = async (book: Book): Promise<boolean> => {
+  // 单书快捷备份 (细粒度隔离进度状态)
+  const handleSingleUpload = async (
+    book: Book,
+    options?: { isBackgroundRecovery?: boolean },
+  ): Promise<boolean> => {
+    const isBackground = options?.isBackgroundRecovery === true;
     if (!currentShareToken) {
-      setToastMsg(
-        "请先在同步设置中保存私人云访问口令，再执行备份。",
-        "warning",
-      );
+      if (!isBackground) {
+        setToastMsg(
+          "请先在同步设置中保存私人云访问口令，再执行备份。",
+          "warning",
+        );
+      }
       return false;
     }
     if (syncMutexRef.current) {
-      setToastMsg("上一项同步操作尚未完成，请稍后再试。", "warning");
+      if (!isBackground) {
+        setToastMsg("上一项同步操作尚未完成，请稍后再试。", "warning");
+      }
       return false;
     }
     if (isSyncing || syncingBookId) {
-      setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+      if (!isBackground) {
+        setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+      }
       return false;
     }
     if (!isOnline) {
-      setToastMsg("设备当前离线，请联网后再备份。", "warning");
+      if (!isBackground) {
+        setToastMsg("设备当前离线，请联网后再备份。", "warning");
+      }
       return false;
     }
     const operation = createPersonalSyncOperation(currentShareToken);
@@ -1683,12 +1699,20 @@ export function LibraryDefault({
       }
 
       clearActiveSyncTask(book.id, operation.shareToken);
-      setToastMsg(`「${book.title}」的云端副本已完整核验。`, "success");
+      if (!isBackground) {
+        setToastMsg(`「${book.title}」的云端副本已完整核验。`, "success");
+      }
       await fetchCloudBooks();
       return true;
     } catch (error) {
-      console.error(`备份藏书「${book.title}」失败:`, error);
-      setToastMsg("备份未通过完整性核验，已保留待重试状态。", "danger");
+      console.warn(`备份藏书「${book.title}」失败:`, error);
+      if (isBackground) {
+        if (book.sourceType === "cloud_cache") {
+          clearActiveSyncTask(book.id, operation.shareToken);
+        }
+      } else {
+        setToastMsg("备份未通过完整性核验，已保留待重试状态。", "danger");
+      }
       return false;
     } finally {
       syncMutexRef.current = false;
@@ -1703,21 +1727,33 @@ export function LibraryDefault({
   };
 
   // 单书快捷拉取 (物理还原进度快照)
-  const handleSingleDownload = async (book: LegacyRemoteBook) => {
+  const handleSingleDownload = async (
+    book: LegacyRemoteBook,
+    options?: { isBackgroundRecovery?: boolean },
+  ) => {
+    const isBackground = options?.isBackgroundRecovery === true;
     if (!currentShareToken) {
-      setToastMsg("请先保存私人云访问口令，再从云端下载。", "warning");
+      if (!isBackground) {
+        setToastMsg("请先保存私人云访问口令，再从云端下载。", "warning");
+      }
       return;
     }
     if (syncMutexRef.current) {
-      setToastMsg("上一项同步操作尚未完成，请稍后再试。", "warning");
+      if (!isBackground) {
+        setToastMsg("上一项同步操作尚未完成，请稍后再试。", "warning");
+      }
       return;
     }
     if (isSyncing || syncingBookId) {
-      setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+      if (!isBackground) {
+        setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+      }
       return;
     }
     if (!navigator.onLine || !isOnline) {
-      setToastMsg("设备当前离线，请联网后再下载。", "warning");
+      if (!isBackground) {
+        setToastMsg("设备当前离线，请联网后再下载。", "warning");
+      }
       return;
     }
     const operation = createPersonalSyncOperation(currentShareToken);
@@ -1766,17 +1802,21 @@ export function LibraryDefault({
         await new Promise((r) => setTimeout(r, 30));
       }
 
-      setToastMsg(`「${book.title}」已下载到本机。`, "success");
+      if (!isBackground) {
+        setToastMsg(`「${book.title}」已下载到本机。`, "success");
+      }
       clearActiveSyncTask(book.id, operation.shareToken);
       await fetchCloudBooks();
     } catch {
-      if (!navigator.onLine) {
-        setToastMsg("设备当前离线，请联网后再下载。", "warning");
-      } else {
-        setToastMsg(
-          "下载未完成，请检查网络、私人云服务和正文完整性后重试。",
-          "danger",
-        );
+      if (!isBackground) {
+        if (!navigator.onLine) {
+          setToastMsg("设备当前离线，请联网后再下载。", "warning");
+        } else {
+          setToastMsg(
+            "下载未完成，请检查网络、私人云服务和正文完整性后重试。",
+            "danger",
+          );
+        }
       }
     } finally {
       syncMutexRef.current = false;
@@ -1929,10 +1969,13 @@ export function LibraryDefault({
                 `[Sync recovery] 检测到未完成任务「${recoveryBook.title}」(${action})，开始恢复。`,
               );
               if (action === "upload" && localBook) {
-                await handleSingleUpload(localBook);
+                await handleSingleUpload(localBook, { isBackgroundRecovery: true });
               } else if (action === "download" && remoteBook) {
-                await handleSingleDownload(remoteBook);
+                await handleSingleDownload(remoteBook, { isBackgroundRecovery: true });
               }
+            } else {
+              // 本地和远端均不存在的书籍任务，自动清理，防止成为死任务
+              clearActiveSyncTask(bookId, shareToken);
             }
           }
         }

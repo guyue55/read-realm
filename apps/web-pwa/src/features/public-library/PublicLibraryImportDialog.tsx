@@ -86,21 +86,21 @@ export function PublicLibraryImportDialog({
     const maintenanceKey = normalizeShareToken(
       window.localStorage.getItem("reader-share-token"),
     );
-    if (maintenanceKey) {
-      const client = new PublicLibraryMaintenanceClient(maintenanceKey);
-      void client
-        .listScanRoots()
-        .then((roots) => {
-          if (scanGenerationRef.current !== generation) return;
-          setScanRoots(roots);
-          setSelectedRootId(roots[0]?.rootId ?? "");
-        })
-        .catch(() => {
-          if (scanGenerationRef.current === generation) {
-            setScanMessage("服务端维护目录暂不可用，仍可选择本地 TXT 入阁。");
-          }
-        });
-    }
+    // 允许空密钥：无限制模式（服务端 ALLOW_ANY=1）下匿名访客也可入阁，
+    // 权限交给服务端判定；无论是否有密钥，都尝试加载扫描根。
+    const client = new PublicLibraryMaintenanceClient(maintenanceKey);
+    void client
+      .listScanRoots()
+      .then((roots) => {
+        if (scanGenerationRef.current !== generation) return;
+        setScanRoots(roots);
+        setSelectedRootId(roots[0]?.rootId ?? "");
+      })
+      .catch(() => {
+        if (scanGenerationRef.current === generation) {
+          setScanMessage("服务端维护目录暂不可用，仍可选择本地 TXT 入阁。");
+        }
+      });
     return () => {
       scanGenerationRef.current += 1;
     };

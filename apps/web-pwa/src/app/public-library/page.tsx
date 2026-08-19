@@ -28,9 +28,14 @@ import {
   type PublicLibraryBook,
   type PublicLibraryFacet,
 } from "@/features/public-library/public-library-client";
-import { publicLibraryJoinService } from "@/features/public-library/dexie-public-library-local";
+import {
+  getBatchLocalStatesForPublicBooks,
+  publicLibraryJoinService,
+  type PublicBookLocalState,
+} from "@/features/public-library/dexie-public-library-local";
 import { PublicLibraryImportDialog } from "@/features/public-library/PublicLibraryImportDialog";
 import { PublicLibraryCatalogEditorDialog } from "@/features/public-library/PublicLibraryCatalogEditorDialog";
+import { PublicLibraryBookDetailModal } from "@/features/public-library/PublicLibraryBookDetailModal";
 import {
   parsePublicLibraryRouteContext,
   serializePublicLibraryRouteContext,
@@ -38,6 +43,7 @@ import {
 } from "@/features/public-library/public-library-route-context";
 import { normalizeShareToken } from "@/lib/api";
 import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
+import { Check, Compass } from "lucide-react";
 
 const views = [
   { id: "books", label: "书籍", icon: BookOpen },
@@ -80,7 +86,14 @@ export default function PublicLibraryPage() {
   } | null>(null);
   const [loadError, setLoadError] = useState("");
   const [joiningId, setJoiningId] = useState("");
+  const [openingId, setOpeningId] = useState("");
+  const [localStates, setLocalStates] = useState<
+    Map<string, PublicBookLocalState>
+  >(new Map());
   const [importOpen, setImportOpen] = useState(false);
+  const [previewingBook, setPreviewingBook] = useState<PublicLibraryBook | null>(
+    null,
+  );
   const [editingBook, setEditingBook] = useState<PublicLibraryBook | null>(
     null,
   );
@@ -88,8 +101,23 @@ export default function PublicLibraryPage() {
   const [ingressAllowAny, setIngressAllowAny] = useState(false);
   const importButtonRef = useRef<HTMLButtonElement>(null);
   const editButtonRef = useRef<HTMLElement | null>(null);
+  const previewFallbackRef = useRef<HTMLElement | null>(null);
   const catalogSnapshotRef = useRef<number | undefined>(undefined);
   const catalogRestartNoticeRef = useRef(false);
+
+  // 刷新当前可见书籍的本地书架与阅读进度状态
+  const refreshLocalStates = async (targetBooks: PublicLibraryBook[]) => {
+    if (!targetBooks.length) {
+      setLocalStates(new Map());
+      return;
+    }
+    try {
+      const states = await getBatchLocalStatesForPublicBooks(targetBooks);
+      setLocalStates(states);
+    } catch (e) {
+      console.warn("[PublicLibrary] 查询本地书籍状态异常:", e);
+    }
+  };
 
   useEffect(() => {
     if (window.location.pathname !== "/") {
@@ -201,8 +229,10 @@ export default function PublicLibraryPage() {
         if (generation !== requestGeneration.current) return;
         if (page === 1) catalogSnapshotRef.current = result.snapshotRevision;
         if (view === "books") {
-          setBooks(result.items as PublicLibraryBook[]);
+          const fetchedBooks = result.items as PublicLibraryBook[];
+          setBooks(fetchedBooks);
           setFacets([]);
+          void refreshLocalStates(fetchedBooks);
         } else {
           setBooks([]);
           setFacets(result.items as PublicLibraryFacet[]);
@@ -233,6 +263,19 @@ export default function PublicLibraryPage() {
       });
   }, [appliedQuery, categoryId, maintainerId, page, reloadNonce, tagId, view]);
 
+  // 页面重新获焦时静默对齐本地书架状态与阅读进度
+  useEffect(() => {
+    const onWindowFocus = () => {
+      if (books.length > 0) {
+        void refreshLocalStates(books);
+      }
+    };
+    window.addEventListener("focus", onWindowFocus);
+    return () => {
+      window.removeEventListener("focus", onWindowFocus);
+    };
+  }, [books]);
+
   const beginCatalogTransition = () => {
     requestGeneration.current += 1;
     setState("loading");
@@ -242,14 +285,49 @@ export default function PublicLibraryPage() {
     setNotice(null);
   };
 
-  const joinBook = async (book: PublicLibraryBook) => {
-    if (joiningId) return;
-    setJoiningId(book.id);
+  /**
+   * 即刻开卷 / 继续阅读：
+   * 1. 若本地已收录，直接路由进入阅读器（保留公共藏经阁来源参数 ?from=public-library）；
+   * 2. 若本地尚未收录，静默完整拉取后直接进入阅读器，实现零感知秒开！
+   */
+  const openBook = async (book: PublicLibraryBook) => {
+    if (openingId || joiningId) return;
+    const localState = localStates.get(book.id);
+    if (localState?.localBook) {
+      router.push(`/reader/${localState.localBook.id}?from=public-library`);
+      return;
+    }
+
+    setOpeningId(book.id);
     setNotice(null);
     try {
       const result = await publicLibraryJoinService.join(book.id);
-      router.push(`/reader/${result.localBookId}`);
-    } catch {
+      void refreshLocalStates(books);
+      router.push(`/reader/${result.localBookId}?from=public-library`);
+    } catch (err) {
+      console.error("[PublicLibrary] 开卷失败:", err);
+      setNotice({
+        text: "整本正文未能完整加入，本地书架没有留下半本书。请稍后重试。",
+        tone: "danger",
+      });
+    } finally {
+      setOpeningId("");
+    }
+  };
+
+  /**
+   * 仅加入书架（不跳转阅读）
+   */
+  const joinBookOnly = async (book: PublicLibraryBook) => {
+    if (joiningId || openingId) return;
+    setJoiningId(book.id);
+    setNotice(null);
+    try {
+      await publicLibraryJoinService.join(book.id);
+      await refreshLocalStates(books);
+      toast.showToast(`《${book.title}》已成功放入书架`, "success");
+    } catch (err) {
+      console.error("[PublicLibrary] 加入书架失败:", err);
       setNotice({
         text: "整本正文未能完整加入，本地书架没有留下半本书。请稍后重试。",
         tone: "danger",
@@ -527,48 +605,140 @@ export default function PublicLibraryPage() {
               />
             ) : view === "books" ? (
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {books.map((book) => (
-                  <article
-                    className="ui-card flex min-w-0 gap-4 rounded-[var(--radius-card)] p-4"
-                    data-public-library-book
-                    key={book.id}
-                  >
-                    <BookCover
-                      className="h-24 w-16 shrink-0"
-                      compact
-                      title={book.title}
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-xs font-semibold text-[var(--color-primary)]">
-                        {book.category}
-                      </span>
-                      <h2 className="mt-1 line-clamp-2 [font-family:var(--font-display)] text-base font-semibold">
-                        {book.title}
-                      </h2>
-                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                        {book.author || "佚名"} · {book.chapterCount} 章
-                      </p>
-                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                        {book.maintainerLabel || "维护来源未标注"}
-                        {book.tags?.length
-                          ? ` · ${book.tags.map((tag) => tag.label).join(" / ")}`
-                          : ""}
-                      </p>
-                      <div className="mt-auto flex flex-wrap gap-2 pt-3">
+                {books.map((book) => {
+                  const localState = localStates.get(book.id);
+                  const isLocal = Boolean(localState?.localBook);
+                  const progress = localState?.progress;
+                  const hasProgress = progress && progress.percentage > 0;
+
+                  return (
+                    <article
+                      className="ui-card group flex min-w-0 cursor-pointer flex-col gap-3 rounded-[var(--radius-card)] p-4 transition-all hover:shadow-md"
+                      data-public-library-book
+                      key={book.id}
+                      onClick={(event) => {
+                        if (
+                          (event.target as HTMLElement).closest(
+                            "button, a, input, select",
+                          )
+                        ) {
+                          return;
+                        }
+                        previewFallbackRef.current = event.currentTarget;
+                        setPreviewingBook(book);
+                      }}
+                    >
+                      <div className="flex min-w-0 gap-3.5">
+                        <BookCover
+                          className="h-24 w-16 shrink-0 transition-transform group-hover:scale-105"
+                          compact
+                          title={book.title}
+                        />
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-semibold text-[var(--color-primary)]">
+                              {book.category}
+                            </span>
+                            {hasProgress ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                <Compass aria-hidden="true" className="h-3 w-3" />
+                                第 {progress.chapterIndex + 1} 章 ({Math.round(progress.percentage)}%)
+                              </span>
+                            ) : isLocal ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                <Check aria-hidden="true" className="h-3 w-3" />
+                                已在书架
+                              </span>
+                            ) : null}
+                          </div>
+                          <h2 className="mt-1 line-clamp-2 [font-family:var(--font-display)] text-base font-semibold group-hover:text-[var(--color-primary)]">
+                            {book.title}
+                          </h2>
+                          <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                            {book.author || "佚名"} · {book.chapterCount} 章
+                          </p>
+                          <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                            {book.maintainerLabel || "维护来源未标注"}
+                            {book.tags?.length
+                              ? ` · ${book.tags.map((tag) => tag.label).join(" / ")}`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 卡片底部操作栏 */}
+                      <div className="mt-auto flex items-center gap-2 border-t border-[var(--color-border)]/40 pt-2.5">
                         <button
-                          className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-primary)] px-4 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
-                          disabled={Boolean(joiningId)}
-                          onClick={() => void joinBook(book)}
+                          className="ui-focus-ring inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            previewFallbackRef.current = event.currentTarget;
+                            setPreviewingBook(book);
+                          }}
                           type="button"
                         >
-                          <Download aria-hidden="true" className="h-4 w-4" />
-                          {joiningId === book.id ? "正在完整加入" : "加入书架"}
+                          <BookOpen aria-hidden="true" className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                          预览目录
+                        </button>
+                        <button
+                          className="ui-focus-ring inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-2 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-50"
+                          disabled={Boolean(openingId || joiningId)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void openBook(book);
+                          }}
+                          title={hasProgress ? `继续阅读：第 ${progress.chapterIndex + 1} 章` : "即刻开卷阅读"}
+                          type="button"
+                        >
+                          {openingId === book.id ? (
+                            "准备中…"
+                          ) : hasProgress ? (
+                            <>
+                              <Compass aria-hidden="true" className="h-3.5 w-3.5" />
+                              继续阅读
+                            </>
+                          ) : (
+                            <>
+                              <BookOpen aria-hidden="true" className="h-3.5 w-3.5" />
+                              即刻开卷
+                            </>
+                          )}
+                        </button>
+                        <button
+                          aria-label={isLocal ? "已在书架" : "加入书架"}
+                          className={`ui-focus-ring inline-flex h-10 items-center justify-center gap-1 rounded-[var(--radius-control)] border px-2.5 text-xs font-medium transition-colors ${
+                            isLocal
+                              ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
+                              : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+                          } disabled:opacity-50`}
+                          disabled={isLocal || Boolean(joiningId || openingId)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void joinBookOnly(book);
+                          }}
+                          title={isLocal ? "已收录至本地书架" : "收录至本地书架"}
+                          type="button"
+                        >
+                          {joiningId === book.id ? (
+                            "收录中…"
+                          ) : isLocal ? (
+                            <>
+                              <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">已入书架</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download aria-hidden="true" className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">加入书架</span>
+                            </>
+                          )}
                         </button>
                         {maintenanceAvailable && (
                           <button
                             aria-label={`整理《${book.title}》目录`}
-                            className="ui-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)]"
+                            className="ui-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]"
                             onClick={(event) => {
+                              event.stopPropagation();
                               editButtonRef.current = event.currentTarget;
                               setEditingBook(book);
                             }}
@@ -578,9 +748,9 @@ export default function PublicLibraryPage() {
                           </button>
                         )}
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -687,6 +857,18 @@ export default function PublicLibraryPage() {
           setBooks((current) =>
             current.map((book) => (book.id === updated.id ? updated : book)),
           );
+        }}
+      />
+      <PublicLibraryBookDetailModal
+        book={previewingBook}
+        fallbackFocus={previewFallbackRef}
+        onClose={() => setPreviewingBook(null)}
+        onJoined={(book) => {
+          void refreshLocalStates(books);
+          setNotice({
+            text: `《${book.title}》已收录至本地书架。`,
+            tone: "success",
+          });
         }}
       />
     </>

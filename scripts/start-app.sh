@@ -7,6 +7,7 @@
 #
 # 用法：
 #   bash scripts/start-app.sh            # 开发模式（快速启动，默认局域网可访问）
+#   bash scripts/start-app.sh --scan     # 启动并在服务就绪后自动扫描维护目录入阁
 #   bash scripts/start-app.sh --prod     # 生产模式（先构建再启动）
 #   bash scripts/start-app.sh --local    # 仅本机访问（强制 127.0.0.1）
 #
@@ -14,13 +15,48 @@
 #   API_PORT  API 端口（默认 4000）
 #   WEB_PORT  前端端口（默认 3000）
 #   READING_WORLD_NO_OPEN=1  启动后不自动打开浏览器
+#   READER_AUTO_SCAN=1       启动后自动触发藏经阁维护目录扫描
 #
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ---- 自动加载根目录 .env 与 .env.local（如存在）----
+if [ -f "$ROOT/.env" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$ROOT/.env"
+  set +a
+fi
+if [ -f "$ROOT/.env.local" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$ROOT/.env.local"
+  set +a
+fi
+
 API_PORT="${API_PORT:-4000}"
 WEB_PORT="${WEB_PORT:-3000}"
-MODE="${1:-dev}"
+MODE="dev"
+AUTO_SCAN="${READER_AUTO_SCAN:-0}"
+
+for arg in "$@"; do
+  case "$arg" in
+    --scan)
+      AUTO_SCAN=1
+      ;;
+    --prod)
+      MODE="--prod"
+      ;;
+    --local)
+      MODE="--local"
+      ;;
+    dev)
+      MODE="dev"
+      ;;
+  esac
+done
+
 LOG_DIR="$ROOT/.tmp"
 mkdir -p "$LOG_DIR"
 API_LOG="$LOG_DIR/app-api.log"
@@ -84,6 +120,21 @@ echo "  🔑 藏经阁入阁口令 → ${MAINTENANCE_KEY}（请在设置页把�
 if [ "$ALLOW_ANY" = "1" ]; then
   echo "  🚪 无限制入阁已开启 → 任何人都可入阁（关闭：READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY=0）"
 fi
+
+# 提示维护目录配置文件
+if [ -n "${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE:-}" ] && [ -f "${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE}" ]; then
+  echo "  📁 维护目录配置   → ${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE}"
+elif [ -f "$ROOT/data/public-library-roots.json" ]; then
+  echo "  📁 维护目录配置   → data/public-library-roots.json"
+elif [ -f "$ROOT/library-roots.json" ]; then
+  echo "  📁 维护目录配置   → library-roots.json"
+elif [ -n "${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS:-}" ]; then
+  echo "  📁 维护目录配置   → 环境变量（READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS）"
+fi
+
+if [ "$AUTO_SCAN" = "1" ]; then
+  echo "  ⚡ 自动扫描已开启 → 服务就绪后将自动扫描维护目录并入阁"
+fi
 echo "  日志 → ${LOG_DIR}/app-{api,web}.log"
 
 # ---- 清理可能残留的旧进程 ----
@@ -109,6 +160,8 @@ trap cleanup INT TERM
 PORT="$API_PORT" API_HOST="$HOST" \
   READER_PUBLIC_LIBRARY_MAINTENANCE_KEY="$MAINTENANCE_KEY" \
   READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY="$ALLOW_ANY" \
+  READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS="${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS:-}" \
+  READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE="${READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE:-}" \
   corepack pnpm --dir "$ROOT/apps/api" dev >"$API_LOG" 2>&1 &
 API_PID=$!
 
@@ -159,6 +212,34 @@ if [ "$ready" = "1" ]; then
     echo "   局域网设备请访问：${PUBLIC_BASE}（同一 Wi-Fi/局域网内）"
   fi
   echo "   （按 Ctrl+C 可停止全部服务）"
+
+  # 若开启了自动扫描，发起一次扫描任务
+  if [ "$AUTO_SCAN" = "1" ]; then
+    echo "🔍 正在自动触发藏经阁目录扫描…"
+    ROOTS_JSON="$(curl -s -H "x-public-library-maintenance-key: ${MAINTENANCE_KEY}" "http://127.0.0.1:${API_PORT}/public-library/maintenance/scan-roots" || true)"
+    node -e "
+      const data = JSON.parse(process.argv[1] || '{}');
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        for (const item of data.items) {
+          fetch('http://127.0.0.1:${API_PORT}/public-library/maintenance/scans', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-public-library-maintenance-key': '${MAINTENANCE_KEY}'
+            },
+            body: JSON.stringify({ rootId: item.rootId, rightsConfirmed: true })
+          }).then(r => r.json()).then(res => {
+            console.log('   🚀 已触发后台扫描任务 [' + item.label + '] (ID: ' + item.rootId + ')');
+          }).catch((err) => {
+            console.error('   ⚠️ 自动扫描启动失败:', err.message);
+          });
+        }
+      } else {
+        console.log('   ℹ️ 未检测到配置的维护目录，跳过自动扫描。');
+      }
+    " "$ROOTS_JSON" 2>/dev/null || true
+  fi
+
   # 尽力打开浏览器（失败不阻塞；CI 或 READING_WORLD_NO_OPEN=1 时跳过）
   if [ -z "${CI:-}" ] && [ -z "${READING_WORLD_NO_OPEN:-}" ]; then
     { command -v open >/dev/null 2>&1 && open "${PUBLIC_BASE}"; } || true

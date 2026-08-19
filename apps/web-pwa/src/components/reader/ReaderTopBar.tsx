@@ -14,6 +14,7 @@ import {
 export interface ReaderTopBarProps {
   title: string;
   onBack: () => void;
+  backLabel?: string;
   onBookmark: () => void;
   onSettings: () => void;
   isVisible: boolean;
@@ -33,6 +34,7 @@ export interface ReaderTopBarProps {
 export function ReaderTopBar({
   title,
   onBack,
+  backLabel = "返回书架",
   onBookmark,
   onSettings,
   isVisible,
@@ -73,7 +75,7 @@ export function ReaderTopBar({
       >
         <button
           onClick={onBack}
-          aria-label="返回书架"
+          aria-label={backLabel}
           data-icon-only="true"
           data-reader-control
           className={`reader-control-press reader-focus-ring mr-4 min-w-11 min-h-11 flex items-center justify-center rounded-xl ${iconColor}`}
@@ -121,11 +123,12 @@ export function ReaderTopBar({
       <div className="flex justify-start">
         <button
           onClick={onBack}
+          aria-label={backLabel}
           data-reader-control
           className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
         >
           <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} />
-          <span className="hidden lg:inline">返回书架</span>
+          <span className="hidden lg:inline">{backLabel}</span>
         </button>
       </div>
       

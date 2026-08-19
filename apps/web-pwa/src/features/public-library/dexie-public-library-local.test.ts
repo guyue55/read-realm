@@ -126,3 +126,91 @@ describe("publicLibraryLocalPort", () => {
     await expect(db.chapters.count()).resolves.toBe(0);
   });
 });
+
+describe("getLocalStateForPublicBook & getBatchLocalStatesForPublicBooks", () => {
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    db.close();
+    await db.delete();
+    await db.open();
+  });
+
+  afterAll(async () => {
+    vi.restoreAllMocks();
+    db.close();
+    await db.delete();
+  });
+
+  it("returns null state when public book is not on shelf", async () => {
+    const { getLocalStateForPublicBook } = await import(
+      "./dexie-public-library-local"
+    );
+    const state = await getLocalStateForPublicBook({
+      title: "未入架的书",
+      author: "作者",
+      chapterCount: 10,
+    });
+    expect(state.localBook).toBeUndefined();
+    expect(state.progress).toBeUndefined();
+  });
+
+  it("matches local book and retrieves reading progress", async () => {
+    const { getLocalStateForPublicBook, getBatchLocalStatesForPublicBooks } =
+      await import("./dexie-public-library-local");
+
+    await db.books.add(book);
+    await db.progress.add({
+      bookId: book.id,
+      chapterId: chapters[1].id,
+      chapterIndex: 1,
+      offset: 100,
+      percentage: 50,
+      updatedAt: "2026-08-16T00:00:00.000Z",
+    });
+
+    const singleState = await getLocalStateForPublicBook({
+      title: "离线馆藏",
+      author: "",
+      chapterCount: 2,
+    });
+    expect(singleState.localBook).toBeDefined();
+    expect(singleState.localBook?.id).toBe(book.id);
+    expect(singleState.progress?.chapterIndex).toBe(1);
+    expect(singleState.progress?.percentage).toBe(50);
+
+    const batchStates = await getBatchLocalStatesForPublicBooks([
+      {
+        id: "pub-1",
+        title: "离线馆藏",
+        author: "",
+        format: "txt",
+        chapterCount: 2,
+        wordCount: 4,
+        category: "经典",
+        contentHash: "hash-1",
+        tags: [],
+        maintainerLabel: "",
+        publishedAt: "2026-08-15T00:00:00.000Z",
+      },
+      {
+        id: "pub-2",
+        title: "另一本不在书架的书",
+        author: "未知",
+        format: "txt",
+        chapterCount: 5,
+        wordCount: 100,
+        category: "文学",
+        contentHash: "hash-2",
+        tags: [],
+        maintainerLabel: "",
+        publishedAt: "2026-08-15T00:00:00.000Z",
+      },
+    ]);
+
+    expect(batchStates.size).toBe(2);
+    expect(batchStates.get("pub-1")?.localBook?.id).toBe(book.id);
+    expect(batchStates.get("pub-1")?.progress?.chapterIndex).toBe(1);
+    expect(batchStates.get("pub-2")?.localBook).toBeUndefined();
+    expect(batchStates.get("pub-2")?.progress).toBeUndefined();
+  });
+});

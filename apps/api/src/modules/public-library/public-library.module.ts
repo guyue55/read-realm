@@ -82,6 +82,7 @@ export const PUBLIC_LIBRARY_BLOB_STORAGE = Symbol(
               personalBlobPath: resolveBlobStoragePath(),
               publicBlobPath: resolvePublicLibraryBlobStoragePath(),
             },
+            process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE,
           );
         try {
           const resolved = await resolveRoots();

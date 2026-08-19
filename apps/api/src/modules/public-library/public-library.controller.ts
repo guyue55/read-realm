@@ -31,7 +31,10 @@ import {
   type PublicLibraryUploadedFile,
   PublicLibraryService,
 } from './public-library.service';
-import { PublicLibraryMaintenanceGuard } from './public-library-maintenance.guard';
+import {
+  PublicLibraryMaintenanceGuard,
+  PublicLibraryMaintenanceAllowAnyGuard,
+} from './public-library-maintenance.guard';
 
 @Controller('public-library')
 export class PublicLibraryController {
@@ -99,7 +102,7 @@ export class PublicLibraryController {
   }
 
   @Post('maintenance/files')
-  @UseGuards(PublicLibraryMaintenanceGuard)
+  @UseGuards(PublicLibraryMaintenanceAllowAnyGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       preservePath: true,
