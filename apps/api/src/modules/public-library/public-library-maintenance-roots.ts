@@ -1,4 +1,5 @@
-import { lstat, realpath } from 'node:fs/promises';
+import { lstat, readFile, realpath } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import {
   isAbsolute,
@@ -34,6 +35,14 @@ interface ConfiguredRoot {
   path?: unknown;
 }
 
+const MAX_CONFIG_BYTES = 1024 * 1024; // 1 MB 安全上限
+
+const DEFAULT_CONFIG_FILES = [
+  'data/public-library-roots.json',
+  'library-roots.json',
+  'public-library-roots.json',
+];
+
 function containsPath(parent: string, candidate: string) {
   const pathFromParent = relative(resolve(parent), resolve(candidate));
   return (
@@ -66,6 +75,62 @@ async function resolvePhysicalTarget(input: string) {
   }
 }
 
+async function tryReadConfigFile(filePath: string): Promise<string | undefined> {
+  const resolvedPath = resolve(filePath);
+  try {
+    const status = await lstat(resolvedPath);
+    if (!status.isFile() || status.isSymbolicLink()) {
+      return undefined;
+    }
+    if (status.size > MAX_CONFIG_BYTES) {
+      throw new Error('PUBLIC_LIBRARY_MAINTENANCE_ROOTS_INVALID');
+    }
+    return await readFile(resolvedPath, 'utf8');
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'PUBLIC_LIBRARY_MAINTENANCE_ROOTS_INVALID'
+    ) {
+      throw error;
+    }
+    return undefined;
+  }
+}
+
+export async function detectMaintenanceRootsRaw(
+  rawEnv: string | undefined,
+  explicitFileEnv: string | undefined = process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE,
+  baseDir: string = process.cwd(),
+): Promise<string | undefined> {
+  // 1. 显式指定的文件路径优先
+  if (explicitFileEnv?.trim()) {
+    const targetFile = resolve(baseDir, explicitFileEnv.trim());
+    const content = await tryReadConfigFile(targetFile);
+    if (content !== undefined) return content;
+    throw new Error('PUBLIC_LIBRARY_MAINTENANCE_ROOTS_INVALID');
+  }
+
+  // 2. 环境变量字符串（若为 json 文件路径则读文件，否则按原始 JSON 字符串解析）
+  if (rawEnv?.trim()) {
+    const trimmed = rawEnv.trim();
+    const candidateFile = resolve(baseDir, trimmed);
+    if (trimmed.endsWith('.json') || existsSync(candidateFile)) {
+      const content = await tryReadConfigFile(candidateFile);
+      if (content !== undefined) return content;
+    }
+    return trimmed;
+  }
+
+  // 3. 自动探测默认位置的 JSON 配置文件
+  for (const defaultFile of DEFAULT_CONFIG_FILES) {
+    const candidatePath = resolve(baseDir, defaultFile);
+    const content = await tryReadConfigFile(candidatePath);
+    if (content !== undefined) return content;
+  }
+
+  return undefined;
+}
+
 function parseConfiguredRoots(raw: string) {
   let parsed: unknown;
   try {
@@ -89,8 +154,15 @@ function containsControlCharacter(value: string) {
 export async function resolvePublicLibraryMaintenanceRoots(
   raw: string | undefined,
   isolation: PublicLibraryMaintenanceIsolation,
+  explicitFilePath?: string,
+  baseDir?: string,
 ) {
-  if (!raw?.trim()) return { roots: [], publicRoots: [] };
+  const effectiveRaw = await detectMaintenanceRootsRaw(
+    raw,
+    explicitFilePath,
+    baseDir,
+  );
+  if (!effectiveRaw?.trim()) return { roots: [], publicRoots: [] };
   const storageTargets = await Promise.all(
     [
       isolation.personalDatabasePath,
@@ -100,7 +172,7 @@ export async function resolvePublicLibraryMaintenanceRoots(
     ].map(resolvePhysicalTarget),
   );
   const roots: PublicLibraryMaintenanceRoot[] = [];
-  for (const [rootId, configured] of parseConfiguredRoots(raw)) {
+  for (const [rootId, configured] of parseConfiguredRoots(effectiveRaw)) {
     if (!/^[a-z0-9][a-z0-9_-]{0,63}$/u.test(rootId)) {
       throw new Error('PUBLIC_LIBRARY_MAINTENANCE_ROOT_ID_INVALID');
     }
@@ -159,3 +231,4 @@ export async function resolvePublicLibraryMaintenanceRoots(
     publicRoots: roots.map(({ rootId, label }) => ({ rootId, label })),
   };
 }
+

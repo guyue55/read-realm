@@ -9,15 +9,7 @@ export interface PublicLibraryJoinLocalPort {
   apply(input: { book: Book; chapters: LocalChapter[] }): Promise<void>;
 }
 
-async function sha256(value: string) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
+import { safeSha256 } from "@/lib/safe-crypto";
 
 export class PublicLibraryJoinService {
   constructor(
@@ -40,7 +32,7 @@ export class PublicLibraryJoinService {
       if (
         chapter.index !== index ||
         !chapter.content ||
-        (await sha256(chapter.content)) !== chapter.contentHash
+        (await safeSha256(chapter.content)) !== chapter.contentHash
       ) {
         throw new Error("PUBLIC_LIBRARY_PACKAGE_INVALID");
       }

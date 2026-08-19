@@ -598,7 +598,28 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             progress={readingProgress}
             currentChapterIndex={chapter.index}
             totalChapters={toc.length}
-            onBack={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
+            onBack={() => {
+              const isFromPublicLibrary =
+                typeof window !== "undefined" &&
+                (window.location.search.includes("from=public-library") ||
+                  window.location.hash.includes("from=public-library"));
+              if (isFromPublicLibrary) {
+                router.push("/public-library");
+              } else {
+                router.push(
+                  sourceFolderId
+                    ? `/library?folderId=${sourceFolderId}`
+                    : "/library",
+                );
+              }
+            }}
+            backLabel={
+              typeof window !== "undefined" &&
+              (window.location.search.includes("from=public-library") ||
+                window.location.hash.includes("from=public-library"))
+                ? "返回藏经阁"
+                : "返回书架"
+            }
             onBookmark={addBookmark}
             onSettings={() => togglePanel("settings")}
             onToggleToc={isDesktopViewport ? () => togglePanel("toc") : undefined}

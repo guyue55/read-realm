@@ -139,4 +139,99 @@ describe('public library maintenance roots', () => {
       status: 503,
     });
   });
+
+  it('loads configuration from auto-detected JSON file in base directory', async () => {
+    const dataDir = join(root, 'data');
+    await mkdir(dataDir);
+    const configFile = join(dataDir, 'public-library-roots.json');
+    await writeFile(
+      configFile,
+      JSON.stringify({
+        my_novels: { label: '本地小说', path: join(root, 'maintenance-a') },
+      }),
+    );
+
+    const resolved = await resolvePublicLibraryMaintenanceRoots(
+      undefined,
+      isolation,
+      undefined,
+      root,
+    );
+    expect(resolved.roots).toMatchObject([
+      { rootId: 'my_novels', label: '本地小说' },
+    ]);
+  });
+
+  it('loads configuration from explicitly specified JSON file path', async () => {
+    const customConfig = join(root, 'custom-roots.json');
+    await writeFile(
+      customConfig,
+      JSON.stringify({
+        custom_root: { label: '自定义目录', path: join(root, 'maintenance-b') },
+      }),
+    );
+
+    const resolved = await resolvePublicLibraryMaintenanceRoots(
+      undefined,
+      isolation,
+      'custom-roots.json',
+      root,
+    );
+    expect(resolved.roots).toMatchObject([
+      { rootId: 'custom_root', label: '自定义目录' },
+    ]);
+  });
+
+  it('loads configuration when raw string is a json file path', async () => {
+    const customConfig = join(root, 'roots-via-raw.json');
+    await writeFile(
+      customConfig,
+      JSON.stringify({
+        raw_file_root: { label: '路径引用', path: join(root, 'maintenance-a') },
+      }),
+    );
+
+    const resolved = await resolvePublicLibraryMaintenanceRoots(
+      'roots-via-raw.json',
+      isolation,
+      undefined,
+      root,
+    );
+    expect(resolved.roots).toMatchObject([
+      { rootId: 'raw_file_root', label: '路径引用' },
+    ]);
+  });
+
+  it('rejects config file if it exceeds size limit or is a symlink', async () => {
+    const oversizedFile = join(root, 'huge.json');
+    // 超过 1MB
+    await writeFile(oversizedFile, ' '.repeat(1024 * 1024 + 10));
+    await expect(
+      resolvePublicLibraryMaintenanceRoots(
+        undefined,
+        isolation,
+        'huge.json',
+        root,
+      ),
+    ).rejects.toThrow('PUBLIC_LIBRARY_MAINTENANCE_ROOTS_INVALID');
+
+    const realConfigFile = join(root, 'real-config.json');
+    await writeFile(
+      realConfigFile,
+      JSON.stringify({
+        symlink_root: { label: '软链', path: join(root, 'maintenance-a') },
+      }),
+    );
+    const symlinkConfigFile = join(root, 'symlink-config.json');
+    await symlink(realConfigFile, symlinkConfigFile);
+
+    await expect(
+      resolvePublicLibraryMaintenanceRoots(
+        undefined,
+        isolation,
+        'symlink-config.json',
+        root,
+      ),
+    ).rejects.toThrow('PUBLIC_LIBRARY_MAINTENANCE_ROOTS_INVALID');
+  });
 });

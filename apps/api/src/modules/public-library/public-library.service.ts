@@ -54,13 +54,16 @@ export class PublicLibraryService {
       process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY === '1',
   ) {}
 
-  /** 无限制模式：任何人都可入阁/维护，跳过凭据校验（默认开启）。 */
+  /** 无限制模式：仅入阁上传（publishFile）可跳过凭据校验，其余维护写操作（catalog 修改、个人快照等）始终要求口令。 */
   isAllowAnyMaintenance() {
     return this.allowAnyMaintenance;
   }
 
-  assertMaintenanceKey(key: string | undefined) {
-    if (this.allowAnyMaintenance) return;
+  assertMaintenanceKey(
+    key: string | undefined,
+    options?: { allowAny?: boolean },
+  ) {
+    if (options?.allowAny && this.allowAnyMaintenance) return;
     const expected = this.maintenanceKey.trim();
     if (!expected || expected.toLowerCase() === 'default') {
       throw new ServiceUnavailableException('公共馆藏维护写入尚未配置');
@@ -103,7 +106,7 @@ export class PublicLibraryService {
     fields: PublicLibraryFileFields,
     file: PublicLibraryUploadedFile,
   ) {
-    this.assertMaintenanceKey(key);
+    this.assertMaintenanceKey(key, { allowAny: true });
     const filename = normalizePublicLibraryDirectFilename(file.originalname);
     if (
       !filename ||

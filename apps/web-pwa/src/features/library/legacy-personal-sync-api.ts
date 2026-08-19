@@ -371,12 +371,22 @@ export class LegacyPersonalSyncApiClient {
     const verifiedBook = (await this.listBooks()).find(
       (candidate) => candidate.id === book.id,
     );
+    const remoteProgress = verifiedBook
+      ? readLegacyRemoteProgress(verifiedBook)
+      : undefined;
+    const progressMatches =
+      !normalizedProgress?.success ||
+      (remoteProgress &&
+        remoteProgress.bookId === normalizedProgress.data.bookId &&
+        remoteProgress.chapterIndex === normalizedProgress.data.chapterIndex &&
+        remoteProgress.chapterId === normalizedProgress.data.chapterId &&
+        Math.abs(remoteProgress.percentage - normalizedProgress.data.percentage) <
+          0.1);
+
     if (
       !verifiedBook ||
       verifiedBook.chapterCount !== book.chapterCount ||
-      (normalizedProgress?.success &&
-        JSON.stringify(readLegacyRemoteProgress(verifiedBook)) !==
-          JSON.stringify(normalizedProgress.data))
+      !progressMatches
     ) {
       throw new LegacyPersonalSyncError(
         "remote_verification_failed",

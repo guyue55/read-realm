@@ -151,18 +151,7 @@ export class PersonalPublicationApiClient implements PersonalPublicationRemotePo
   }
 }
 
-async function sha256(value: string): Promise<string> {
-  if (!globalThis.crypto?.subtle) {
-    throw new PersonalBookExportError("remote_hash_mismatch");
-  }
-  const digest = await globalThis.crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
-}
+import { safeSha256 } from "@/lib/safe-crypto";
 
 interface PublicationPass {
   snapshotHash: string;
@@ -254,7 +243,7 @@ export class PersonalBookExportService {
           if (!("content" in item)) {
             throw new PersonalBookExportError("remote_snapshot_invalid");
           }
-          if ((await sha256(item.content)) !== item.contentHash) {
+          if ((await safeSha256(item.content)) !== item.contentHash) {
             throw new PersonalBookExportError("remote_hash_mismatch");
           }
           contents.push(item.content);
@@ -304,7 +293,7 @@ export class PersonalBookExportService {
         chapter.bookId !== bookId ||
         chapter.index !== index ||
         chapter.title !== expected?.title ||
-        (await sha256(chapter.content)) !== expected.contentHash
+        (await safeSha256(chapter.content)) !== expected.contentHash
       ) {
         return undefined;
       }

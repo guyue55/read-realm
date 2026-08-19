@@ -6,6 +6,7 @@ import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
 import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import type { Book } from "@reader/shared-types";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BookCard } from "@/components/BookCard";
 import { BookCover } from "@/components/BookCover";
@@ -335,52 +336,78 @@ export default function SearchPage() {
     >
       {/* 搜索/分类 核心框 */}
       <section className="ui-card rounded-[var(--radius-card)] p-4 sm:p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <input
-            id="search-input-field"
-            type="text"
-            placeholder={`${strings.shelf.searchPlaceholder} (按 '/' 键聚焦)`}
-            value={searchQuery}
-            onChange={(e) => {
-              invalidateRemoteSearchResults();
-              setSearchQuery(e.target.value);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && handleGlobalSearch()}
-            maxLength={120}
-            className="ui-focus-ring min-h-11 w-full rounded-[var(--radius-field)] border border-[var(--ui-border)] bg-white px-4 text-sm text-[var(--ui-text)] focus:border-[var(--ui-accent)]"
-            autoFocus
-          />
+        <form
+          className="grid grid-cols-[minmax(0,1fr)_44px] gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleGlobalSearch();
+          }}
+        >
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">{strings.shelf.searchPlaceholder}</span>
+            <Search
+              aria-hidden="true"
+              className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]"
+            />
+            <input
+              id="search-input-field"
+              type="text"
+              placeholder={`${strings.shelf.searchPlaceholder} (按 '/' 键聚焦)`}
+              value={searchQuery}
+              onChange={(e) => {
+                invalidateRemoteSearchResults();
+                setSearchQuery(e.target.value);
+              }}
+              maxLength={120}
+              className="ui-focus-ring min-h-11 w-full rounded-[var(--radius-field)] border border-[var(--color-border)] bg-white/80 pl-11 pr-4 text-sm text-[var(--color-text)] focus:border-[var(--color-primary)]"
+              autoFocus
+            />
+          </label>
           <button
-            onClick={() => handleGlobalSearch()}
+            type="submit"
             disabled={isSearching || !searchQuery.trim()}
             title={
               !searchQuery.trim()
                 ? "请输入书名、作者或标签关键词"
                 : "搜索私人云端书架"
             }
-            className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-4 text-sm font-semibold text-white disabled:opacity-45"
+            aria-label="检索私人云端"
+            className="ui-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-primary)] text-sm font-semibold text-white disabled:opacity-45 sm:px-5"
           >
-            {isSearching ? "搜索中" : "搜索私人云端"}
+            <Search
+              aria-hidden="true"
+              className="h-[18px] w-[18px] sm:hidden"
+              strokeWidth={1.75}
+            />
+            <span className="hidden sm:inline">
+              {isSearching ? "搜索中" : "搜索私人云端"}
+            </span>
           </button>
-        </div>
+        </form>
 
-        {/* 托管高亮的分类胶囊栏 */}
-        <div className="mt-4.5 flex flex-wrap gap-2.5">
+        {/* 馆藏/本地分类过滤栏（完全对齐藏经阁样式与间距） */}
+        <div
+          aria-label="搜索范围分类"
+          className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:overflow-x-auto sm:pb-1"
+          role="group"
+        >
           {["综合", "书名", "作者", "标签", "连载中", "已完结"].map((label) => {
             const isActive = activeFilter === label;
             return (
               <button
                 key={label}
+                aria-pressed={isActive}
                 onClick={() => {
                   if (activeFilter === label) return;
                   invalidateRemoteSearchResults();
                   setActiveFilter(label as LocalSearchFilter);
                 }}
-                className={`ui-focus-ring min-h-11 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors duration-200 shadow-sm ${
+                className={`ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border px-3 text-xs font-semibold transition-colors duration-150 ${
                   isActive
-                    ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)] font-bold"
-                    : "border-[var(--ui-border)] bg-white/60 text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] bg-white/70 text-[var(--color-muted)] hover:bg-white"
                 }`}
+                type="button"
               >
                 {label}
               </button>
