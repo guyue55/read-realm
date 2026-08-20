@@ -1,7 +1,7 @@
 {
   "name": "read-realm",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "corepack pnpm --parallel --filter web-pwa --filter api dev",
