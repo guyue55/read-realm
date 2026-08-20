@@ -49,5 +49,12 @@
   // Tailwind CSS 智能提示设置
   "tailwindCSS.includeLanguages": {
     "plaintext": "ts"
-  }
+  },
+
+  // Antigravity Agent 免确认自动执行策略设置
+  "antigravity.agent.terminalExecutionPolicy": "always-proceed",
+  "antigravity.agent.fileAccessPolicy": "allow",
+  "antigravity.agent.networkPolicy": "allow",
+  "antigravity.agent.artifactReviewMode": "always-proceed"
 }
+
