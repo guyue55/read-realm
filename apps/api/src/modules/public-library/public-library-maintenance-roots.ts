@@ -75,7 +75,9 @@ async function resolvePhysicalTarget(input: string) {
   }
 }
 
-async function tryReadConfigFile(filePath: string): Promise<string | undefined> {
+async function tryReadConfigFile(
+  filePath: string,
+): Promise<string | undefined> {
   const resolvedPath = resolve(filePath);
   try {
     const status = await lstat(resolvedPath);
@@ -99,7 +101,8 @@ async function tryReadConfigFile(filePath: string): Promise<string | undefined> 
 
 export async function detectMaintenanceRootsRaw(
   rawEnv: string | undefined,
-  explicitFileEnv: string | undefined = process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE,
+  explicitFileEnv: string | undefined = process.env
+    .READER_PUBLIC_LIBRARY_MAINTENANCE_ROOTS_FILE,
   baseDir: string = process.cwd(),
 ): Promise<string | undefined> {
   // 1. 显式指定的文件路径优先
@@ -231,4 +234,3 @@ export async function resolvePublicLibraryMaintenanceRoots(
     publicRoots: roots.map(({ rootId, label }) => ({ rootId, label })),
   };
 }
-

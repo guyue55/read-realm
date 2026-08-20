@@ -330,6 +330,78 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     };
   }, [handleMouseOrTouchUp]);
 
+  // 监听桌面端 / 外接键盘翻页与面板快捷键
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // 1. 如果用户正在输入框/文本域等交互元素中打字，放行所有按键
+      if (isInteractiveReaderTarget(event.target)) {
+        if (event.key === "Escape") {
+          (event.target as HTMLElement).blur?.();
+        }
+        return;
+      }
+
+      // 2. 如果备注弹窗打开，优先处理弹窗 Escape
+      if (showNoteDialog) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeNoteDialog();
+        }
+        return;
+      }
+
+      // 3. 处理 Escape 键：若有抽屉面板或菜单打开，则一键关闭
+      if (event.key === "Escape") {
+        if (activePanel) {
+          event.preventDefault();
+          setActivePanel(null);
+          return;
+        }
+        if (showMenu) {
+          event.preventDefault();
+          setShowMenu(false);
+          return;
+        }
+        return;
+      }
+
+      // 4. 如果当前有打开的抽屉面板（如目录、AI伴读、设置），按键不触发底层翻页
+      if (activePanel) return;
+
+      // 5. 如果当前存在划词选区，按键留给用户调整选区/光标
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
+        return;
+      }
+
+      // 6. 翻页按键映射
+      if (event.key === "ArrowRight" || event.key === "PageDown" || (event.key === " " && !event.shiftKey)) {
+        event.preventDefault();
+        if (isFlipCooldown()) return;
+        void handleVisiblePageNext();
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp" || (event.key === " " && event.shiftKey)) {
+        event.preventDefault();
+        if (isFlipCooldown()) return;
+        void handleVisiblePagePrev();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    showNoteDialog,
+    closeNoteDialog,
+    activePanel,
+    setActivePanel,
+    showMenu,
+    setShowMenu,
+    isFlipCooldown,
+    handleVisiblePageNext,
+    handleVisiblePagePrev,
+  ]);
+
   const setReaderCanvasRef = useCallback((node: HTMLDivElement | null) => {
     readerCanvasRef.current = node;
     (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;

@@ -148,14 +148,14 @@ describe("Dexie pre-upgrade backup", () => {
         percentage: 0,
         updatedAt: now,
       }],
-      bookmarks: [{ id: "malformed-bm", bookId: "deleted-book", chapterIndex: 0, offset: 0 }], // 缺 createdAt → 不合 schema → 过滤
+      bookmarks: [{ id: "malformed-bm", bookId: "deleted-book", chapterIndex: 0, offset: 0 }] as any, // 缺 createdAt → 不合 schema → 过滤
       indexedFiles: [],
       sources: [],
       settingsValue: null,
     });
     expect(snapshot.data.books).toHaveLength(1);
     expect(snapshot.data.chapters).toHaveLength(1);
-    expect(snapshot.data.chapters[0].id).toBe("ch-1");
+    expect(snapshot.data.chapters[0]?.id).toBe("ch-1");
     expect(snapshot.data.progress).toHaveLength(1);
     expect(snapshot.data.bookmarks).toHaveLength(0);
   });
