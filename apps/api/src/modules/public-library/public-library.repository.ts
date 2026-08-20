@@ -1674,15 +1674,23 @@ export class PublicLibraryRepository {
     if (sha256(bytes) !== packageHash) {
       throw new Error('PUBLIC_LIBRARY_PACKAGE_HASH_MISMATCH');
     }
-    const bundle = JSON.parse(bytes.toString('utf8')) as PublicLibraryPackage;
+    let bundle: PublicLibraryPackage;
+    try {
+      bundle = JSON.parse(bytes.toString('utf8')) as PublicLibraryPackage;
+    } catch {
+      throw new Error('PUBLIC_LIBRARY_PACKAGE_INVALID');
+    }
     if (
+      !bundle ||
       bundle.schemaVersion !== 1 ||
       (bundle.taxonomyVersion !== undefined &&
         bundle.taxonomyVersion !== PUBLIC_LIBRARY_TAXONOMY_VERSION) ||
-      bundle.book.id !== id ||
-      bundle.book.chapterCount !== bundle.chapters.length ||
+      bundle.book?.id !== id ||
+      bundle.book?.chapterCount !== bundle.chapters?.length ||
+      !Array.isArray(bundle.chapters) ||
       bundle.chapters.some(
         (chapter, index) =>
+          !chapter ||
           chapter.index !== index ||
           sha256(chapter.content) !== chapter.contentHash,
       )

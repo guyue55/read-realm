@@ -50,8 +50,8 @@ export class PublicLibraryService {
     private readonly repository: PublicLibraryRepository,
     private readonly maintenanceKey = process.env
       .READER_PUBLIC_LIBRARY_MAINTENANCE_KEY ?? '',
-    private readonly allowAnyMaintenance =
-      process.env.READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY === '1',
+    private readonly allowAnyMaintenance = process.env
+      .READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY === '1',
   ) {}
 
   /** 无限制模式：仅入阁上传（publishFile）可跳过凭据校验，其余维护写操作（catalog 修改、个人快照等）始终要求口令。 */

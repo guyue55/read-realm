@@ -5,7 +5,8 @@ import * as express from 'express';
 const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 // 局域网私网来源（RFC1918）：放行局域网内其他设备（手机/平板/另一台电脑）
 // 通过 `scripts/start-app.sh` 一键启动的局域网地址访问本地书架。
-const LAN_ORIGIN = /^https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
+const LAN_ORIGIN =
+  /^https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i;
 
 function isAllowedOrigin(origin: string): boolean {
   // 显式配置优先：CORS_ORIGIN 逗号分隔，覆盖默认策略。
