@@ -2,6 +2,7 @@
   --color-background: #f6f4ee;
   --color-surface: #fffefa;
   --color-surface-muted: #eeeee7;
+  --color-surface-hover: #e6e5dc;
   --color-text: #262824;
   --color-muted: #686e68;
   --color-quiet: #6f746c;
@@ -39,8 +40,10 @@
   /* 兼容现有页面，逐页迁移到语义令牌。 */
   --background: var(--color-background);
   --foreground: var(--color-text);
+  --color-foreground: var(--color-text);
   --ui-bg: var(--color-background);
   --ui-surface: var(--color-surface);
+  --ui-surface-muted: var(--color-surface-muted);
   --ui-raised: #ffffff;
   --ui-panel: rgba(255, 254, 250, 0.96);
   --ui-border: var(--color-border);
