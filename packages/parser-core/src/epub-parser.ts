@@ -1,7 +1,59 @@
 import JSZip from "jszip";
 import { DOMParser } from "@xmldom/xmldom";
 import type { ParsedBook, ParsedChapter } from "./txt-parser";
+import { normalizeChapterTitle } from "./txt-parser";
 import { sanitizeWorkerSafeHtml } from "./worker-safe-html-sanitizer";
+
+/**
+ * 解码常见 HTML 实体（&amp; &lt; &gt; &quot; &#39; 等），
+ * 用于 EPUB 章节标题的文本清洗。
+ *
+ * 注意：
+ * - 先解码数字实体（&#NN; / &#xHH;），再解码命名实体，避免
+ *   `&amp;lt;` 被二次解码为 `<`（双重解码）。
+ * - 命名实体用「占位符 → 最终字符」两阶段，避免 `&#38;amp;`
+ *   （数字实体解码出 `&` 后被命名实体规则再次解码）的二次解码漏洞。
+ * - 非法码点（0、代理区、超出 Unicode 上限）返回原样，不抛 RangeError，
+ *   避免单个标题损坏导致整本 EPUB 解析失败。
+ */
+function decodeHtmlEntities(value: string): string {
+  // 占位符使用不可打印的控制字符，避免与正文真实内容冲突
+  const P_AMP = "\uE000";
+  const P_LT = "\uE001";
+  const P_GT = "\uE002";
+  const P_QUOT = "\uE003";
+  const P_APOS = "\uE004";
+  const P_NBSP = "\uE005";
+  return value
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) => {
+      const code = parseInt(hex, 16);
+      return Number.isInteger(code) && code > 0 && code <= 0x10ffff &&
+        !(code >= 0xd800 && code <= 0xdfff)
+        ? String.fromCodePoint(code)
+        : `&#x${hex};`;
+    })
+    .replace(/&#(\d+);/g, (_, dec: string) => {
+      const code = Number(dec);
+      return Number.isInteger(code) && code > 0 && code <= 0x10ffff &&
+        !(code >= 0xd800 && code <= 0xdfff)
+        ? String.fromCodePoint(code)
+        : `&#${dec};`;
+    })
+    // 命名实体 → 占位符（只匹配 `&xxx;` 形态，不回溯已解码出的 `&`）
+    .replace(/&amp;/g, P_AMP)
+    .replace(/&lt;/g, P_LT)
+    .replace(/&gt;/g, P_GT)
+    .replace(/&quot;/g, P_QUOT)
+    .replace(/&#39;|&apos;/g, P_APOS)
+    .replace(/&nbsp;/g, P_NBSP)
+    // 占位符 → 最终字符
+    .replace(new RegExp(P_AMP, "g"), "&")
+    .replace(new RegExp(P_LT, "g"), "<")
+    .replace(new RegExp(P_GT, "g"), ">")
+    .replace(new RegExp(P_QUOT, "g"), '"')
+    .replace(new RegExp(P_APOS, "g"), "'")
+    .replace(new RegExp(P_NBSP, "g"), " ");
+}
 
 export async function parseEpubBook(
   filename: string,
@@ -35,7 +87,9 @@ export async function parseEpubBook(
 
   // Extract Title
   const titleNode = opfDoc.getElementsByTagNameNS("*", "title")[0];
-  const title = titleNode ? titleNode.textContent || filename : filename;
+  const title = titleNode
+    ? decodeHtmlEntities(titleNode.textContent || "").trim() || filename
+    : filename;
 
   // Extract Manifest & Spine
   const manifestItems = opfDoc.getElementsByTagNameNS("*", "item");
@@ -64,7 +118,7 @@ export async function parseEpubBook(
 
   // Parse NCX / Nav ToC Map
   const tocMap: Record<string, string> = {};
-  
+
   if (ncxHref) {
     try {
       const ncxPath = opfDir + ncxHref;
@@ -79,7 +133,9 @@ export async function parseEpubBook(
           const labelNode = np.getElementsByTagName("navLabel")[0]?.getElementsByTagName("text")[0];
           const contentNode = np.getElementsByTagName("content")[0];
           if (labelNode && contentNode) {
-            const titleText = labelNode.textContent?.trim();
+            const titleText = decodeHtmlEntities(
+              labelNode.textContent?.trim() || "",
+            ).trim();
             const src = contentNode.getAttribute("src");
             if (titleText && src) {
               const cleanSrc = src.split("#")[0];
@@ -109,7 +165,7 @@ export async function parseEpubBook(
           const a = aNodes[i];
           if (!a) continue;
           const href = a.getAttribute("href");
-          const labelText = a.textContent?.trim();
+          const labelText = decodeHtmlEntities(a.textContent?.trim() || "").trim();
           if (href && labelText) {
             const cleanHref = href.split("#")[0];
             if (cleanHref) {
@@ -171,7 +227,7 @@ export async function parseEpubBook(
 
     chapters.push({
       index: i,
-      title: chapterTitle,
+      title: normalizeChapterTitle(decodeHtmlEntities(chapterTitle)),
       content: cleanHtml,
     });
   }

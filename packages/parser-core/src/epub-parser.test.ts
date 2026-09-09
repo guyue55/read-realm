@@ -66,4 +66,44 @@ describe("epub parser", () => {
     );
     expect(parsed.chapters[0]?.content).not.toContain("https://tracker.invalid");
   });
+
+  it("decodes HTML entities in chapter titles safely (no RangeError on invalid codepoints)", async () => {
+    const zip = new JSZip();
+    zip.file(
+      "META-INF/container.xml",
+      `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf" /></rootfiles>
+</container>`,
+    );
+    zip.file(
+      "OEBPS/content.opf",
+      `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>实体标题</dc:title></metadata>
+  <manifest><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml" /></manifest>
+  <spine><itemref idref="c1" /></spine>
+</package>`,
+    );
+    // 标题含命名实体 + 数字实体 + 非法码点（&#0; 与代理区 &#55296;）+ 双重解码陷阱
+    zip.file(
+      "OEBPS/c1.xhtml",
+      `<html><head><title>第1章 &amp; 序 &lt;启&gt; &#65; &#55296; &#0;</title></head>
+       <body><h1>第1章 &amp; 序 &lt;启&gt; &#65;</h1><p>正文</p></body></html>`,
+    );
+    const bytes = await zip.generateAsync({
+      type: "uint8array",
+      compression: "STORE",
+    });
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+
+    const parsed = await parseEpubBook("entity.epub", buffer);
+    expect(parsed.chapters).toHaveLength(1);
+    // 命名实体解码为字面字符，不二次解码
+    expect(parsed.chapters[0]?.title).toBe("第1章 & 序 <启> A");
+    // 非法码点保留原样（不崩溃），不产生 NUL 或代理字符
+    expect(parsed.chapters[0]?.title).not.toContain("\u0000");
+    expect(parsed.chapters[0]?.title).not.toMatch(/[\ud800-\udfff]/);
+  });
 });
