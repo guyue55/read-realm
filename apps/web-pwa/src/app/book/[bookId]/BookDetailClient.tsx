@@ -152,7 +152,7 @@ export default function BookDetailPage({
   if (!book) {
     return (
       <PageLayout title="载入书册..." onBack={() => router.push("/library")}>
-        <div className="w-full max-w-4xl mx-auto mt-10 p-6 md:p-10 rounded-[28px] border border-[#E9DCC8] bg-[#FFFDF8] shadow-[0_16px_40px_rgba(80,65,45,0.02)] physics-spring animate-pulse">
+        <div className="w-full max-w-4xl mx-auto mt-10 p-6 md:p-10 rounded-[28px] border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-[0_16px_40px_rgba(80,65,45,0.02)] physics-spring animate-pulse">
           <SkeletonLoader type="list" count={1} />
         </div>
       </PageLayout>
@@ -251,7 +251,7 @@ export default function BookDetailPage({
               className="px-8 py-3 rounded-[12px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
               style={{
                 backgroundColor: colors.accent,
-                color: book.format === "epub" ? "#FFF" : colors.bgGradStart,
+                color: book.format === "epub" ? "#fff" : colors.bgGradStart,
               }}
             >
               继续阅读
@@ -460,35 +460,35 @@ export default function BookDetailPage({
             onClick={() => setShowCacheSheet(false)}
           />
 
-          <div className="relative w-full max-w-4xl bg-[#FAF6EE] border-t border-[#DFD1BF] rounded-t-[32px] shadow-2xl p-6 md:p-10 flex flex-col gap-6 animate-in slide-in-from-bottom duration-300">
+          <div className="relative w-full max-w-4xl bg-[var(--color-surface-muted)] border-t border-[var(--color-border)] rounded-t-[32px] shadow-2xl p-6 md:p-10 flex flex-col gap-6 animate-in slide-in-from-bottom duration-300">
             {/* 中式边线装饰 */}
-            <div className="absolute inset-4 rounded-t-[24px] border border-[#E9DCC8]/60 pointer-events-none" />
+            <div className="absolute inset-4 rounded-t-[24px] border border-[var(--color-border-soft)]/60 pointer-events-none" />
 
             <div className="flex justify-between items-center relative z-10">
-              <h2 className="text-xl font-bold font-serif text-[#2F2A24] flex items-center gap-2">
+              <h2 className="text-xl font-bold font-serif text-[var(--color-text)] flex items-center gap-2">
                 📦 案头藏书本地物理存储管理
               </h2>
               <button
                 onClick={() => setShowCacheSheet(false)}
-                className="w-8 h-8 rounded-full bg-[#EBE3D3]/50 text-[#6F665B] flex items-center justify-center hover:bg-[#EBE3D3] transition-colors"
+                className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-muted)] flex items-center justify-center hover:bg-[var(--color-border)] transition-colors"
               >
                 ✕
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-2 relative z-10">
-              <div className="bg-[#FFFDF9] border border-[#EBE3D3] p-5 rounded-2xl flex flex-col justify-center">
+              <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-5 rounded-2xl flex flex-col justify-center">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-sm font-serif text-[#3A3226]">
+                  <span className="text-sm font-serif text-[var(--color-text)]">
                     章节正文物理缓存
                   </span>
-                  <span className="text-2xl font-bold font-mono text-[#5F7D52]">
+                  <span className="text-2xl font-bold font-mono text-[var(--color-primary)]">
                     {book.wordCount
                       ? `${(book.wordCount * 0.003).toFixed(1)} KB`
                       : "0.0 KB"}
                   </span>
                 </div>
-                <p className="text-[10px] text-[#9C9388] mt-3 font-serif leading-relaxed">
+                <p className="text-[10px] text-[var(--color-muted)] mt-3 font-serif leading-relaxed">
                   * 字数以中文 UTF-8 编码 1 字符 ≈ 3
                   字节换算数据库中正文物理体积。
                 </p>
@@ -497,11 +497,11 @@ export default function BookDetailPage({
               <div className="space-y-4">
                 <button
                   onClick={handleClearCache}
-                  className="w-full py-3.5 border border-[#B86B5C] text-[#B86B5C] bg-[#FFF0EC] hover:bg-[#FCE0DA] active:scale-[0.98] font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-3.5 border border-[var(--color-danger)] text-[var(--color-danger)] bg-[var(--color-danger-soft)] hover:bg-[var(--color-danger)] hover:text-white active:scale-[0.98] font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5"
                 >
                   🗑️ 清空章节本地正文缓存
                 </button>
-                <p className="text-[11px] text-[#9C9388] leading-relaxed font-serif px-1">
+                <p className="text-[11px] text-[var(--color-muted)] leading-relaxed font-serif px-1">
                   🍂
                   说明：此操作仅清除本地书阁中该书所有章节的正文缓存以释放本地空间（保留书籍元数据、目录、阅读进度以及您的全部高亮笔记手记）。再次阅读该书时会自动按需同步加载。
                 </p>
@@ -513,7 +513,7 @@ export default function BookDetailPage({
 
       {/* 优雅宣纸毛玻璃 Toast */}
       {toastMsg && (
-        <div className="fixed bottom-24 left-1/2 z-[99] -translate-x-1/2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] px-5 py-2.5 text-xs font-bold text-[#2F2A24] shadow-lg backdrop-blur-md physics-spring flex items-center gap-2 animate-bounce-short">
+        <div className="fixed bottom-24 left-1/2 z-[99] -translate-x-1/2 rounded-full border border-[rgba(80,65,45,0.15)] bg-[rgba(255,252,245,0.92)] px-5 py-2.5 text-xs font-bold text-[var(--color-text)] shadow-lg backdrop-blur-md physics-spring flex items-center gap-2 animate-bounce-short">
           <span>🍃</span> {toastMsg}
         </div>
       )}
