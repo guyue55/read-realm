@@ -65,6 +65,9 @@ importers:
       express:
         specifier: 5.2.1
         version: 5.2.1
+      puppeteer-core:
+        specifier: ^25.1.0
+        version: 25.1.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
