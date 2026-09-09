@@ -51,6 +51,10 @@ export function ReaderTopBar({
   onToggleProgress,
 }: ReaderTopBarProps) {
   const isOnline = useOnlineStatus();
+  // 离线徽章配色：dark 用暖棕亮色，浅色用语义 warning 令牌
+  const offlineBadge = isDark
+    ? "bg-[#C4A484]/15 border-[#C4A484]/30 text-[#C9A57B]"
+    : "bg-[var(--color-warning-soft)] border-[var(--color-warning)]/40 text-[var(--color-warning)]";
   // Mobile Top Bar (Overlay)
   if (!isDesktop) {
     const bgClass = isDark
@@ -59,8 +63,8 @@ export function ReaderTopBar({
     const borderClass = isDark
       ? "border-[rgba(255,255,255,0.1)]"
       : "border-[rgba(80,65,45,0.12)]";
-    const textColor = isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]";
-    const iconColor = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
+    const textColor = isDark ? "text-[#CFCFCF]" : "text-[var(--color-text)]";
+    const iconColor = isDark ? "text-[#8F8F8F]" : "text-[var(--color-muted)]";
 
     return (
       <div
@@ -88,7 +92,7 @@ export function ReaderTopBar({
           >
             <span>{title}</span>
             {!isOnline && (
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-[#FAF4EB]/90 border border-[#E5C9A6]/40 text-[#8C6239] rounded scale-90 select-none leading-none">
+              <span className={`text-[9px] font-extrabold px-1.5 py-0.5 ${offlineBadge} rounded scale-90 select-none leading-none`}>
                 离线
               </span>
             )}
@@ -113,6 +117,14 @@ export function ReaderTopBar({
   }
 
   // Desktop Weak Toolbar (Always visible but unobtrusive)
+  const desktopMuted = isDark ? "text-[#A8A8A8] hover:text-[#9DB98B]" : "text-[var(--color-muted)] hover:text-[var(--color-primary)]";
+  const desktopAccent = isDark ? "text-[#9DB98B] hover:text-[#C4D6B5]" : "text-[var(--color-primary)] hover:text-[var(--color-primary-strong)]";
+  const desktopWarm = isDark ? "text-[#C9A57B] hover:text-[#DFC29A]" : "text-[var(--color-warning)] hover:text-[var(--color-warning)]";
+  const desktopHoverBg = isDark ? "bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.14)]" : "bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)]";
+  const desktopProgressBg = isDark
+    ? "bg-[rgba(157,185,139,0.12)] border-[#9DB98B]/25 text-[#9DB98B] hover:bg-[rgba(157,185,139,0.2)]"
+    : "bg-[rgba(103,128,85,0.08)] border-[var(--color-primary)]/15 text-[var(--color-primary)] hover:bg-[rgba(103,128,85,0.16)]";
+
   return (
     <div
       aria-hidden={backgroundDisabled || undefined}
@@ -125,7 +137,7 @@ export function ReaderTopBar({
           onClick={onBack}
           aria-label={backLabel}
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
+          className={`reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium ${desktopMuted} flex items-center justify-center gap-2`}
         >
           <ArrowLeft aria-hidden="true" size={18} strokeWidth={1.8} />
           <span className="hidden lg:inline">{backLabel}</span>
@@ -140,7 +152,7 @@ export function ReaderTopBar({
           }}
           data-icon-only="true"
           data-reader-control
-          className="reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
+          className={`reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 ${desktopHoverBg} rounded-full ${desktopMuted}`}
           title="上一章"
           aria-label="上一章"
         >
@@ -158,7 +170,7 @@ export function ReaderTopBar({
                 e.stopPropagation();
                 onToggleProgress();
               }}
-              className="flex items-center gap-1.5 backdrop-blur-md bg-[rgba(103,128,85,0.08)] border border-[#678055]/15 text-[#678055] px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide hover:bg-[rgba(103,128,85,0.16)] transition-colors"
+              className={`flex items-center gap-1.5 backdrop-blur-md ${desktopProgressBg} px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide transition-colors`}
               title={`拖动阅读进度: 当前 ${Math.round(progress)}%`}
             >
               <span>{Math.round(progress)}%</span>
@@ -168,7 +180,7 @@ export function ReaderTopBar({
             </button>
           ) : typeof progress === "number" ? (
             <div 
-              className="flex items-center gap-1.5 backdrop-blur-md bg-[rgba(103,128,85,0.08)] border border-[#678055]/15 text-[#678055] px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide"
+              className={`flex items-center gap-1.5 backdrop-blur-md ${desktopProgressBg} px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide`}
               title={`阅读进度: ${Math.round(progress)}%`}
             >
               <span>{Math.round(progress)}%</span>
@@ -178,7 +190,7 @@ export function ReaderTopBar({
             </div>
           ) : null}
           {!isOnline && (
-            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#FAF4EB] border border-[#E5C9A6]/50 text-[#8C6239] uppercase tracking-wider select-none shrink-0 leading-none">
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${offlineBadge} uppercase tracking-wider select-none shrink-0 leading-none`}>
               离线
             </span>
           )}
@@ -191,7 +203,7 @@ export function ReaderTopBar({
           }}
           data-icon-only="true"
           data-reader-control
-          className="reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] rounded-full text-[#6F665B] hover:text-[#5F7D52]"
+          className={`reader-control-press reader-focus-ring flex shrink-0 items-center justify-center min-w-11 w-11 h-11 ${desktopHoverBg} rounded-full ${desktopMuted}`}
           title="下一章"
           aria-label="下一章"
         >
@@ -204,7 +216,7 @@ export function ReaderTopBar({
           <button
             onClick={onToggleToc}
             data-reader-control
-            className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
+            className={`reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium ${desktopMuted} flex items-center justify-center gap-2`}
             title="展开目录"
             aria-label="展开目录"
           >
@@ -215,7 +227,7 @@ export function ReaderTopBar({
         <button
           onClick={onBookmark}
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#678055] hover:text-[#5F7D52] flex items-center justify-center gap-2"
+          className={`reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium ${desktopAccent} flex items-center justify-center gap-2`}
           title="添加书签"
           aria-label="添加书签"
         >
@@ -226,7 +238,7 @@ export function ReaderTopBar({
           <button
             onClick={onToggleAi}
             data-reader-control
-            className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#9A6A3A] hover:text-[#B37B46] flex items-center justify-center gap-2"
+            className={`reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium ${desktopWarm} flex items-center justify-center gap-2`}
             title="伴读"
             aria-label="伴读"
           >
@@ -238,7 +250,7 @@ export function ReaderTopBar({
           onClick={onSettings}
           aria-label="阅读设置"
           data-reader-control
-          className="reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium text-[#6F665B] hover:text-[#5F7D52] flex items-center justify-center gap-2"
+          className={`reader-control-press reader-focus-ring min-h-11 min-w-11 shrink-0 rounded-xl px-2 text-sm font-medium ${desktopMuted} flex items-center justify-center gap-2`}
           title="阅读设置"
         >
           <Settings2 aria-hidden="true" size={18} strokeWidth={1.8} />
