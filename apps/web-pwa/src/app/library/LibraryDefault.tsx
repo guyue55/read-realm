@@ -7,18 +7,13 @@ import { db } from "@reader/storage-core";
 import {
   Archive,
   BookOpen,
-  ChevronDown,
   ChevronRight,
-  ChevronUp,
   Cloud,
-  CloudOff,
   Copy,
   Folder,
   KeyRound,
   Library,
   Link2,
-  LoaderCircle,
-  Settings2,
   Trash2,
   Upload,
   UploadCloud,
@@ -45,6 +40,7 @@ import type {
 } from "@reader/shared-types";
 import { cacheEntireBook } from "@/hooks/useReader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SyncStatusBar } from "@/components/library/SyncStatusBar";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { PersonalBookPublicationDialog } from "@/features/library/PersonalBookPublicationDialog";
 import {
@@ -1637,7 +1633,10 @@ export function LibraryDefault({
     }
     if (isSyncing || syncingBookId) {
       if (!isBackground) {
-        setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+        setToastMsg(
+          "全量同步正在进行，请等待完成后再处理单本书籍。",
+          "warning",
+        );
       }
       return false;
     }
@@ -1746,7 +1745,10 @@ export function LibraryDefault({
     }
     if (isSyncing || syncingBookId) {
       if (!isBackground) {
-        setToastMsg("全量同步正在进行，请等待完成后再处理单本书籍。", "warning");
+        setToastMsg(
+          "全量同步正在进行，请等待完成后再处理单本书籍。",
+          "warning",
+        );
       }
       return;
     }
@@ -1969,9 +1971,13 @@ export function LibraryDefault({
                 `[Sync recovery] 检测到未完成任务「${recoveryBook.title}」(${action})，开始恢复。`,
               );
               if (action === "upload" && localBook) {
-                await handleSingleUpload(localBook, { isBackgroundRecovery: true });
+                await handleSingleUpload(localBook, {
+                  isBackgroundRecovery: true,
+                });
               } else if (action === "download" && remoteBook) {
-                await handleSingleDownload(remoteBook, { isBackgroundRecovery: true });
+                await handleSingleDownload(remoteBook, {
+                  isBackgroundRecovery: true,
+                });
               }
             } else {
               // 本地和远端均不存在的书籍任务，自动清理，防止成为死任务
@@ -2225,12 +2231,12 @@ export function LibraryDefault({
               inventoryGeneration,
               verifiedBooks,
             );
-            setToastMsg(
-              `《${title}》已从本机和当前私人云移除。`,
-              "success",
-            );
+            setToastMsg(`《${title}》已从本机和当前私人云移除。`, "success");
           } catch (error) {
-            console.error("Cloud inventory readback after delete failed", error);
+            console.error(
+              "Cloud inventory readback after delete failed",
+              error,
+            );
             setToastMsg(
               "已从本机和私人云删除；暂时无法重新核对云端书目。",
               "warning",
@@ -2366,81 +2372,14 @@ export function LibraryDefault({
         data-library-sync
         className="ui-card relative mt-5 overflow-hidden p-5"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--ui-accent-soft)] text-[var(--ui-accent)]">
-              {isSyncing ? (
-                <LoaderCircle
-                  aria-hidden="true"
-                  className="h-5 w-5 animate-spin"
-                  strokeWidth={1.75}
-                />
-              ) : isOnline ? (
-                <Cloud
-                  aria-hidden="true"
-                  className="h-5 w-5"
-                  strokeWidth={1.75}
-                />
-              ) : (
-                <CloudOff
-                  aria-hidden="true"
-                  className="h-5 w-5"
-                  strokeWidth={1.75}
-                />
-              )}
-            </div>
-            <div>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--ui-text)]">
-                <span>私人云同步</span>
-                {currentShareToken && (
-                  <span className="rounded-[var(--radius-control)] bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
-                    访问口令已设置
-                  </span>
-                )}
-              </h3>
-              <p className="mt-0.5 text-xs text-[var(--ui-muted)] leading-relaxed">
-                {isSyncing && !syncingBookId
-                  ? syncStepText
-                  : isOnline
-                    ? "设备已联网，可尝试连接私人云；服务状态会在同步时核验。"
-                    : "设备当前离线；已下载内容仍可阅读。"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            {isOnline && currentShareToken && (
-              <button
-                onClick={() => handleDualSync(false)}
-                disabled={isSyncing}
-                className="ui-focus-ring min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--ui-accent-hover)] disabled:cursor-not-allowed disabled:bg-gray-300 sm:w-auto"
-              >
-                {isSyncing && !syncingBookId
-                  ? "同步中..."
-                  : strings.sync.syncBtn}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="relative z-10 flex flex-col items-start">
-          <button
-            onClick={() => setShowSyncConfig(!showSyncConfig)}
-            className="ui-focus-ring mt-3 flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] px-2 text-sm font-semibold text-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
-          >
-            <Settings2
-              aria-hidden="true"
-              className="h-[18px] w-[18px]"
-              strokeWidth={1.75}
-            />
-            <span>{strings.sync.syncSettingsTitle}</span>
-            {showSyncConfig ? (
-              <ChevronUp aria-hidden="true" className="h-4 w-4" />
-            ) : (
-              <ChevronDown aria-hidden="true" className="h-4 w-4" />
-            )}
-          </button>
-        </div>
+        <SyncStatusBar
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          hasShareToken={Boolean(currentShareToken)}
+          syncStepText={syncStepText}
+          onOpenSettings={() => setShowSyncConfig((open) => !open)}
+          onSync={() => handleDualSync(false)}
+        />
 
         {showSyncConfig && (
           <div className="mt-4 pt-4 border-t border-[rgba(80,65,45,0.08)] space-y-4 animate-fade-in relative z-10">

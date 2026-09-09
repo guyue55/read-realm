@@ -122,6 +122,8 @@ export const strings = {
     offlineDesc: "设备当前离线，私人云操作暂不可用；本机内容不受影响。",
     syncBtn: "立即双向同步",
     syncing: "正在双向同步中...",
+    notConfiguredDesc: "未开启；设置访问口令后可备份到私人云。",
+    configuredBadge: "访问口令已设置",
     syncSuccess: "本次同步完成，并已重新读取云端书目。",
     syncFailed: "同步未完成，请检查私人云服务后重试。",
     uploading: "正在备份「{title}」至云端... {progress}%",
