@@ -12,6 +12,7 @@ import {
   buildManualAssistBook,
 } from "@/lib/url-import/manual-assist";
 import { UrlImportError } from "@/lib/url-import/index";
+import { loadUrlFetchPreference } from "@/lib/url-import/url-fetch-preference";
 import {
   assertAuthorizedPublicSourceUrl,
   createDefaultSourceCheckPreference,
@@ -1066,7 +1067,12 @@ export default function ImportPage() {
       activeTaskIdRef.current = draft.id;
       await durableImportController.transition(draft.id, { type: "reading" });
       setStatus("开始解析 URL...");
-      const parsedBook = await parseAuthorizedUrlSource(url, true, setStatus);
+      // 档位联动：从设置读取抓取偏好（标准默认；激进启用 L2 headless + 高并发）
+      const fetchPreference = loadUrlFetchPreference();
+      const parsedBook = await parseAuthorizedUrlSource(url, true, {
+        onProgress: setStatus,
+        tier: fetchPreference.tier,
+      });
       await durableImportController.transition(draft.id, {
         type: "parsing",
         totalChapters: parsedBook.chapters.length,

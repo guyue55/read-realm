@@ -15,6 +15,7 @@ import { FetchError, type FetchOptions, type FetchResult, type UrlFetcher } from
 import { detectBlockedPage, isUsableContent, antiScrapeToErrorCode } from "./anti-scrape";
 import { LocalApiStaticFetcher } from "./api-fetchers";
 import { LocalHeadlessFetcher } from "./headless-fetcher";
+import { resolveFetchTier, createDefaultUrlFetchPreference } from "../url-source-policy";
 
 /** 默认请求超时（毫秒） */
 const DEFAULT_TIMEOUT_MS = 12_000;
@@ -120,22 +121,26 @@ export class BrowserDirectFetcher implements UrlFetcher {
 }
 
 /**
- * 默认抓取器列表（多级）：
+ * 默认抓取器列表（多级，与档位联动）：
  * - L0 BrowserDirectFetcher：浏览器直连（CORS 通畅时最快）
  * - L1 LocalApiStaticFetcher：本地 API 静态抓取（解决 CORS/UA，默认主通道）
  * - L2 LocalHeadlessFetcher：仅激进档启用（重操作，攻克 JS/Cloudflare）
- * 多级路由由 index.ts 的 fetchWithMultiLevel 编排：L0 失败自动降级 L1（→L2）。
+ * 档位 → 级别/并发由 url-source-policy.resolveFetchTier 纯函数决定（可测）。
  */
 export function createDefaultFetchers(options: {
   /** 激进档：启用 L2 headless 渲染（默认关闭，重操作） */
   aggressive?: boolean;
 } = {}): readonly UrlFetcher[] {
-  const fetchers: UrlFetcher[] = [
-    new BrowserDirectFetcher(),
-    new LocalApiStaticFetcher(),
-  ];
-  if (options.aggressive) {
-    fetchers.push(new LocalHeadlessFetcher());
+  const route = resolveFetchTier(
+    options.aggressive
+      ? { ...createDefaultUrlFetchPreference(), tier: "aggressive" }
+      : createDefaultUrlFetchPreference(),
+  );
+  const fetchers: UrlFetcher[] = [];
+  for (const level of route.levels) {
+    if (level === "browser") fetchers.push(new BrowserDirectFetcher());
+    if (level === "api") fetchers.push(new LocalApiStaticFetcher());
+    if (level === "headless") fetchers.push(new LocalHeadlessFetcher());
   }
   return fetchers;
 }

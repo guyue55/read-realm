@@ -3,9 +3,12 @@ import {
   assertAuthorizedPublicSourceUrl,
   createUrlSourceCheckPreview,
   createDefaultSourceCheckPreference,
+  createDefaultUrlFetchPreference,
   isSourceCheckDue,
   nextSourceCheckAt,
   parseSourceCheckPreference,
+  parseUrlFetchPreference,
+  resolveFetchTier,
 } from "./url-source-policy";
 
 describe("URL source policy", () => {
@@ -87,5 +90,38 @@ describe("URL source policy", () => {
         now,
       ),
     ).toBe(true);
+  });
+
+  it("默认抓取档位为标准：L0+L1、并发 5、第三方关闭", () => {
+    expect(createDefaultUrlFetchPreference()).toEqual({
+      tier: "standard",
+      thirdPartyEnabled: false,
+      concurrency: 5,
+    });
+    expect(resolveFetchTier(createDefaultUrlFetchPreference())).toEqual({
+      levels: ["browser", "api"],
+      concurrency: 5,
+    });
+  });
+
+  it("激进档启用 L2 headless 且并发 10", () => {
+    const aggressive = parseUrlFetchPreference({ tier: "aggressive" });
+    expect(aggressive.concurrency).toBe(10);
+    expect(resolveFetchTier(aggressive)).toEqual({
+      levels: ["browser", "api", "headless"],
+      concurrency: 10,
+    });
+  });
+
+  it("档位解析：非法档位抛错，第三方开关独立持久化", () => {
+    expect(() => parseUrlFetchPreference({ tier: "extreme" })).toThrow(
+      "URL_FETCH_TIER_UNSUPPORTED",
+    );
+    const parsed = parseUrlFetchPreference({
+      tier: "standard",
+      thirdPartyEnabled: true,
+    });
+    expect(parsed.thirdPartyEnabled).toBe(true);
+    expect(parseUrlFetchPreference(null)).toEqual(createDefaultUrlFetchPreference());
   });
 });

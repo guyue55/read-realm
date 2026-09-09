@@ -99,8 +99,10 @@ function isRetryableFetchError(error: unknown): boolean {
 
 /** 兼容入口参数：与旧 url-import.ts 的 parseUrlBookInBrowser 签名一致 */
 export interface ParseUrlBookInBrowserOptions {
-  /** 多级抓取器（默认 L0 浏览器直连） */
+  /** 多级抓取器（默认由档位决定：标准 L0+L1） */
   fetchers?: readonly UrlFetcher[];
+  /** 抓取档位（标准/激进）；决定 fetchers 与并发（默认标准） */
+  tier?: "standard" | "aggressive";
   /** 进度回调（字符串消息，兼容旧调用方；内部由结构化事件转字符串） */
   onProgress?: (message: string) => void;
   /** 中止信号 */
@@ -129,9 +131,20 @@ export async function parseUrlBookInBrowserWithFetchers(
   url: string,
   options: ParseUrlBookInBrowserOptions = {},
 ): Promise<ParsedBook> {
-  const { fetchers, onProgress, signal } = options;
+  const { fetchers, tier, onProgress, signal } = options;
   const resolvedFetchers =
-    fetchers ?? (await import("./browser-fetchers")).createDefaultFetchers();
+    fetchers ??
+    (await import("./browser-fetchers")).createDefaultFetchers({
+      aggressive: tier === "aggressive",
+    });
+  // 并发档位联动：激进档并发 10，标准档并发 5
+  const { resolveFetchTier, createDefaultUrlFetchPreference } =
+    await import("../url-source-policy");
+  const route = resolveFetchTier(
+    tier === "aggressive"
+      ? { ...createDefaultUrlFetchPreference(), tier: "aggressive" }
+      : createDefaultUrlFetchPreference(),
+  );
 
   // 进度事件统一为结构化（旧字符串回调转发为 message）
   const emit = (event: ParseProgressEvent): void => {
@@ -155,5 +168,8 @@ export async function parseUrlBookInBrowserWithFetchers(
     return new DOMParser().parseFromString(result.html, "text/html");
   };
 
-  return parseUrlBook(finalUrl, fetchDoc, {}, { onProgress: emit });
+  return parseUrlBook(finalUrl, fetchDoc, {}, {
+    onProgress: emit,
+    concurrency: route.concurrency,
+  });
 }

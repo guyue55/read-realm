@@ -10,7 +10,35 @@ export interface UrlSourceCheckPreview {
   differences: string[];
 }
 
+/** URL 抓取档位：standard（默认，L0+L1）| aggressive（+L2 headless + 高并发） */
+export type FetchTier = "standard" | "aggressive";
+
+/** URL 抓取偏好（档位 + 第三方通道开关 + 并发联动） */
+export interface UrlFetchPreference {
+  tier: FetchTier;
+  /** 第三方抓取通道（默认关闭，尊重"先显式启用"约束） */
+  thirdPartyEnabled: boolean;
+  /** 章节并发数（档位联动：标准 5 / 激进 10） */
+  concurrency: 5 | 10;
+}
+
 const supportedIntervals = new Set([6, 12, 24, 72, 168]);
+
+/** 档位 → fetcher 路由结果（纯函数，可测） */
+export interface FetchTierRoute {
+  /** 启用的抓取级别（L0 浏览器直连 / L1 本地 API / L2 headless） */
+  levels: Array<"browser" | "api" | "headless">;
+  /** 章节并发数 */
+  concurrency: 5 | 10;
+}
+
+/** 档位 → 抓取级别与并发（纯函数：标准 L0+L1 并发 5；激进 +L2 并发 10） */
+export function resolveFetchTier(preference: UrlFetchPreference): FetchTierRoute {
+  if (preference.tier === "aggressive") {
+    return { levels: ["browser", "api", "headless"], concurrency: 10 };
+  }
+  return { levels: ["browser", "api"], concurrency: 5 };
+}
 
 export function assertAuthorizedPublicSourceUrl(
   rawUrl: string,
@@ -97,4 +125,27 @@ export function isSourceCheckDue(
   const checkedAt = Date.parse(lastCheckedAt);
   if (!Number.isFinite(checkedAt)) return true;
   return now.getTime() >= checkedAt + preference.intervalHours * 60 * 60 * 1_000;
+}
+
+/** 默认抓取档位：标准（L0+L1，并发 5），第三方通道关闭 */
+export function createDefaultUrlFetchPreference(): UrlFetchPreference {
+  return { tier: "standard", thirdPartyEnabled: false, concurrency: 5 };
+}
+
+/** 校验并解析抓取档位偏好（非法值回退默认；tier 非法抛错） */
+export function parseUrlFetchPreference(value: unknown): UrlFetchPreference {
+  if (value === null || typeof value !== "object") {
+    return createDefaultUrlFetchPreference();
+  }
+  const candidate = value as Record<string, unknown>;
+  const tier = candidate.tier;
+  if (tier !== "standard" && tier !== "aggressive") {
+    throw new Error("URL_FETCH_TIER_UNSUPPORTED");
+  }
+  const thirdPartyEnabled = candidate.thirdPartyEnabled === true;
+  return {
+    tier,
+    thirdPartyEnabled,
+    concurrency: tier === "aggressive" ? 10 : 5,
+  };
 }

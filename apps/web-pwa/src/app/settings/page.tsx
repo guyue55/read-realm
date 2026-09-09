@@ -15,6 +15,14 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import {
+  createDefaultUrlFetchPreference,
+  type UrlFetchPreference,
+} from "@/lib/url-source-policy";
+import {
+  loadUrlFetchPreference,
+  saveUrlFetchPreference,
+} from "@/lib/url-import/url-fetch-preference";
+import {
   createBrowserPortableDataBackup,
   describeLocalDataBackupError,
   inspectBrowserPortableDataBackup,
@@ -41,6 +49,10 @@ export default function SettingsPage() {
 
   const [settings, setSettings] = useState<ReaderSettingsState>(
     DEFAULT_READER_SETTINGS,
+  );
+  // URL 抓取档位偏好（标准/激进 + 第三方通道开关）
+  const [fetchPreference, setFetchPreference] = useState<UrlFetchPreference>(
+    createDefaultUrlFetchPreference,
   );
   const [saved, setSaved] = useState(false);
   const [settingsError, setSettingsError] = useState("");
@@ -74,6 +86,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setSettings(loadReaderSettings());
+    setFetchPreference(loadUrlFetchPreference());
   }, []);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -122,6 +135,19 @@ export default function SettingsPage() {
         setSaved(false);
         setSettingsError("设置保存失败，已恢复为上次成功保存的值。");
       }
+    }
+  };
+
+  // URL 抓取档位保存（同步 localStorage，成功后标记保存气泡）
+  const saveFetchPreference = (next: UrlFetchPreference) => {
+    setFetchPreference(next);
+    try {
+      saveUrlFetchPreference(next);
+      markSaved();
+    } catch (error) {
+      console.error("抓取档位保存失败", error);
+      setSettingsError("抓取档位保存失败，请重试。");
+      setFetchPreference(loadUrlFetchPreference());
     }
   };
 
@@ -839,6 +865,83 @@ export default function SettingsPage() {
           </div>
         </SettingsCard>
       </div>
+
+      {/* URL 抓取档位 */}
+      <SettingsCard>
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold">URL 抓取档位</h2>
+            <p className="mt-1 text-sm text-[var(--ui-muted)]">
+              控制从公开网页导入小说时的抓取强度。默认标准档稳妥省资源；激进档启用无头浏览器渲染，攻克动态渲染与 JS 挑战页面。
+            </p>
+          </div>
+          {saved && (
+            <span className="rounded-full bg-[var(--ui-accent-soft)] px-3 py-1 text-sm font-semibold text-[var(--ui-accent)]">
+              {strings.settings.saved}
+            </span>
+          )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              {
+                key: "standard",
+                name: "标准档（默认）",
+                desc: "浏览器直连 + 本地服务静态抓取，章节并发 5。覆盖绝大多数静态小说站。",
+              },
+              {
+                key: "aggressive",
+                name: "激进档",
+                desc: "额外启用无头浏览器渲染（L2），章节并发 10。攻克动态渲染 / Cloudflare 等重页面，更耗资源更慢。",
+              },
+            ] as const
+          ).map((tierOption) => {
+            const isActive = fetchPreference.tier === tierOption.key;
+            return (
+              <button
+                key={tierOption.key}
+                onClick={() =>
+                  saveFetchPreference({
+                    ...fetchPreference,
+                    tier: tierOption.key,
+                    concurrency: tierOption.key === "aggressive" ? 10 : 5,
+                  })
+                }
+                className={`ui-focus-ring flex flex-col justify-between rounded-[var(--radius-card)] border p-4 text-left transition-all hover:scale-[1.02] active:scale-95 duration-200 ${
+                  isActive
+                    ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] ring-2 ring-[rgba(95,125,82,0.16)]"
+                    : "border-[var(--ui-border)] bg-white/64 hover:border-[var(--ui-warm)]"
+                }`}
+              >
+                <span className="block text-base font-bold text-[var(--ui-text)]">
+                  {tierOption.name}
+                </span>
+                <span className="mt-2 block text-xs text-[var(--ui-muted)] leading-relaxed">
+                  {tierOption.desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="mt-4 flex items-start gap-3 rounded-[14px] border border-[rgba(95,125,82,0.16)] bg-white/60 p-4 text-sm text-[var(--ui-muted)]">
+          <input
+            type="checkbox"
+            checked={fetchPreference.thirdPartyEnabled}
+            onChange={(event) =>
+              saveFetchPreference({
+                ...fetchPreference,
+                thirdPartyEnabled: event.currentTarget.checked,
+              })
+            }
+            className="mt-1 h-4 w-4 accent-[var(--ui-accent)]"
+          />
+          <span className="leading-6">
+            允许第三方抓取通道（默认关闭）。仅在你明确信任时开启；外传 URL 需你显式授权。
+          </span>
+        </label>
+      </SettingsCard>
 
       {/* AI 配置面板 */}
       <SettingsCard>
