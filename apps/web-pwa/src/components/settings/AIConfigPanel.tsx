@@ -23,9 +23,9 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
   });
   const [showKey, setShowKey] = useState(false);
 
-  const inputBg = isDark ? 'bg-white/5 border-white/10' : 'bg-[#FAF9F6] border-[#E5E0D5]';
-  const textColor = isDark ? 'text-[#CFCFCF]' : 'text-[#2F2A24]';
-  const mutedText = isDark ? 'text-[#8F8F8F]' : 'text-[#6F665B]';
+  const inputBg = isDark ? 'bg-white/5 border-white/10' : 'bg-[var(--color-surface-muted)] border-[var(--color-border)]';
+  const textColor = isDark ? 'text-[#CFCFCF]' : 'text-[var(--color-text)]';
+  const mutedText = isDark ? 'text-[#8F8F8F]' : 'text-[var(--color-muted)]';
 
   useEffect(() => {
     loadUserAIConfig().then((config) => {
@@ -80,9 +80,9 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
           aiStatus.available
             ? aiStatus.source === 'user'
-              ? 'bg-[#678055]/15 text-[#678055]'
-              : 'bg-[#9A6A3A]/15 text-[#9A6A3A]'
-            : 'bg-[#C4A484]/15 text-[#8C6239]'
+              ? isDark ? 'bg-[#678055]/15 text-[#9DB98B]' : 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
+              : isDark ? 'bg-[#9A6A3A]/15 text-[#C9A57B]' : 'bg-[var(--color-warning-soft)] text-[var(--color-warning)]'
+            : isDark ? 'bg-[#C4A484]/15 text-[#8C6239]' : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)]'
         }`}>
           {aiStatus.available
             ? aiStatus.source === 'user'
@@ -110,7 +110,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
-              className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} pr-16 focus:outline-none focus:border-[#678055] transition-colors`}
+              className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} pr-16 focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
             />
             <button
               onClick={() => setShowKey(!showKey)}
@@ -130,7 +130,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.openai.com/v1"
-            className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[#678055] transition-colors`}
+            className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
           />
           <p className={`text-[10px] ${mutedText} mt-1`}>
             支持任何 OpenAI 兼容 API（如 DeepSeek、Moonshot 等）
@@ -146,7 +146,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="gpt-3.5-turbo"
-            className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[#678055] transition-colors`}
+            className={`w-full px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
           />
         </div>
       </div>
@@ -157,10 +157,10 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
           disabled={saving || !apiKey.trim()}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
             saving || !apiKey.trim()
-              ? 'bg-[#E5E0D5] text-[#9D978D] cursor-not-allowed'
+              ? 'bg-[var(--color-surface-muted)] text-[var(--color-muted)] cursor-not-allowed'
               : status === 'saved'
-                ? 'bg-[#678055] text-white'
-                : 'bg-[#678055] text-white hover:bg-[#556b46] active:scale-[0.98]'
+                ? 'bg-[var(--color-primary)] text-white'
+                : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-strong)] active:scale-[0.98]'
           }`}
         >
           {saving ? '保存中...' : status === 'saved' ? '已保存 ✓' : '保存配置'}
@@ -168,7 +168,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
         {apiKey && (
           <button
             onClick={handleDelete}
-            className="px-4 py-2 rounded-lg text-sm font-medium border border-[#C4A484]/30 text-[#8C6239] hover:bg-[#C4A484]/10 active:scale-[0.98] transition-all"
+            className="px-4 py-2 rounded-lg text-sm font-medium border border-[var(--color-warning)]/30 text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10 active:scale-[0.98] transition-all"
           >
             清除
           </button>
@@ -176,7 +176,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
       </div>
 
       {status === 'error' && (
-        <p className="text-xs text-red-500">保存失败，请检查后重试</p>
+        <p className="text-xs text-[var(--color-danger)]">保存失败，请检查后重试</p>
       )}
 
       <p className={`text-[10px] ${mutedText} leading-relaxed pt-1`}>
