@@ -2532,7 +2532,7 @@ export function LibraryDefault({
                       <button
                         onClick={handleClearCloudBooks}
                         disabled={!isOnline}
-                        className={`ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] border border-[#c25042]/30 bg-[#c25042]/5 px-3 text-sm font-semibold text-[#c25042] transition-colors hover:bg-[#c25042]/10 ${
+                        className={`ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-3 text-sm font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 ${
                           !isOnline ? "opacity-40 cursor-not-allowed" : ""
                         }`}
                         title="清空此访问口令对应的云端书籍和阅读记录"
@@ -2546,7 +2546,7 @@ export function LibraryDefault({
                       </button>
                       <button
                         onClick={handleClearShareToken}
-                        className="ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] bg-[#8b7355]/80 px-3 text-sm font-semibold text-white transition-colors hover:bg-[#8b7355]"
+                        className="ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] bg-[var(--color-warning)]/90 px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-warning)]"
                       >
                         <Link2
                           aria-hidden="true"
@@ -2641,7 +2641,7 @@ export function LibraryDefault({
                       onClick={() => !isLast && navigateToFolder(crumb.id)}
                       className={`ui-focus-ring flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-1 [font-family:var(--font-display)] transition-colors ${
                         isLast
-                          ? "text-[#5C4533] cursor-default"
+                          ? "text-[var(--color-warning)] cursor-default"
                           : "text-[var(--ui-muted)] hover:text-[var(--ui-accent)] hover:scale-101 active:scale-98"
                       }`}
                     >
@@ -2750,7 +2750,7 @@ export function LibraryDefault({
               <div
                 key={folder.id}
                 data-folder-id={folder.id}
-                className="group relative order-2 flex cursor-pointer items-center justify-between gap-4 bg-gradient-to-r from-[#FFFDF9]/60 to-[#FDF9F2]/60 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50"
+                className="group relative order-2 flex cursor-pointer items-center justify-between gap-4 bg-gradient-to-r from-[var(--color-surface)]/60 to-[var(--color-surface-muted)]/60 px-6 py-4 transition-all duration-300 hover:bg-[var(--color-surface-hover)]/60"
               >
                 {/* 左侧绿点指示 */}
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--ui-accent)] opacity-0 scale-50 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100" />
@@ -2880,7 +2880,7 @@ export function LibraryDefault({
                   onTouchMove={
                     isLocal ? handleTouchEndOrMove(book.id) : undefined
                   }
-                  className={`group relative order-1 flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[#FAF5EB]/50 ${
+                  className={`group relative order-1 flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition-all duration-300 hover:bg-[var(--color-surface-hover)]/60 ${
                     isCloudOnly ? "opacity-75 backdrop-blur-[0.5px]" : ""
                   }`}
                 >
@@ -3091,7 +3091,7 @@ export function LibraryDefault({
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-[#E4D7C2]/30 pt-3">
+                <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)]/40 pt-3">
                   <span className="text-xs font-semibold text-[var(--ui-muted)]">
                     共 {folderBookCounts.get(folder.id) ?? 0} 本藏书
                   </span>
@@ -3638,7 +3638,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
             }}
           />
 
-          <div className="flex items-center justify-between border-b border-[#E9DCC8]/60 pb-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 pb-4">
             <div className="flex items-center gap-2">
               <Library
                 aria-hidden="true"
@@ -3789,7 +3789,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                     className={`ui-focus-ring min-h-[44px] shrink-0 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold transition-colors ${
                       isCaching
                         ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "bg-[#F1F6F0] hover:bg-[var(--ui-accent)] hover:text-white text-[var(--ui-accent)] border-[var(--ui-accent-soft)]"
+                        : "bg-[var(--color-primary-soft)] hover:bg-[var(--ui-accent)] hover:text-white text-[var(--ui-accent)] border-[var(--ui-accent-soft)]"
                     }`}
                   >
                     {isCaching ? "下载中…" : "保存到本机"}
@@ -3841,7 +3841,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                     type="button"
                     disabled={!canPublish}
                     onClick={() => setPublicationOpen(true)}
-                    className="reader-focus-ring min-h-[44px] shrink-0 rounded-[var(--radius-control)] border border-[#C9D7C2] bg-[#F1F6F0] px-4 text-sm font-semibold text-[#4F7047] transition-colors hover:bg-[#5F7D52] hover:text-white disabled:cursor-not-allowed disabled:border-[#E4DED4] disabled:bg-[#F4F1EB] disabled:text-[#7A746D]"
+                    className="reader-focus-ring min-h-[44px] shrink-0 rounded-[var(--radius-control)] border border-[var(--color-primary-soft)] bg-[var(--color-primary-soft)] px-4 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)] hover:text-white disabled:cursor-not-allowed disabled:border-[var(--color-border)] disabled:bg-[var(--color-surface-muted)] disabled:text-[var(--color-muted)]"
                   >
                     发布公共副本
                   </button>
@@ -3858,9 +3858,9 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                 />
                 从本机移除
               </label>
-              <div className="flex items-center justify-between gap-4 rounded-[var(--radius-card)] border border-red-200/40 bg-red-50/20 p-4">
+              <div className="flex items-center justify-between gap-4 rounded-[var(--radius-card)] border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]/60 p-4">
                 <div>
-                  <h5 className="text-sm font-semibold text-[#A64B4B]">
+                  <h5 className="text-sm font-semibold text-[var(--color-danger)]">
                     删除本机副本
                   </h5>
                   <p className="mt-1 text-xs leading-5 text-[var(--ui-muted)]">
@@ -3870,7 +3870,7 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                 <button
                   onClick={() => setUnbindConfirmOpen(true)}
                   disabled={isMutationBlocked || isCaching}
-                  className="ui-focus-ring min-h-[44px] shrink-0 rounded-[var(--radius-control)] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-[#A64B4B] transition-colors hover:bg-[#A64B4B] hover:text-white"
+                  className="ui-focus-ring min-h-[44px] shrink-0 rounded-[var(--radius-control)] border border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)] hover:text-white"
                 >
                   移除
                 </button>
