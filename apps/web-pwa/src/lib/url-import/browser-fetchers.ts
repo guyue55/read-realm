@@ -13,6 +13,7 @@
 
 import { FetchError, type FetchOptions, type FetchResult, type UrlFetcher } from "./fetch-adapter";
 import { detectBlockedPage, isUsableContent, antiScrapeToErrorCode } from "./anti-scrape";
+import { LocalApiStaticFetcher } from "./api-fetchers";
 
 /** 默认请求超时（毫秒） */
 const DEFAULT_TIMEOUT_MS = 12_000;
@@ -117,7 +118,14 @@ export class BrowserDirectFetcher implements UrlFetcher {
   }
 }
 
-/** 默认抓取器列表：仅 L0 浏览器直连（阶段 A；B 阶段加入 L1） */
-export const defaultFetchers: readonly UrlFetcher[] = [new BrowserDirectFetcher()];
+/**
+ * 默认抓取器列表（多级）：
+ * - L0 BrowserDirectFetcher：浏览器直连（CORS 通畅时最快）
+ * - L1 LocalApiStaticFetcher：本地 API 静态抓取（解决 CORS/UA，默认主通道）
+ * 多级路由由 index.ts 的 fetchWithMultiLevel 编排：L0 失败自动降级 L1。
+ */
+export function createDefaultFetchers(): readonly UrlFetcher[] {
+  return [new BrowserDirectFetcher(), new LocalApiStaticFetcher()];
+}
 
 export { antiScrapeToErrorCode };

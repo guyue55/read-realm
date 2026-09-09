@@ -115,9 +115,9 @@ export async function parseUrlBookInBrowser(
   url: string,
   onProgress?: (message: string) => void,
 ): Promise<ParsedBook> {
-  const { defaultFetchers } = await import("./browser-fetchers");
+  const { createDefaultFetchers } = await import("./browser-fetchers");
   return parseUrlBookInBrowserWithFetchers(url, {
-    fetchers: defaultFetchers,
+    fetchers: createDefaultFetchers(),
     onProgress,
   });
 }
@@ -130,7 +130,8 @@ export async function parseUrlBookInBrowserWithFetchers(
   options: ParseUrlBookInBrowserOptions = {},
 ): Promise<ParsedBook> {
   const { fetchers, onProgress } = options;
-  const resolvedFetchers = fetchers ?? (await import("./browser-fetchers")).defaultFetchers;
+  const resolvedFetchers =
+    fetchers ?? (await import("./browser-fetchers")).createDefaultFetchers();
 
   onProgress?.("读取链接页面...");
   const { finalUrl } = await fetchWithMultiLevel(url, {
