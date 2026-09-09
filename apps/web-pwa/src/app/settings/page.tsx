@@ -13,6 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { useVirtualRouter } from "@/lib/route-store";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
+import { SettingsCard } from "@/components/settings/SettingsCard";
 import {
   createBrowserPortableDataBackup,
   describeLocalDataBackupError,
@@ -32,7 +33,9 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+      window.location.replace(
+        `/#${window.location.pathname}${window.location.search}`,
+      );
     }
   }, []);
 
@@ -134,11 +137,12 @@ export default function SettingsPage() {
     setConfirmState({
       isOpen: true,
       title: "重置排版配置",
-      message: "确定要恢复默认排版设置吗？此操作将立即恢复纸墨底色、字号行间至初始状态。",
+      message:
+        "确定要恢复默认排版设置吗？此操作将立即恢复纸墨底色、字号行间至初始状态。",
       isDanger: false,
       onConfirm: () => {
         return saveNextSettings(DEFAULT_READER_SETTINGS);
-      }
+      },
     });
   };
 
@@ -156,7 +160,8 @@ export default function SettingsPage() {
       URL.revokeObjectURL(url);
       setBackupStatus({
         state: "success",
-        message: "完整备份包已下载；manifest 已记录版本、条目大小与 SHA-256 校验。",
+        message:
+          "完整备份包已下载；manifest 已记录版本、条目大小与 SHA-256 校验。",
       });
     } catch (error) {
       setBackupStatus({
@@ -180,7 +185,10 @@ export default function SettingsPage() {
     setMergePlan(null);
     setMergeResolutions({});
     setRestoreMode("copy");
-    setBackupStatus({ state: "working", message: "正在逐项校验备份并生成恢复预览…" });
+    setBackupStatus({
+      state: "working",
+      message: "正在逐项校验备份并生成恢复预览…",
+    });
     try {
       const serialized = await file.text();
       const [preview, nextMergePlan] = await Promise.all([
@@ -240,7 +248,9 @@ export default function SettingsPage() {
         });
         return;
       }
-      const result = await restoreBrowserPortableDataBackup(restorePreview.serialized);
+      const result = await restoreBrowserPortableDataBackup(
+        restorePreview.serialized,
+      );
       setSettings(loadReaderSettings());
       setRestorePreview(null);
       setBackupStatus({
@@ -248,7 +258,10 @@ export default function SettingsPage() {
         message: `恢复完成：${result.bookCount} 本书、${result.chapterCount} 章、${result.progressCount} 条进度。`,
       });
     } catch (error) {
-      setBackupStatus({ state: "failed", message: describeLocalDataBackupError(error) });
+      setBackupStatus({
+        state: "failed",
+        message: describeLocalDataBackupError(error),
+      });
     } finally {
       restoreMutexRef.current = false;
     }
@@ -287,7 +300,7 @@ export default function SettingsPage() {
             {settingsError}
           </p>
         )}
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+        <SettingsCard>
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold">界面密度</h2>
@@ -334,9 +347,9 @@ export default function SettingsPage() {
               </span>
             </button>
           </div>
-        </section>
+        </SettingsCard>
 
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)]">
+        <SettingsCard interactive={false}>
           <div className="mb-4">
             <h2 className="text-lg font-bold">本地备份与空库恢复</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--ui-muted)]">
@@ -352,7 +365,9 @@ export default function SettingsPage() {
             >
               下载完整备份包
             </button>
-            <label className={`ui-focus-ring flex min-h-11 items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold ${backupStatus.state === "working" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
+            <label
+              className={`ui-focus-ring flex min-h-11 items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold ${backupStatus.state === "working" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+            >
               选择备份恢复
               <input
                 type="file"
@@ -383,22 +398,54 @@ export default function SettingsPage() {
             >
               <h3 className="font-bold">恢复影响预览</h3>
               <p className="mt-1 break-all text-sm text-[var(--ui-muted)]">
-                {restorePreview.fileName} · 包格式 v{restorePreview.preview.packageVersion}
+                {restorePreview.fileName} · 包格式 v
+                {restorePreview.preview.packageVersion}
               </p>
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-                <div><dt className="text-[var(--ui-muted)]">书籍</dt><dd className="font-bold">{restorePreview.preview.counts.books}</dd></div>
-                <div><dt className="text-[var(--ui-muted)]">章节</dt><dd className="font-bold">{restorePreview.preview.counts.chapters}</dd></div>
-                <div><dt className="text-[var(--ui-muted)]">进度</dt><dd className="font-bold">{restorePreview.preview.counts.progress}</dd></div>
-                <div><dt className="text-[var(--ui-muted)]">书签</dt><dd className="font-bold">{restorePreview.preview.counts.bookmarks}</dd></div>
-                <div><dt className="text-[var(--ui-muted)]">文件引用</dt><dd className="font-bold">{restorePreview.preview.counts.fileRefs}</dd></div>
+                <div>
+                  <dt className="text-[var(--ui-muted)]">书籍</dt>
+                  <dd className="font-bold">
+                    {restorePreview.preview.counts.books}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--ui-muted)]">章节</dt>
+                  <dd className="font-bold">
+                    {restorePreview.preview.counts.chapters}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--ui-muted)]">进度</dt>
+                  <dd className="font-bold">
+                    {restorePreview.preview.counts.progress}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--ui-muted)]">书签</dt>
+                  <dd className="font-bold">
+                    {restorePreview.preview.counts.bookmarks}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--ui-muted)]">文件引用</dt>
+                  <dd className="font-bold">
+                    {restorePreview.preview.counts.fileRefs}
+                  </dd>
+                </div>
               </dl>
               <p className="mt-3 text-sm text-[var(--ui-muted)]">
-                选择恢复方式后再确认。空库副本不会覆盖现有书架；合并模式会列出同 ID 内容冲突，不会静默覆盖。
+                选择恢复方式后再确认。空库副本不会覆盖现有书架；合并模式会列出同
+                ID 内容冲突，不会静默覆盖。
               </p>
               {restorePreview.preview.warnings.map((warning) => (
-                <p key={warning} className="mt-2 text-sm text-amber-700">{warning}</p>
+                <p key={warning} className="mt-2 text-sm text-amber-700">
+                  {warning}
+                </p>
               ))}
-              <div className="mt-4 grid gap-2 sm:grid-cols-2" aria-label="恢复模式">
+              <div
+                className="mt-4 grid gap-2 sm:grid-cols-2"
+                aria-label="恢复模式"
+              >
                 <button
                   type="button"
                   aria-pressed={restoreMode === "copy"}
@@ -406,7 +453,9 @@ export default function SettingsPage() {
                   className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "copy" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
                 >
                   <span className="block font-bold">空库副本恢复</span>
-                  <span className="mt-1 block text-[var(--ui-muted)]">只允许空书架，确认后逐项回读。</span>
+                  <span className="mt-1 block text-[var(--ui-muted)]">
+                    只允许空书架，确认后逐项回读。
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -415,31 +464,51 @@ export default function SettingsPage() {
                   className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "merge" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
                 >
                   <span className="block font-bold">合并当前书架</span>
-                  <span className="mt-1 block text-[var(--ui-muted)]">新增项直接加入，内容分歧逐项决定。</span>
+                  <span className="mt-1 block text-[var(--ui-muted)]">
+                    新增项直接加入，内容分歧逐项决定。
+                  </span>
                 </button>
               </div>
               {restoreMode === "merge" && mergePlan && (
                 <div className="mt-4 space-y-3" aria-label="合并冲突清单">
                   <p className="text-sm text-[var(--ui-muted)]">
-                    将新增 {mergePlan.summary.addedBooks} 本书、{mergePlan.summary.addedChapters} 章；发现 {mergePlan.conflicts.length} 项内容分歧。
+                    将新增 {mergePlan.summary.addedBooks} 本书、
+                    {mergePlan.summary.addedChapters} 章；发现{" "}
+                    {mergePlan.conflicts.length} 项内容分歧。
                   </p>
                   {mergePlan.conflicts.map((conflict) => (
-                    <fieldset key={conflict.key} className="rounded-xl border border-[var(--ui-border)] p-3">
+                    <fieldset
+                      key={conflict.key}
+                      className="rounded-xl border border-[var(--ui-border)] p-3"
+                    >
                       <legend className="px-1 text-sm font-bold">
-                        {conflict.kind === "settings" ? "阅读设置" : `${conflict.kind} · ${conflict.id}`}
+                        {conflict.kind === "settings"
+                          ? "阅读设置"
+                          : `${conflict.kind} · ${conflict.id}`}
                       </legend>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {(["keep-existing", "use-incoming"] as const).map((choice) => (
-                          <button
-                            key={choice}
-                            type="button"
-                            aria-pressed={mergeResolutions[conflict.key] === choice}
-                            onClick={() => setMergeResolutions((current) => ({ ...current, [conflict.key]: choice }))}
-                            className={`ui-focus-ring min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold ${mergeResolutions[conflict.key] === choice ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
-                          >
-                            {choice === "keep-existing" ? "保留现有" : "使用备份"}
-                          </button>
-                        ))}
+                        {(["keep-existing", "use-incoming"] as const).map(
+                          (choice) => (
+                            <button
+                              key={choice}
+                              type="button"
+                              aria-pressed={
+                                mergeResolutions[conflict.key] === choice
+                              }
+                              onClick={() =>
+                                setMergeResolutions((current) => ({
+                                  ...current,
+                                  [conflict.key]: choice,
+                                }))
+                              }
+                              className={`ui-focus-ring min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold ${mergeResolutions[conflict.key] === choice ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                            >
+                              {choice === "keep-existing"
+                                ? "保留现有"
+                                : "使用备份"}
+                            </button>
+                          ),
+                        )}
                       </div>
                     </fieldset>
                   ))}
@@ -452,7 +521,9 @@ export default function SettingsPage() {
                   disabled={backupStatus.state === "working"}
                   className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
                 >
-                  {restoreMode === "merge" ? "确认合并并校验" : "确认恢复到空书架"}
+                  {restoreMode === "merge"
+                    ? "确认合并并校验"
+                    : "确认恢复到空书架"}
                 </button>
                 <button
                   type="button"
@@ -461,7 +532,10 @@ export default function SettingsPage() {
                     setRestorePreview(null);
                     setMergePlan(null);
                     setMergeResolutions({});
-                    setBackupStatus({ state: "idle", message: "已取消恢复，书架未发生变化。" });
+                    setBackupStatus({
+                      state: "idle",
+                      message: "已取消恢复，书架未发生变化。",
+                    });
                   }}
                   className="ui-focus-ring min-h-11 rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold"
                 >
@@ -470,9 +544,9 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-        </section>
+        </SettingsCard>
 
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+        <SettingsCard>
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold">{strings.settings.theme}</h2>
@@ -517,9 +591,9 @@ export default function SettingsPage() {
               );
             })}
           </div>
-        </section>
+        </SettingsCard>
 
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+        <SettingsCard>
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold">字体风雅</h2>
@@ -581,9 +655,9 @@ export default function SettingsPage() {
               );
             })}
           </div>
-        </section>
+        </SettingsCard>
 
-        <section className="ui-card rounded-[18px] p-5 md:p-6 space-y-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+        <SettingsCard className="space-y-6">
           <div>
             <h2 className="text-lg font-bold">排版微调</h2>
             <p className="mt-1 text-sm text-[var(--ui-muted)]">
@@ -596,7 +670,9 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold">
                 <span className="text-[var(--ui-text)]">字号 (Size)</span>
-                <span className="text-[var(--ui-accent)]">{settings.fontSize} px</span>
+                <span className="text-[var(--ui-accent)]">
+                  {settings.fontSize} px
+                </span>
               </div>
               <input
                 type="range"
@@ -605,7 +681,12 @@ export default function SettingsPage() {
                 max="36"
                 step="1"
                 value={settings.fontSize}
-                onChange={(e) => handleSettingChange({ ...settings, fontSize: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  handleSettingChange({
+                    ...settings,
+                    fontSize: parseInt(e.target.value),
+                  })
+                }
                 onMouseUp={() => void handleSettingCommit(settings)}
                 onTouchEnd={() => void handleSettingCommit(settings)}
                 onBlur={() => void handleSettingCommit(settings)}
@@ -620,8 +701,12 @@ export default function SettingsPage() {
             {/* 行高滑轨 */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold">
-                <span className="text-[var(--ui-text)]">行高 (Line Height)</span>
-                <span className="text-[var(--ui-accent)]">{settings.lineHeight} 倍</span>
+                <span className="text-[var(--ui-text)]">
+                  行高 (Line Height)
+                </span>
+                <span className="text-[var(--ui-accent)]">
+                  {settings.lineHeight} 倍
+                </span>
               </div>
               <input
                 type="range"
@@ -630,7 +715,12 @@ export default function SettingsPage() {
                 max="2.4"
                 step="0.1"
                 value={settings.lineHeight}
-                onChange={(e) => handleSettingChange({ ...settings, lineHeight: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  handleSettingChange({
+                    ...settings,
+                    lineHeight: parseFloat(e.target.value),
+                  })
+                }
                 onMouseUp={() => void handleSettingCommit(settings)}
                 onTouchEnd={() => void handleSettingCommit(settings)}
                 onBlur={() => void handleSettingCommit(settings)}
@@ -645,8 +735,12 @@ export default function SettingsPage() {
             {/* 段距滑轨 */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold">
-                <span className="text-[var(--ui-text)]">段落间距 (Paragraph)</span>
-                <span className="text-[var(--ui-accent)]">{settings.paragraphSpacing} px</span>
+                <span className="text-[var(--ui-text)]">
+                  段落间距 (Paragraph)
+                </span>
+                <span className="text-[var(--ui-accent)]">
+                  {settings.paragraphSpacing} px
+                </span>
               </div>
               <input
                 type="range"
@@ -655,7 +749,12 @@ export default function SettingsPage() {
                 max="40"
                 step="2"
                 value={settings.paragraphSpacing}
-                onChange={(e) => handleSettingChange({ ...settings, paragraphSpacing: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  handleSettingChange({
+                    ...settings,
+                    paragraphSpacing: parseInt(e.target.value),
+                  })
+                }
                 onMouseUp={() => void handleSettingCommit(settings)}
                 onTouchEnd={() => void handleSettingCommit(settings)}
                 onBlur={() => void handleSettingCommit(settings)}
@@ -671,7 +770,9 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-semibold">
                 <span className="text-[var(--ui-text)]">字符间距 (Letter)</span>
-                <span className="text-[var(--ui-accent)]">{settings.letterSpacing} em</span>
+                <span className="text-[var(--ui-accent)]">
+                  {settings.letterSpacing} em
+                </span>
               </div>
               <input
                 type="range"
@@ -680,7 +781,12 @@ export default function SettingsPage() {
                 max="0.25"
                 step="0.01"
                 value={settings.letterSpacing}
-                onChange={(e) => handleSettingChange({ ...settings, letterSpacing: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  handleSettingChange({
+                    ...settings,
+                    letterSpacing: parseFloat(e.target.value),
+                  })
+                }
                 onMouseUp={() => void handleSettingCommit(settings)}
                 onTouchEnd={() => void handleSettingCommit(settings)}
                 onBlur={() => void handleSettingCommit(settings)}
@@ -692,9 +798,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </section>
+        </SettingsCard>
 
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
+        <SettingsCard>
           <h2 className="mb-4 text-lg font-bold">
             {strings.settings.previewTitle}
           </h2>
@@ -705,18 +811,23 @@ export default function SettingsPage() {
               color: currentTheme.text,
             }}
           >
-            <h3 className="font-reading-title mb-4 text-2xl font-semibold" style={{ letterSpacing: `${settings.letterSpacing}em` }}>
+            <h3
+              className="font-reading-title mb-4 text-2xl font-semibold"
+              style={{ letterSpacing: `${settings.letterSpacing}em` }}
+            >
               黄金排版案头预览
             </h3>
             <div
               className="reader-content"
-              style={{
-                "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-                fontSize: `${settings.fontSize}px`,
-                lineHeight: settings.lineHeight,
-                "--paragraph-spacing": `${settings.paragraphSpacing}px`,
-                "--letter-spacing": `${settings.letterSpacing}em`,
-              } as React.CSSProperties}
+              style={
+                {
+                  "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
+                  fontSize: `${settings.fontSize}px`,
+                  lineHeight: settings.lineHeight,
+                  "--paragraph-spacing": `${settings.paragraphSpacing}px`,
+                  "--letter-spacing": `${settings.letterSpacing}em`,
+                } as React.CSSProperties
+              }
             >
               <p>
                 一页安静的文字，应该像灯下摊开的纸，字与字有了呼吸的空隙，段与段有了落脚的宁静。
@@ -726,13 +837,13 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
-        </section>
+        </SettingsCard>
       </div>
 
-        {/* AI 配置面板 */}
-        <section className="ui-card rounded-[18px] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)] hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring">
-          <AIConfigPanel isDark={isDark} />
-        </section>
+      {/* AI 配置面板 */}
+      <SettingsCard>
+        <AIConfigPanel isDark={isDark} />
+      </SettingsCard>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

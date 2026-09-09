@@ -249,7 +249,8 @@ export function PublicLibraryBookDetailModal({
                   {localProgress && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                       <Compass className="h-3 w-3" />
-                      已读至第 {localProgress.chapterIndex + 1} 章 ({Math.round(localProgress.percentage)}%)
+                      已读至第 {localProgress.chapterIndex + 1} 章 (
+                      {Math.round(localProgress.percentage)}%)
                     </span>
                   )}
                 </div>
@@ -257,7 +258,8 @@ export function PublicLibraryBookDetailModal({
                   {book.title}
                 </h2>
                 <p className="mt-0.5 text-xs text-[var(--color-muted)] sm:text-sm">
-                  {book.author || "佚名"} 著 · {book.chapterCount} 章节 · 约 {(book.wordCount / 10000).toFixed(1)} 万字
+                  {book.author || "佚名"} 著 · {book.chapterCount} 章节 · 约{" "}
+                  {(book.wordCount / 10000).toFixed(1)} 万字
                 </p>
               </div>
 
@@ -492,9 +494,7 @@ export function PublicLibraryBookDetailModal({
                           currentChapter.index >=
                             packageData.chapters.length - 1
                         }
-                        onClick={() =>
-                          setSelectedChapterIndex((i) => i + 1)
-                        }
+                        onClick={() => setSelectedChapterIndex((i) => i + 1)}
                         title="下一章"
                         type="button"
                       >
@@ -619,7 +619,9 @@ export function PublicLibraryBookDetailModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 p-4 sm:p-5">
           <div className="text-xs text-[var(--color-muted)]">
             {localProgress ? (
-              <span>已读至第 {localProgress.chapterIndex + 1} 章，随时可无缝续读</span>
+              <span>
+                已读至第 {localProgress.chapterIndex + 1} 章，随时可无缝续读
+              </span>
             ) : localBook ? (
               <span>典籍已在本地书架，随时可开启阅读</span>
             ) : (
@@ -630,7 +632,7 @@ export function PublicLibraryBookDetailModal({
           <div className="flex items-center gap-2 sm:gap-3">
             {!localBook ? (
               <button
-                className="ui-focus-ring inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-surface-hover)] disabled:opacity-50 sm:text-sm"
+                className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-xs font-semibold text-[var(--color-foreground)] shadow-sm hover:bg-[var(--color-surface-hover)] disabled:opacity-50 sm:text-sm"
                 disabled={joining || readingActionPending}
                 onClick={() => void handleAddToShelf()}
                 type="button"
@@ -650,7 +652,7 @@ export function PublicLibraryBookDetailModal({
             )}
 
             <button
-              className="ui-focus-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-6 text-xs font-semibold text-white shadow-md transition-transform hover:opacity-95 active:scale-95 disabled:opacity-50 sm:text-sm"
+              className="ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-6 text-xs font-semibold text-white shadow-md transition-transform hover:opacity-95 active:scale-95 disabled:opacity-50 sm:text-sm"
               disabled={joining || readingActionPending}
               onClick={() => void handleDirectRead()}
               type="button"

@@ -375,7 +375,7 @@ export default function BookDetailPage({
                     void checkUrlSource("manual");
                   }}
                   disabled={sourceChecking}
-                  className="ui-focus-ring min-h-10 shrink-0 rounded-full border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
+                  className="ui-focus-ring min-h-11 shrink-0 rounded-full border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
                   style={{ borderColor: colors.border, color: colors.text }}
                 >
                   {sourceChecking ? "检查中…" : "立即检查"}

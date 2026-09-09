@@ -91,9 +91,8 @@ export default function PublicLibraryPage() {
     Map<string, PublicBookLocalState>
   >(new Map());
   const [importOpen, setImportOpen] = useState(false);
-  const [previewingBook, setPreviewingBook] = useState<PublicLibraryBook | null>(
-    null,
-  );
+  const [previewingBook, setPreviewingBook] =
+    useState<PublicLibraryBook | null>(null);
   const [editingBook, setEditingBook] = useState<PublicLibraryBook | null>(
     null,
   );
@@ -351,9 +350,7 @@ export default function PublicLibraryPage() {
             <div className="flex items-center gap-2">
               <button
                 className={`ui-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white ${
-                  maintenanceAvailable
-                    ? ""
-                    : "cursor-not-allowed opacity-45"
+                  maintenanceAvailable ? "" : "cursor-not-allowed opacity-45"
                 }`}
                 aria-disabled={!maintenanceAvailable}
                 onClick={() => {
@@ -541,9 +538,9 @@ export default function PublicLibraryPage() {
             role="tabpanel"
             tabIndex={0}
           >
-          {notice && (
-            <StatusNotice className="mt-4" tone={notice.tone}>
-              {notice.text}
+            {notice && (
+              <StatusNotice className="mt-4" tone={notice.tone}>
+                {notice.text}
               </StatusNotice>
             )}
             {state === "loading" ? (
@@ -641,8 +638,12 @@ export default function PublicLibraryPage() {
                             </span>
                             {hasProgress ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                                <Compass aria-hidden="true" className="h-3 w-3" />
-                                第 {progress.chapterIndex + 1} 章 ({Math.round(progress.percentage)}%)
+                                <Compass
+                                  aria-hidden="true"
+                                  className="h-3 w-3"
+                                />
+                                第 {progress.chapterIndex + 1} 章 (
+                                {Math.round(progress.percentage)}%)
                               </span>
                             ) : isLocal ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
@@ -669,7 +670,7 @@ export default function PublicLibraryPage() {
                       {/* 卡片底部操作栏 */}
                       <div className="mt-auto flex items-center gap-2 border-t border-[var(--color-border)]/40 pt-2.5">
                         <button
-                          className="ui-focus-ring inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+                          className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
                           onClick={(event) => {
                             event.stopPropagation();
                             previewFallbackRef.current = event.currentTarget;
@@ -677,29 +678,42 @@ export default function PublicLibraryPage() {
                           }}
                           type="button"
                         >
-                          <BookOpen aria-hidden="true" className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                          <BookOpen
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5 text-[var(--color-primary)]"
+                          />
                           预览目录
                         </button>
                         <button
-                          className="ui-focus-ring inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-2 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-50"
+                          className="ui-focus-ring inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-2 text-xs font-semibold text-white hover:brightness-105 disabled:opacity-50"
                           disabled={Boolean(openingId || joiningId)}
                           onClick={(event) => {
                             event.stopPropagation();
                             void openBook(book);
                           }}
-                          title={hasProgress ? `继续阅读：第 ${progress.chapterIndex + 1} 章` : "即刻开卷阅读"}
+                          title={
+                            hasProgress
+                              ? `继续阅读：第 ${progress.chapterIndex + 1} 章`
+                              : "即刻开卷阅读"
+                          }
                           type="button"
                         >
                           {openingId === book.id ? (
                             "准备中…"
                           ) : hasProgress ? (
                             <>
-                              <Compass aria-hidden="true" className="h-3.5 w-3.5" />
+                              <Compass
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                               继续阅读
                             </>
                           ) : (
                             <>
-                              <BookOpen aria-hidden="true" className="h-3.5 w-3.5" />
+                              <BookOpen
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                               即刻开卷
                             </>
                           )}
@@ -716,19 +730,27 @@ export default function PublicLibraryPage() {
                             event.stopPropagation();
                             void joinBookOnly(book);
                           }}
-                          title={isLocal ? "已收录至本地书架" : "收录至本地书架"}
+                          title={
+                            isLocal ? "已收录至本地书架" : "收录至本地书架"
+                          }
                           type="button"
                         >
                           {joiningId === book.id ? (
                             "收录中…"
                           ) : isLocal ? (
                             <>
-                              <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                              <Check
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                               <span className="hidden sm:inline">已入书架</span>
                             </>
                           ) : (
                             <>
-                              <Download aria-hidden="true" className="h-3.5 w-3.5" />
+                              <Download
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                               <span className="hidden sm:inline">加入书架</span>
                             </>
                           )}
