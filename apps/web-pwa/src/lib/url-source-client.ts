@@ -1,6 +1,6 @@
 import type { ParsedBook } from "@reader/parser-core";
 import { apiUrl, getShareHeaders } from "./api";
-import { parseUrlBookInBrowser } from "./url-import";
+import { parseUrlBookInBrowser } from "./url-import/index";
 import {
   assertAuthorizedPublicSourceUrl,
   shouldUseBackendUrlFallback,

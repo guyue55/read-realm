@@ -8,7 +8,7 @@ import {
   parseSourceCheckPreference,
   shouldUseBackendUrlFallback,
 } from "./url-source-policy";
-import { UrlImportError } from "./url-import";
+import { UrlImportError } from "./url-import/index";
 
 describe("URL source policy", () => {
   it("requires an explicit rights confirmation for public http(s) URLs", () => {

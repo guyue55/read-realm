@@ -14,6 +14,10 @@
       "types": "./dist/html-parser.d.ts",
       "default": "./dist/html-parser.js"
     },
+    "./browser-readability": {
+      "types": "./dist/browser-readability.d.ts",
+      "default": "./dist/browser-readability.js"
+    },
     "./txt-parser": {
       "types": "./dist/txt-parser.d.ts",
       "default": "./dist/txt-parser.js"

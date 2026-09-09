@@ -1,0 +1,151 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from "vitest";
+import {
+  parseUrlBook,
+  parseChapterPages,
+  getChapterLinks,
+  getNextPageUrl,
+  normalizeWhitespace,
+  toAbsoluteUrl,
+  heuristicExtractText,
+  parseHtmlInBrowser,
+} from "./parse";
+
+/** 用真实 DOM（jsdom）构造页面，生产代码使用的 innerText/querySelectorAll 均可工作 */
+function makeDoc(html: string): Document {
+  return new DOMParser().parseFromString(html, "text/html");
+}
+
+/** 典型小说章页 HTML */
+function chapterPageHtml(title: string, paragraphs: string[]): string {
+  return `<!DOCTYPE html><html><head><title>${title}</title></head><body>
+    <header>站点导航<nav>首页 书架</nav></header>
+    <h1>${title}</h1>
+    ${paragraphs.map((p) => `<p>${p}</p>`).join("")}
+    <footer>© 2026</footer>
+  </body></html>`;
+}
+
+describe("parse 解析引擎", () => {
+  describe("normalizeWhitespace / toAbsoluteUrl", () => {
+    it("规范化空白", () => {
+      expect(normalizeWhitespace("  a\u00a0 b  \n\n\n c  ")).toBe("a b \n\n c");
+    });
+    it("URL 绝对化与协议白名单", () => {
+      expect(toAbsoluteUrl("/ch/2", "https://a.example/ch/1")).toBe(
+        "https://a.example/ch/2",
+      );
+      expect(toAbsoluteUrl("javascript:x", "https://a.example/")).toBeNull();
+      expect(toAbsoluteUrl(null, "https://a.example/")).toBeNull();
+    });
+  });
+
+  describe("getChapterLinks 章节链接识别", () => {
+    it("识别第X章链接并去重限源", () => {
+      const doc = makeDoc(`<html><body>
+        <a href="/ch/1">第一章 启程</a>
+        <a href="/ch/2">第二章 旅途</a>
+        <a href="/ch/2">第二章 旅途</a>
+        <a href="https://other.example/x">第三章 外站</a>
+        <a href="/about">关于我们</a>
+      </body></html>`);
+      const links = getChapterLinks(doc, "https://a.example/ch/1");
+      expect(links).toHaveLength(2);
+      expect(links[0]).toEqual({
+        title: "第一章 启程",
+        url: "https://a.example/ch/1",
+      });
+    });
+  });
+
+  describe("getNextPageUrl 分页识别", () => {
+    it("识别下一页并排除下一章", () => {
+      const doc = makeDoc(`<html><body>
+        <a href="/ch/1?p=2">下一页</a>
+        <a href="/ch/2">下一章</a>
+      </body></html>`);
+      const next = getNextPageUrl(doc, "https://a.example/ch/1", new Set());
+      expect(next).toBe("https://a.example/ch/1?p=2");
+    });
+  });
+
+  describe("heuristicExtractText 启发式正文提取", () => {
+    it("从正文容器提取并剔除导航", () => {
+      const doc = makeDoc(chapterPageHtml("第一章 启程", ["夜色如墨。", "少年上路。"]));
+      const text = heuristicExtractText(doc);
+      expect(text).toContain("夜色如墨。");
+      expect(text).not.toContain("站点导航");
+    });
+
+    it("长正文可直接从 body 提取", () => {
+      const long = "字".repeat(200);
+      const doc = makeDoc(`<html><body><p>${long}</p></body></html>`);
+      expect(heuristicExtractText(doc)).toContain(long);
+    });
+  });
+
+  describe("parseChapterPages 分页聚合", () => {
+    it("聚合多页正文并取首页标题", async () => {
+      const fetchDoc = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes("p=2")) {
+          return makeDoc(chapterPageHtml("第一章 启程", ["第二页正文。" + "字".repeat(80)]));
+        }
+        return makeDoc(chapterPageHtml("第一章 启程", ["第一页正文。" + "字".repeat(80)]));
+      });
+      const result = await parseChapterPages(
+        "https://a.example/ch/1",
+        "第一章 启程",
+        fetchDoc,
+        { extractText: (doc) => heuristicExtractText(doc) },
+      );
+      expect(result.title).toBe("第一章 启程");
+      expect(result.content).toContain("第一页正文。");
+    });
+  });
+
+  describe("parseUrlBook 整书解析", () => {
+    it("有目录时逐章解析", async () => {
+      const tocHtml = `<html><body>
+        <h1>测试书名</h1>
+        <a href="/ch/1">第一章 启程</a>
+        <a href="/ch/2">第二章 旅途</a>
+      </body></html>`;
+      const fetchDoc = vi.fn().mockImplementation(async (url: string) => {
+        if (url.endsWith("/ch/1"))
+          return makeDoc(chapterPageHtml("第一章 启程", ["正文一。" + "字".repeat(80)]));
+        if (url.endsWith("/ch/2"))
+          return makeDoc(chapterPageHtml("第二章 旅途", ["正文二。" + "字".repeat(80)]));
+        return makeDoc(tocHtml);
+      });
+      const book = await parseUrlBook("https://a.example/index", fetchDoc, {
+        extractText: (doc) => heuristicExtractText(doc),
+      });
+      expect(book.title).toBe("测试书名");
+      expect(book.chapters).toHaveLength(2);
+      expect(book.chapters[0]?.title).toBe("第一章 启程");
+    });
+
+    it("无目录时作为单章解析", async () => {
+      const fetchDoc = vi
+        .fn()
+        .mockResolvedValue(
+          makeDoc(chapterPageHtml("单章书名", ["单章正文。" + "字".repeat(80)])),
+        );
+      const book = await parseUrlBook("https://a.example/one", fetchDoc, {
+        extractText: (doc) => heuristicExtractText(doc),
+      });
+      expect(book.chapters).toHaveLength(1);
+    });
+  });
+
+  describe("parseHtmlInBrowser 单页正文提取", () => {
+    it("从 HTML 提取标题与正文", () => {
+      const result = parseHtmlInBrowser(
+        chapterPageHtml("第一章 启程", ["直接解析正文。" + "字".repeat(80)]),
+        { extractText: (doc) => heuristicExtractText(doc) },
+      );
+      expect(result.title).toBe("第一章 启程");
+      expect(result.text).toContain("直接解析正文。");
+    });
+  });
+});
