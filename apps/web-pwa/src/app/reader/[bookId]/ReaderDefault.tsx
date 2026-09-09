@@ -3,7 +3,10 @@
 import { strings } from "@/lib/i18n";
 import { TocDrawer } from "@/components/reader/TocDrawer";
 import { AIReaderPanel } from "@/components/reader/AIReaderPanel";
-import { PaginatedReader, type PaginatedReaderHandle } from "@/components/reader/PaginatedReader";
+import {
+  PaginatedReader,
+  type PaginatedReaderHandle,
+} from "@/components/reader/PaginatedReader";
 import { SettingsSheet } from "@/components/reader/SettingsSheet";
 import { ReaderTopBar } from "@/components/reader/ReaderTopBar";
 import { ReaderBottomBar } from "@/components/reader/ReaderBottomBar";
@@ -13,7 +16,15 @@ import { ReaderProgressRange } from "@/components/reader/ReaderProgressRange";
 import { useReader } from "@/hooks/useReader";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type TouchEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { GestureRecognizer } from "@reader/gesture-core";
 import {
@@ -107,7 +118,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [userNoteText, setUserNoteText] = useState("");
   const [progressPreview, setProgressPreview] = useState(readingProgress);
-  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(null);
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean | null>(
+    null,
+  );
   const [mobileChromeInsets, setMobileChromeInsets] = useState({
     top: 68,
     bottom: 160,
@@ -118,7 +131,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   });
   const mobileRootRef = useRef<HTMLDivElement>(null);
   const viewportModeRef = useRef<boolean | null>(null);
-  const paginationTouchRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const paginationTouchRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+  } | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 768px)");
@@ -147,14 +164,19 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
   useLayoutEffect(() => {
     const root = mobileRootRef.current;
     if (!root || isDesktopViewport !== false) return;
-    const topBar = root.querySelector<HTMLElement>('[data-reader-toolbar="top"]');
-    const bottomBar = root.querySelector<HTMLElement>('[data-reader-toolbar="bottom"]');
+    const topBar = root.querySelector<HTMLElement>(
+      '[data-reader-toolbar="top"]',
+    );
+    const bottomBar = root.querySelector<HTMLElement>(
+      '[data-reader-toolbar="bottom"]',
+    );
     if (!topBar || !bottomBar) return;
 
     const measureChrome = () => {
       const topHeight = Math.ceil(topBar.getBoundingClientRect().height);
       const bottomHeight = Math.ceil(bottomBar.getBoundingClientRect().height);
-      const bottomOffset = Number.parseFloat(getComputedStyle(bottomBar).bottom) || 0;
+      const bottomOffset =
+        Number.parseFloat(getComputedStyle(bottomBar).bottom) || 0;
       const safeAreaTop = Math.max(0, topHeight - 56);
       const safeAreaBottom = Math.max(0, bottomOffset - 12);
       const next = {
@@ -165,7 +187,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         immersiveBottom: 36 + safeAreaBottom,
         immersiveIndicator: 12 + safeAreaBottom,
       };
-      setMobileChromeInsets((current) => (
+      setMobileChromeInsets((current) =>
         current.top === next.top &&
         current.bottom === next.bottom &&
         current.indicator === next.indicator &&
@@ -173,8 +195,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         current.immersiveBottom === next.immersiveBottom &&
         current.immersiveIndicator === next.immersiveIndicator
           ? current
-          : next
-      ));
+          : next,
+      );
     };
 
     measureChrome();
@@ -195,7 +217,8 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     if (isPagination) {
       const scrollContainer = paginatedReaderRef.current?.getScrollContainer();
       if (scrollContainer) {
-        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = scrollContainer;
+        (contentRef as React.MutableRefObject<HTMLDivElement | null>).current =
+          scrollContainer;
       }
     }
   }, [isPagination, contentRef, chapter?.id, isDesktopViewport]);
@@ -214,54 +237,69 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     await handlePrev();
   }, [getActivePaginatedReader, handlePrev, isPagination]);
 
-  const handleVisibleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
-    if (!isPagination) {
-      handleContentTouchStart(event);
-      return;
-    }
-    if (isInteractiveReaderTarget(event.target) || activePanel) return;
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) return;
-    const touch = event.touches[0];
-    if (!touch || touch.clientX < 30 || touch.clientX > window.innerWidth - 30) {
-      paginationTouchRef.current = null;
-      return;
-    }
-    paginationTouchRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    };
-  }, [activePanel, handleContentTouchStart, isPagination]);
+  const handleVisibleTouchStart = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      if (!isPagination) {
+        handleContentTouchStart(event);
+        return;
+      }
+      if (isInteractiveReaderTarget(event.target) || activePanel) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      const touch = event.touches[0];
+      if (
+        !touch ||
+        touch.clientX < 30 ||
+        touch.clientX > window.innerWidth - 30
+      ) {
+        paginationTouchRef.current = null;
+        return;
+      }
+      paginationTouchRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now(),
+      };
+    },
+    [activePanel, handleContentTouchStart, isPagination],
+  );
 
-  const handleVisibleTouchEnd = useCallback((event: TouchEvent<HTMLDivElement>) => {
-    if (!isPagination) {
-      handleContentTouchEnd(event);
-      return;
-    }
-    const start = paginationTouchRef.current;
-    paginationTouchRef.current = null;
-    const touch = event.changedTouches[0];
-    if (!start || !touch) return;
-    const selection = window.getSelection();
-    const deltaX = touch.clientX - start.x;
-    if (selection && !selection.isCollapsed) {
-      if (Math.abs(deltaX) <= 70) return;
-      selection.removeAllRanges();
-    }
-    const action = recognizer.getSwipeAction(
-      { x: start.x, y: start.y },
-      { x: touch.clientX, y: touch.clientY },
-      Date.now() - start.time,
-    );
-    if (action === "swipeLeft" || action === "swipeUp") {
-      event.preventDefault();
-      void handleVisiblePageNext();
-    } else if (action === "swipeRight" || action === "swipeDown") {
-      event.preventDefault();
-      void handleVisiblePagePrev();
-    }
-  }, [handleContentTouchEnd, handleVisiblePageNext, handleVisiblePagePrev, isPagination]);
+  const handleVisibleTouchEnd = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      if (!isPagination) {
+        handleContentTouchEnd(event);
+        return;
+      }
+      const start = paginationTouchRef.current;
+      paginationTouchRef.current = null;
+      const touch = event.changedTouches[0];
+      if (!start || !touch) return;
+      const selection = window.getSelection();
+      const deltaX = touch.clientX - start.x;
+      if (selection && !selection.isCollapsed) {
+        if (Math.abs(deltaX) <= 70) return;
+        selection.removeAllRanges();
+      }
+      const action = recognizer.getSwipeAction(
+        { x: start.x, y: start.y },
+        { x: touch.clientX, y: touch.clientY },
+        Date.now() - start.time,
+      );
+      if (action === "swipeLeft" || action === "swipeUp") {
+        event.preventDefault();
+        void handleVisiblePageNext();
+      } else if (action === "swipeRight" || action === "swipeDown") {
+        event.preventDefault();
+        void handleVisiblePagePrev();
+      }
+    },
+    [
+      handleContentTouchEnd,
+      handleVisiblePageNext,
+      handleVisiblePagePrev,
+      isPagination,
+    ],
+  );
 
   const [aiInput, setAiInput] = useState(""); // 🏮 联动 AI 伴读的输入框内容
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -286,32 +324,39 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     };
   }, []);
 
-  const handleMouseOrTouchUp = useCallback((e: { target: EventTarget | null }) => {
-    // 排除点在气泡或弹窗内部的点击，防止点气泡按钮时选区被清空
-    if (e.target instanceof Element && (e.target.closest(".selection-popover") || e.target.closest(".note-dialog"))) {
-      return;
-    }
-    
-    setTimeout(() => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim().length > 0) {
-        const text = selection.toString().trim();
-        setSelectedText(text);
-        
-        try {
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          setSelectionRect(rect);
-        } catch (err) {
-          console.warn("无法捕获选区位置:", err);
-        }
-      } else {
-        // 清空
-        setSelectionRect(null);
-        setSelectedText("");
+  const handleMouseOrTouchUp = useCallback(
+    (e: { target: EventTarget | null }) => {
+      // 排除点在气泡或弹窗内部的点击，防止点气泡按钮时选区被清空
+      if (
+        e.target instanceof Element &&
+        (e.target.closest(".selection-popover") ||
+          e.target.closest(".note-dialog"))
+      ) {
+        return;
       }
-    }, 50); // 稍微延迟，等待系统 Selection 更新
-  }, []);
+
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim().length > 0) {
+          const text = selection.toString().trim();
+          setSelectedText(text);
+
+          try {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            setSelectionRect(rect);
+          } catch (err) {
+            console.warn("无法捕获选区位置:", err);
+          }
+        } else {
+          // 清空
+          setSelectionRect(null);
+          setSelectedText("");
+        }
+      }, 50); // 稍微延迟，等待系统 Selection 更新
+    },
+    [],
+  );
 
   const closeNoteDialog = useCallback(() => {
     setShowNoteDialog(false);
@@ -370,16 +415,28 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
       // 5. 如果当前存在划词选区，按键留给用户调整选区/光标
       const selection = window.getSelection();
-      if (selection && !selection.isCollapsed && selection.toString().trim().length > 0) {
+      if (
+        selection &&
+        !selection.isCollapsed &&
+        selection.toString().trim().length > 0
+      ) {
         return;
       }
 
       // 6. 翻页按键映射
-      if (event.key === "ArrowRight" || event.key === "PageDown" || (event.key === " " && !event.shiftKey)) {
+      if (
+        event.key === "ArrowRight" ||
+        event.key === "PageDown" ||
+        (event.key === " " && !event.shiftKey)
+      ) {
         event.preventDefault();
         if (isFlipCooldown()) return;
         void handleVisiblePageNext();
-      } else if (event.key === "ArrowLeft" || event.key === "PageUp" || (event.key === " " && event.shiftKey)) {
+      } else if (
+        event.key === "ArrowLeft" ||
+        event.key === "PageUp" ||
+        (event.key === " " && event.shiftKey)
+      ) {
         event.preventDefault();
         if (isFlipCooldown()) return;
         void handleVisiblePagePrev();
@@ -402,14 +459,19 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     handleVisiblePagePrev,
   ]);
 
-  const setReaderCanvasRef = useCallback((node: HTMLDivElement | null) => {
-    readerCanvasRef.current = node;
-    (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  }, [contentRef]);
+  const setReaderCanvasRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      readerCanvasRef.current = node;
+      (contentRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        node;
+    },
+    [contentRef],
+  );
 
   useLayoutEffect(() => {
     if (!isPagination && readerCanvasRef.current) {
-      (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = readerCanvasRef.current;
+      (contentRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        readerCanvasRef.current;
     }
   }, [contentRef, isPagination]);
 
@@ -480,7 +542,16 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       // 点击中间区域，隐藏菜单
       setShowMenu(false);
     },
-    [showMenu, handleVisiblePagePrev, handleVisiblePageNext, setShowMenu, activePanel, isPagination, isFlipCooldown, selectionRect],
+    [
+      showMenu,
+      handleVisiblePagePrev,
+      handleVisiblePageNext,
+      setShowMenu,
+      activePanel,
+      isPagination,
+      isFlipCooldown,
+      selectionRect,
+    ],
   );
 
   if (error) {
@@ -493,23 +564,29 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         style={{ backgroundColor: bg, color: text }}
       >
         <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#2f2a24_1px,transparent_1px)] [background-size:16px_1px]" />
-        
-        <div 
+
+        <div
           className="relative max-w-md w-[90%] p-8 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all duration-500 transform hover:scale-[1.01] flex flex-col items-center text-center animate-in fade-in zoom-in duration-300"
           style={{
-            backgroundColor: isDark ? "rgba(40, 40, 40, 0.85)" : "rgba(255, 252, 245, 0.85)",
-            borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(80, 65, 45, 0.15)",
-            boxShadow: isDark 
-              ? "0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255,255,255,0.05)" 
-              : "0 20px 40px rgba(80, 65, 45, 0.08), inset 0 0 0 1px rgba(255,255,255,0.6)"
+            backgroundColor: isDark
+              ? "rgba(40, 40, 40, 0.85)"
+              : "rgba(255, 252, 245, 0.85)",
+            borderColor: isDark
+              ? "rgba(255, 255, 255, 0.12)"
+              : "rgba(80, 65, 45, 0.15)",
+            boxShadow: isDark
+              ? "0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255,255,255,0.05)"
+              : "0 20px 40px rgba(80, 65, 45, 0.08), inset 0 0 0 1px rgba(255,255,255,0.6)",
           }}
         >
-          <div 
+          <div
             className="w-16 h-16 rounded-full flex items-center justify-center mb-6 border-2 border-dashed relative animate-spin-slow"
             style={{
               borderColor: isDark ? "#c84c3c" : "#b23e2d",
               color: isDark ? "#e06c5c" : "#b23e2d",
-              backgroundColor: isDark ? "rgba(200, 76, 60, 0.05)" : "rgba(178, 62, 45, 0.03)",
+              backgroundColor: isDark
+                ? "rgba(200, 76, 60, 0.05)"
+                : "rgba(178, 62, 45, 0.03)",
             }}
           >
             <span className="font-serif text-2xl font-bold">🏮</span>
@@ -525,17 +602,28 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
           <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
             <button
-              onClick={() => router.push(sourceFolderId ? `/library?folderId=${sourceFolderId}` : "/library")}
+              onClick={() =>
+                router.push(
+                  sourceFolderId
+                    ? `/library?folderId=${sourceFolderId}`
+                    : "/library",
+                )
+              }
               className="px-6 py-2.5 rounded-full text-xs font-serif font-semibold tracking-widest transition-all duration-300 border shadow-sm hover:opacity-90 active:scale-95"
               style={{
                 backgroundColor: isDark ? "#3a3a3a" : "#fdfbf7",
-                borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(80, 65, 45, 0.25)",
+                borderColor: isDark
+                  ? "rgba(255,255,255,0.15)"
+                  : "rgba(80, 65, 45, 0.25)",
                 color: isDark ? "#E5E5E5" : "#2F2A24",
               }}
             >
               {strings.settings?.backToShelf || "返回书架"}
             </button>
-            {error && (error.includes("权限") || error.includes("授权") || error.includes("PERMISSION_REQUIRED")) ? (
+            {error &&
+            (error.includes("权限") ||
+              error.includes("授权") ||
+              error.includes("PERMISSION_REQUIRED")) ? (
               <button
                 onClick={async () => {
                   const granted = await regrantPermission();
@@ -575,13 +663,52 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         className="flex h-screen items-center justify-center transition-colors duration-300 animate-pulse-short"
         style={{ backgroundColor: bg, color: text }}
       >
-        <span className="text-sm font-semibold tracking-widest">{strings.reader.loading}</span>
+        <span className="text-sm font-semibold tracking-widest">
+          {strings.reader.loading}
+        </span>
       </div>
     );
   }
 
   const isDark = settings.theme === "dark";
   const borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(80,65,45,0.12)";
+  // 划词气泡 / 自动换章胶囊 / 笔记对话框：跟随阅读主题（isDark）而非 OS 暗色，
+  // 保证 dark 阅读主题下 chrome 与正文同色系、对比度达标。
+  const flipChipClasses = isDark
+    ? "border-[#EEF2E9]/20 bg-[rgba(45,45,45,0.92)] text-[#EEF2E9]"
+    : "border-[#678055]/30 bg-[rgba(238,242,233,0.92)] text-[#678055]";
+  const popoverClasses = isDark
+    ? "bg-[rgba(30,30,30,0.92)] border-[rgba(255,255,255,0.12)]"
+    : "bg-[rgba(255,252,245,0.92)] border-[rgba(80,65,45,0.15)]";
+  const popoverActionText = isDark
+    ? "text-[#E5E5E5] hover:text-[#D2A66A]"
+    : "text-[#2F2A24] hover:text-[#9A6A3A]";
+  const popoverDivider = isDark
+    ? "bg-[rgba(255,255,255,0.12)]"
+    : "bg-[rgba(80,65,45,0.12)]";
+  const noteDialogClasses = isDark
+    ? "bg-[#25231F] border-[#4A4238]"
+    : "bg-[#FAF6EE] border-[#DFD1BF]";
+  const noteInnerBorder = isDark
+    ? "border-[#5C5346]/40"
+    : "border-[#E9DCC8]/60";
+  const noteTitleText = isDark ? "text-[#E9DCC8]" : "text-[#2F2A24]";
+  const noteQuoteBox = isDark
+    ? "bg-[#1C1B19] border-[#3D372E]"
+    : "bg-[#FFFDF9] border-[#EBE3D3]";
+  const noteQuoteLabel = isDark ? "text-[#807667]" : "text-[#A69B88]";
+  const noteQuoteText = isDark
+    ? "text-[#BDB19F] border-l-2 border-[#6B5A49]"
+    : "text-[#5C5446] border-l-2 border-[#D5C2B1]";
+  const noteInputClasses = isDark
+    ? "bg-[#1C1B19] border-[#3D372E] text-[#E2D5C5] focus:border-[#83A370] placeholder-[#A89F8F]"
+    : "bg-[#FFFDF9] border-[#EBE3D3] text-[#3A2D22] focus:border-[#678055] placeholder-[#A89F8F]";
+  const noteCancelClasses = isDark
+    ? "bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border-[rgba(255,255,255,0.08)] text-[#A89F8F]"
+    : "bg-[rgba(80,65,45,0.04)] hover:bg-[rgba(80,65,45,0.08)] border-[rgba(80,65,45,0.08)] text-[#6F665B]";
+  const noteSaveClasses = isDark
+    ? "bg-[#4E623E] hover:bg-[#3C4E2E]"
+    : "bg-[#678055] hover:bg-[#4B633C]";
   const activeMobileInsets = showMenu
     ? {
         top: mobileChromeInsets.top,
@@ -608,9 +735,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         <div
           className="fixed top-24 left-1/2 -translate-x-1/2 z-[99] px-6 py-3 rounded-full text-xs font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-md physics-spring animate-in fade-in slide-in-from-top-4"
           style={{
-            backgroundColor: isDark ? "rgba(45, 45, 45, 0.85)" : "rgba(255, 252, 245, 0.85)",
+            backgroundColor: isDark
+              ? "rgba(45, 45, 45, 0.85)"
+              : "rgba(255, 252, 245, 0.85)",
             color: isDark ? "#E5E5E5" : "#2F2A24",
-            borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(80, 65, 45, 0.15)",
+            borderColor: isDark
+              ? "rgba(255, 255, 255, 0.12)"
+              : "rgba(80, 65, 45, 0.15)",
           }}
         >
           {toast}
@@ -630,9 +761,13 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           role="alert"
           className="fixed top-4 left-1/2 z-[100] flex min-h-11 -translate-x-1/2 items-center gap-3 rounded-xl border px-4 py-2 text-xs font-semibold shadow-lg"
           style={{
-            backgroundColor: isDark ? "rgba(54, 35, 32, 0.96)" : "rgba(255, 247, 242, 0.96)",
+            backgroundColor: isDark
+              ? "rgba(54, 35, 32, 0.96)"
+              : "rgba(255, 247, 242, 0.96)",
             color: isDark ? "#FFD8CC" : "#8B2E20",
-            borderColor: isDark ? "rgba(255, 155, 130, 0.35)" : "rgba(178, 62, 45, 0.24)",
+            borderColor: isDark
+              ? "rgba(255, 155, 130, 0.35)"
+              : "rgba(178, 62, 45, 0.24)",
           }}
         >
           <span>阅读进度尚未保存，请保持页面开启</span>
@@ -651,16 +786,20 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         <div
           ref={mobileRootRef}
           data-reader-viewport-root={isDesktopViewport ? "desktop" : "mobile"}
-          className={isDesktopViewport
-            ? "relative flex h-[calc(100vh-64px)] w-full max-w-[1372px] flex-col overflow-hidden rounded-[12px] border shadow-sm"
-            : "reader-mobile-root absolute inset-0 flex h-full w-full flex-col"}
-          style={{
-            backgroundColor: currentThemeColors.bg,
-            color: currentThemeColors.text,
-            borderColor,
-            "--reader-mobile-content-top": `${activeMobileInsets.top}px`,
-            "--reader-mobile-content-bottom": `${activeMobileInsets.bottom}px`,
-          } as React.CSSProperties}
+          className={
+            isDesktopViewport
+              ? "relative flex h-[calc(100vh-64px)] w-full max-w-[1372px] flex-col overflow-hidden rounded-[12px] border shadow-sm"
+              : "reader-mobile-root absolute inset-0 flex h-full w-full flex-col"
+          }
+          style={
+            {
+              backgroundColor: currentThemeColors.bg,
+              color: currentThemeColors.text,
+              borderColor,
+              "--reader-mobile-content-top": `${activeMobileInsets.top}px`,
+              "--reader-mobile-content-bottom": `${activeMobileInsets.bottom}px`,
+            } as React.CSSProperties
+          }
         >
           <ReaderTopBar
             title={chapter.title}
@@ -694,9 +833,15 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             }
             onBookmark={addBookmark}
             onSettings={() => togglePanel("settings")}
-            onToggleToc={isDesktopViewport ? () => togglePanel("toc") : undefined}
-            onToggleAi={isDesktopViewport ? () => void handleSummarize() : undefined}
-            onToggleProgress={isDesktopViewport ? () => togglePanel("progress") : undefined}
+            onToggleToc={
+              isDesktopViewport ? () => togglePanel("toc") : undefined
+            }
+            onToggleAi={
+              isDesktopViewport ? () => void handleSummarize() : undefined
+            }
+            onToggleProgress={
+              isDesktopViewport ? () => togglePanel("progress") : undefined
+            }
             onPrevChapter={handlePrevChapterActive}
             onNextChapter={handleNextChapterActive}
             backgroundDisabled={Boolean(activePanel || showNoteDialog)}
@@ -704,7 +849,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
 
           <div
             ref={setReaderCanvasRef}
-            data-reader-content-canvas={isDesktopViewport ? "desktop" : "mobile"}
+            data-reader-content-canvas={
+              isDesktopViewport ? "desktop" : "mobile"
+            }
             data-page-mode={isPagination ? "pagination" : "scroll"}
             inert={activePanel || showNoteDialog ? true : undefined}
             tabIndex={-1}
@@ -712,14 +859,17 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             onTouchStart={handleVisibleTouchStart}
             onTouchEnd={handleVisibleTouchEnd}
             className={`${isDesktopViewport ? "" : "reader-mobile-canvas"} relative flex-1 overflow-x-hidden reader-gpu-accelerated ${
-              isPagination && isDesktopViewport ? "overflow-hidden" : "overflow-y-auto"
+              isPagination && isDesktopViewport
+                ? "overflow-hidden"
+                : "overflow-y-auto"
             } transition-all duration-300 ease-out ${
               isPagination || isPositionRestored
                 ? "opacity-100 blur-0"
                 : "pointer-events-none opacity-0 blur-md"
             }`}
             style={{
-              scrollBehavior: isPagination && isDesktopViewport ? "auto" : "smooth",
+              scrollBehavior:
+                isPagination && isDesktopViewport ? "auto" : "smooth",
               overflowAnchor: isPagination ? "auto" : "none",
             }}
           >
@@ -735,13 +885,21 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                 fontFamily={settings.fontFamily || "kaiti"}
                 paragraphSpacing={settings.paragraphSpacing ?? 16}
                 letterSpacing={settings.letterSpacing ?? 0.03}
-                initialAnchor={paginationAnchor?.chapterIndex === chapter.index ? paginationAnchor : undefined}
+                initialAnchor={
+                  paginationAnchor?.chapterIndex === chapter.index
+                    ? paginationAnchor
+                    : undefined
+                }
                 onAnchorChange={savePaginationAnchor}
                 onBoundaryNext={handleNext}
                 onBoundaryPrev={handlePrev}
                 reservedTop={isDesktopViewport ? 48 : activeMobileInsets.top}
-                reservedBottom={isDesktopViewport ? 120 : activeMobileInsets.bottom}
-                pageIndicatorInset={isDesktopViewport ? 16 : activeMobileInsets.indicator}
+                reservedBottom={
+                  isDesktopViewport ? 120 : activeMobileInsets.bottom
+                }
+                pageIndicatorInset={
+                  isDesktopViewport ? 16 : activeMobileInsets.indicator
+                }
               />
             ) : (
               renderedChapters.map((ch) => (
@@ -752,9 +910,11 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   }`}
                   data-chapter-index={ch.index}
                   style={{
-                    maxWidth: `${isDesktopViewport
-                      ? readerTokens.layout.desktopContentMaxWidth
-                      : readerTokens.layout.tabletContentMaxWidth}px`,
+                    maxWidth: `${
+                      isDesktopViewport
+                        ? readerTokens.layout.desktopContentMaxWidth
+                        : readerTokens.layout.tabletContentMaxWidth
+                    }px`,
                   }}
                 >
                   <ReaderContent
@@ -765,20 +925,28 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                     buttonVariant="default"
                     onPrev={undefined}
                     onNext={undefined}
-                    style={{
-                      fontSize: `${settings.fontSize}px`,
-                      lineHeight: settings.lineHeight,
-                      columnWidth: "auto",
-                      columnGap: "48px",
-                      height: "auto",
-                      "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
-                      "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
-                      "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
-                    } as React.CSSProperties}
-                    titleClassName={isDesktopViewport
-                      ? "mb-10 text-center font-serif text-3xl font-bold"
-                      : "mb-8 font-serif text-2xl font-bold"}
-                    titleStyle={isDesktopViewport ? { color: currentThemeColors.text } : undefined}
+                    style={
+                      {
+                        fontSize: `${settings.fontSize}px`,
+                        lineHeight: settings.lineHeight,
+                        columnWidth: "auto",
+                        columnGap: "48px",
+                        height: "auto",
+                        "--paragraph-spacing": `${settings.paragraphSpacing ?? 16}px`,
+                        "--letter-spacing": `${settings.letterSpacing ?? 0.03}em`,
+                        "--reader-font-family": `var(--font-${settings.fontFamily || "kaiti"})`,
+                      } as React.CSSProperties
+                    }
+                    titleClassName={
+                      isDesktopViewport
+                        ? "mb-10 text-center font-serif text-3xl font-bold"
+                        : "mb-8 font-serif text-2xl font-bold"
+                    }
+                    titleStyle={
+                      isDesktopViewport
+                        ? { color: currentThemeColors.text }
+                        : undefined
+                    }
                   />
                 </div>
               ))
@@ -808,224 +976,253 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
         </div>
       )}
 
-      {isDesktopViewport !== null && typeof document !== "undefined" && createPortal(
-        <>
-          <ReaderDialogSurface
-            open={activePanel === "toc"}
-            label="阅读目录"
-            onClose={() => setActivePanel(null)}
-            fallbackFocus={() => contentRef.current}
-            className={`reader-panel-motion fixed inset-0 z-50 flex justify-start bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
-            onClick={() => setActivePanel(null)}
-          >
-            <div
-              className={isDesktopViewport
-                ? "h-full w-[320px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
-                : "h-full w-[280px] max-w-[82vw] overflow-hidden bg-[var(--theme-bg)] shadow-xl"}
-              style={{ backgroundColor: currentThemeColors.bg, borderColor }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <TocDrawer
-                toc={toc}
-                bookmarks={bookmarks}
-                currentChapterIndex={chapter.index}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onJumpToChapter={jumpToChapter}
-                onJumpToBookmark={jumpToBookmark}
-                isMobileDrawer={!isDesktopViewport}
-                onClose={() => setActivePanel(null)}
-              />
-            </div>
-          </ReaderDialogSurface>
-
-          <ReaderDialogSurface
-            open={activePanel === "ai"}
-            label="伴读"
-            onClose={() => setActivePanel(null)}
-            fallbackFocus={() => contentRef.current}
-            className={`reader-panel-motion fixed inset-0 z-50 flex justify-end bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
-            onClick={() => setActivePanel(null)}
-          >
-            <div
-              className={isDesktopViewport
-                ? "h-full w-[360px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
-                : "h-full w-[300px] max-w-[88vw] overflow-hidden bg-[var(--theme-bg)] shadow-xl"}
-              style={{ backgroundColor: currentThemeColors.bg, borderColor }}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <AIReaderPanel
-                isAiLoading={isAiLoading}
-                aiSummary={aiSummary}
-                isMobileDrawer={!isDesktopViewport}
-                isDark={isDark}
-                onClose={() => setActivePanel(null)}
-                aiInput={aiInput}
-                setAiInput={setAiInput}
-                onAsk={handleAsk}
-                onIntent={handleSummarize}
-                onClearSession={async () => {
-                  await clearAiSession();
-                  setAiInput("");
-                }}
-              />
-            </div>
-          </ReaderDialogSurface>
-
-          <ReaderDialogSurface
-            open={activePanel === "settings"}
-            label="阅读设置"
-            onClose={() => setActivePanel(null)}
-            fallbackFocus={() => contentRef.current}
-            className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
-              isDesktopViewport
-                ? "items-center justify-center p-4"
-                : "items-end p-3"
-            }`}
-            onClick={() => setActivePanel(null)}
-          >
-            <div
-              className={isDesktopViewport
-                ? ""
-                : "mb-safe w-full overflow-hidden rounded-[24px] shadow-2xl"}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <SettingsSheet
-                settings={settings}
-                updateFontSize={updateFontSize}
-                updateTheme={updateTheme}
-                updatePageMode={updatePageMode}
-                updateFontFamily={updateFontFamily}
-                updateParagraphSpacing={updateParagraphSpacing}
-                updateLetterSpacing={updateLetterSpacing}
-                updateLineHeight={updateLineHeight}
-                updateAutoFlipAtBottom={updateAutoFlipAtBottom}
-                isMobileSheet={!isDesktopViewport}
-                onClose={() => setActivePanel(null)}
-              />
-            </div>
-          </ReaderDialogSurface>
-
-          <ReaderDialogSurface
-            open={activePanel === "progress"}
-            label="阅读进度"
-            onClose={() => setActivePanel(null)}
-            fallbackFocus={() => contentRef.current}
-            className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
-              isDesktopViewport ? "items-center justify-center p-4" : "items-end p-3"
-            }`}
-            onClick={() => setActivePanel(null)}
-          >
-            <div
-              className={`max-h-[70vh] w-full overflow-y-auto rounded-[24px] px-5 pt-6 shadow-2xl backdrop-blur-md ${
-              isDesktopViewport
-                ? "max-w-[560px] pb-6"
-                : "mb-safe pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
-              } ${isDark ? "bg-[rgba(35,35,35,0.96)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.96)] text-[#2F2A24]"}`}
-              onClick={(event) => event.stopPropagation()}
-            >
-          <div className="flex justify-between items-center mb-4">
-            <h3
-              className={`font-bold ${isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]"}`}
-            >
-              阅读进度
-            </h3>
-            <button
-              aria-label="关闭阅读进度"
+      {isDesktopViewport !== null &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <ReaderDialogSurface
+              open={activePanel === "toc"}
+              label="阅读目录"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion fixed inset-0 z-50 flex justify-start bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
               onClick={() => setActivePanel(null)}
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-xl ${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"}`}
             >
-              <X aria-hidden="true" size={20} strokeWidth={1.8} />
-            </button>
-          </div>
-          <div className="grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px] items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                void handlePrevChapterActive();
-              }}
-              title="上一章"
-              aria-label="上一章"
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
+              <div
+                className={
+                  isDesktopViewport
+                    ? "h-full w-[320px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                    : "h-full w-[280px] max-w-[82vw] overflow-hidden shadow-xl"
+                }
+                style={{ backgroundColor: currentThemeColors.bg, borderColor }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <TocDrawer
+                  toc={toc}
+                  bookmarks={bookmarks}
+                  currentChapterIndex={chapter.index}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  onJumpToChapter={jumpToChapter}
+                  onJumpToBookmark={jumpToBookmark}
+                  isMobileDrawer={!isDesktopViewport}
+                  isDark={isDark}
+                  onClose={() => setActivePanel(null)}
+                />
+              </div>
+            </ReaderDialogSurface>
+
+            <ReaderDialogSurface
+              open={activePanel === "ai"}
+              label="伴读"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion fixed inset-0 z-50 flex justify-end bg-black/20 ${isDesktopViewport ? "p-8" : "p-0"}`}
+              onClick={() => setActivePanel(null)}
             >
-              <ChevronsLeft aria-hidden="true" size={19} strokeWidth={1.8} />
-            </button>
-            <button
-              onClick={handleVisiblePagePrev}
-              aria-label="上一页"
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
-            >
-              <ChevronLeft aria-hidden="true" size={20} strokeWidth={1.8} />
-            </button>
-            <ReaderProgressRange
-              value={progressPreview}
-              onPreview={(value) => {
-                setProgressPreview(value);
-              }}
-              onCommit={(value) => {
-                void seekToProgress(value);
-              }}
-              className="reader-range reader-focus-ring h-11 w-full accent-[#678055]"
-            />
-            <button
-              onClick={handleVisiblePageNext}
-              aria-label="下一页"
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
-            >
-              <ChevronRight aria-hidden="true" size={20} strokeWidth={1.8} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleNextChapterActive();
-              }}
-              title="下一章"
-              aria-label="下一章"
-              data-icon-only="true"
-              data-reader-control
-              className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
-            >
-              <ChevronsRight aria-hidden="true" size={19} strokeWidth={1.8} />
-            </button>
-          </div>
-          <div
-            className={`flex justify-between text-sm ${isDark ? "text-[#8F8F8F]" : "text-[#6F665B]"}`}
-          >
-            <span>{toc[progressPreviewChapterIndex]?.title ?? chapter?.title}</span>
-            <span>
-              {Math.round(progressPreview)}% · {progressPreviewChapterIndex + 1} /{" "}
-              {toc.length} 章
-            </span>
-          </div>
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={() => {
-                void rollbackProgress();
-              }}
-              data-reader-control
-              className={`reader-control-press reader-focus-ring min-h-11 w-full rounded-full px-4 text-xs font-semibold tracking-wider border flex items-center justify-center gap-2 ${
-                isDark
-                  ? "bg-[#678055]/20 hover:bg-[#678055]/30 border-[#678055]/40 text-[#EEF2E9]"
-                  : "bg-[#678055] hover:bg-[#556b46] border-[#678055] text-white shadow-[0_4px_12px_rgba(103,128,85,0.2)]"
+              <div
+                className={
+                  isDesktopViewport
+                    ? "h-full w-[360px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                    : "h-full w-[300px] max-w-[88vw] overflow-hidden shadow-xl"
+                }
+                style={{ backgroundColor: currentThemeColors.bg, borderColor }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <AIReaderPanel
+                  isAiLoading={isAiLoading}
+                  aiSummary={aiSummary}
+                  isMobileDrawer={!isDesktopViewport}
+                  isDark={isDark}
+                  onClose={() => setActivePanel(null)}
+                  aiInput={aiInput}
+                  setAiInput={setAiInput}
+                  onAsk={handleAsk}
+                  onIntent={handleSummarize}
+                  onClearSession={async () => {
+                    await clearAiSession();
+                    setAiInput("");
+                  }}
+                />
+              </div>
+            </ReaderDialogSurface>
+
+            <ReaderDialogSurface
+              open={activePanel === "settings"}
+              label="阅读设置"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
+                isDesktopViewport
+                  ? "items-center justify-center p-4"
+                  : "items-end p-3"
               }`}
+              onClick={() => setActivePanel(null)}
             >
-              <RotateCcw aria-hidden="true" size={18} strokeWidth={1.8} />
-              {strings.sync.progressRollbackBtn}
-            </button>
-          </div>
-            </div>
-          </ReaderDialogSurface>
-        </>,
-        document.body,
-      )}
+              <div
+                className={
+                  isDesktopViewport
+                    ? ""
+                    : "mb-safe w-full overflow-hidden rounded-[24px] shadow-2xl"
+                }
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SettingsSheet
+                  settings={settings}
+                  updateFontSize={updateFontSize}
+                  updateTheme={updateTheme}
+                  updatePageMode={updatePageMode}
+                  updateFontFamily={updateFontFamily}
+                  updateParagraphSpacing={updateParagraphSpacing}
+                  updateLetterSpacing={updateLetterSpacing}
+                  updateLineHeight={updateLineHeight}
+                  updateAutoFlipAtBottom={updateAutoFlipAtBottom}
+                  isMobileSheet={!isDesktopViewport}
+                  onClose={() => setActivePanel(null)}
+                />
+              </div>
+            </ReaderDialogSurface>
+
+            <ReaderDialogSurface
+              open={activePanel === "progress"}
+              label="阅读进度"
+              onClose={() => setActivePanel(null)}
+              fallbackFocus={() => contentRef.current}
+              className={`reader-panel-motion fixed inset-0 z-50 flex bg-black/20 ${
+                isDesktopViewport
+                  ? "items-center justify-center p-4"
+                  : "items-end p-3"
+              }`}
+              onClick={() => setActivePanel(null)}
+            >
+              <div
+                className={`max-h-[70vh] w-full overflow-y-auto rounded-[24px] px-5 pt-6 shadow-2xl backdrop-blur-md ${
+                  isDesktopViewport
+                    ? "max-w-[560px] pb-6"
+                    : "mb-safe pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+                } ${isDark ? "bg-[rgba(35,35,35,0.96)] text-[#CFCFCF]" : "bg-[rgba(255,255,255,0.96)] text-[#2F2A24]"}`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3
+                    className={`font-bold ${isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]"}`}
+                  >
+                    阅读进度
+                  </h3>
+                  <button
+                    aria-label="关闭阅读进度"
+                    onClick={() => setActivePanel(null)}
+                    data-icon-only="true"
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-xl ${isDark ? "text-[#8F8F8F] hover:bg-white/10" : "text-[#6F665B] hover:bg-black/5"}`}
+                  >
+                    <X aria-hidden="true" size={20} strokeWidth={1.8} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-[44px_44px_minmax(0,1fr)_44px_44px] items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handlePrevChapterActive();
+                    }}
+                    title="上一章"
+                    aria-label="上一章"
+                    data-icon-only="true"
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
+                  >
+                    <ChevronsLeft
+                      aria-hidden="true"
+                      size={19}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                  <button
+                    onClick={handleVisiblePagePrev}
+                    aria-label="上一页"
+                    data-icon-only="true"
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
+                  >
+                    <ChevronLeft
+                      aria-hidden="true"
+                      size={20}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                  <ReaderProgressRange
+                    value={progressPreview}
+                    onPreview={(value) => {
+                      setProgressPreview(value);
+                    }}
+                    onCommit={(value) => {
+                      void seekToProgress(value);
+                    }}
+                    className="reader-range reader-focus-ring h-11 w-full accent-[#678055]"
+                  />
+                  <button
+                    onClick={handleVisiblePageNext}
+                    aria-label="下一页"
+                    data-icon-only="true"
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
+                  >
+                    <ChevronRight
+                      aria-hidden="true"
+                      size={20}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleNextChapterActive();
+                    }}
+                    title="下一章"
+                    aria-label="下一章"
+                    data-icon-only="true"
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring h-11 w-11 rounded-full flex items-center justify-center ${isDark ? "text-[#CFCFCF] hover:bg-white/10" : "text-[#2F2A24] hover:bg-[#F4ECD8]"}`}
+                  >
+                    <ChevronsRight
+                      aria-hidden="true"
+                      size={19}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                </div>
+                <div
+                  className={`flex justify-between text-sm ${isDark ? "text-[#8F8F8F]" : "text-[#6F665B]"}`}
+                >
+                  <span>
+                    {toc[progressPreviewChapterIndex]?.title ?? chapter?.title}
+                  </span>
+                  <span>
+                    {Math.round(progressPreview)}% ·{" "}
+                    {progressPreviewChapterIndex + 1} / {toc.length} 章
+                  </span>
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={() => {
+                      void rollbackProgress();
+                    }}
+                    data-reader-control
+                    className={`reader-control-press reader-focus-ring min-h-11 w-full rounded-full px-4 text-xs font-semibold tracking-wider border flex items-center justify-center gap-2 ${
+                      isDark
+                        ? "bg-[#678055]/20 hover:bg-[#678055]/30 border-[#678055]/40 text-[#EEF2E9]"
+                        : "bg-[#678055] hover:bg-[#556b46] border-[#678055] text-white shadow-[0_4px_12px_rgba(103,128,85,0.2)]"
+                    }`}
+                  >
+                    <RotateCcw aria-hidden="true" size={18} strokeWidth={1.8} />
+                    {strings.sync.progressRollbackBtn}
+                  </button>
+                </div>
+              </div>
+            </ReaderDialogSurface>
+          </>,
+          document.body,
+        )}
 
       {/* 磨砂玻璃自适应自动换章倒计时胶囊 */}
       {autoFlipCountdown !== null && (
@@ -1033,7 +1230,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           <button
             onClick={() => handleNext()}
             data-reader-control
-            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-full border border-[#678055]/30 bg-[rgba(238,242,233,0.92)] px-5 text-xs font-bold text-[#678055] shadow-[0_8px_30px_rgba(103,128,85,0.15)] backdrop-blur-md dark:border-[#EEF2E9]/20 dark:bg-[rgba(45,45,45,0.92)] dark:text-[#EEF2E9]"
+            className={`reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-full border px-5 text-xs font-bold shadow-[0_8px_30px_rgba(103,128,85,0.15)] backdrop-blur-md ${flipChipClasses}`}
           >
             <Sparkles aria-hidden="true" size={18} strokeWidth={1.8} />
             {autoFlipCountdown.toFixed(1)}s 后自动切到下一章... [立即跳转]
@@ -1044,7 +1241,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
       {/* 极奢国风毛玻璃划词气泡 (SelectionPopover) */}
       {selectionRect && !showNoteDialog && (
         <div
-          className="selection-popover fixed z-40 bg-[rgba(255,252,245,0.92)] dark:bg-[rgba(30,30,30,0.92)] backdrop-blur-md border border-[rgba(80,65,45,0.15)] dark:border-[rgba(255,255,255,0.12)] rounded-full shadow-[0_10px_32px_rgba(80,65,45,0.12)] px-4 py-1.5 flex items-center gap-3.5 transition-all duration-300 animate-in fade-in zoom-in-95"
+          className={`selection-popover fixed z-40 backdrop-blur-md border rounded-full shadow-[0_10px_32px_rgba(80,65,45,0.12)] px-4 py-1.5 flex items-center gap-3.5 transition-all duration-300 animate-in fade-in zoom-in-95 ${popoverClasses}`}
           style={{
             // 🏮 [FIX] 修复 fixed 元素在页面滚动时漂移的问题，并增加顶部空间不足时的自适应底部避让
             top: `${selectionRect.top - 54 < 12 ? selectionRect.bottom + 12 : selectionRect.top - 54}px`,
@@ -1055,26 +1252,30 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           <button
             onClick={() => setShowNoteDialog(true)}
             data-reader-control
-            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
+            className={`reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif ${popoverActionText}`}
           >
             <PenLine aria-hidden="true" size={17} strokeWidth={1.8} /> 记笔记
           </button>
-          <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
+          <span className={`w-[1px] h-3.5 ${popoverDivider}`} />
           <button
             onClick={() => {
               // AI 伴读强连通
-              setAiInput((prev) => prev ? `${prev}\n对于这段话：“${selectedText}”` : `我想请问关于这段话：“${selectedText}”的看法。`);
+              setAiInput((prev) =>
+                prev
+                  ? `${prev}\n对于这段话：“${selectedText}”`
+                  : `我想请问关于这段话：“${selectedText}”的看法。`,
+              );
               setActivePanel("ai");
               // 清除
               window.getSelection()?.removeAllRanges();
               setSelectionRect(null);
             }}
             data-reader-control
-            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
+            className={`reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif ${popoverActionText}`}
           >
             <Sparkles aria-hidden="true" size={17} strokeWidth={1.8} /> AI伴读
           </button>
-          <span className="w-[1px] h-3.5 bg-[rgba(80,65,45,0.12)] dark:bg-[rgba(255,255,255,0.12)]" />
+          <span className={`w-[1px] h-3.5 ${popoverDivider}`} />
           <button
             onClick={() => {
               navigator.clipboard.writeText(selectedText);
@@ -1083,7 +1284,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               setSelectionRect(null);
             }}
             data-reader-control
-            className="reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif text-[#2F2A24] dark:text-[#E5E5E5] hover:text-[#9A6A3A] dark:hover:text-[#D2A66A]"
+            className={`reader-control-press reader-focus-ring flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-semibold font-serif ${popoverActionText}`}
           >
             <Copy aria-hidden="true" size={17} strokeWidth={1.8} /> 复制
           </button>
@@ -1100,40 +1301,55 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
           className="fixed inset-0 z-50 flex sm:items-center sm:justify-center items-end justify-center bg-black/30 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={closeNoteDialog}
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
-            className="note-dialog relative w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-[24px] max-sm:rounded-b-none max-sm:pb-[calc(1.75rem+env(safe-area-inset-bottom))] max-w-md bg-[#FAF6EE] dark:bg-[#25231F] rounded-[24px] border border-[#DFD1BF] dark:border-[#4A4238] shadow-2xl p-7 flex flex-col gap-5 animate-in max-sm:slide-in-from-bottom sm:zoom-in-95 duration-300"
+            className={`note-dialog relative w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:rounded-t-[24px] max-sm:rounded-b-none max-sm:pb-[calc(1.75rem+env(safe-area-inset-bottom))] max-w-md border rounded-[24px] shadow-2xl p-7 flex flex-col gap-5 animate-in max-sm:slide-in-from-bottom sm:zoom-in-95 duration-300 ${noteDialogClasses}`}
             style={{
-              transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : undefined,
-              transition: "transform 0.15s ease-out"
+              transform:
+                keyboardHeight > 0
+                  ? `translateY(-${keyboardHeight}px)`
+                  : undefined,
+              transition: "transform 0.15s ease-out",
             }}
           >
-            <div className="absolute inset-3.5 max-sm:inset-3 rounded-[18px] max-sm:rounded-t-[18px] max-sm:rounded-b-none border border-[#E9DCC8]/60 dark:border-[#5C5346]/40 pointer-events-none" />
-            
-            <h3 className="text-lg font-bold font-serif text-[#2F2A24] dark:text-[#E9DCC8] flex items-center gap-2 relative z-10">
+            <div
+              className={`absolute inset-3.5 max-sm:inset-3 rounded-[18px] max-sm:rounded-t-[18px] max-sm:rounded-b-none border ${noteInnerBorder} pointer-events-none`}
+            />
+
+            <h3
+              className={`text-lg font-bold font-serif ${noteTitleText} flex items-center gap-2 relative z-10`}
+            >
               ✍️ 文人落墨 · 记录读书笔记
             </h3>
-            
-            <div className="bg-[#FFFDF9] dark:bg-[#1C1B19] border border-[#EBE3D3] dark:border-[#3D372E] rounded-[16px] p-4 relative z-10 max-h-[100px] overflow-y-auto">
-              <span className="text-[10px] text-[#A69B88] dark:text-[#807667] font-serif block mb-1 uppercase tracking-wider">所选引文</span>
-              <p className="text-xs font-serif text-[#5C5446] dark:text-[#BDB19F] italic leading-relaxed pl-3.5 border-l-2 border-[#D5C2B1] dark:border-[#6B5A49]">
+
+            <div
+              className={`border rounded-[16px] p-4 relative z-10 max-h-[100px] overflow-y-auto ${noteQuoteBox}`}
+            >
+              <span
+                className={`text-[10px] font-serif block mb-1 uppercase tracking-wider ${noteQuoteLabel}`}
+              >
+                所选引文
+              </span>
+              <p
+                className={`text-xs font-serif italic leading-relaxed pl-3.5 ${noteQuoteText}`}
+              >
                 “{selectedText}”
               </p>
             </div>
-            
+
             <textarea
               value={userNoteText}
               onChange={(e) => setUserNoteText(e.target.value)}
               placeholder="在此写下您的所思、所想、所悟，落墨留痕..."
               rows={4}
-              className="w-full bg-[#FFFDF9] dark:bg-[#1C1B19] border border-[#EBE3D3] dark:border-[#3D372E] rounded-[16px] p-4 text-sm font-serif text-[#3A2D22] dark:text-[#E2D5C5] focus:border-[#678055] dark:focus:border-[#83A370] focus:outline-none transition-colors relative z-10 resize-none placeholder-[#A89F8F]"
+              className={`w-full border rounded-[16px] p-4 text-sm font-serif focus:outline-none transition-colors relative z-10 resize-none ${noteInputClasses}`}
             />
-            
+
             <div className="flex gap-3 justify-end relative z-10">
               <button
                 onClick={closeNoteDialog}
                 data-reader-control
-                className="reader-focus-ring min-h-11 px-5 py-2.5 bg-[rgba(80,65,45,0.04)] dark:bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(80,65,45,0.08)] dark:hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(80,65,45,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#6F665B] dark:text-[#A89F8F] text-sm font-semibold rounded-full transition-colors font-serif"
+                className={`reader-focus-ring min-h-11 px-5 py-2.5 border text-sm font-semibold rounded-full transition-colors font-serif ${noteCancelClasses}`}
               >
                 作罢
               </button>
@@ -1149,7 +1365,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
                   setSelectionRect(null);
                 }}
                 data-reader-control
-                className="reader-focus-ring min-h-11 px-6 py-2.5 bg-[#678055] dark:bg-[#4E623E] hover:bg-[#4B633C] dark:hover:bg-[#3C4E2E] text-white text-sm font-semibold rounded-full shadow-md transition-colors font-serif"
+                className={`reader-focus-ring min-h-11 px-6 py-2.5 text-white text-sm font-semibold rounded-full shadow-md transition-colors font-serif ${noteSaveClasses}`}
               >
                 落墨保存
               </button>
