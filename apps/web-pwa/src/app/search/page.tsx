@@ -8,8 +8,7 @@ import { strings } from "@/lib/i18n";
 import type { Book } from "@reader/shared-types";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { BookCard } from "@/components/BookCard";
-import { BookCover } from "@/components/BookCover";
+import { SearchBookCard } from "@/components/search/SearchBookCard";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { libraryQueryService } from "@/features/library/dexie-library-query";
 import {
@@ -371,7 +370,7 @@ export default function SearchPage() {
                 ? "请输入书名、作者或标签关键词"
                 : "搜索私人云端书架"
             }
-            aria-label="检索私人云端"
+            aria-label={isSearching ? "搜索中" : "搜索私人云端"}
             className="ui-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--color-primary)] text-sm font-semibold text-white disabled:opacity-45 sm:px-5"
           >
             <Search
@@ -446,9 +445,10 @@ export default function SearchPage() {
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {localResults.map((book) => (
-                <BookCard
+                <SearchBookCard
                   key={book.id}
                   book={book}
+                  variant="local"
                   onRead={(id) => router.push(`/reader/${id}`)}
                 />
               ))}
@@ -477,86 +477,16 @@ export default function SearchPage() {
                 const pct = importProgress[book.id] || 0;
 
                 return (
-                  <div
+                  <SearchBookCard
                     key={book.id}
-                    className="ui-card flex flex-col items-stretch gap-4 rounded-[18px] border border-white/60 bg-gradient-to-br from-white/70 to-white/40 p-4 shadow-[0_10px_30px_rgba(80,65,45,0.03)] sm:flex-row sm:items-center"
-                  >
-                    <BookCover
-                      title={book.title}
-                      className="h-[108px] w-[72px]"
-                      compact
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-lg font-bold text-[var(--ui-text)] font-reading-title">
-                            {book.title}
-                          </h3>
-                          <p className="mt-1 text-sm text-[var(--ui-muted)]">
-                            {book.author || "佚名"} ·{" "}
-                            {book.format.toUpperCase()}
-                          </p>
-                        </div>
-                        <span className="text-xs font-semibold text-[var(--ui-muted)]">
-                          私人云端
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="rounded-md bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
-                          全本同步
-                        </span>
-                        <span className="rounded-md bg-[rgba(80,65,45,0.05)] px-2 py-0.5 text-xs text-[var(--ui-muted)]">
-                          共 {book.chapterCount} 章节
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* 云端一键同步批量拉取入库控制钮 */}
-                    <div className="w-full shrink-0 sm:w-auto">
-                      {isLocal ? (
-                        <button
-                          onClick={() => router.push(`/reader/${book.id}`)}
-                          className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] shadow-sm transition-colors hover:bg-[var(--ui-accent)] hover:text-white sm:w-auto"
-                        >
-                          去阅读
-                        </button>
-                      ) : isImporting ? (
-                        <div
-                          role="status"
-                          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[rgba(95,125,82,0.18)] bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
-                        >
-                          <svg
-                            className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          <span>正在同步 {pct}%</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleImportBook(book)}
-                          className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--ui-text)] shadow-sm transition-colors hover:border-[var(--ui-accent)] hover:bg-white hover:text-[var(--ui-accent)] sm:w-auto"
-                        >
-                          拉取入库
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    book={book}
+                    variant="cloud"
+                    isLocal={isLocal}
+                    isImporting={isImporting}
+                    importPercent={pct}
+                    onRead={(id) => router.push(`/reader/${id}`)}
+                    onImport={handleImportBook}
+                  />
                 );
               })}
             </div>

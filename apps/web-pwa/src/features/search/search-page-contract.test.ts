@@ -6,6 +6,12 @@ describe("private search page boundary", () => {
     new URL("../../app/search/page.tsx", import.meta.url),
     "utf8",
   );
+  // 搜索结果书卡已抽取为统一组件，触控安全与响应式布局契约由组件承担
+  const cardSource = readFileSync(
+    new URL("../../components/search/SearchBookCard.tsx", import.meta.url),
+    "utf8",
+  );
+  const uiSource = `${source}\n${cardSource}`;
 
   it("does not issue raw storage or network operations from the page", () => {
     expect(source).not.toContain("db.books");
@@ -26,11 +32,12 @@ describe("private search page boundary", () => {
       'role={statusTone === "error" ? "alert" : "status"}',
     );
     expect(source).toContain('role="status"');
-    expect(source).toContain("min-h-11");
-    expect(source).toMatch(/flex flex-col[^"\n]*sm:flex-row/);
-    expect(source).toMatch(/w-full[^"\n]*sm:w-auto/);
-    expect(source).not.toContain("animate-bounce-short");
-    expect(source).not.toMatch(/[📖📥💡🍃]/u);
+    // 统一书卡组件的按钮触控高度与移动端响应式布局
+    expect(cardSource).toContain("min-h-11");
+    expect(cardSource).toMatch(/flex flex-col[^"\n]*sm:flex-row/);
+    expect(cardSource).toMatch(/w-full[^"\n]*sm:w-auto/);
+    expect(uiSource).not.toContain("animate-bounce-short");
+    expect(uiSource).not.toMatch(/[📖📥💡🍃]/u);
   });
 
   it("invalidates stale private-cloud results when browser history restores a route", () => {
