@@ -223,23 +223,96 @@ export async function parseChapterPages(
  * @param url 页面 URL
  * @param fetchDoc 按 URL 获取已解析 Document 的注入函数（由抓取适配器提供）
  * @param deps 解析依赖（可注入，默认浏览器全局）
+ * @param options 并发与进度配置
  */
+export interface ParseUrlBookOptions {
+  /** 章节并发抓取数（默认 5；1 表示串行） */
+  concurrency?: number;
+  /** 结构化进度回调（index/total/status/message） */
+  onProgress?: (event: ParseProgressEvent) => void;
+}
+
+/** 结构化解析进度事件 */
+export interface ParseProgressEvent {
+  /** 章节序号（-1 表示整书级阶段） */
+  index: number;
+  /** 总章节数 */
+  total: number;
+  /** 状态：queued / fetching / parsing / ok / failed */
+  status: "queued" | "fetching" | "parsing" | "ok" | "failed";
+  /** 人类可读消息（兼容旧字符串进度） */
+  message: string;
+}
+
 export async function parseUrlBook(
   url: string,
   fetchDoc: (url: string) => Promise<Document>,
   deps: ParseDeps = {},
+  options: ParseUrlBookOptions = {},
 ): Promise<ParsedBook> {
+  const { concurrency = 5, onProgress } = options;
   const normalizedUrl = new URL(url).toString();
   const doc = await fetchDoc(normalizedUrl);
   const title = getDocumentTitle(doc, normalizedUrl);
   const chapterLinks = getChapterLinks(doc, normalizedUrl);
 
   if (chapterLinks.length >= 2) {
+    const { createConcurrencyPool } = await import("./fetch-adapter");
+    const total = chapterLinks.length;
+
+    onProgress?.({
+      index: -1,
+      total,
+      status: "queued",
+      message: `发现 ${total} 章，开始并发抓取...`,
+    });
+
     const chapters: ParsedChapter[] = [];
-    for (let index = 0; index < chapterLinks.length; index += 1) {
-      const link = chapterLinks[index];
-      const chapter = await parseChapterPages(link.url, link.title, fetchDoc, deps);
-      chapters.push({ ...chapter, index });
+    // 并发抓取章节；单章失败不阻断整体（失败项置 null，由上层决定重试策略）
+    const results = await createConcurrencyPool(
+      chapterLinks,
+      async (link, index) => {
+        onProgress?.({
+          index,
+          total,
+          status: "fetching",
+          message: `抓取第 ${index + 1}/${total} 章：${link.title}`,
+        });
+        try {
+          const chapter = await parseChapterPages(
+            link.url,
+            link.title,
+            fetchDoc,
+            deps,
+          );
+          onProgress?.({
+            index,
+            total,
+            status: "ok",
+            message: `第 ${index + 1}/${total} 章解析完成`,
+          });
+          return { ...chapter, index } as ParsedChapter;
+        } catch (error) {
+          onProgress?.({
+            index,
+            total,
+            status: "failed",
+            message: `第 ${index + 1}/${total} 章解析失败：${
+              error instanceof Error ? error.message : "未知错误"
+            }`,
+          });
+          return null;
+        }
+      },
+      concurrency,
+    );
+
+    // 收集成功章节（按 index 排序，保证顺序稳定）
+    for (const result of results) {
+      if (result) chapters.push(result);
+    }
+    if (chapters.length === 0) {
+      throw new Error("未能识别有效正文，可能是动态渲染或反爬页面");
     }
     return { title, chapters };
   }

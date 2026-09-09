@@ -17,7 +17,7 @@ import {
   antiScrapeToErrorCode,
 } from "./anti-scrape";
 import { FetchError, type UrlFetcher, retryWithBackoff } from "./fetch-adapter";
-import { parseUrlBook } from "./parse";
+import { parseUrlBook, type ParseProgressEvent } from "./parse";
 
 /** URL 导入错误（带稳定错误码，供导入任务状态机与用户提示映射） */
 export class UrlImportError extends Error {
@@ -101,7 +101,7 @@ function isRetryableFetchError(error: unknown): boolean {
 export interface ParseUrlBookInBrowserOptions {
   /** 多级抓取器（默认 L0 浏览器直连） */
   fetchers?: readonly UrlFetcher[];
-  /** 进度回调（字符串消息，兼容旧接口） */
+  /** 进度回调（字符串消息，兼容旧调用方；内部由结构化事件转字符串） */
   onProgress?: (message: string) => void;
   /** 中止信号 */
   signal?: AbortSignal;
@@ -109,7 +109,7 @@ export interface ParseUrlBookInBrowserOptions {
 
 /**
  * 在浏览器中解析 URL 为 ParsedBook（兼容旧接口签名）。
- * 默认使用 L0 浏览器直连抓取；可通过 fetchers 注入多级抓取。
+ * 默认使用多级抓取（L0 直连 + L1 本地 API）；可通过 fetchers 注入更多级别。
  */
 export async function parseUrlBookInBrowser(
   url: string,
@@ -129,24 +129,31 @@ export async function parseUrlBookInBrowserWithFetchers(
   url: string,
   options: ParseUrlBookInBrowserOptions = {},
 ): Promise<ParsedBook> {
-  const { fetchers, onProgress } = options;
+  const { fetchers, onProgress, signal } = options;
   const resolvedFetchers =
     fetchers ?? (await import("./browser-fetchers")).createDefaultFetchers();
 
-  onProgress?.("读取链接页面...");
+  // 进度事件统一为结构化（旧字符串回调转发为 message）
+  const emit = (event: ParseProgressEvent): void => {
+    onProgress?.(event.message);
+  };
+
+  emit({ index: -1, total: 0, status: "fetching", message: "读取链接页面..." });
   const { finalUrl } = await fetchWithMultiLevel(url, {
     fetchers: resolvedFetchers,
+    signal,
   });
 
-  onProgress?.("解析目录与章节...");
+  emit({ index: -1, total: 0, status: "parsing", message: "解析目录与章节..." });
   // 复用 parseUrlBook 的解析逻辑，传入"按 URL 获取已解析 Document"的注入函数
   const fetchDoc = async (pageUrl: string): Promise<Document> => {
-    onProgress?.(`抓取 ${pageUrl}...`);
+    emit({ index: -1, total: 0, status: "fetching", message: `抓取 ${pageUrl}...` });
     const result = await fetchWithMultiLevel(pageUrl, {
       fetchers: resolvedFetchers,
+      signal,
     });
     return new DOMParser().parseFromString(result.html, "text/html");
   };
 
-  return parseUrlBook(finalUrl, fetchDoc);
+  return parseUrlBook(finalUrl, fetchDoc, {}, { onProgress: emit });
 }

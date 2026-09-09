@@ -66,10 +66,6 @@ export function nextSourceCheckAt(
   return lastCheckedAt + preference.intervalHours * 60 * 60 * 1_000;
 }
 
-export function shouldUseBackendUrlFallback(error: unknown): boolean {
-  return error instanceof TypeError && /fetch|network|cors|load/i.test(error.message);
-}
-
 export function createUrlSourceCheckPreview(
   local: { title: string; chapterCount: number },
   remote: { title: string; chapters: readonly unknown[] },

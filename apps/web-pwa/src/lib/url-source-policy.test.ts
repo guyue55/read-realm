@@ -6,9 +6,7 @@ import {
   isSourceCheckDue,
   nextSourceCheckAt,
   parseSourceCheckPreference,
-  shouldUseBackendUrlFallback,
 } from "./url-source-policy";
-import { UrlImportError } from "./url-import/index";
 
 describe("URL source policy", () => {
   it("requires an explicit rights confirmation for public http(s) URLs", () => {
@@ -48,17 +46,6 @@ describe("URL source policy", () => {
     expect(() =>
       parseSourceCheckPreference({ enabled: true, intervalHours: 1 }),
     ).toThrow("SOURCE_CHECK_INTERVAL_UNSUPPORTED");
-  });
-
-  it("uses backend fallback only for browser network/CORS failures", () => {
-    expect(shouldUseBackendUrlFallback(new TypeError("Failed to fetch"))).toBe(true);
-    expect(shouldUseBackendUrlFallback(new DOMException("timeout", "AbortError"))).toBe(false);
-    expect(
-      shouldUseBackendUrlFallback(
-        new UrlImportError("需要验证码", "SOURCE_RATE_LIMITED"),
-      ),
-    ).toBe(false);
-    expect(shouldUseBackendUrlFallback(new Error("页面正文为空"))).toBe(false);
   });
 
   it("produces a non-mutating update preview from source metadata", () => {

@@ -136,6 +136,74 @@ describe("parse 解析引擎", () => {
       });
       expect(book.chapters).toHaveLength(1);
     });
+
+    it("并发抓取章节且失败章不阻断整体", async () => {
+      const tocHtml = `<html><body>
+        <h1>并发测试书</h1>
+        <a href="/ch/1">第一章</a>
+        <a href="/ch/2">第二章</a>
+        <a href="/ch/3">第三章</a>
+        <a href="/ch/4">第四章</a>
+        <a href="/ch/5">第五章</a>
+      </body></html>`;
+      const fetchDoc = vi.fn().mockImplementation(async (url: string) => {
+        // 第三章解析失败（返回无正文页面）
+        if (url.endsWith("/ch/3")) {
+          return makeDoc("<html><body><h1>第三章</h1><p>短</p></body></html>");
+        }
+        if (url.endsWith("/ch/1"))
+          return makeDoc(chapterPageHtml("第一章", ["正文一。" + "字".repeat(80)]));
+        if (url.endsWith("/ch/2"))
+          return makeDoc(chapterPageHtml("第二章", ["正文二。" + "字".repeat(80)]));
+        if (url.endsWith("/ch/4"))
+          return makeDoc(chapterPageHtml("第四章", ["正文四。" + "字".repeat(80)]));
+        if (url.endsWith("/ch/5"))
+          return makeDoc(chapterPageHtml("第五章", ["正文五。" + "字".repeat(80)]));
+        return makeDoc(tocHtml);
+      });
+      const events: string[] = [];
+      const book = await parseUrlBook(
+        "https://a.example/index",
+        fetchDoc,
+        { extractText: (doc) => heuristicExtractText(doc) },
+        {
+          concurrency: 3,
+          onProgress: (event) => events.push(`${event.index}:${event.status}`),
+        },
+      );
+      // 成功 4 章（第三章失败被跳过，不阻断整体）
+      expect(book.chapters).toHaveLength(4);
+      expect(book.chapters.map((c) => c.title)).toEqual([
+        "第一章",
+        "第二章",
+        "第四章",
+        "第五章",
+      ]);
+      // 进度事件包含失败标记
+      expect(events.some((e) => e.includes("failed"))).toBe(true);
+    });
+
+    it("全部章节失败时抛错", async () => {
+      const tocHtml = `<html><body>
+        <h1>全失败书</h1>
+        <a href="/ch/1">第一章</a>
+        <a href="/ch/2">第二章</a>
+      </body></html>`;
+      const fetchDoc = vi.fn().mockImplementation(async (url: string) => {
+        if (url.endsWith("/ch/1") || url.endsWith("/ch/2")) {
+          return makeDoc("<html><body><h1>x</h1><p>短</p></body></html>");
+        }
+        return makeDoc(tocHtml);
+      });
+      await expect(
+        parseUrlBook(
+          "https://a.example/index",
+          fetchDoc,
+          { extractText: (doc) => heuristicExtractText(doc) },
+          { concurrency: 2 },
+        ),
+      ).rejects.toThrow("未能识别有效正文");
+    });
   });
 
   describe("parseHtmlInBrowser 单页正文提取", () => {
