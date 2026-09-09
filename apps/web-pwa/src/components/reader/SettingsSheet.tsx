@@ -36,11 +36,19 @@ export function SettingsSheet({
   const isDark = settings.theme === "dark";
   const bgClass = isDark
     ? "bg-[#232323]/92 backdrop-blur-md text-[#CFCFCF]"
-    : "bg-white/92 backdrop-blur-md text-[#2F2A24]";
-  const inputBgClass = isDark ? "bg-[#1E1E1E]" : "bg-[#F8F8F5]";
+    : "bg-white/92 backdrop-blur-md text-[var(--color-text)]";
+  const inputBgClass = isDark
+    ? "bg-[#1E1E1E]"
+    : "bg-[var(--color-surface-muted)]";
   const activeBtnBg = isDark ? "bg-[#333333]" : "bg-white";
-  const textColor = isDark ? "text-[#CFCFCF]" : "text-[#2F2A24]";
-  const mutedText = isDark ? "text-[#8F8F8F]" : "text-[#6F665B]";
+  const textColor = isDark ? "text-[#CFCFCF]" : "text-[var(--color-text)]";
+  const mutedText = isDark ? "text-[#8F8F8F]" : "text-[var(--color-muted)]";
+  // 选中态强调绿：dark 面板用亮绿保持对比，浅色面板用语义主色
+  const accentText = isDark ? "text-[#9DB98B]" : "text-[var(--color-primary)]";
+  const accentBorder = isDark
+    ? "border-[#9DB98B]"
+    : "border-[var(--color-primary)]";
+  const accentBg = isDark ? "bg-[#9DB98B]/14" : "bg-[var(--color-primary)]/10";
 
   const containerClasses = isMobileSheet
     ? `flex flex-col pb-[calc(1.2rem+env(safe-area-inset-bottom))] ${bgClass} max-h-[60vh] overflow-y-auto rounded-[24px] shadow-2xl`
@@ -67,10 +75,14 @@ export function SettingsSheet({
         </div>
       )}
 
-      <div className={`flex flex-col gap-4 ${isMobileSheet ? "px-4 pb-4" : ""}`}>
+      <div
+        className={`flex flex-col gap-4 ${isMobileSheet ? "px-4 pb-4" : ""}`}
+      >
         {updateUiMode && (
           <div className="flex items-center justify-between pb-4 border-b border-[rgba(80,65,45,0.08)]">
-            <span className={`text-sm font-medium ${mutedText}`}>{strings.reader.uiModeLabel}</span>
+            <span className={`text-sm font-medium ${mutedText}`}>
+              {strings.reader.uiModeLabel}
+            </span>
             <div
               className={`flex items-center ${inputBgClass} rounded-lg p-1 ml-4 flex-1 border border-[rgba(80,65,45,0.08)]`}
             >
@@ -80,7 +92,7 @@ export function SettingsSheet({
                 data-reader-control
                 className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                   settings.uiMode === "default"
-                    ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                    ? `${activeBtnBg} shadow-sm font-bold ${accentText}`
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
                 }`}
               >
@@ -92,7 +104,7 @@ export function SettingsSheet({
                 data-reader-control
                 className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                   settings.uiMode === "simple"
-                    ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                    ? `${activeBtnBg} shadow-sm font-bold ${accentText}`
                     : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
                 }`}
               >
@@ -152,7 +164,7 @@ export function SettingsSheet({
                   data-reader-control
                   className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                     settings.fontFamily === f.key
-                      ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                      ? `${activeBtnBg} shadow-sm font-bold ${accentText}`
                       : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
                   }`}
                   style={{ fontFamily: `var(--font-${f.key})` }}
@@ -176,7 +188,7 @@ export function SettingsSheet({
                 data-reader-control
                 className={`reader-control-press reader-focus-ring flex h-11 w-11 items-center justify-center rounded-full ${
                   settings.theme === name
-                    ? "bg-[#678055]/10"
+                    ? accentBg
                     : "hover:bg-[rgba(80,65,45,0.05)]"
                 }`}
                 title={strings.reader.themeNames[name as ThemeName]}
@@ -186,7 +198,7 @@ export function SettingsSheet({
                   aria-hidden="true"
                   className={`h-8 w-8 rounded-full border-2 ${
                     settings.theme === name
-                      ? "border-[#678055]"
+                      ? accentBorder
                       : "border-[rgba(80,65,45,0.12)]"
                   }`}
                   style={{ backgroundColor: colors.bg }}
@@ -209,7 +221,7 @@ export function SettingsSheet({
               data-reader-control
               className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                 settings.pageMode === "scroll"
-                  ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                  ? `${activeBtnBg} shadow-sm font-bold ${accentText}`
                   : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
               }`}
             >
@@ -221,7 +233,7 @@ export function SettingsSheet({
               data-reader-control
               className={`reader-control-press reader-focus-ring flex-1 min-h-11 flex items-center justify-center text-sm rounded-[10px] ${
                 settings.pageMode === "pagination"
-                  ? `${activeBtnBg} shadow-sm font-bold text-[#678055]`
+                  ? `${activeBtnBg} shadow-sm font-bold ${accentText}`
                   : `${mutedText} hover:bg-[rgba(80,65,45,0.05)]`
               }`}
             >
@@ -234,8 +246,12 @@ export function SettingsSheet({
         {updateLineHeight && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>{strings.reader.lineHeightLabel}</span>
-              <span className={`${textColor} font-bold text-xs`}>{settings.lineHeight.toFixed(1)} 倍</span>
+              <span className={mutedText}>
+                {strings.reader.lineHeightLabel}
+              </span>
+              <span className={`${textColor} font-bold text-xs`}>
+                {settings.lineHeight.toFixed(1)} 倍
+              </span>
             </div>
             <input
               aria-label={strings.reader.lineHeightLabel}
@@ -246,7 +262,7 @@ export function SettingsSheet({
               step={0.1}
               value={settings.lineHeight}
               onChange={(e) => updateLineHeight(Number(e.target.value))}
-              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[var(--color-primary)] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -254,8 +270,12 @@ export function SettingsSheet({
         {updateParagraphSpacing && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>{strings.reader.paragraphSpacingLabel}</span>
-              <span className={`${textColor} font-bold text-xs`}>{settings.paragraphSpacing} px</span>
+              <span className={mutedText}>
+                {strings.reader.paragraphSpacingLabel}
+              </span>
+              <span className={`${textColor} font-bold text-xs`}>
+                {settings.paragraphSpacing} px
+              </span>
             </div>
             <input
               aria-label={strings.reader.paragraphSpacingLabel}
@@ -266,7 +286,7 @@ export function SettingsSheet({
               step={4}
               value={settings.paragraphSpacing}
               onChange={(e) => updateParagraphSpacing(Number(e.target.value))}
-              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[var(--color-primary)] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -274,8 +294,12 @@ export function SettingsSheet({
         {updateLetterSpacing && (
           <div className="flex flex-col gap-1 pb-1">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className={mutedText}>{strings.reader.letterSpacingLabel}</span>
-              <span className={`${textColor} font-bold text-xs`}>{settings.letterSpacing.toFixed(2)} em</span>
+              <span className={mutedText}>
+                {strings.reader.letterSpacingLabel}
+              </span>
+              <span className={`${textColor} font-bold text-xs`}>
+                {settings.letterSpacing.toFixed(2)} em
+              </span>
             </div>
             <input
               aria-label={strings.reader.letterSpacingLabel}
@@ -286,7 +310,7 @@ export function SettingsSheet({
               step={0.01}
               value={settings.letterSpacing}
               onChange={(e) => updateLetterSpacing(Number(e.target.value))}
-              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[#678055] ${isDark ? "reader-range-dark" : ""}`}
+              className={`reader-range reader-focus-ring w-full h-11 cursor-pointer accent-[var(--color-primary)] ${isDark ? "reader-range-dark" : ""}`}
             />
           </div>
         )}
@@ -294,7 +318,9 @@ export function SettingsSheet({
         {/* 触底自动切章 Switch */}
         {settings.pageMode === "scroll" && updateAutoFlipAtBottom && (
           <div className="flex items-center justify-between pt-4 border-t border-[rgba(80,65,45,0.08)]">
-            <span className={`text-sm font-medium ${mutedText}`}>{strings.reader.autoFlipAtBottomLabel}</span>
+            <span className={`text-sm font-medium ${mutedText}`}>
+              {strings.reader.autoFlipAtBottomLabel}
+            </span>
             <button
               onClick={() => updateAutoFlipAtBottom(!settings.autoFlipAtBottom)}
               data-reader-control
@@ -303,12 +329,18 @@ export function SettingsSheet({
               aria-checked={settings.autoFlipAtBottom}
               aria-label={strings.reader.autoFlipAtBottomLabel}
             >
-              <span className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-                settings.autoFlipAtBottom ? "bg-[#678055]" : "bg-gray-300 dark:bg-zinc-700"
-              }`}>
+              <span
+                className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  settings.autoFlipAtBottom
+                    ? "bg-[var(--color-primary)]"
+                    : "bg-gray-300 dark:bg-zinc-700"
+                }`}
+              >
                 <span
                   className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                    settings.autoFlipAtBottom ? "translate-x-6" : "translate-x-1"
+                    settings.autoFlipAtBottom
+                      ? "translate-x-6"
+                      : "translate-x-1"
                   }`}
                 />
               </span>
