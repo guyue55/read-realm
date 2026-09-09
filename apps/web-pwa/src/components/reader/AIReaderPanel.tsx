@@ -278,7 +278,7 @@ function SummaryContent({ text, isAiLoading, bubbleBg }: SummaryContentProps) {
 
   return (
     <div
-      className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[16px] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
+      className={`${bubbleBg} border border-[rgba(80,65,45,0.12)] p-4 rounded-[var(--radius-card)] text-inherit leading-relaxed whitespace-pre-wrap shadow-sm transition-all duration-300 animate-ai-fade-in`}
     >
       <span>{displayedText}</span>
       {isTyping && (

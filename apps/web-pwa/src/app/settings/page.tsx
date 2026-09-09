@@ -305,7 +305,7 @@ export default function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               onClick={() => updateUiMode("default")}
-              className={`ui-focus-ring rounded-[16px] border p-5 text-left transition-all ${
+              className={`ui-focus-ring rounded-[var(--radius-card)] border p-5 text-left transition-all ${
                 settings.uiMode === "default"
                   ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] ring-2 ring-[rgba(95,125,82,0.16)]"
                   : "border-[var(--ui-border)] bg-white/64 hover:border-[var(--ui-warm)]"
@@ -320,7 +320,7 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={() => updateUiMode("simple")}
-              className={`ui-focus-ring rounded-[16px] border p-5 text-left transition-all ${
+              className={`ui-focus-ring rounded-[var(--radius-card)] border p-5 text-left transition-all ${
                 settings.uiMode === "simple"
                   ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] ring-2 ring-[rgba(95,125,82,0.16)]"
                   : "border-[var(--ui-border)] bg-white/64 hover:border-[var(--ui-warm)]"
@@ -562,7 +562,7 @@ export default function SettingsPage() {
                       fontFamily: f.key as "kaiti" | "songti" | "heiti",
                     })
                   }
-                  className={`ui-focus-ring flex flex-col justify-between rounded-[16px] border p-4 text-left transition-all hover:scale-[1.02] active:scale-95 duration-200 ${
+                  className={`ui-focus-ring flex flex-col justify-between rounded-[var(--radius-card)] border p-4 text-left transition-all hover:scale-[1.02] active:scale-95 duration-200 ${
                     isActive
                       ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] ring-2 ring-[rgba(95,125,82,0.16)]"
                       : "border-[var(--ui-border)] bg-white/64 hover:border-[var(--ui-warm)]"
@@ -699,7 +699,7 @@ export default function SettingsPage() {
             {strings.settings.previewTitle}
           </h2>
           <div
-            className="rounded-[16px] border border-[rgba(80,65,45,0.12)] p-6 shadow-sm transition-all duration-300"
+            className="rounded-[var(--radius-card)] border border-[rgba(80,65,45,0.12)] p-6 shadow-sm transition-all duration-300"
             style={{
               backgroundColor: currentTheme.bg,
               color: currentTheme.text,

@@ -368,7 +368,7 @@ export function PublicLibraryImportDialog({
             )}
           </div>
 
-          <section className="mt-6 rounded-[22px] border border-[var(--color-border)] bg-white/55 p-4">
+          <section className="mt-6 rounded-[var(--radius-panel)] border border-[var(--color-border)] bg-white/55 p-4">
             <div className="flex items-start gap-3">
               <Server
                 aria-hidden="true"

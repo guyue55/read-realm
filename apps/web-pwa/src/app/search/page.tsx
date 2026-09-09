@@ -496,7 +496,7 @@ export default function SearchPage() {
           remoteStatus !== "failed" &&
           searchQuery.trim() &&
           localResults.length === 0 && (
-            <div className="ui-card mt-8 rounded-[16px] py-20 text-center text-[var(--ui-muted)] shadow-sm">
+            <div className="ui-card mt-8 rounded-[var(--radius-card)] py-20 text-center text-[var(--ui-muted)] shadow-sm">
               本地未找到相关书籍；可搜索已绑定的私人云端
             </div>
           )

@@ -1171,7 +1171,7 @@ export default function ImportPage() {
           {/* ==================================== */}
           {activeMode === "single" && (
             <label
-              className="group ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-8 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+              className="group ui-focus-ring relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius-card)] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-8 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
             >
               <div className="pointer-events-none flex flex-col items-center justify-center">
                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm physics-spring group-hover:scale-[1.1] group-hover:rotate-[-3deg]">
@@ -1240,7 +1240,7 @@ export default function ImportPage() {
           {activeMode === "batch" && (
             <div className="flex flex-col gap-5">
               <label
-                className="group ui-focus-ring relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-5 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
+                className="group ui-focus-ring relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius-card)] border-2 border-dashed border-[rgba(95,125,82,0.28)] bg-[rgba(255,255,255,0.48)] p-5 text-center transition-all duration-300 hover:border-[var(--ui-accent)] hover:bg-[var(--ui-accent-soft)]"
               >
                 <div className="pointer-events-none flex flex-col items-center justify-center">
                   <div className="mb-3 text-2xl">📚</div>
@@ -1262,7 +1262,7 @@ export default function ImportPage() {
               </label>
 
               {batchTasks.length > 0 && (
-                <div className="rounded-[16px] border border-[#E9DCC8]/50 bg-white/40 p-4">
+                <div className="rounded-[var(--radius-card)] border border-[#E9DCC8]/50 bg-white/40 p-4">
                   <h3 className="mb-3 text-sm font-bold text-[var(--ui-text)]">批量队列任务</h3>
                   <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
                     {batchTasks.map((t) => (
@@ -1306,7 +1306,7 @@ export default function ImportPage() {
           {activeMode === "folder" && (
             <div className="flex flex-col gap-5">
               {!previewTree ? (
-                <div className="flex flex-col items-center justify-center rounded-[16px] border border-[#E9DCC8]/50 bg-[#FFFDFB]/60 p-10 text-center">
+                <div className="flex flex-col items-center justify-center rounded-[var(--radius-card)] border border-[#E9DCC8]/50 bg-[#FFFDFB]/60 p-10 text-center">
                   <div className="mb-4 text-3xl">🧭</div>
                   <h2 className="text-xl font-extrabold text-[var(--ui-text)]">
                     绑定本地小说文件夹
@@ -1344,7 +1344,7 @@ export default function ImportPage() {
                   </div>
 
                   {/* 画卷预览树渲染 */}
-                  <div className="rounded-[16px] border border-[#E9DCC8]/60 bg-white/40 p-3 md:p-5 max-h-[420px] overflow-y-auto">
+                  <div className="rounded-[var(--radius-card)] border border-[#E9DCC8]/60 bg-white/40 p-3 md:p-5 max-h-[420px] overflow-y-auto">
                     <h3 className="mb-4 text-sm font-bold text-[var(--ui-text)] border-b border-[#E9DCC8]/40 pb-2">📂 勘测与预览</h3>
                     <FolderPreviewTree
                       node={previewTree}
@@ -1383,7 +1383,7 @@ export default function ImportPage() {
           {activeMode === "url" && (
             <form
               onSubmit={handleUrlImport}
-              className="flex min-h-[280px] flex-col justify-center rounded-[16px] border border-[rgba(95,125,82,0.18)] bg-[rgba(255,255,255,0.52)] p-5 md:p-8"
+              className="flex min-h-[280px] flex-col justify-center rounded-[var(--radius-card)] border border-[rgba(95,125,82,0.18)] bg-[rgba(255,255,255,0.52)] p-5 md:p-8"
             >
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(95,125,82,0.18)] bg-white text-[var(--ui-accent)] shadow-sm">
                 🪶
@@ -1482,7 +1482,7 @@ export default function ImportPage() {
         </section>
 
         <aside className="flex flex-col gap-4">
-          <div className="ui-card rounded-[16px] p-5">
+          <div className="ui-card rounded-[var(--radius-card)] p-5">
             <h2 className="text-base font-bold text-[var(--ui-text)]">
               治书章法
             </h2>

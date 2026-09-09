@@ -991,7 +991,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               <div
                 className={
                   isDesktopViewport
-                    ? "h-full w-[320px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                    ? "h-full w-[320px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
                     : "h-full w-[280px] max-w-[82vw] overflow-hidden shadow-xl"
                 }
                 style={{ backgroundColor: currentThemeColors.bg, borderColor }}
@@ -1023,7 +1023,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               <div
                 className={
                   isDesktopViewport
-                    ? "h-full w-[360px] overflow-hidden rounded-[22px] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
+                    ? "h-full w-[360px] overflow-hidden rounded-[var(--radius-panel)] border bg-[rgba(255,252,245,0.96)] shadow-2xl backdrop-blur-md dark:bg-[rgba(30,30,30,0.96)]"
                     : "h-full w-[300px] max-w-[88vw] overflow-hidden shadow-xl"
                 }
                 style={{ backgroundColor: currentThemeColors.bg, borderColor }}
@@ -1323,7 +1323,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
             </h3>
 
             <div
-              className={`border rounded-[16px] p-4 relative z-10 max-h-[100px] overflow-y-auto ${noteQuoteBox}`}
+              className={`border rounded-[var(--radius-card)] p-4 relative z-10 max-h-[100px] overflow-y-auto ${noteQuoteBox}`}
             >
               <span
                 className={`text-[10px] font-serif block mb-1 uppercase tracking-wider ${noteQuoteLabel}`}
@@ -1342,7 +1342,7 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
               onChange={(e) => setUserNoteText(e.target.value)}
               placeholder="在此写下您的所思、所想、所悟，落墨留痕..."
               rows={4}
-              className={`w-full border rounded-[16px] p-4 text-sm font-serif focus:outline-none transition-colors relative z-10 resize-none ${noteInputClasses}`}
+              className={`w-full border rounded-[var(--radius-card)] p-4 text-sm font-serif focus:outline-none transition-colors relative z-10 resize-none ${noteInputClasses}`}
             />
 
             <div className="flex gap-3 justify-end relative z-10">

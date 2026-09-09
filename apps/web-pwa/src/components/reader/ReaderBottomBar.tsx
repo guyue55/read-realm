@@ -121,7 +121,7 @@ export function ReaderBottomBar({
       data-reader-toolbar="bottom"
       inert={!isVisible || backgroundDisabled ? true : undefined}
       style={{ willChange: "transform" }}
-      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[22px] border px-3 pb-3 pt-3 backdrop-blur-xl reader-panel-motion sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 sm:px-4 sm:pb-4 ${shellClass} ${
+      className={`fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-20 rounded-[var(--radius-panel)] border px-3 pb-3 pt-3 backdrop-blur-xl reader-panel-motion sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2 sm:px-4 sm:pb-4 ${shellClass} ${
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-6 opacity-0 pointer-events-none"

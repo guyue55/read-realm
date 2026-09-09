@@ -207,7 +207,7 @@ export default function PreviewPage({
   if (error) {
     return (
       <AppShell title="解析失败" subtitle="导入任务未能完成">
-        <div className="ui-card mx-auto max-w-md rounded-[16px] p-8 text-center">
+        <div className="ui-card mx-auto max-w-md rounded-[var(--radius-card)] p-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF0EC] text-[var(--ui-danger)]">
             !
           </div>
