@@ -6,6 +6,13 @@ import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
 import { parseAuthorizedUrlSource } from "@/lib/url-source-client";
 import {
+  isManualAssistError,
+  manualAssistHint,
+  parsePastedHtmlToChapter,
+  buildManualAssistBook,
+} from "@/lib/url-import/manual-assist";
+import { UrlImportError } from "@/lib/url-import/index";
+import {
   assertAuthorizedPublicSourceUrl,
   createDefaultSourceCheckPreference,
   type SourceCheckPreference,
@@ -247,6 +254,12 @@ export default function ImportPage() {
   const [urlCheckPreference, setUrlCheckPreference] = useState<SourceCheckPreference>(
     createDefaultSourceCheckPreference,
   );
+  // L3 手动协助：登录/验证码/动态渲染页面的用户引导（不绕过，只引导）
+  const [manualAssist, setManualAssist] = useState<{
+    hint: string;
+    openUrl: string;
+  } | null>(null);
+  const [pastedHtml, setPastedHtml] = useState("");
   const router = useVirtualRouter();
 
   // 1. 批量上传相关 State
@@ -1093,6 +1106,14 @@ export default function ImportPage() {
           console.error("[Import] URL 任务失败状态无法落盘:", persistenceError);
         }
       }
+      // L3 手动协助：登录/验证码/动态渲染时引导用户在新窗口打开，粘贴内容继续
+      if (isManualAssistError(e)) {
+        const code = e instanceof UrlImportError ? e.code : "URL_PARSE_FAILED";
+        setManualAssist({ hint: manualAssistHint(code), openUrl: url });
+        setPastedHtml("");
+      } else {
+        setManualAssist(null);
+      }
       if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
         setStatus("网络请求失败：目标网站拒绝跨域访问，且后端代理未启动。请确认 API 服务运行于端口 4000。");
       } else if (message.includes("章节内容")) {
@@ -1100,6 +1121,49 @@ export default function ImportPage() {
       } else {
         setStatus(`URL 解析失败: ${message}`);
       }
+      setIsProcessing(false);
+    }
+  };
+
+  // L3 手动协助：粘贴可见内容继续导入（不绕过登录，用户已在新窗口确认内容可见）
+  const handleManualAssistPaste = async () => {
+    if (isProcessing) return;
+    const html = pastedHtml.trim();
+    if (!html) {
+      setStatus("请先粘贴页面内容。");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const chapter = parsePastedHtmlToChapter(html, urlInput.trim() || undefined);
+      if (chapter.content.trim().length < 40) {
+        setStatus("粘贴内容过短，无法识别为正文。请粘贴完整的章节页面内容（Ctrl+A 全选后复制）。");
+        setIsProcessing(false);
+        return;
+      }
+      const book = buildManualAssistBook(chapter);
+      const parsedUrl = new URL(urlInput.trim());
+      const draft = await durableImportController.create({
+        id: createId(),
+        filename: parsedUrl.hostname,
+        format: "html",
+        sourceKind: "url",
+        url: urlInput.trim(),
+      });
+      await durableImportController.transition(draft.id, { type: "reading" });
+      await durableImportController.transition(draft.id, {
+        type: "parsing",
+        totalChapters: book.chapters.length,
+      });
+      const parsedResult = buildParsedImportResult({ draft, parsedBook: book, createId });
+      await durableImportController.attachParsedResult(draft.id, parsedResult);
+      setStatus(`手动协助导入完成，共 1 章`);
+      setManualAssist(null);
+      setIsProcessing(false);
+      router.push(`/import/preview/${draft.id}`);
+    } catch (error) {
+      const pasteError = error as Error;
+      setStatus(`手动导入失败：${describeAppError(pasteError) || pasteError.message}`);
       setIsProcessing(false);
     }
   };
@@ -1475,6 +1539,52 @@ export default function ImportPage() {
                     <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-[var(--ui-warm)]" />
                   )}
                   {status}
+                </div>
+              )}
+
+              {manualAssist && (
+                <div className="mx-auto mt-5 w-full max-w-xl rounded-[16px] border border-[#E5C9A6]/50 bg-[#FBF6EC] p-5 text-sm leading-6 text-[#6B5B3E]">
+                  <div className="mb-2 flex items-center gap-2 font-semibold text-[#8C6239]">
+                    <span>🧭</span> 需要手动协助（不绕过登录/验证，仅引导）
+                  </div>
+                  <p className="mb-3">{manualAssist.hint}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={manualAssist.openUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full bg-[var(--ui-accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#527047]"
+                    >
+                      在新窗口打开
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setManualAssist(null)}
+                      className="rounded-full border border-[#E5C9A6] bg-white px-4 py-2 text-xs font-semibold text-[#6B5B3E] transition-colors hover:bg-[#F1E6D2]"
+                    >
+                      收起
+                    </button>
+                  </div>
+                  <div className="mt-4 border-t border-[#E5C9A6]/40 pt-4">
+                    <label className="mb-2 block text-xs font-semibold text-[#8C6239]">
+                      看到内容后，全选复制页面内容，粘贴到下面继续导入：
+                    </label>
+                    <textarea
+                      value={pastedHtml}
+                      onChange={(event) => setPastedHtml(event.currentTarget.value)}
+                      rows={5}
+                      placeholder="Ctrl+A 全选页面后复制（含标题），粘贴到这里…"
+                      className="ui-focus-ring w-full resize-y rounded-[12px] border border-[#E5C9A6] bg-white px-3 py-2 text-sm text-[var(--ui-text)] placeholder:text-[#B8A989]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleManualAssistPaste}
+                      disabled={isProcessing}
+                      className="mt-2 rounded-full bg-[#8C6239] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7A5430] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isProcessing ? "导入中…" : "粘贴内容继续导入"}
+                    </button>
+                  </div>
                 </div>
               )}
             </form>

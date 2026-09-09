@@ -1681,6 +1681,12 @@ export function useReader(bookId: string) {
         }
 
         if (!c && typeof window !== "undefined" && navigator.onLine) {
+          // 阶段 E：已本地全量化（chapters_full）的书永不走网络 ——
+          // 服务端下线不影响已导入内容阅读；本地意外缺失时静默降级而非打扰阅读。
+          const fullBook = await db.books.get(id);
+          if (fullBook?.cacheStatus === "chapters_full") {
+            return null;
+          }
           try {
             const headers = getShareHeaders();
             const res = await fetch(apiUrl(`/books/${id}/chapters/${index}`), {
@@ -1699,6 +1705,7 @@ export function useReader(bookId: string) {
               console.error(`[Reader] 云端章节拉取失败: HTTP ${res.status}`);
             }
           } catch (err) {
+            // 云端拉取失败静默降级：不抛出、不打断阅读，本地缺失章节以空态呈现
             console.error("[Reader] 按需懒加载章节网络异常:", err);
           }
         }
