@@ -42,7 +42,11 @@ import {
   type PublicLibraryCatalogView,
 } from "@/features/public-library/public-library-route-context";
 import { normalizeShareToken } from "@/lib/api";
-import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
+import {
+  parseHash,
+  ROUTE_CONTEXT_EVENT,
+  useVirtualRouter,
+} from "@/lib/route-store";
 import { Check, Compass } from "lucide-react";
 
 const views = [
@@ -127,6 +131,8 @@ export default function PublicLibraryPage() {
   }, []);
 
   useEffect(() => {
+    // keep-alive 下隐藏视图挂载时不应改写地址栏；只有藏经阁为当前活动视图时才同步 URL。
+    if (parseHash(window.location.hash).currentView !== "public-library") return;
     const location = serializePublicLibraryRouteContext({
       view,
       query: appliedQuery,
@@ -143,6 +149,8 @@ export default function PublicLibraryPage() {
 
   useEffect(() => {
     const restoreRouteContext = () => {
+      // keep-alive 下组件常驻，只有藏经阁为当前活动视图时才响应路由变化恢复。
+      if (parseHash(window.location.hash).currentView !== "public-library") return;
       const context = parsePublicLibraryRouteContext(window.location.hash);
       requestGeneration.current += 1;
       catalogSnapshotRef.current = undefined;

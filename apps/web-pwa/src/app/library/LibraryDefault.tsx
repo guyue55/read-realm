@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import {
+  parseHash,
+  queryVisibleAppMain,
   rememberViewScrollPosition,
   rememberViewSourceFocus,
   ROUTE_CONTEXT_EVENT,
@@ -329,6 +331,9 @@ export function LibraryDefault({
   };
 
   useEffect(() => {
+    // keep-alive 下隐藏视图也会挂载，但只有书架是当前活动视图时才可拥有并同步 URL，
+    // 否则会覆盖其他活动视图（如阅读器）的地址栏状态。
+    if (parseHash(window.location.hash).currentView !== "library") return;
     const location = serializeLibraryRouteContext({
       folderId: currentFolderId,
       page: libraryPageNumber,
@@ -343,6 +348,8 @@ export function LibraryDefault({
 
   useEffect(() => {
     const restoreRouteContext = () => {
+      // keep-alive 下组件常驻，只有书架为当前活动视图时才响应路由变化恢复。
+      if (parseHash(window.location.hash).currentView !== "library") return;
       const context = parseLibraryRouteContext(
         window.location.hash,
         loadLibraryViewMode(),
@@ -2135,7 +2142,7 @@ export function LibraryDefault({
   }, []);
 
   const rememberLibrarySource = (bookId: string) => {
-    const main = document.querySelector<HTMLElement>("[data-app-main]");
+    const main = queryVisibleAppMain();
     rememberViewScrollPosition("library", main?.scrollTop ?? 0);
     rememberViewSourceFocus("library", bookId);
   };
@@ -3427,7 +3434,7 @@ export function LibraryDefault({
           const trigger = governanceTriggerRef.current;
           return trigger?.isConnected
             ? trigger
-            : document.querySelector<HTMLElement>("[data-app-main]");
+            : queryVisibleAppMain();
         }}
         tryAcquireMutation={tryAcquireLibraryMutation}
       />

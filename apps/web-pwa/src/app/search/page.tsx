@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ROUTE_CONTEXT_EVENT, useVirtualRouter } from "@/lib/route-store";
+import {
+  parseHash,
+  ROUTE_CONTEXT_EVENT,
+  useVirtualRouter,
+} from "@/lib/route-store";
 import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import type { Book } from "@reader/shared-types";
@@ -48,6 +52,8 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
+    // keep-alive 下隐藏视图挂载时不应改写地址栏；只有寻书为当前活动视图时才同步 URL。
+    if (parseHash(window.location.hash).currentView !== "search") return;
     const targetHash = `#${serializeSearchRouteContext({
       query: searchQuery,
       filter: activeFilter,
@@ -81,6 +87,9 @@ export default function SearchPage() {
 
   useEffect(() => {
     const restoreRouteContext = () => {
+      // keep-alive 下组件常驻，只有寻书为当前活动视图时才响应路由变化恢复；
+      // 否则切到其他视图的 popstate 会误清空隐藏搜索页的状态。
+      if (parseHash(window.location.hash).currentView !== "search") return;
       const context = parseSearchRouteContext(window.location.hash);
       invalidateRemoteSearchResults();
       setSearchQuery(context.query);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
+import { queryVisibleAppMain } from "@/lib/route-store";
 
 export interface ConfirmDialogProps {
   /** 弹窗是否开启 */
@@ -83,7 +84,7 @@ export function ConfirmDialog({
       onClose={handleCancel}
       fallbackFocus={
         fallbackFocus ??
-        (() => document.querySelector<HTMLElement>("main, [data-app-main]"))
+        (() => queryVisibleAppMain() ?? document.querySelector("main"))
       }
       className="fixed inset-0 z-[80] flex items-end justify-center bg-[#25231f]/40 p-3 backdrop-blur-[2px] sm:items-center sm:p-6"
       data-ui-confirm-dialog="true"

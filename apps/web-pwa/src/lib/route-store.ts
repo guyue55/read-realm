@@ -81,6 +81,23 @@ export function readViewSourceFocus(viewKey: string): string | null {
   }
 }
 
+/**
+ * 查询当前可见的 AppShell main 容器。
+ * keep-alive 模式下多个视图的 AppShell 同时挂载（非活动视图 display:none），
+ * 全局 querySelector("[data-app-main]") 会命中隐藏视图的容器；
+ * 用 offsetParent 判可见性（display:none 的容器 offsetParent 为 null）过滤。
+ */
+export function queryVisibleAppMain(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const mains = document.querySelectorAll<HTMLElement>("[data-app-main]");
+  for (const main of mains) {
+    if (main.offsetParent !== null || main.getClientRects().length > 0) {
+      return main;
+    }
+  }
+  return mains[0] ?? null;
+}
+
 // 保存快照至 LocalStorage 确保刷新零丢失自愈
 const STORAGE_KEY = "read_realm_virtual_route_snapshot";
 
