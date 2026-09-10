@@ -168,6 +168,15 @@ export function AppShell({
     router.push(href);
   };
 
+  // 挂载后静默预载全部导航视图分块，保证切换菜单零"正在打开…"占位（无刷新感）。
+  // keep-alive 下组件常驻，故每个 AppShell 实例只做一次。
+  const prefetchedRef = useRef(false);
+  useEffect(() => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    APP_NAV_ITEMS.forEach((item) => router.prefetch(item.href));
+  }, [router]);
+
   return (
     <div className="flex h-[100dvh] min-h-screen w-full overflow-hidden bg-[var(--color-background)] text-[var(--color-text)]">
       <aside className="hidden h-full w-[var(--shell-sidebar-width)] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-5 md:flex">

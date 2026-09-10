@@ -12,63 +12,63 @@ import type { AppView } from "@/lib/navigation-state";
 const LibraryPage = dynamic(
   () => import("./library/page"),
   {
-    loading: () => <ViewLoading label="正在打开书架" />,
+    loading: () => <ViewLoading label="正在打开书架" silent />,
     ssr: false,
   },
 );
 const ReaderPage = dynamic(
   () => import("./reader/[bookId]/ReaderClient"),
   {
-    loading: () => <ViewLoading label="正在打开阅读器" />,
+    loading: () => <ViewLoading label="正在打开阅读器" silent />,
     ssr: false,
   },
 );
 const BookDetailPage = dynamic(
   () => import("./book/[bookId]/BookDetailClient"),
   {
-    loading: () => <ViewLoading label="正在读取书籍详情" />,
+    loading: () => <ViewLoading label="正在读取书籍详情" silent />,
     ssr: false,
   },
 );
 const SearchPage = dynamic(
   () => import("./search/page"),
   {
-    loading: () => <ViewLoading label="正在打开寻书" />,
+    loading: () => <ViewLoading label="正在打开寻书" silent />,
     ssr: false,
   },
 );
 const NotesPage = dynamic(
   () => import("./notes/page"),
   {
-    loading: () => <ViewLoading label="正在打开笺注" />,
+    loading: () => <ViewLoading label="正在打开笺注" silent />,
     ssr: false,
   },
 );
 const SettingsPage = dynamic(
   () => import("./settings/page"),
   {
-    loading: () => <ViewLoading label="正在打开设置" />,
+    loading: () => <ViewLoading label="正在打开设置" silent />,
     ssr: false,
   },
 );
 const ImportPage = dynamic(
   () => import("./import/page"),
   {
-    loading: () => <ViewLoading label="正在打开导入" />,
+    loading: () => <ViewLoading label="正在打开导入" silent />,
     ssr: false,
   },
 );
 const ImportPreviewPage = dynamic(
   () => import("./import/preview/[taskId]/PreviewClient"),
   {
-    loading: () => <ViewLoading label="正在读取导入预览" />,
+    loading: () => <ViewLoading label="正在读取导入预览" silent />,
     ssr: false,
   },
 );
 const PublicLibraryPage = dynamic(
   () => import("./public-library/page"),
   {
-    loading: () => <ViewLoading label="正在打开藏经阁" />,
+    loading: () => <ViewLoading label="正在打开藏经阁" silent />,
     ssr: false,
   },
 );
@@ -282,7 +282,9 @@ export default function Page() {
         console.error("视图分块预热失败（不影响正常使用）", error);
       }
     };
-    const timer = window.setTimeout(preload, 600);
+    // 挂载后 100ms 即开始预热，尽可能赶在用户首次点击导航前把视图分块缓存好，
+    // 避免首次切换时出现"正在打开…"占位（视觉刷新感）。
+    const timer = window.setTimeout(preload, 100);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);

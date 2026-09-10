@@ -262,8 +262,41 @@ export function useVirtualRouter() {
       this.push(url);
     },
     prefetch(url: string) {
-      // 虚拟路由下页面完全处于同一 React 树中，无 prefetch 损耗
-      void url;
+      // 虚拟路由下页面处于同一 React 树中，无需 Next 的 RSC prefetch；
+      // 但视图分块是 next/dynamic 懒加载，须预载对应 chunk，
+      // 否则首次切换视图会显示"正在打开…"占位（视觉上的刷新感）。
+      if (typeof window === "undefined") return;
+      const nextState = parseAppLocation(url);
+      switch (nextState.currentView) {
+        case "reader":
+          void import("@/app/reader/[bookId]/ReaderClient");
+          break;
+        case "book-detail":
+          void import("@/app/book/[bookId]/BookDetailClient");
+          break;
+        case "search":
+          void import("@/app/search/page");
+          break;
+        case "notes":
+          void import("@/app/notes/page");
+          break;
+        case "settings":
+          void import("@/app/settings/page");
+          break;
+        case "import":
+          void import("@/app/import/page");
+          break;
+        case "import-preview":
+          void import("@/app/import/preview/[taskId]/PreviewClient");
+          break;
+        case "public-library":
+          void import("@/app/public-library/page");
+          break;
+        case "library":
+        default:
+          void import("@/app/library/page");
+          break;
+      }
     },
     back() {
       virtualRouter.goBack();
