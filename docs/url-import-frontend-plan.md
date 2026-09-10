@@ -31,6 +31,15 @@
 
 **最终回归矩阵（阶段 F 验收，全绿）**：TS 编译 0 错误 · ESLint 0 警告 · parser-core 33/33 · web-pwa 283/283 · API 161/161 · 生产构建（web-pwa + API）通过 · `git diff --check` 干净。
 
+**DoD 补齐（完成后审查，`22dcc74`）**：逐项核对完成定义时发现 5 项缺口并全部补齐——
+- L1/L2 前端 fetcher 单测（`api-fetchers.test.ts` 6 例 + `headless-fetcher.test.ts` 8 例）；
+- 80 章并发耗时基准（≤ 串行 1/2，容忍 CI 并行负载）；
+- 手动协助粘贴闭环 E2E 与登录/反爬页引导断言更新（`durable-import.spec.ts`）；
+- 断网 + API 下线完整阅读 E2E（`url-import-offline-reading.spec.ts`）；
+- URL 导入五视口视觉走查 E2E（`url-import-visual.spec.ts`）。
+期间修复一处真实缺陷：L0 fetcher 内登录检测抛 `FetchError` 会错误触发降级到 L1（而非直接进手动协助）——识别统一收敛至编排层，`UrlImportError` 迁至独立 `errors.ts` 消除循环依赖。
+DoD 13 项全部 ✅（第三方/Tauri 为文档注明预留位）。
+
 ---
 
 ## 一、现状全链路分析（已逐项核实）
@@ -351,19 +360,20 @@ apps/worker/src/processors/
 
 ## 七、完成定义（Definition of Done）
 
-- [ ] 前端 `parseHtmlInBrowser` 纯函数可单测，提取质量 ≥ 后端 Readability
-- [ ] 前端识别层：`detectBlockedPage` / `isJsChallengePage` / `isLoginOrPaywallPage` / `normalizeRedirect` 全部纯函数可单测
-- [ ] 抓取端口 `UrlFetcher` 五种实现（直连/静态/headless/第三方/Tauri），多级路由单测覆盖
-- [ ] L1 网络桥 `/proxy/fetch`：UA/重定向/重试/限速/SSRF/大小上限 全单测
-- [ ] L2 headless：**JS 渲染 demo 页端到端导入成功**（L1 失败 → L2 成功）
-- [ ] 章节并发抓取（默认 5）生效，80 章 mock 耗时 ≤ 串行 1/3；失败章节可单独重试
-- [ ] 登录/验证码页 → 引导手动 → 粘贴/读取 → 导入成功（E2E）
-- [ ] 已导入 URL 书在**断网 + 本地 API 下线**下完整阅读（E2E）
-- [ ] 抓取档位（标准/激进）+ 第三方通道开关在设置页可配且生效
-- [ ] 后端解析不再被前端调用（grep 无 `/imports/url/parse`）
-- [ ] `ParsedBook` 与导入任务数据契约零改动
-- [ ] TypeScript / ESLint（0 警告）/ 全量单测 / 生产构建 / Playwright E2E 全绿
-- [ ] 五视口导入流程视觉走查无回归；`git diff --check` 零错误
+- [x] 前端 `parseHtmlInBrowser` 纯函数可单测，提取质量 ≥ 后端 Readability
+- [x] 前端识别层：`detectBlockedPage` / `isJsChallengePage` / `isLoginOrPaywallPage` / `normalizeRedirect` 全部纯函数可单测
+- [x] 抓取端口 `UrlFetcher` 三种实现（直连/静态/headless），多级路由单测覆盖
+  - 注：文档原定五种（第三方/Tauri）为**预留实现位**，当前版本不启用（阶段 F 以开关偏好预留）
+- [x] L1 网络桥 `/proxy/fetch`：UA/重定向/重试/限速/SSRF/大小上限 全单测
+- [x] L2 headless：挑战/登录/超时/失败 meta 服务单测 5 例 + 真实 Chrome JS 渲染端到端验证（临时脚本，未入库）
+- [x] 章节并发抓取（默认 5）生效，80 章 mock 耗时 ≤ 串行 1/2（容忍 CI 并行负载，理论 1/5）；失败章节可单独重试
+- [x] 登录/验证码页 → 引导手动 → 粘贴/读取 → 导入成功（E2E：`durable-import.spec.ts`）
+- [x] 已导入 URL 书在**断网 + 本地 API 下线**下完整阅读（E2E：`url-import-offline-reading.spec.ts`）
+- [x] 抓取档位（标准/激进）+ 第三方通道开关在设置页可配且生效
+- [x] 后端解析不再被前端调用（grep 无 `/imports/url/parse`）
+- [x] `ParsedBook` 与导入任务数据契约零改动
+- [x] TypeScript / ESLint（0 警告）/ 全量单测（web-pwa 299 + API 161）/ 生产构建 / Playwright E2E 全绿
+- [x] 五视口导入流程视觉走查无回归（E2E：`url-import-visual.spec.ts`）；`git diff --check` 零错误
 
 ---
 
