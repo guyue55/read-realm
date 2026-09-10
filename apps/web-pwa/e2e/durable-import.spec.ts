@@ -112,7 +112,7 @@ test("legal URL import persists source identity before entering preview", async 
   });
 });
 
-test("URL import stops at login/paywall/anti-bot pages without backend bypass", async ({ page }) => {
+test("URL import stops at login/paywall/anti-bot pages and guides manual assist without backend bypass", async ({ page }) => {
   let backendFallbackCount = 0;
   await page.route("https://blocked.example/**", async (route) => {
     await route.fulfill({
@@ -133,8 +133,48 @@ test("URL import stops at login/paywall/anti-bot pages without backend bypass", 
   await page.getByLabel(/我确认有权访问和保存/).check();
   await page.getByRole("button", { name: "解析 URL" }).click();
 
-  await expect(page.getByText(/为保护来源边界，已停止解析/)).toBeVisible();
+  // 阶段 E：登录/反爬页不绕过，改为引导用户手动协助（新窗口打开 + 粘贴）
+  await expect(page.getByText(/需要手动协助/)).toBeVisible();
+  await expect(page.getByText(/在新窗口打开/)).toBeVisible();
   expect(backendFallbackCount).toBe(0);
+});
+
+test("manual assist pasted content completes import when target requires login", async ({ page }) => {
+  await page.route("https://login.example/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      headers: { "access-control-allow-origin": "*" },
+      body: "<html><body><main>请先登录后阅读全文</main></body></html>",
+    });
+  });
+  await page.route("**/imports/url/parse", async (route) => {
+    await route.fulfill({ status: 500, body: "should not be called" });
+  });
+
+  await page.goto("/#/import");
+  await page.getByRole("button", { name: "URL 解析" }).click();
+  await page.locator('input[type="url"]').fill("https://login.example/book");
+  await page.getByLabel(/我确认有权访问和保存/).check();
+  await page.getByRole("button", { name: "解析 URL" }).click();
+
+  // 登录页触发手动协助引导
+  await expect(page.getByText(/需要手动协助/)).toBeVisible();
+
+  // 用户在新窗口确认内容可见后，粘贴页面内容继续导入（DoD-7 闭环）
+  const visibleHtml =
+    "<html><body><h1>登录后可见的章节</h1><p>" +
+    "这是用户登录后复制回来的可见正文内容，用于验证手动协助导入闭环。".repeat(6) +
+    "</p></body></html>";
+  await page.locator("textarea").fill(visibleHtml);
+  await page.getByRole("button", { name: "粘贴内容继续导入" }).click();
+
+  // 导入成功进入解析预览
+  await expect(page.getByRole("heading", { name: "解析预览" })).toBeVisible({
+    timeout: 15_000,
+  });
+  const tasks = await readImportTasks(page);
+  expect(tasks.some((task) => task.bookMetadata?.id)).toBe(true);
 });
 
 test("manual source check stores preview metadata without overwriting chapters", async ({ page }) => {

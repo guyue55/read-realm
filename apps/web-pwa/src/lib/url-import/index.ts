@@ -18,17 +18,11 @@ import {
 } from "./anti-scrape";
 import { FetchError, type UrlFetcher, retryWithBackoff } from "./fetch-adapter";
 import { parseUrlBook, type ParseProgressEvent } from "./parse";
+import { UrlImportError } from "./errors";
 
-/** URL 导入错误（带稳定错误码，供导入任务状态机与用户提示映射） */
-export class UrlImportError extends Error {
-  constructor(
-    message: string,
-    readonly code: string = "URL_PARSE_FAILED",
-  ) {
-    super(message);
-    this.name = "UrlImportError";
-  }
-}
+// 向后兼容：UrlImportError 迁移到独立 errors.ts（避免循环依赖），这里 re-export
+export { UrlImportError } from "./errors";
+export type { UrlImportError as UrlImportErrorType } from "./errors";
 
 /** 多级抓取路由配置 */
 export interface MultiLevelFetchOptions {

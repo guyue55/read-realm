@@ -12,7 +12,7 @@
  */
 
 import { FetchError, type FetchOptions, type FetchResult, type UrlFetcher } from "./fetch-adapter";
-import { detectBlockedPage, isUsableContent, antiScrapeToErrorCode } from "./anti-scrape";
+import { isUsableContent, antiScrapeToErrorCode } from "./anti-scrape";
 import { LocalApiStaticFetcher } from "./api-fetchers";
 import { LocalHeadlessFetcher } from "./headless-fetcher";
 import { resolveFetchTier, createDefaultUrlFetchPreference } from "../url-source-policy";
@@ -84,26 +84,9 @@ export class BrowserDirectFetcher implements UrlFetcher {
         throw new FetchError("页面响应超过大小上限", "FETCH_TOO_LARGE");
       }
 
-      // 反爬预检：识别登录/付费墙/JS 挑战（在解析前尽早暴露，避免无效抓取）
-      const blocked = detectBlockedPage(html);
-      if (blocked) {
-        // 对 HTML 做纯文本粗提取后再次判定（HTML 里的 meta/script 可能干扰）
-        const plainText = html
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/[ \t]+/g, " ")
-          .slice(0, 3000);
-        const reBlocked = detectBlockedPage(plainText);
-        if (reBlocked?.kind === "login_paywall") {
-          throw new FetchError(
-            "页面需要登录或付费；请手动打开后继续",
-            "FETCH_HTTP",
-          );
-        }
-      }
-
       const finalUrl = response.url || url;
+      // 注意：反爬识别统一由 fetchWithMultiLevel 编排层判定（login_paywall 抛 UrlImportError 阻断降级，
+      // 触发 L3 手动协助）；fetcher 只负责返回 HTML，不做识别决策。
       const usable = isUsableContent(
         html
           .replace(/<script[\s\S]*?<\/script>/gi, "")

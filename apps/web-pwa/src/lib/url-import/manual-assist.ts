@@ -10,7 +10,7 @@
 
 import type { ParsedBook } from "@reader/parser-core";
 import { parseHtmlInBrowser } from "./parse";
-import { UrlImportError } from "./index";
+import { UrlImportError } from "./errors";
 
 /** 需要手动协助的错误码集合（登录/付费墙/动态渲染/验证码） */
 export const MANUAL_ASSIST_ERROR_CODES = new Set([

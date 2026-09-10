@@ -18,6 +18,7 @@ import {
   type FetchResult,
   type UrlFetcher,
 } from "./fetch-adapter";
+import { UrlImportError } from "./errors";
 
 /** headless 渲染结果 meta 类型（与后端一致） */
 export type HeadlessMeta = "ok" | "challenge" | "timeout" | "login_required";
@@ -54,13 +55,16 @@ export class LocalHeadlessFetcher implements UrlFetcher {
         meta: HeadlessMeta;
       };
 
-      // 挑战/登录 meta：转换为可路由错误，上层据此升级 L3 手动协助
+      // 挑战/登录 meta：抛 UrlImportError 使编排层直接透传并触发 L3 手动协助
+      // （区别于普通 FetchError——后者会继续降级到其他 fetcher 造成无效等待）
       if (result.meta === "challenge" || result.meta === "login_required") {
-        throw new FetchError(
+        throw new UrlImportError(
           result.meta === "challenge"
             ? "页面触发人机验证，需手动打开完成验证"
             : "页面需要登录，请手动打开后继续",
-          "FETCH_HTTP",
+          result.meta === "challenge"
+            ? "URL_DYNAMIC_RENDER_REQUIRED"
+            : "SOURCE_LOGIN_PAYWALL_REQUIRED",
         );
       }
 
@@ -70,7 +74,8 @@ export class LocalHeadlessFetcher implements UrlFetcher {
         level: this.level,
       };
     } catch (error) {
-      if (error instanceof FetchError) throw error;
+      // UrlImportError 是编排层语义错误（登录/验证码→L3 手动协助），原样透传不包装
+      if (error instanceof FetchError || error instanceof UrlImportError) throw error;
       if (controller.signal.aborted) {
         throw new FetchError("动态渲染超时", "FETCH_TIMEOUT");
       }
