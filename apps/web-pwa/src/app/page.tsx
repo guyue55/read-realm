@@ -9,6 +9,9 @@ import { ViewLoading } from "@/components/ViewLoading";
 import { virtualRouter } from "@/lib/route-store";
 import type { AppView } from "@/lib/navigation-state";
 
+// 视图分块懒加载。切换无感由 keep-alive 预挂载保证（首访后常驻、切换零加载）；
+// next/dynamic 的 loading 走静默占位，仅在未预挂载视图（书架）首次挂载或冷加载时兜底，
+// 不出现"正在打开…"文字闪烁（视觉刷新感）。
 const LibraryPage = dynamic(
   () => import("./library/page"),
   {
@@ -176,7 +179,10 @@ type ParameterizedView = "reader" | "book-detail" | "import-preview";
 function ActiveView() {
   const { currentView, activeBookId, activeTaskId } = useRouteStore();
   // 已挂载的固定视图集合（首挂后常驻，保证切换无感、状态保留）。
-  // 初始为空：只挂载当前激活视图，避免隐藏视图预挂载发起多余网络请求/副作用。
+  // 初始为空：只挂载当前激活视图，避免隐藏视图预挂载引入多余 DOM（多 AppShell 并存
+  // 会干扰文本定位断言）与网络/副作用；视图首次访问后加入集合，此后切换零加载、零空窗。
+  // 首次访问某视图时，next/dynamic 走静默占位（无文字无动画，仅同背景色过渡），
+  // 配合分块预载（preload/prefetch），冷启动首切也几乎无感。
   const mountedViewsRef = useRef<Set<string>>(new Set());
 
   const renderView = (view: AppView): ReactNode => {
