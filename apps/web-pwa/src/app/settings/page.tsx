@@ -376,7 +376,7 @@ export default function SettingsPage() {
           </div>
         </SettingsCard>
 
-        <SettingsCard interactive={false}>
+        <SettingsCard hoverable={false}>
           <div className="mb-4">
             <h2 className="text-lg font-bold">本地备份与空库恢复</h2>
             <p className="mt-1 text-sm leading-6 text-[var(--ui-muted)]">
@@ -873,7 +873,8 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-lg font-bold">URL 抓取档位</h2>
             <p className="mt-1 text-sm text-[var(--ui-muted)]">
-              控制从公开网页导入小说时的抓取强度。默认标准档稳妥省资源；激进档启用无头浏览器渲染，攻克动态渲染与 JS 挑战页面。
+              控制从公开网页导入小说时的抓取强度。默认标准档稳妥省资源；激进档启用无头浏览器渲染，攻克动态渲染与
+              JS 挑战页面。
             </p>
           </div>
           {saved && (
@@ -905,7 +906,10 @@ export default function SettingsPage() {
                 onClick={() =>
                   // 档位→并发由 parseUrlFetchPreference 单一事实源计算，避免手写 10/5 重复
                   saveFetchPreference(
-                    parseUrlFetchPreference({ ...fetchPreference, tier: tierOption.key }),
+                    parseUrlFetchPreference({
+                      ...fetchPreference,
+                      tier: tierOption.key,
+                    }),
                   )
                 }
                 className={`ui-focus-ring flex flex-col justify-between rounded-[var(--radius-card)] border p-4 text-left transition-all hover:scale-[1.02] active:scale-95 duration-200 ${
@@ -938,7 +942,8 @@ export default function SettingsPage() {
             className="mt-1 h-4 w-4 accent-[var(--ui-accent)]"
           />
           <span className="leading-6">
-            允许第三方抓取通道（默认关闭）。仅在你明确信任时开启；外传 URL 需你显式授权。
+            允许第三方抓取通道（默认关闭）。仅在你明确信任时开启；外传 URL
+            需你显式授权。
           </span>
         </label>
       </SettingsCard>

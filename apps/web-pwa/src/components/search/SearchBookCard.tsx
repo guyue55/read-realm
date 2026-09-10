@@ -35,10 +35,13 @@ export function SearchBookCard({
   onRead,
   onImport,
 }: SearchBookCardProps) {
-  // 三态按钮：已入库（或本地卡）→ 去阅读；同步中 → 进度；未入库 → 拉取入库
-  const showRead = variant === "local" || isLocal;
-  const showImporting = variant === "cloud" && !isLocal && isImporting;
-  const showImport = variant === "cloud" && !isLocal && !isImporting;
+  // 操作态单一事实源：本地卡（或云端且已在书架）→ 去阅读；同步中 → 进度；其余 → 拉取入库
+  const action: "read" | "importing" | "import" =
+    variant === "local" || isLocal
+      ? "read"
+      : isImporting
+        ? "importing"
+        : "import";
   const chapterLabel = strings.reader.chapterCount.replace(
     "{count}",
     book.chapterCount?.toString() ?? "0",
@@ -78,7 +81,7 @@ export function SearchBookCard({
 
       {/* 云端一键同步批量拉取入库控制钮 */}
       <div className="w-full shrink-0 sm:w-auto">
-        {showRead ? (
+        {action === "read" ? (
           <button
             type="button"
             onClick={() => onRead(book.id)}
@@ -86,7 +89,7 @@ export function SearchBookCard({
           >
             去阅读
           </button>
-        ) : showImporting ? (
+        ) : action === "importing" ? (
           <div
             role="status"
             className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)]/70 px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
@@ -113,7 +116,7 @@ export function SearchBookCard({
             </svg>
             <span>正在同步 {importPercent}%</span>
           </div>
-        ) : showImport ? (
+        ) : (
           <button
             type="button"
             onClick={() => onImport?.(book)}
@@ -121,7 +124,7 @@ export function SearchBookCard({
           >
             拉取入库
           </button>
-        ) : null}
+        )}
       </div>
     </div>
   );
