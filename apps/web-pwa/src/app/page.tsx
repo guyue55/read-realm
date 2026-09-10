@@ -5,6 +5,7 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Component, useEffect, useRef } from "react";
 import { AlertTriangle, Library, RotateCcw } from "lucide-react";
 import { RouteProvider, useRouteStore } from "@/components/RouteProvider";
+import { GlobalChrome } from "@/components/app-shell/GlobalChrome";
 import { ViewLoading } from "@/components/ViewLoading";
 import { virtualRouter } from "@/lib/route-store";
 import type { AppView } from "@/lib/navigation-state";
@@ -238,7 +239,7 @@ function ActiveView() {
   // 固定视图全部常驻挂载，非活动隐藏（不卸载，DOM/state/滚动原位保留）；
   // 参数化视图仅当前渲染（切走即卸载，进度由 DB 恢复）。
   return (
-    <div className="h-[100dvh] overflow-hidden">
+    <div className="h-full overflow-hidden">
       {KEEP_ALIVE_VIEWS.map((view) => {
         // 参数化视图缺少参数时，回退到常驻书架（将其作为活动视图显示）
         const isActive =
@@ -300,7 +301,14 @@ export default function Page() {
   return (
     <GlobalErrorBoundary>
       <RouteProvider>
-        <ActiveView />
+        {/* 全局导航 chrome 常驻 keep-alive 之外：切换视图时侧边栏/底部导航永不消失，
+            视图只刷新内容区，消除"整页空白/刷新"感。 */}
+        <div className="flex h-[100dvh] w-full overflow-hidden bg-[var(--color-background)]">
+          <GlobalChrome />
+          <div className="h-full min-w-0 flex-1">
+            <ActiveView />
+          </div>
+        </div>
       </RouteProvider>
     </GlobalErrorBoundary>
   );
