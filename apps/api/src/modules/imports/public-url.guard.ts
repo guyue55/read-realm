@@ -20,7 +20,7 @@ export const REQUEST_TIMEOUT_MS = 15000;
 /** 静态抓取响应大小上限（字节，10MB，防超大页面拖垮内存） */
 export const MAX_FETCH_BYTES = 10 * 1024 * 1024;
 
-/** 反爬/风控/拦截页特征（与前端 anti-scrape 保持一致并保守扩展） */
+/** 反爬/风控/拦截页特征（后端保守守门子集；前端 anti-scrape 为细粒度识别层，两者有意分层不同步） */
 export const blockedPagePattern =
   /(验证码|访问过于频繁|安全验证|人机验证|登录后(?:阅读|查看)|会员专享|付费阅读|订阅后|请开启javascript|enable javascript|checking your browser|just a moment|cloudflare|access denied|forbidden|sign in|log in|paywall|subscribe to read)/i;
 

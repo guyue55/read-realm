@@ -13,7 +13,7 @@
 /** 一次抓取的结果：HTML 文本 + 元信息（供上层判定是否需升级抓取级别） */
 export interface FetchResult {
   html: string;
-  /** 抓取级别：browser（L0）/ api（L1）/ headless（L2）/ third_party */
+  /** 抓取级别：browser（L0）/ api（L1）/ headless（L2）/ third_party（预留，第三方通道接入后启用） */
   level: "browser" | "api" | "headless" | "third_party";
   /** 最终 URL（可能经过重定向） */
   finalUrl: string;

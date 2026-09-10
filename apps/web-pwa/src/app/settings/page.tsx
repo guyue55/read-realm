@@ -16,6 +16,7 @@ import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import {
   createDefaultUrlFetchPreference,
+  parseUrlFetchPreference,
   type UrlFetchPreference,
 } from "@/lib/url-source-policy";
 import {
@@ -902,11 +903,10 @@ export default function SettingsPage() {
               <button
                 key={tierOption.key}
                 onClick={() =>
-                  saveFetchPreference({
-                    ...fetchPreference,
-                    tier: tierOption.key,
-                    concurrency: tierOption.key === "aggressive" ? 10 : 5,
-                  })
+                  // 档位→并发由 parseUrlFetchPreference 单一事实源计算，避免手写 10/5 重复
+                  saveFetchPreference(
+                    parseUrlFetchPreference({ ...fetchPreference, tier: tierOption.key }),
+                  )
                 }
                 className={`ui-focus-ring flex flex-col justify-between rounded-[var(--radius-card)] border p-4 text-left transition-all hover:scale-[1.02] active:scale-95 duration-200 ${
                   isActive

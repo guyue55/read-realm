@@ -12,8 +12,10 @@
  */
 
 /**
- * 常见反爬/风控/拦截页特征。
- * 与后端 url-import.service.ts 的 blockedPagePattern 保持一致，并做保守扩展。
+ * 常见反爬/风控/拦截页特征（前端识别层，细粒度）。
+ * 与后端 public-url.guard.ts 的 blockedPagePattern（保守守门子集）职责分层：
+ * 前端负责精细分类（供升级 L2/L3 路由），后端只做"是否拦截"的保守判定，
+ * 两处集合有意不同步（前端更全，后端更稳）。
  */
 const blockedPagePattern =
   /(验证码|访问过于频繁|安全验证|人机验证|访问异常|请求过于频繁|您的请求过于频繁|登录后(?:阅读|查看)|会员专享|付费阅读|订阅后|vip章节|请先登录|需要登录|请开启\s*javascript|enable javascript|checking your browser|just a moment|access denied|forbidden|sign in to continue|log in to continue|paywall|subscribe to read|内容审核中|页面不存在|404 not found)/i;
