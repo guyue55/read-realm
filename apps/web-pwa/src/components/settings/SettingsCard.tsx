@@ -21,11 +21,11 @@ export function SettingsCard({
 }: SettingsCardProps) {
   const baseClasses =
     "ui-card rounded-[var(--radius-card)] p-5 md:p-6 shadow-[0_12px_32px_rgba(80,65,45,0.04)]";
-  const interactiveClasses = hoverable
+  const hoverableClasses = hoverable
     ? "hover:shadow-[0_18px_42px_rgba(80,65,45,0.06)] transition-all duration-300 physics-spring"
     : "";
   return (
-    <section className={`${baseClasses} ${interactiveClasses} ${className}`}>
+    <section className={`${baseClasses} ${hoverableClasses} ${className}`}>
       {children}
     </section>
   );
