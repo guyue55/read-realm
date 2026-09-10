@@ -10,7 +10,6 @@ import {
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
-import { useVirtualRouter } from "@/lib/route-store";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { SettingsCard } from "@/components/settings/SettingsCard";
@@ -38,8 +37,6 @@ import type {
 } from "@reader/storage-core";
 
 export default function SettingsPage() {
-  const router = useVirtualRouter();
-
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.pathname !== "/") {
       window.location.replace(
@@ -302,20 +299,12 @@ export default function SettingsPage() {
       title="设置"
       subtitle="案前雅度，因人而适。在这里微调行间章合，雕刻最契合您双眸的心流世界。"
       rightNodes={
-        <div className="flex gap-2">
-          <button
-            onClick={handleReset}
-            className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-all hover:bg-white hover:text-[var(--ui-accent)] flex items-center gap-1.5 shadow-sm active:scale-95 duration-200"
-          >
-            <span>⚙</span> 重置默认
-          </button>
-          <button
-            onClick={() => router.push("/library")}
-            className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white shadow-sm"
-          >
-            返回书架
-          </button>
-        </div>
+        <button
+          onClick={handleReset}
+          className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-all hover:bg-white hover:text-[var(--ui-accent)] flex items-center gap-1.5 shadow-sm active:scale-95 duration-200"
+        >
+          <span>⚙</span> 重置默认
+        </button>
       }
     >
       <div className="max-w-3xl mx-auto space-y-6 pb-12">

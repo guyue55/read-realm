@@ -333,14 +333,6 @@ export default function SearchPage() {
     <AppShell
       title="搜索"
       subtitle="本地书架搜索与已绑定的私人云端"
-      rightNodes={
-        <button
-          onClick={() => router.push("/library")}
-          className="ui-focus-ring min-h-11 rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white"
-        >
-          回书架
-        </button>
-      }
     >
       {/* 搜索/分类 核心框 */}
       <section className="ui-card rounded-[var(--radius-card)] p-4 sm:p-5">

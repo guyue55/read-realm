@@ -165,7 +165,8 @@ test("keyboard-adjusted reader settings persist after blur and reload", async ({
   await expect(fontSize).toHaveValue("18");
   await fontSize.focus();
   await page.keyboard.press("ArrowRight");
-  await page.getByRole("button", { name: "返回书架" }).focus();
+  // 让字号滑杆失焦（focus 页面内其他控件），触发设置持久化
+  await page.getByRole("button", { name: "重置默认" }).focus();
   await expect
     .poll(() =>
       page.evaluate(() =>

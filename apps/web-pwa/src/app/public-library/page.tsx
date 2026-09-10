@@ -383,13 +383,6 @@ export default function PublicLibraryPage() {
                 <Upload aria-hidden="true" className="h-4 w-4" />
                 入阁
               </button>
-              <button
-                className="ui-focus-ring hidden min-h-11 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-semibold sm:inline-flex sm:items-center"
-                onClick={() => router.push("/library")}
-                type="button"
-              >
-                回书架
-              </button>
             </div>
           }
         >
