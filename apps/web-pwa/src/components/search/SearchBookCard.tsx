@@ -23,6 +23,8 @@ export interface SearchBookCardProps {
 /**
  * 搜索页统一书卡：本地书架命中与私人云端结果共用同一视觉语言，
  * 与书架（藏经阁）卡片风格通过 --ui-* / --color-* 令牌保持一致。
+ * 颜色与圆角均取自语义令牌；卡片外层的柔和暖色投影（0 10px 30px）为
+ * 刻意保留的专属设计签名，暂无对应令牌，故保留字面量。
  */
 export function SearchBookCard({
   book,
@@ -45,7 +47,7 @@ export function SearchBookCard({
   return (
     <div
       data-book-id={book.id}
-      className="ui-card flex flex-col items-stretch gap-4 rounded-[18px] border border-white/60 bg-gradient-to-br from-white/70 to-white/40 p-4 shadow-[0_10px_30px_rgba(80,65,45,0.03)] sm:flex-row sm:items-center"
+      className="ui-card flex flex-col items-stretch gap-4 rounded-[var(--radius-card)] border border-white/60 bg-gradient-to-br from-white/70 to-white/40 p-4 shadow-[0_10px_30px_rgba(80,65,45,0.03)] sm:flex-row sm:items-center"
     >
       <BookCover title={book.title} className="h-[108px] w-[72px]" compact />
       <div className="min-w-0 flex-1">
@@ -68,7 +70,7 @@ export function SearchBookCard({
           <span className="rounded-md bg-[var(--ui-accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--ui-accent)]">
             {variant === "cloud" ? "全本同步" : book.format.toUpperCase()}
           </span>
-          <span className="rounded-md bg-[rgba(80,65,45,0.05)] px-2 py-0.5 text-xs text-[var(--ui-muted)]">
+          <span className="rounded-md bg-[var(--color-surface-muted)] px-2 py-0.5 text-xs text-[var(--ui-muted)]">
             {chapterLabel}
           </span>
         </div>
@@ -87,7 +89,7 @@ export function SearchBookCard({
         ) : showImporting ? (
           <div
             role="status"
-            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[rgba(95,125,82,0.18)] bg-[rgba(80,65,45,0.06)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
+            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)]/70 px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
           >
             <svg
               className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]"
