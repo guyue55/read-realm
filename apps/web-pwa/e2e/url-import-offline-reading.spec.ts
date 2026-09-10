@@ -95,14 +95,10 @@ test("断网 + 本地 API 下线：已导入 URL 书完整阅读", async ({ page
     });
   });
 
-  // 模拟本地 API 下线：拦截所有 API 请求并返回失败
+  // 模拟本地 API 下线：拦截 API 请求并返回失败
+  // （E2E 环境 API base 固定为 127.0.0.1:4100，见 playwright.config.ts）
   let apiRequestCount = 0;
   await page.route("http://127.0.0.1:4100/**", async (route) => {
-    apiRequestCount += 1;
-    await route.abort("failed");
-  });
-  // 兜底：任意端口 API 请求也拦截（防止 baseURL 端口差异）
-  await page.route("**/books/**", async (route) => {
     apiRequestCount += 1;
     await route.abort("failed");
   });
