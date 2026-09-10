@@ -105,7 +105,8 @@
 
 1. 高优先文件（按硬编码密度）：BookDetailClient(21)、SettingsSheet(21)、AIConfigPanel(23)、ReaderTopBar(28)、LibraryDefault(31)、ReaderDefault(99)。
    - **执行偏离（已记录决策）**：`ReaderDefault` 的 92 处 #hex **未迁移**——全部位于 S1 建立的 `isDark ? dark色 : light色` 主题配对三元中，属阅读 5 主题数据（依 §五.4 豁免条款），迁移会破坏 S1 对比度成果与 5 主题独立性。仅 2 处 `[16px]/[22px]` 圆角迁为令牌。其余 5 文件的浅色分支 #hex 已迁令牌；`LibraryDefault` 保留 6 处 `#81a073`/`#9a6a3a` 品牌渐变（刻意保留）。
-   - 收口审计（S3 后补）：`import/page.tsx` 残留 5 处边框/背景色已补迁（提交 1310748）；`SearchBookCard` 字面量已迁令牌（同提交），仅保留卡片专属柔和投影（无令牌可表达，已注释）。
+   - 收口审计（S3 后补）：`import/page.tsx` 残留 5 处边框/背景色已补迁（提交 1310748）；`SearchBookCard` 字面量已迁令牌（同提交），仅保留卡片专属柔和投影（无令牌可表达，已注释）。替换时透明度有微调（`#E9DCC8/50→--color-border/60`、`/60→/70`、`/40→/50`、`#FFFDFB/60→--color-surface/70`）——`--color-border`(#d8d5ca) 较原色略深，抬升透明度作视觉补偿，保持与原观感等效。
+   - 复核收口（2026-06 审核整改）：**文件夹绑定/出版场景暖棕品牌色系**（`#E5C9A6`/`#FAF4EB`/`#8C6239`/`#6B5B3E`/`#F1E6D2`/`#FBF6EC` 等，import/page.tsx 15 处 + FolderPreviewTree/PersonalBookPublicationDialog/AIConfigPanel 同源）**刻意保留**——属该场景独立品牌视觉语言，与 LibraryDefault 品牌渐变同理，不迁入绿色系 `--color-*` 令牌（迁移会改变品牌观感，违反"只提升不降低"）；如后续要收敛，应新建独立暖色令牌组而非套用主色系。
 2. 统一圆角：`rounded-lg/md/xl/2xl` → 对应令牌；自定义 `[18px]/[20px]` 等 → 语义化（卡片 16、面板 22、控件 10）。
 3. 统一空态：EmptyState 与 StatePanel 对齐（统一用 `--color-*` 令牌 + 相同排版），保留两个组件的 props 兼容。
 4. **验收**：全站无新增 #hex（`git grep` 抽查递减）；构建/单测/E2E 全绿。
@@ -152,7 +153,7 @@
 2. **逐片提交**：每阶段独立 commit，格式 `xxx(xxx): 中文xxx`（如 `fix(style): 补齐未定义 CSS 令牌`、`refactor(ui): 统一搜索页书卡组件`）。
 3. **抽取不改变输出**：抽公共组件时，先用"纯结构抽取"验证渲染结果一致，再谈优化。
 4. **令牌优先**：新写代码一律用语义令牌，禁止新增 #hex。
-   - **豁免：阅读器 5 主题配对色**（`isDark ? "…dark 色…" : "…light 色…"` 三元内的硬编码色）属**主题数据**而非全局 UI 令牌——tokens.css 目前只有一套浅色语义令牌，无 dark 变体层，为 5 主题独立对比度（S1 成果）与全局令牌解耦，允许在 reader 相关组件内保留字面量配对色。豁免范围仅限 reader 组件（ReaderDefault/TocDrawer/ReaderTopBar/SettingsSheet/AIReaderPanel）内的 isDark 三元分支。
+   - **豁免：阅读器 5 主题配对色**（`isDark ? "…dark 色…" : "…light 色…"` 三元内的硬编码色）属**主题数据**而非全局 UI 令牌——tokens.css 目前只有一套浅色语义令牌，无 dark 变体层，为 5 主题独立对比度（S1 成果）与全局令牌解耦，允许在 reader 相关组件内保留字面量配对色。豁免范围仅限 reader 组件（ReaderDefault/TocDrawer/ReaderTopBar/SettingsSheet/AIReaderPanel）及设置页 AIConfigPanel 内的 isDark 三元分支（AIConfigPanel 的 AI 状态徽章 dark 分支与阅读主题数据同源，同样豁免）。
    - 非 reader 组件的浅色分支一律迁令牌；新写非 reader 代码禁止新增 #hex。
 5. **测试护栏**：每阶段改完即跑 tsc + eslint（0 警告）+ 相关单测 + 目标 E2E；全量矩阵在 S5。
 6. **不碰既有 UI 历史删除**：工作树 `UI/` 目录删除与本次无关，不纳入任何 commit。
@@ -183,4 +184,4 @@
 - [x] TypeScript / ESLint / 单测 / 构建 / E2E 全绿（4 个既有失败已甄别非本次引入，见执行报告）
 - [x] 五视口视觉走查无回归
 
-**实施记录**：S0-S5 全部完成，11 个提交（`b30c553`..`1b81f86`）推送 `origin/main`；审核后补交 `1310748`（残留 hex/书卡字面量收口）。执行偏离两处（S2 书卡抽取、S3 ReaderDefault 迁移）均已在本文档记录。
+**实施记录**：S0-S5 全部完成，10 个提交（`b30c553`..`1b81f86`）推送 `origin/main`；审核后补交 `1310748`（残留 hex/书卡字面量收口）、`ba321df`（执行偏离与豁免条款记录）、`698feb7`（操作态收敛与命名修正）。执行偏离两处（S2 书卡抽取、S3 ReaderDefault 迁移）均已在本文档记录。
