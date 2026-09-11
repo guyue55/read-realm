@@ -346,7 +346,10 @@ export default function PublicLibraryPage() {
 
   return (
     <>
-      <div>
+      {/* 必须保留 h-full：外层 keep-alive 以定高（h-full + overflow-hidden）约束视图，
+          本层若为默认 height:auto 会使其内 AppShell / main 的 h-full 退化为 auto，
+          容器被内容撑高后 scrollHeight === clientHeight，页面将完全无法滚动。 */}
+      <div className="h-full">
         <AppShell
           title="藏经阁"
           subtitle={
@@ -721,7 +724,7 @@ export default function PublicLibraryPage() {
                         </button>
                         <button
                           aria-label={isLocal ? "已在书架" : "加入书架"}
-                          className={`ui-focus-ring inline-flex h-10 items-center justify-center gap-1 rounded-[var(--radius-control)] border px-2.5 text-xs font-medium transition-colors ${
+                          className={`ui-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-[var(--radius-control)] border px-2.5 text-xs font-medium transition-colors ${
                             isLocal
                               ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
                               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
@@ -759,7 +762,7 @@ export default function PublicLibraryPage() {
                         {maintenanceAvailable && (
                           <button
                             aria-label={`整理《${book.title}》目录`}
-                            className="ui-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]"
+                            className="ui-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]"
                             onClick={(event) => {
                               event.stopPropagation();
                               editButtonRef.current = event.currentTarget;

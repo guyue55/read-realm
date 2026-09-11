@@ -35,7 +35,10 @@ describe("private search page boundary", () => {
     // 统一书卡组件的按钮触控高度与移动端响应式布局
     expect(cardSource).toContain("min-h-11");
     expect(cardSource).toMatch(/flex flex-col[^"\n]*sm:flex-row/);
-    expect(cardSource).toMatch(/w-full[^"\n]*sm:w-auto/);
+    // 操作按钮已改为紧凑内联按钮（去掉移动端整行铺满的 w-full / sm:w-auto，
+    // 避免每条结果在手机上占满整行竖向空间）；触控安全由 min-h-11 保证，
+    // 响应式布局由书卡根节点的 flex-col → sm:flex-row 承担。
+    expect(cardSource).toMatch(/inline-flex[^"\n]*min-h-11/);
     expect(uiSource).not.toContain("animate-bounce-short");
     expect(uiSource).not.toMatch(/[📖📥💡🍃]/u);
   });

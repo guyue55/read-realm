@@ -30,8 +30,10 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
     localStorage.setItem("reader-sync-auto-startup", "false");
   });
   await page.goto("/#/library");
+  // 「私人云同步」卡片已迁移至设置页，书架不再渲染该文本；
+  // 原意是确认已进入书架视图再开始 EXP-14 流程，改用书架标题作为哨兵。
   await expect(
-    page.getByText("私人云同步", { exact: false }).first(),
+    page.getByRole("heading", { name: "书架", exact: true }),
   ).toBeVisible();
   console.log("GATE03_PRODUCT_STAGE_ENTERED=EXP-14");
   await page.getByRole("link", { name: "公共藏书" }).click();
@@ -148,6 +150,9 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
   ).toBeVisible();
   await expect(page.locator("article")).toHaveCount(1);
   await page.getByRole("button", { name: "加入书架" }).click();
+  // 「加入书架」自 ece9ce0 起只入库、不跳转阅读（另设「即刻开卷」承担进入阅读），
+  // 因此需再点一次主按钮才能进入阅读器，继续验证「加入后离线可读」。
+  await page.getByRole("button", { name: "即刻开卷" }).click();
 
   await expect(page).toHaveURL(/#\/reader\//);
   const localBookId = decodeURIComponent(
@@ -161,7 +166,9 @@ test("EXP-14 isolates publication, browses a real page boundary, joins atomicall
   );
   await context.setOffline(true);
   await page.getByRole("button", { name: "返回书架" }).click();
-  await expect(page.locator("body")).toContainText(/私人云同步|页面暂时无法打开/);
+  // 书架副标题（原用「私人云同步」，该卡片迁至设置页后改用书架自身文案），
+  // 用于区分「离线返回书架后书架仍正常渲染」与「错误页」两种结果。
+  await expect(page.locator("body")).toContainText(/本地优先|页面暂时无法打开/);
   const appError = page.getByRole("alert", { name: "页面暂时无法打开" });
   if (await appError.isVisible()) {
     await page.getByText("查看错误信息").click();
