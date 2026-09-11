@@ -37,7 +37,8 @@ describe("library truth contract", () => {
 
   it("does not claim an unverified cloud difference", () => {
     expect(source).not.toContain("发现本地与云端存在数据微澜");
-    expect(source).toContain("data-library-sync");
+    // 同步版块已迁移至设置页，书架不再渲染同步区块
+    expect(source).not.toContain("data-library-sync");
     expect(source).toContain("上次核验有云端副本");
   });
 
@@ -89,7 +90,8 @@ describe("library truth contract", () => {
     expect(source).toContain(
       "const operation = createPersonalSyncOperation(currentShareToken)",
     );
-    expect(source).toContain("currentShareTokenRef.current = trimmed");
+    // 访问口令绑定/解绑 UI 已随同步版块迁移至设置页，书架源码不再包含绑定赋值
+    expect(source).not.toContain("currentShareTokenRef.current = trimmed");
     expect(source).toContain(
       "currentShareTokenRef.current !== recoveryShareToken",
     );

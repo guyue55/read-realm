@@ -6,12 +6,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@reader/storage-core";
 import {
   Archive,
-  BookOpen,
   ChevronRight,
-  Cloud,
-  Copy,
   Folder,
-  KeyRound,
   Library,
   Link2,
   Trash2,
@@ -25,9 +21,13 @@ import {
   rememberViewScrollPosition,
   rememberViewSourceFocus,
   ROUTE_CONTEXT_EVENT,
+  SYNC_CONFIG_EVENT,
+  SYNC_STATUS_EVENT,
+  SYNC_STATUS_REQUEST_EVENT,
+  SYNC_TRIGGER_EVENT,
   useVirtualRouter,
 } from "@/lib/route-store";
-import { isValidShareToken, normalizeShareToken } from "@/lib/api";
+import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -42,7 +42,6 @@ import type {
 } from "@reader/shared-types";
 import { cacheEntireBook } from "@/hooks/useReader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { SyncStatusBar } from "@/components/library/SyncStatusBar";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { PersonalBookPublicationDialog } from "@/features/library/PersonalBookPublicationDialog";
 import {
@@ -91,41 +90,6 @@ type LibraryShelfEntry =
 const LIBRARY_VIEW_KEY = "library-view-mode";
 const LIBRARY_PAGE_SIZE = 48;
 const EMPTY_LIBRARY_FOLDERS: LibraryFolder[] = [];
-
-const POETIC_KEYS = [
-  "松风阅心",
-  "煮字生涯",
-  "寒夜客来",
-  "静夜钟声",
-  "西窗剪烛",
-  "墨染秋池",
-  "落木萧萧",
-  "独钓寒江",
-  "疏影横斜",
-  "暗香浮动",
-  "云破月来",
-  "小楼听雨",
-  "青山对弈",
-  "半窗晴翠",
-  "石栏斜阳",
-  "竹露清响",
-  "荷风晚照",
-  "烟雨行舟",
-  "梅雪争春",
-  "枯木逢春",
-  "泉流石上",
-  "草木含情",
-  "琴心剑胆",
-  "书香门第",
-  "笔墨春秋",
-  "风回小院",
-  "帘外芭蕉",
-  "浮生若梦",
-  "沧海一粟",
-  "坐看云起",
-  "行到水穷",
-  "晚风吹雨",
-];
 
 function loadLibraryViewMode(): LibraryViewMode {
   if (typeof window === "undefined") return "cover";
@@ -246,6 +210,8 @@ export function LibraryDefault({
     onConfirm: () => {},
   });
   const [isSyncing, setIsSyncing] = useState(false);
+  // 同步进度/步骤文案：书架本身不再渲染同步版块（已迁移到设置页），
+  // 但引擎仍写入这两个状态，并通过 SYNC_STATUS_EVENT 广播给设置页回显。
   const [syncProgress, setSyncProgress] = useState(0);
   const [syncStepText, setSyncStepText] = useState("");
   const [syncingBookId, setSyncingBookId] = useState<string | null>(null);
@@ -871,33 +837,16 @@ export function LibraryDefault({
   };
 
   // 用户同步首选项配置
-  const [autoSyncOnStartup, setAutoSyncOnStartupState] = useState<boolean>(
-    () => {
-      if (typeof window === "undefined") return true;
-      const val = window.localStorage.getItem("reader-sync-auto-startup");
-      return val !== "false";
-    },
-  );
-  const [autoSyncProgressOnReading, setAutoSyncProgressOnReadingState] =
-    useState<boolean>(() => {
-      if (typeof window === "undefined") return true;
-      const val = window.localStorage.getItem("reader-sync-auto-progress");
-      return val !== "false";
-    });
-  const [showSyncConfig, setShowSyncConfig] = useState(false);
+  // 用户同步首选项配置（值仅用于自动同步 effect；开关 UI 已随同步版块迁移到设置页，
+  // 设置页写入 localStorage，书架下次挂载读取最新值）。
+  const [autoSyncOnStartup] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const val = window.localStorage.getItem("reader-sync-auto-startup");
+    return val !== "false";
+  });
 
-  const setAutoSyncOnStartup = (val: boolean) => {
-    setAutoSyncOnStartupState(val);
-    window.localStorage.setItem("reader-sync-auto-startup", String(val));
-  };
-
-  const setAutoSyncProgressOnReading = (val: boolean) => {
-    setAutoSyncProgressOnReadingState(val);
-    window.localStorage.setItem("reader-sync-auto-progress", String(val));
-  };
-
-  // 多端共享相关状态与方法
-  const [shareTokenInput, setShareTokenInput] = useState("");
+  // 多端共享访问口令（配置与修改位于设置页「私人云同步」卡片；
+  // 此处初始化自 localStorage，并监听 SYNC_CONFIG_EVENT 跟随设置页变更）。
   const [currentShareToken, setCurrentShareToken] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return normalizeShareToken(
@@ -908,7 +857,6 @@ export function LibraryDefault({
 
   useEffect(() => {
     currentShareTokenRef.current = currentShareToken;
-    setShareTokenInput(currentShareToken);
   }, [currentShareToken]);
 
   const invalidateCloudInventory = useCallback(() => {
@@ -936,102 +884,6 @@ export function LibraryDefault({
     },
     [],
   );
-
-  const handleGeneratePoeticKey = () => {
-    const random = crypto.getRandomValues(new Uint32Array(2));
-    const idx = random[0] % POETIC_KEYS.length;
-    const num = 1000 + (random[1] % 9000);
-    const key = `${POETIC_KEYS[idx]}-${num}`;
-    setShareTokenInput(key);
-  };
-
-  const handleBindShareToken = async () => {
-    const trimmed = shareTokenInput.trim();
-    if (!trimmed) return;
-    if (!isValidShareToken(trimmed)) {
-      setToastMsg(
-        "访问口令仅支持中文、英文、数字、下划线和短横线，最长 64 位。",
-        "danger",
-      );
-      return;
-    }
-    if (syncMutexRef.current) {
-      setToastMsg("同步操作尚未完成，请稍后再切换访问口令。", "warning");
-      return;
-    }
-
-    window.localStorage.setItem("reader-share-token", trimmed);
-    currentShareTokenRef.current = trimmed;
-    setCurrentShareToken(trimmed);
-    setCloudBooks([]);
-    invalidateCloudInventory();
-    setCloudInventoryReloadNonce((nonce) => nonce + 1);
-    setToastMsg(strings.sync.shareBindSuccess, "success");
-  };
-
-  const handleClearShareToken = () => {
-    if (syncMutexRef.current) {
-      setToastMsg("同步操作尚未完成，请稍后再移除访问口令。", "warning");
-      return;
-    }
-    window.localStorage.removeItem("reader-share-token");
-    currentShareTokenRef.current = "";
-    setCurrentShareToken("");
-    setShareTokenInput("");
-    setCloudBooks([]);
-    invalidateCloudInventory();
-    setToastMsg(strings.sync.shareClearSuccess, "success");
-  };
-
-  const handleClearCloudBooks = async () => {
-    if (!currentShareToken || !isOnline) return;
-    const operation = createPersonalSyncOperation(currentShareToken);
-
-    setConfirmState({
-      isOpen: true,
-      title: "清空私人云端备份",
-      message:
-        "将删除当前访问口令下的私人云书籍与进度；本机书架不删除。此操作不可撤销。",
-      isDanger: true,
-      onConfirm: async () => {
-        if (
-          syncMutexRef.current ||
-          currentShareTokenRef.current !== operation.shareToken
-        ) {
-          throw new Error("同步状态或访问口令已变更，本次清空未执行。");
-        }
-        syncMutexRef.current = true;
-        const inventoryGeneration = invalidateCloudInventory();
-        try {
-          await operation.api.clearBooks();
-          const remaining = await operation.api.listBooks();
-          if (remaining.length > 0) {
-            throw new Error("REMOTE_CLEAR_READBACK_NOT_EMPTY");
-          }
-          setToastMsg("私人云端已清空，并完成空库核验。", "success");
-          commitCloudInventory(operation.shareToken, inventoryGeneration, []);
-        } catch (err) {
-          console.error("清空云端备份失败:", err);
-          throw new Error("清空后未能完成云端回读核验，请稍后重试。");
-        } finally {
-          syncMutexRef.current = false;
-        }
-      },
-    });
-  };
-
-  const handleCopyPoeticKey = () => {
-    if (!currentShareToken) return;
-    navigator.clipboard
-      .writeText(currentShareToken)
-      .then(() => {
-        setToastMsg(strings.sync.shareCopySuccess, "success");
-      })
-      .catch((err) => {
-        console.error("复制访问口令失败", err);
-        setToastMsg("复制失败，请手动复制访问口令。", "danger");
-      });
-  };
 
   // 拉取云端书籍列表
   const fetchCloudBooks = useCallback(async () => {
@@ -1071,6 +923,45 @@ export function LibraryDefault({
     void fetchCloudBooks();
   }, [cloudInventoryReloadNonce, fetchCloudBooks]);
 
+  // 设置页改动同步配置（绑定/解绑口令、清空云端）后广播事件；
+  // 书架为 keep-alive 常驻视图，需据此重新读取口令并重新核验云端书目。
+  useEffect(() => {
+    const handleSyncConfigChange = () => {
+      const nextToken = normalizeShareToken(
+        window.localStorage.getItem("reader-share-token"),
+      );
+      currentShareTokenRef.current = nextToken;
+      setCurrentShareToken(nextToken);
+      setCloudBooks([]);
+      invalidateCloudInventory();
+      setCloudInventoryReloadNonce((nonce) => nonce + 1);
+    };
+    window.addEventListener(SYNC_CONFIG_EVENT, handleSyncConfigChange);
+    return () => {
+      window.removeEventListener(SYNC_CONFIG_EVENT, handleSyncConfigChange);
+    };
+  }, [invalidateCloudInventory]);
+
+  // 把同步进行状态广播给设置页的同步卡片（书架不再自行渲染同步版块）；
+  // 并响应设置页的重播请求，避免其刚打开时读到过期的默认状态。
+  useEffect(() => {
+    const broadcastSyncStatus = () => {
+      window.dispatchEvent(
+        new CustomEvent(SYNC_STATUS_EVENT, {
+          detail: { isSyncing, syncStepText, syncProgress },
+        }),
+      );
+    };
+    broadcastSyncStatus();
+    window.addEventListener(SYNC_STATUS_REQUEST_EVENT, broadcastSyncStatus);
+    return () => {
+      window.removeEventListener(
+        SYNC_STATUS_REQUEST_EVENT,
+        broadcastSyncStatus,
+      );
+    };
+  }, [isSyncing, syncStepText, syncProgress]);
+
   // 双向一键智能同步中心（支持多进程分布式互斥、最深阅读进度对碰与细粒度容错隔离）
   const handleDualSync = async (isSilent: boolean = false) => {
     if (isSyncing || !isOnline) return;
@@ -1087,17 +978,8 @@ export function LibraryDefault({
           "使用旧版私人云同步前，需要先设置访问口令。当前同步不是端到端加密，请只连接你信任的服务。现在打开设置吗？",
         isDanger: false,
         onConfirm: () => {
-          setShowSyncConfig(true);
-          setTimeout(() => {
-            const el = document.getElementById("mo-wen-mi-ge-panel");
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "center" });
-              const inputEl = el.querySelector("input");
-              if (inputEl) {
-                (inputEl as HTMLInputElement).focus();
-              }
-            }
-          }, 150);
+          // 同步配置已迁移至设置页的「私人云同步」卡片
+          router.push("/settings");
         },
       });
       return;
@@ -1616,7 +1498,22 @@ export function LibraryDefault({
     }
   };
 
-  // 单书快捷备份 (细粒度隔离进度状态)
+  // 设置页「立即双向同步」按钮通过事件请求同步：同步引擎依赖书架的本机书目
+  // 与阅读进度，因此仍由常驻书架执行；用 ref 承接最新实现避免频繁重绑监听。
+  const handleDualSyncRef = useRef(handleDualSync);
+  useEffect(() => {
+    handleDualSyncRef.current = handleDualSync;
+  });
+  useEffect(() => {
+    const handleSyncTrigger = () => {
+      void handleDualSyncRef.current(false);
+    };
+    window.addEventListener(SYNC_TRIGGER_EVENT, handleSyncTrigger);
+    return () => {
+      window.removeEventListener(SYNC_TRIGGER_EVENT, handleSyncTrigger);
+    };
+  }, []);
+
   // 单书快捷备份 (细粒度隔离进度状态)
   const handleSingleUpload = async (
     book: Book,
@@ -2374,240 +2271,6 @@ export function LibraryDefault({
           </div>
         </section>
       )}
-
-      <section
-        data-library-sync
-        className="ui-card relative mt-5 overflow-hidden p-5"
-      >
-        <SyncStatusBar
-          isOnline={isOnline}
-          isSyncing={isSyncing}
-          hasShareToken={Boolean(currentShareToken)}
-          syncStepText={syncStepText}
-          onOpenSettings={() => setShowSyncConfig((open) => !open)}
-          onSync={() => handleDualSync(false)}
-        />
-
-        {showSyncConfig && (
-          <div className="mt-4 pt-4 border-t border-[rgba(80,65,45,0.08)] space-y-4 animate-fade-in relative z-10">
-            {/* 启动自动云同步 */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
-                  <Cloud
-                    aria-hidden="true"
-                    className="h-[18px] w-[18px]"
-                    strokeWidth={1.75}
-                  />
-                  {strings.sync.autoSyncStartupLabel}
-                </label>
-                <p className="mt-1 text-xs leading-5 text-[var(--ui-muted)]">
-                  {strings.sync.autoSyncStartupDesc}
-                </p>
-              </div>
-              <button
-                onClick={() => setAutoSyncOnStartup(!autoSyncOnStartup)}
-                disabled={!isOnline}
-                aria-label={strings.sync.autoSyncStartupLabel}
-                aria-pressed={autoSyncOnStartup}
-                className={`ui-focus-ring relative inline-flex h-11 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent p-0.5 transition-colors duration-200 ease-in-out ${
-                  autoSyncOnStartup && isOnline
-                    ? "bg-[var(--ui-accent)]"
-                    : "bg-gray-200"
-                } ${!isOnline ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    autoSyncOnStartup && isOnline
-                      ? "translate-x-4"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* 阅读翻页自动备份 */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
-                  <BookOpen
-                    aria-hidden="true"
-                    className="h-[18px] w-[18px]"
-                    strokeWidth={1.75}
-                  />
-                  {strings.sync.autoSyncProgressLabel}
-                </label>
-                <p className="mt-1 text-xs leading-5 text-[var(--ui-muted)]">
-                  {strings.sync.autoSyncProgressDesc}
-                </p>
-              </div>
-              <button
-                onClick={() =>
-                  setAutoSyncProgressOnReading(!autoSyncProgressOnReading)
-                }
-                disabled={!isOnline}
-                aria-label={strings.sync.autoSyncProgressLabel}
-                aria-pressed={autoSyncProgressOnReading}
-                className={`ui-focus-ring relative inline-flex h-11 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent p-0.5 transition-colors duration-200 ease-in-out ${
-                  autoSyncProgressOnReading && isOnline
-                    ? "bg-[var(--ui-accent)]"
-                    : "bg-gray-200"
-                } ${!isOnline ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    autoSyncProgressOnReading && isOnline
-                      ? "translate-x-4"
-                      : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="pt-4 border-t border-[rgba(80,65,45,0.06)] flex flex-col gap-3.5">
-              <div className="flex-1 min-w-0">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ui-text)]">
-                  <KeyRound
-                    aria-hidden="true"
-                    className="h-[18px] w-[18px]"
-                    strokeWidth={1.75}
-                  />
-                  {strings.sync.shareTitle}
-                </label>
-                <p className="mt-1 text-xs leading-5 text-[var(--ui-muted)]">
-                  {strings.sync.shareDesc}
-                </p>
-              </div>
-
-              <div
-                id="mo-wen-mi-ge-panel"
-                className="relative space-y-3 overflow-hidden rounded-[var(--radius-card)] border border-[var(--ui-border)] bg-[var(--ui-surface-muted)] p-4"
-              >
-                <div className="flex flex-col gap-1.5 relative z-10">
-                  <label
-                    className="text-xs font-semibold text-[var(--ui-muted)]"
-                    htmlFor="private-cloud-access-token"
-                  >
-                    {strings.sync.shareKeyLabel}
-                  </label>
-
-                  <div className="flex gap-2">
-                    <input
-                      id="private-cloud-access-token"
-                      type="text"
-                      value={shareTokenInput}
-                      onChange={(e) => setShareTokenInput(e.target.value)}
-                      placeholder={strings.sync.shareKeyPlaceholder}
-                      className="ui-focus-ring min-h-11 min-w-0 flex-1 rounded-[var(--radius-field)] border border-[rgba(139,115,85,0.2)] bg-white/60 px-3 text-sm text-[var(--ui-text)] placeholder-[var(--ui-quiet)] transition-colors focus:border-[var(--ui-accent)] dark:bg-black/30"
-                    />
-                    {currentShareToken &&
-                    currentShareToken === shareTokenInput.trim() ? (
-                      <button
-                        onClick={handleCopyPoeticKey}
-                        aria-label="复制私人云访问口令"
-                        className="ui-focus-ring flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] border border-[rgba(139,115,85,0.25)] bg-white/40 px-3 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white/80"
-                        title="复制访问口令"
-                      >
-                        <Copy
-                          aria-hidden="true"
-                          className="h-[18px] w-[18px]"
-                          strokeWidth={1.75}
-                        />
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-1 relative z-10">
-                  <button
-                    onClick={handleGeneratePoeticKey}
-                    className="ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] border border-[rgba(139,115,85,0.25)] bg-[rgba(139,115,85,0.06)] px-3 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-[rgba(139,115,85,0.12)]"
-                  >
-                    <KeyRound
-                      aria-hidden="true"
-                      className="h-[18px] w-[18px]"
-                      strokeWidth={1.75}
-                    />
-                    {strings.sync.shareGenerateBtn}
-                  </button>
-
-                  <div className="flex-1" />
-
-                  {/* 动作按钮 */}
-                  {currentShareToken ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleClearCloudBooks}
-                        disabled={!isOnline}
-                        className={`ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 px-3 text-sm font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 ${
-                          !isOnline ? "opacity-40 cursor-not-allowed" : ""
-                        }`}
-                        title="清空此访问口令对应的云端书籍和阅读记录"
-                      >
-                        <Trash2
-                          aria-hidden="true"
-                          className="h-[18px] w-[18px]"
-                          strokeWidth={1.75}
-                        />
-                        清空云端备份
-                      </button>
-                      <button
-                        onClick={handleClearShareToken}
-                        className="ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] bg-[var(--color-warning)]/90 px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-warning)]"
-                      >
-                        <Link2
-                          aria-hidden="true"
-                          className="h-[18px] w-[18px]"
-                          strokeWidth={1.75}
-                        />
-                        {strings.sync.shareClearBtn}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleBindShareToken}
-                      disabled={!shareTokenInput.trim()}
-                      title={
-                        !shareTokenInput.trim()
-                          ? "请先在上方输入同步口令"
-                          : "绑定并启用私人云同步"
-                      }
-                      className={`ui-focus-ring flex min-h-11 min-w-11 items-center gap-1 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--ui-accent-hover)] ${
-                        !shareTokenInput.trim()
-                          ? "opacity-40 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      <Link2
-                        aria-hidden="true"
-                        className="h-[18px] w-[18px]"
-                        strokeWidth={1.75}
-                      />
-                      {strings.sync.shareBindBtn}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 300ms 黄金阻尼微百分比进度加载条 */}
-        {isSyncing && !syncingBookId && (
-          <div className="mt-4 pt-3 border-t border-[rgba(80,65,45,0.06)] relative z-10">
-            <div className="mb-1.5 flex justify-between text-xs font-semibold text-[var(--ui-muted)]">
-              <span>{syncStepText}</span>
-              <span>{syncProgress}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(80,65,45,0.06)] relative">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-[var(--ui-accent)] via-[#81a073] to-[#9a6a3a] transition-[width] duration-300 ease-out"
-                style={{ width: `${syncProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </section>
 
       <section className="mt-7" data-library-shelf>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

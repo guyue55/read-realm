@@ -13,6 +13,7 @@ import { AppShell } from "@/components/AppShell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { SettingsCard } from "@/components/settings/SettingsCard";
+import { SyncSettingsCard } from "@/components/settings/SyncSettingsCard";
 import {
   createDefaultUrlFetchPreference,
   parseUrlFetchPreference,
@@ -364,6 +365,8 @@ export default function SettingsPage() {
             </button>
           </div>
         </SettingsCard>
+
+        <SyncSettingsCard />
 
         <SettingsCard hoverable={false}>
           <div className="mb-4">

@@ -174,9 +174,16 @@ test("340px shelf exposes first-use sync, unclipped menus, and the registered UI
   await seedSmallMixedShelf(page);
   await page.reload();
 
-  await expect(page.locator("[data-library-sync]")).toBeVisible();
-  await page.getByRole("button", { name: /私人云同步设置/u }).click();
+  // 同步版块已迁移至设置页：书架首屏保持整洁，设置页仍可达同步配置
+  await expect(page.locator("[data-library-sync]")).toHaveCount(0);
+  await page.goto("/#/settings");
+  await expect(page.getByRole("heading", { name: "私人云同步" })).toBeVisible();
   await expect(page.getByLabel("私人云访问口令")).toBeVisible();
+  // 手动同步入口随版块一并迁移到设置页
+  await expect(
+    page.getByRole("button", { name: "立即双向同步" }),
+  ).toBeVisible();
+  await page.goto("/#/library");
 
   const fontFacts = await page.evaluate(() => ({
     rootToken: getComputedStyle(document.documentElement)
@@ -266,12 +273,8 @@ test("500-book shelf stays bounded across views, pages, mobile, and offline", as
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
 
-  await page.getByRole("button", { name: /私人云同步设置/u }).click();
-  await expectVisibleTouchTargets(
-    page.locator(
-      "[data-library-sync] button, [data-library-sync] input, [data-library-sync] select",
-    ),
-  );
+  // 同步版块已迁移至设置页，书架首屏不再包含同步区块
+  await expect(page.locator("[data-library-sync]")).toHaveCount(0);
   const firstVisibleBook = cards.first();
   const firstBookMenu = firstVisibleBook.getByRole("button", {
     name: /操作菜单/u,
@@ -484,7 +487,8 @@ test("an older same-key inventory cannot overwrite a verified cloud clear", asyn
   });
 
   await page.goto("/#/library?view=list");
-  await page.getByRole("button", { name: /私人云同步设置/u }).click();
+  // 同步配置已迁移至设置页：清空云端备份在设置页执行
+  await page.goto("/#/settings");
   await page.getByRole("button", { name: /清空云端备份/u }).click();
   const dialog = page.getByRole("dialog", { name: /清空私人云端备份/u });
   await dialog.getByRole("button", { name: "确认", exact: true }).click();
@@ -493,6 +497,9 @@ test("an older same-key inventory cannot overwrite a verified cloud clear", asyn
 
   releaseOldInventory();
   await page.waitForTimeout(250);
+  // 回到书架：设置页清空云端后广播 SYNC_CONFIG_EVENT，
+  // 常驻书架据此重新核验云端书目，无需整页刷新
+  await page.goto("/#/library");
   await expect(page.locator("[data-library-shelf] [data-book-id]")).toHaveCount(
     0,
   );

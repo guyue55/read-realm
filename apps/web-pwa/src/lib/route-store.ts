@@ -20,6 +20,30 @@ const listeners = new Set<() => void>();
 // 内存中常驻的滚动位置记忆字典，key 为 view 标识符，value 为滚动高度
 export const viewScrollMemory: Record<string, number> = {};
 export const ROUTE_CONTEXT_EVENT = "reading-world-route-context";
+/**
+ * 私人云同步配置变更事件。
+ *
+ * 同步版块位于设置页，而书架是 keep-alive 常驻视图：设置页改写
+ * localStorage 时，书架中的同源状态不会自动更新（同文档内修改 localStorage
+ * 不触发 storage 事件）。设置页在绑定/解绑口令或清空云端后广播本事件，
+ * 书架据此重新读取口令并重新核验云端书目。
+ */
+export const SYNC_CONFIG_EVENT = "reading-world-sync-config";
+/**
+ * 设置页请求「立即双向同步」的事件。同步引擎依赖书架的本机书目与进度，
+ * 因此由常驻书架监听本事件执行，设置页只负责发起。
+ */
+export const SYNC_TRIGGER_EVENT = "reading-world-sync-trigger";
+/**
+ * 书架把同步进行状态（是否同步中 / 步骤文案 / 进度百分比）广播给设置页，
+ * 供设置页的同步卡片回显进度。detail 为 { isSyncing, syncStepText, syncProgress }。
+ */
+export const SYNC_STATUS_EVENT = "reading-world-sync-status";
+/**
+ * 设置页挂载时请求书架重播一次当前同步状态（状态广播只在变化时触发，
+ * 避免设置页刚打开时读到过期的「未同步」默认值）。
+ */
+export const SYNC_STATUS_REQUEST_EVENT = "reading-world-sync-status-request";
 
 const VIEW_SCROLL_STORAGE_PREFIX = "reading_world_view_scroll:";
 const VIEW_FOCUS_STORAGE_PREFIX = "reading_world_view_focus:";
