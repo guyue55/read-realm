@@ -166,7 +166,7 @@ export function GlobalChrome() {
             <Link
               aria-current={active ? "page" : undefined}
               aria-label={item.term.plain}
-              className={`ui-focus-ring flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 text-xs font-semibold transition-colors ${
+              className={`ui-focus-ring flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 text-xs font-semibold transition-colors ${
                 active
                   ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                   : "text-[var(--color-muted)] hover:text-[var(--color-text)]"

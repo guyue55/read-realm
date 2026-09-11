@@ -302,7 +302,7 @@ export default function SettingsPage() {
       rightNodes={
         <button
           onClick={handleReset}
-          className="ui-focus-ring rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-all hover:bg-white hover:text-[var(--ui-accent)] flex items-center gap-1.5 shadow-sm active:scale-95 duration-200"
+          className="ui-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 text-sm font-semibold text-[var(--ui-text)] transition-all hover:bg-white hover:text-[var(--ui-accent)] shadow-sm active:scale-95 duration-200"
         >
           <span>⚙</span> 重置默认
         </button>
@@ -380,12 +380,12 @@ export default function SettingsPage() {
               type="button"
               onClick={() => void handleCreateBackup()}
               disabled={backupStatus.state === "working"}
-              className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
               下载完整备份包
             </button>
             <label
-              className={`ui-focus-ring flex min-h-11 items-center rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold ${backupStatus.state === "working" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+              className={`ui-focus-ring flex min-h-11 items-center rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold ${backupStatus.state === "working" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
             >
               选择备份恢复
               <input
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                   type="button"
                   aria-pressed={restoreMode === "copy"}
                   onClick={() => setRestoreMode("copy")}
-                  className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "copy" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                  className={`ui-focus-ring min-h-11 rounded-[var(--radius-card)] border px-4 py-3 text-left text-sm ${restoreMode === "copy" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
                 >
                   <span className="block font-bold">空库副本恢复</span>
                   <span className="mt-1 block text-[var(--ui-muted)]">
@@ -480,7 +480,7 @@ export default function SettingsPage() {
                   type="button"
                   aria-pressed={restoreMode === "merge"}
                   onClick={() => setRestoreMode("merge")}
-                  className={`ui-focus-ring min-h-11 rounded-xl border px-4 py-3 text-left text-sm ${restoreMode === "merge" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                  className={`ui-focus-ring min-h-11 rounded-[var(--radius-card)] border px-4 py-3 text-left text-sm ${restoreMode === "merge" ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
                 >
                   <span className="block font-bold">合并当前书架</span>
                   <span className="mt-1 block text-[var(--ui-muted)]">
@@ -520,7 +520,7 @@ export default function SettingsPage() {
                                   [conflict.key]: choice,
                                 }))
                               }
-                              className={`ui-focus-ring min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold ${mergeResolutions[conflict.key] === choice ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
+                              className={`ui-focus-ring min-h-11 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${mergeResolutions[conflict.key] === choice ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-[var(--ui-border)] bg-white/70"}`}
                             >
                               {choice === "keep-existing"
                                 ? "保留现有"
@@ -538,7 +538,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => void handleConfirmPortableRestore()}
                   disabled={backupStatus.state === "working"}
-                  className="ui-focus-ring min-h-11 rounded-xl bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
+                  className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] bg-[var(--ui-accent)] px-4 py-2 text-sm font-bold text-white"
                 >
                   {restoreMode === "merge"
                     ? "确认合并并校验"
@@ -556,7 +556,7 @@ export default function SettingsPage() {
                       message: "已取消恢复，书架未发生变化。",
                     });
                   }}
-                  className="ui-focus-ring min-h-11 rounded-xl border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold"
+                  className="ui-focus-ring min-h-11 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-bold"
                 >
                   取消
                 </button>

@@ -1434,7 +1434,7 @@ export default function ImportPage() {
                 setActiveMode("single");
                 setStatus("等待导入");
               }}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+              className={`inline-flex min-h-11 items-center rounded-full px-4 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "single"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
@@ -1448,7 +1448,7 @@ export default function ImportPage() {
                 setActiveMode("batch");
                 setStatus("等待导入");
               }}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+              className={`inline-flex min-h-11 items-center rounded-full px-4 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "batch"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
@@ -1462,7 +1462,7 @@ export default function ImportPage() {
                 setActiveMode("folder");
                 setStatus("等待导入");
               }}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+              className={`inline-flex min-h-11 items-center rounded-full px-4 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "folder"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
@@ -1476,7 +1476,7 @@ export default function ImportPage() {
                 setActiveMode("url");
                 setStatus("等待导入");
               }}
-              className={`rounded-full px-4 py-1.5 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
+              className={`inline-flex min-h-11 items-center rounded-full px-4 font-semibold transition-all duration-300 physics-spring hover:scale-[1.03] active:scale-[0.97] ${
                 activeMode === "url"
                   ? "bg-[var(--ui-accent)] text-white shadow-sm"
                   : "text-[var(--ui-muted)] hover:text-[var(--ui-text)]"
@@ -1664,7 +1664,7 @@ export default function ImportPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={handleFolderSelect}
-                        className="rounded-full bg-white px-3 py-1 text-[10px] hover:bg-white/80"
+                        className="inline-flex min-h-11 items-center rounded-full bg-white px-3 text-xs hover:bg-white/80"
                       >
                         重新绑定目录
                       </button>
@@ -1695,13 +1695,13 @@ export default function ImportPage() {
                       onClick={() => {
                         void abandonFolderImport();
                       }}
-                      className="rounded-full border border-[var(--ui-border)] bg-white px-5 py-2 text-xs font-bold text-[var(--ui-muted)]"
+                      className="inline-flex min-h-11 items-center rounded-full border border-[var(--ui-border)] bg-white px-5 text-xs font-bold text-[var(--ui-muted)]"
                     >
                       清空放弃
                     </button>
                     <button
                       onClick={commitFolderImport}
-                      className="rounded-full bg-[var(--ui-accent)] px-6 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#527047]"
+                      className="inline-flex min-h-11 items-center rounded-full bg-[var(--ui-accent)] px-6 text-xs font-bold text-white shadow-sm hover:bg-[#527047]"
                     >
                       🖋 一键入阁
                     </button>
@@ -1839,7 +1839,7 @@ export default function ImportPage() {
                       href={manualAssist.openUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-full bg-[var(--ui-accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#527047]"
+                      className="inline-flex min-h-11 items-center rounded-full bg-[var(--ui-accent)] px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#527047]"
                     >
                       在新窗口打开
                     </a>
@@ -1868,7 +1868,7 @@ export default function ImportPage() {
                       type="button"
                       onClick={handleManualAssistPaste}
                       disabled={isProcessing}
-                      className="mt-2 rounded-full bg-[#8C6239] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7A5430] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="mt-2 inline-flex min-h-11 items-center rounded-full bg-[#8C6239] px-5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7A5430] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isProcessing ? "导入中…" : "粘贴内容继续导入"}
                     </button>

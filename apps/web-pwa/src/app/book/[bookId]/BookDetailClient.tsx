@@ -248,7 +248,7 @@ export default function BookDetailPage({
           <div className="flex flex-wrap gap-4 mb-10">
             <button
               onClick={() => router.push(`/reader/${book.id}`)}
-              className="px-8 py-3 rounded-[12px] font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
+              className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-8 py-3 font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
               style={{
                 backgroundColor: colors.accent,
                 color: book.format === "epub" ? "#fff" : colors.bgGradStart,
@@ -259,7 +259,7 @@ export default function BookDetailPage({
             {canClearCache && (
               <button
                 onClick={() => setShowCacheSheet(true)}
-                className="px-6 py-3 border rounded-[8px] font-bold hover:bg-white/20 active:scale-95 transition-all"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-6 py-3 font-bold hover:bg-white/20 active:scale-95 transition-all"
                 style={{ borderColor: colors.border, color: colors.text }}
               >
                 缓存管理
@@ -375,7 +375,7 @@ export default function BookDetailPage({
                     void checkUrlSource("manual");
                   }}
                   disabled={sourceChecking}
-                  className="ui-focus-ring min-h-11 shrink-0 rounded-full border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
+                  className="ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border bg-white/70 px-4 text-sm font-semibold disabled:opacity-50"
                   style={{ borderColor: colors.border, color: colors.text }}
                 >
                   {sourceChecking ? "检查中…" : "立即检查"}
@@ -429,7 +429,7 @@ export default function BookDetailPage({
                           ) as SourceCheckPreference["intervalHours"],
                         });
                       }}
-                      className="rounded-full border bg-white/80 px-3 py-1.5"
+                      className="min-h-11 rounded-[var(--radius-control)] border bg-white/80 px-3"
                       style={{ borderColor: colors.border, color: colors.text }}
                     >
                       <option value={6}>6 小时</option>
@@ -470,7 +470,7 @@ export default function BookDetailPage({
               </h2>
               <button
                 onClick={() => setShowCacheSheet(false)}
-                className="w-8 h-8 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-muted)] flex items-center justify-center hover:bg-[var(--color-border)] transition-colors"
+                className="h-11 w-11 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-muted)] flex items-center justify-center hover:bg-[var(--color-border)] transition-colors"
               >
                 ✕
               </button>
@@ -497,7 +497,7 @@ export default function BookDetailPage({
               <div className="space-y-4">
                 <button
                   onClick={handleClearCache}
-                  className="w-full py-3.5 border border-[var(--color-danger)] text-[var(--color-danger)] bg-[var(--color-danger-soft)] hover:bg-[var(--color-danger)] hover:text-white active:scale-[0.98] font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5"
+                  className="w-full min-h-11 border border-[var(--color-danger)] text-[var(--color-danger)] bg-[var(--color-danger-soft)] hover:bg-[var(--color-danger)] hover:text-white active:scale-[0.98] font-bold rounded-[var(--radius-control)] text-sm transition-all flex items-center justify-center gap-1.5"
                 >
                   🗑️ 清空章节本地正文缓存
                 </button>

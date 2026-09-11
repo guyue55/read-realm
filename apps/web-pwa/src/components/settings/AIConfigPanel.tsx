@@ -104,7 +104,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
 
       {!aiStatus.available && (
         <div
-          className={`text-xs ${mutedText} leading-relaxed p-3 rounded-lg ${inputBg} border`}
+          className={`text-xs ${mutedText} leading-relaxed p-3 rounded-[var(--radius-field)] ${inputBg} border`}
         >
           尚未配置 AI 服务。请输入你的 OpenAI 兼容 API 密钥以启用 AI 伴读功能。
           密钥仅在你的设备本地加密保存，不会上传到服务器。
@@ -122,11 +122,11 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
-              className={`w-full min-h-11 px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} pr-16 focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
+              className={`w-full min-h-11 px-3 py-2 text-sm rounded-[var(--radius-field)] border ${inputBg} ${textColor} pr-16 focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
             />
             <button
               onClick={() => setShowKey(!showKey)}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs ${mutedText} hover:opacity-80 px-2 py-1`}
+              className={`absolute inset-y-0 right-0 flex items-center rounded-r-[var(--radius-field)] px-3 text-xs font-semibold ${mutedText} hover:opacity-80`}
             >
               {showKey ? "隐藏" : "显示"}
             </button>
@@ -142,7 +142,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://api.openai.com/v1"
-            className={`w-full min-h-11 px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
+            className={`w-full min-h-11 px-3 py-2 text-sm rounded-[var(--radius-field)] border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
           />
           <p className={`text-[10px] ${mutedText} mt-1`}>
             支持任何 OpenAI 兼容 API（如 DeepSeek、Moonshot 等）
@@ -158,7 +158,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="gpt-3.5-turbo"
-            className={`w-full min-h-11 px-3 py-2 text-sm rounded-lg border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
+            className={`w-full min-h-11 px-3 py-2 text-sm rounded-[var(--radius-field)] border ${inputBg} ${textColor} focus:outline-none focus:border-[var(--color-primary)] transition-colors`}
           />
         </div>
       </div>
@@ -167,7 +167,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
         <button
           onClick={handleSave}
           disabled={saving || !apiKey.trim()}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex-1 flex min-h-11 items-center justify-center rounded-[var(--radius-control)] text-sm font-semibold transition-all ${
             saving || !apiKey.trim()
               ? "bg-[var(--color-surface-muted)] text-[var(--color-muted)] cursor-not-allowed"
               : status === "saved"
@@ -180,7 +180,7 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
         {apiKey && (
           <button
             onClick={handleDelete}
-            className="px-4 py-2 rounded-lg text-sm font-medium border border-[var(--color-warning)]/30 text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10 active:scale-[0.98] transition-all"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--color-warning)]/30 px-4 text-sm font-medium text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10 active:scale-[0.98] transition-all"
           >
             清除
           </button>

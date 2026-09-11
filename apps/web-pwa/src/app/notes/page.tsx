@@ -210,7 +210,7 @@ export default function NotesPage() {
                         `/reader/${note.bookId}?chapter=${note.chapterIndex}&bookmarkId=${note.id}`,
                       )
                     }
-                    className="ui-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] px-3 py-1 font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]"
+                    className="ui-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-3 font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]"
                   >
                     查看原文
                   </button>

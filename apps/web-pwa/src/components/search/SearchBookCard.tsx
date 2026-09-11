@@ -80,19 +80,19 @@ export function SearchBookCard({
       </div>
 
       {/* 云端一键同步批量拉取入库控制钮 */}
-      <div className="w-full shrink-0 sm:w-auto">
+      <div className="shrink-0">
         {action === "read" ? (
           <button
             type="button"
             onClick={() => onRead(book.id)}
-            className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] shadow-sm transition-colors hover:bg-[var(--ui-accent)] hover:text-white sm:w-auto"
+            className="ui-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--ui-accent)] bg-[var(--ui-accent-soft)] px-4 py-2 text-xs font-bold text-[var(--ui-accent)] shadow-sm transition-colors hover:bg-[var(--ui-accent)] hover:text-white"
           >
             去阅读
           </button>
         ) : action === "importing" ? (
           <div
             role="status"
-            className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)]/70 px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none sm:w-auto"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-primary)]/25 bg-[var(--color-primary-soft)]/70 px-4 py-2 text-xs font-bold text-[var(--ui-accent)] select-none"
           >
             <svg
               className="animate-spin h-3.5 w-3.5 text-[var(--ui-accent)]"
@@ -120,7 +120,7 @@ export function SearchBookCard({
           <button
             type="button"
             onClick={() => onImport?.(book)}
-            className="ui-focus-ring min-h-11 w-full rounded-full border border-[var(--ui-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--ui-text)] shadow-sm transition-colors hover:border-[var(--ui-accent)] hover:bg-white hover:text-[var(--ui-accent)] sm:w-auto"
+            className="ui-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white px-4 py-2 text-xs font-bold text-[var(--ui-text)] shadow-sm transition-colors hover:border-[var(--ui-accent)] hover:bg-white hover:text-[var(--ui-accent)]"
           >
             拉取入库
           </button>

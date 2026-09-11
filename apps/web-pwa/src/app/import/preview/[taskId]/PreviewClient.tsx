@@ -251,14 +251,14 @@ export default function PreviewPage({
         <>
           <button
             onClick={handleDiscard}
-            className="ui-focus-ring hidden rounded-full border border-[var(--ui-border)] bg-white/70 px-4 py-2 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white sm:inline-flex"
+            className="ui-focus-ring hidden min-h-11 items-center rounded-full border border-[var(--ui-border)] bg-white/70 px-4 text-sm font-semibold text-[var(--ui-text)] transition-colors hover:bg-white sm:inline-flex"
           >
             放弃
           </button>
           <button
             onClick={handleConfirm}
             disabled={saving}
-            className="ui-focus-ring rounded-full bg-[var(--ui-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
+            className="ui-focus-ring inline-flex min-h-11 items-center rounded-full bg-[var(--ui-accent)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#527047] disabled:opacity-50"
           >
             {saving
               ? "保存中..."

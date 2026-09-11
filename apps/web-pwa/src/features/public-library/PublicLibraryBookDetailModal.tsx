@@ -426,7 +426,7 @@ export function PublicLibraryBookDetailModal({
                 {loadError}
               </p>
               <button
-                className="ui-focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3.5 py-1.5 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+                className="ui-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--color-border)] px-3.5 text-xs font-medium text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
                 onClick={() => {
                   setLoadingPackage(true);
                   setLoadError("");
@@ -537,7 +537,7 @@ export function PublicLibraryBookDetailModal({
                 <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-muted)]" />
                   <input
-                    className="ui-input w-full rounded-lg py-1.5 pl-8 pr-7 text-xs"
+                    className="ui-input min-h-11 w-full rounded-[var(--radius-control)] pl-8 pr-7 text-xs"
                     onChange={(e) => setTocSearch(e.target.value)}
                     placeholder="搜索目录章节…"
                     type="text"
@@ -556,7 +556,7 @@ export function PublicLibraryBookDetailModal({
                 </div>
 
                 <button
-                  className="ui-focus-ring inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                  className="ui-focus-ring inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border border-[var(--color-border)] px-2.5 text-xs text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   onClick={() => setIsTocReverse((v) => !v)}
                   title={isTocReverse ? "切换为正序" : "切换为倒序"}
                   type="button"
