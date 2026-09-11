@@ -14,6 +14,7 @@ import { ReaderContent } from "@/components/reader/ReaderContent";
 import { ReaderDialogSurface } from "@/components/reader/ReaderDialogSurface";
 import { ReaderProgressRange } from "@/components/reader/ReaderProgressRange";
 import { useReader } from "@/hooks/useReader";
+import { useProgressCloudBackup } from "@/hooks/useProgressCloudBackup";
 import { readerTokens } from "@reader/shared-types";
 import { useVirtualRouter } from "@/lib/route-store";
 import {
@@ -112,6 +113,9 @@ export function ReaderDefault({ bookId }: { bookId: string }) {
     regrantPermission,
     sourceFolderId,
   } = useReader(bookId);
+
+  // 阅读翻页自动备份：本地进度落库后延迟 3 秒上报私人云（设置页开关控制）
+  useProgressCloudBackup(progressSaveStatus);
 
   const [selectionRect, setSelectionRect] = useState<DOMRect | null>(null);
   const [selectedText, setSelectedText] = useState("");
