@@ -8,6 +8,7 @@ import {
   type ImportTask,
 } from "@reader/storage-core";
 import { useVirtualRouter } from "@/lib/route-store";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { QualityBadge, analyzeChapterQuality } from "@/components/QualityBadge";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
@@ -42,8 +43,9 @@ export default function PreviewPage({
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) window.location.replace(redirect);
     }
   }, []);
 

@@ -18,6 +18,7 @@ import {
 } from "@reader/shared-types";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatePanel } from "@/components/ui/StatePanel";
 import { StatusNotice } from "@/components/ui/StatusNotice";
@@ -123,11 +124,8 @@ export default function PublicLibraryPage() {
   };
 
   useEffect(() => {
-    if (window.location.pathname !== "/") {
-      window.location.replace(
-        `/#${window.location.pathname}${window.location.search}`,
-      );
-    }
+    const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+    if (redirect) window.location.replace(redirect);
   }, []);
 
   useEffect(() => {

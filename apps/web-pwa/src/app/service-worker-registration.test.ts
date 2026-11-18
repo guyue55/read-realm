@@ -10,8 +10,11 @@ describe("离线服务注册", () => {
     );
 
     expect(source).toContain('process.env.NODE_ENV !== "production"');
-    expect(source).toContain('.getRegistration("/")');
-    expect(source).toContain('register(SERVICE_WORKER_URL, { scope: "/" })');
-    expect(source).toContain('const SERVICE_WORKER_URL = "/sw.js"');
+    expect(source).toContain('.getRegistration(SERVICE_WORKER_SCOPE)');
+    expect(source).toContain(
+      "register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE })",
+    );
+    expect(source).toContain('const SERVICE_WORKER_URL = withBasePath("/sw.js")');
+    expect(source).toContain("const SERVICE_WORKER_SCOPE = swScope()");
   });
 });

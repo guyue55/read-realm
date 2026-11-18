@@ -4,6 +4,7 @@ import "./globals.css";
 import { OfflineBadge } from "@/components/OfflineBadge";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { AppToastProvider } from "@/components/ui/AppToast";
+import { withBasePath } from "@/lib/base-path";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,7 +20,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "墨问｜我的阅读世界",
   description: "本地优先的中文阅读、笔记与书架管理工具",
-  manifest: "/manifest.json",
+  manifest: withBasePath("/manifest.json"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

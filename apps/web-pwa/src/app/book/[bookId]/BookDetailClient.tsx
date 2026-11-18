@@ -7,6 +7,7 @@ import { SkeletonLoader } from "@/components/SkeletonLoader";
 import { extractColorsFromTitle } from "@/lib/color-extraction";
 import { describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { parseAuthorizedUrlSource } from "@/lib/url-source-client";
 import {
   createDefaultSourceCheckPreference,
@@ -45,10 +46,9 @@ export default function BookDetailPage({
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(
-        `/#${window.location.pathname}${window.location.search}`,
-      );
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) window.location.replace(redirect);
     }
   }, []);
 

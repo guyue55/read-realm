@@ -7,6 +7,7 @@ import { PageLayout } from "@/components/PageLayout";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useVirtualRouter } from "@/lib/route-store";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { filterNotes, type NoteWithBook } from "@/features/notes/notes-filter";
 import { notesService } from "@/features/notes/dexie-notes";
 
@@ -22,8 +23,9 @@ export default function NotesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Bookmark | null>(null);
 
   useEffect(() => {
-    if (window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
+    const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+    if (redirect) {
+      window.location.replace(redirect);
       return;
     }
     void notesService

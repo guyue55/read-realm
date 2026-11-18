@@ -1,0 +1,85 @@
+name: Deploy to GitHub Pages
+
+# GitHub Pages 项目站（https://<owner>.github.io/<repo>/）静态部署。
+# 关键点：
+#   1. NEXT_PUBLIC_BASE_PATH=/read-realm 同时驱动 Next 的 basePath/assetPrefix
+#      与前端 base-path.ts 的绝对路径前缀，必须与仓库名一致；
+#   2. 用户站（部署到根域）把 NEXT_PUBLIC_BASE_PATH 置空即可，其余无需改动；
+#   3. Pages 源需在仓库 Settings → Pages → Build and deployment 选
+#      "GitHub Actions"，否则本工作流部署步骤会失败。
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只允许一个 Pages 部署运行；排队而非取消，避免中途产物被覆盖。
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build static site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 先按拓扑构建 web-pwa 的 workspace 依赖（storage-core/parser-core 等），
+      # 否则 web-pwa 构建时找不到这些包的 dist。
+      - name: Build Workspace Dependencies
+        run: pnpm --filter "web-pwa^..." build
+
+      - name: Build Static Export
+        env:
+          EXPORT_MODE: "true"
+          NEXT_PUBLIC_BASE_PATH: "/read-realm"
+        run: pnpm --filter web-pwa build
+
+      # 兜底：即使 Next 未把 public/.nojekyll 复制进 out，也确保产物含该文件，
+      # 防止 GitHub Pages 的 Jekyll 吞掉以 _ 开头的 _next 目录。
+      - name: Ensure .nojekyll
+        run: touch apps/web-pwa/out/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web-pwa/out
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { ReaderDefault } from "./ReaderDefault";
 
 export default function ReaderPageSwitch({
@@ -11,9 +12,12 @@ export default function ReaderPageSwitch({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(`/#${window.location.pathname}${window.location.search}`);
-      return;
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) {
+        window.location.replace(redirect);
+        return;
+      }
     }
     setMounted(true);
   }, []);

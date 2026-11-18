@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { strings, describeAppError } from "@/lib/i18n";
 import { useVirtualRouter } from "@/lib/route-store";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { parseAuthorizedUrlSource } from "@/lib/url-source-client";
 import {
   isManualAssistError,
@@ -245,10 +246,9 @@ export default function ImportPage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(
-        `/#${window.location.pathname}${window.location.search}`,
-      );
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) window.location.replace(redirect);
     }
 
     return () => {

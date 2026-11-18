@@ -76,6 +76,7 @@ bash scripts/app.sh stop api          # 只停 API
 | `READER_PUBLIC_LIBRARY_MAINTENANCE_ALLOW_ANY` | `1` | 无限制入阁开关：`1` 任何人可入阁，`0` 仅口令匹配者可入阁 |
 | `READING_WORLD_NO_OPEN` | — | 设为 `1` 时不自动打开浏览器 |
 | `READER_AUTO_SCAN` | — | 设为 `1` 时启动就绪后自动扫描藏经阁维护目录 |
+| `NEXT_PUBLIC_BASE_PATH` | 空（根域） | GitHub Pages 项目站构建开关，设为 `/<repo>`（如 `/read-realm`）为资源与 SW 加子路径前缀，详见 `docs/github-pages-deployment.md` |
 
 示例：改用自定义入阁口令并关闭无限制模式：
 

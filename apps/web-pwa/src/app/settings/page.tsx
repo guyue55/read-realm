@@ -8,6 +8,7 @@ import {
   type ReaderSettingsState,
 } from "@/lib/reader-settings";
 import { THEMES, type ThemeName } from "@/styles/themes";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -39,10 +40,9 @@ import type {
 
 export default function SettingsPage() {
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(
-        `/#${window.location.pathname}${window.location.search}`,
-      );
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) window.location.replace(redirect);
     }
   }, []);
 

@@ -8,6 +8,7 @@ import {
   useVirtualRouter,
 } from "@/lib/route-store";
 import { normalizeShareToken } from "@/lib/api";
+import { resolveHashRedirect } from "@/lib/base-path";
 import { strings } from "@/lib/i18n";
 import type { Book } from "@reader/shared-types";
 import { Search } from "lucide-react";
@@ -44,10 +45,9 @@ export default function SearchPage() {
   );
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.location.replace(
-        `/#${window.location.pathname}${window.location.search}`,
-      );
+    if (typeof window !== "undefined") {
+      const redirect = resolveHashRedirect(window.location.pathname, window.location.search);
+      if (redirect) window.location.replace(redirect);
     }
   }, []);
 
