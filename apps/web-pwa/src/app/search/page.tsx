@@ -10,6 +10,7 @@ import {
 import { normalizeShareToken } from "@/lib/api";
 import { resolveHashRedirect } from "@/lib/base-path";
 import { strings } from "@/lib/i18n";
+import { isStaticMode } from "@/lib/static-mode";
 import type { Book } from "@reader/shared-types";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -427,13 +428,16 @@ export default function SearchPage() {
               本地书架始终可搜索；绑定私有云密钥后，还可以检索自己的云端副本。
             </p>
           </div>
-          <button
-            className="ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 text-sm font-semibold text-[var(--ui-text)]"
-            onClick={() => router.push("/public-library")}
-            type="button"
-          >
-            浏览藏经阁
-          </button>
+          {/* 静态站无后端，藏经阁不可用：隐藏入口，避免进入无效页面。 */}
+          {!isStaticMode && (
+            <button
+              className="ui-focus-ring min-h-11 shrink-0 rounded-[var(--radius-control)] border border-[var(--ui-border)] bg-white/70 px-4 text-sm font-semibold text-[var(--ui-text)]"
+              onClick={() => router.push("/public-library")}
+              type="button"
+            >
+              浏览藏经阁
+            </button>
+          )}
         </section>
       )}
 

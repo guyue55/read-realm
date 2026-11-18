@@ -78,10 +78,11 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
 
   return (
     <div className="space-y-4">
-      {/* 静态站无后端：即使配置了个人密钥，请求也无法到达服务端，需就地说明 */}
+      {/* 静态站无后端：即使配置了个人密钥，请求也无法到达服务端，需就地说明。
+          配置存于当前站点源下的 IndexedDB，不在备份范围，不会跨源迁移到本地版，故不作此承诺。 */}
       {isStaticMode && (
         <div className={`text-xs leading-relaxed p-3 rounded-[var(--radius-field)] border ${inputBg} ${mutedText}`}>
-          当前为网页静态版，AI 伴读需要本地服务暂不可用；配置可先行保存，待使用本地版时自动生效。已缓存的章节总结仍可查看。
+          当前为网页静态版，AI 伴读需要本地服务暂不可用；已缓存的章节总结仍可查看。如需使用 AI 伴读，请在本地版中另行配置。
         </div>
       )}
       <div className="flex items-center justify-between">

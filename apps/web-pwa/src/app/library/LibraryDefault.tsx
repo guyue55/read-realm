@@ -29,6 +29,7 @@ import {
 } from "@/lib/route-store";
 import { normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
+import { isStaticMode } from "@/lib/static-mode";
 import { AppShell } from "@/components/AppShell";
 import { BookCover } from "@/components/BookCover";
 import { SkeletonLoader } from "@/components/SkeletonLoader";
@@ -2389,17 +2390,25 @@ export function LibraryDefault({
         ) : libraryShelfEntries.length === 0 ? (
           <EmptyState
             title="书架还是空的"
-            description="导入一本 TXT 或 EPUB 开始阅读，或从藏经阁加入公共藏书。"
+            description={
+              isStaticMode
+                ? "导入一本 TXT 或 EPUB 即可开始阅读，全部保存在本机。"
+                : "导入一本 TXT 或 EPUB 开始阅读，或从藏经阁加入公共藏书。"
+            }
             primaryAction={{
               label: "导入本地书籍",
               accessibleLabel: "前往导入本地书籍",
               onClick: () => router.push("/import"),
             }}
-            secondaryAction={{
-              label: "浏览藏经阁",
-              accessibleLabel: "前往藏经阁浏览公共藏书",
-              onClick: () => router.push("/public-library"),
-            }}
+            secondaryAction={
+              isStaticMode
+                ? undefined
+                : {
+                    label: "浏览藏经阁",
+                    accessibleLabel: "前往藏经阁浏览公共藏书",
+                    onClick: () => router.push("/public-library"),
+                  }
+            }
           />
         ) : viewMode === "list" ? (
           <div className="ui-card flex flex-col overflow-visible rounded-[var(--radius-card)] divide-y divide-[var(--ui-soft-border)]">
@@ -3499,11 +3508,14 @@ const BookGovernanceDialog = memo(function BookGovernanceDialog({
                       发布已验证的云端正文
                     </h5>
                     <p className="mt-1 text-xs leading-5 text-[var(--ui-muted)]">
-                      {!publicationCredential
-                        ? "需先在同步设置绑定私有云密钥；匿名浏览仍可正常使用。"
-                        : book.format !== "txt"
-                          ? "当前首版仅支持已上传私人云端的 TXT 藏书。"
-                          : "先核验同一私有云密钥下的云端章节，再创建独立公共明文副本。"}
+                      {/* 静态站无后端：发布到公共藏经阁需服务端，就地说明避免无效操作。 */}
+                      {isStaticMode
+                        ? "当前为网页静态版，发布公共副本需要本地服务暂不可用。"
+                        : !publicationCredential
+                          ? "需先在同步设置绑定私有云密钥；匿名浏览仍可正常使用。"
+                          : book.format !== "txt"
+                            ? "当前首版仅支持已上传私人云端的 TXT 藏书。"
+                            : "先核验同一私有云密钥下的云端章节，再创建独立公共明文副本。"}
                     </p>
                   </div>
                   <button
