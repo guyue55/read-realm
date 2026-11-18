@@ -9,9 +9,11 @@ import {
 } from "@/lib/reader-settings";
 import { THEMES, type ThemeName } from "@/styles/themes";
 import { resolveHashRedirect } from "@/lib/base-path";
+import { isStaticMode } from "@/lib/static-mode";
 import { strings } from "@/lib/i18n";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { StatusNotice } from "@/components/ui/StatusNotice";
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SyncSettingsCard } from "@/components/settings/SyncSettingsCard";
@@ -317,6 +319,39 @@ export default function SettingsPage() {
             {settingsError}
           </p>
         )}
+
+        {/* 静态部署（无后端）环境说明：仅在静态模式显示，帮助用户理解哪些功能受限 */}
+        {isStaticMode && (
+          <SettingsCard hoverable={false}>
+            <h2 className="mb-1 text-lg font-bold">运行环境</h2>
+            <p className="mb-4 mt-1 text-sm leading-6 text-[var(--ui-muted)]">
+              当前为网页静态版，无需安装、数据优先保存在本机。以下功能可正常使用；
+              标注的部分需要本地服务，在此环境不可用。
+            </p>
+            <div className="space-y-3">
+              <StatusNotice tone="success" title="可正常使用">
+                <p>
+                  书架管理、导入本地 TXT/EPUB、阅读与书签笔记、本地全文搜索、
+                  数据备份与恢复，均已完整缓存到本机，无需联网即可使用。
+                </p>
+              </StatusNotice>
+              <StatusNotice tone="warning" title="此静态环境不可用（需本地服务）">
+                <p>
+                  藏经阁浏览与入阁、私人云同步、私人书发布/导出、AI
+                  伴读分析、维护入阁等服务端的联网功能不可用。
+                  你已加入书架的书仍可正常离线阅读；本机数据不会受影响。
+                </p>
+              </StatusNotice>
+              <StatusNotice tone="info" title="网址导入说明">
+                <p>
+                  公开网页导入优先由浏览器直接抓取，多数站点可用；
+                  动态渲染或需登录的页面建议使用本地版或手动复制正文导入。
+                </p>
+              </StatusNotice>
+            </div>
+          </SettingsCard>
+        )}
+
         <SettingsCard>
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>

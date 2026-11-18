@@ -77,6 +77,7 @@ bash scripts/app.sh stop api          # 只停 API
 | `READING_WORLD_NO_OPEN` | — | 设为 `1` 时不自动打开浏览器 |
 | `READER_AUTO_SCAN` | — | 设为 `1` 时启动就绪后自动扫描藏经阁维护目录 |
 | `NEXT_PUBLIC_BASE_PATH` | 空（根域） | GitHub Pages 项目站构建开关，设为 `/<repo>`（如 `/read-realm`）为资源与 SW 加子路径前缀，详见 `docs/github-pages-deployment.md` |
+| `NEXT_PUBLIC_STATIC_MODE` | 空（完整功能） | 纯静态部署（无后端）开关，设为 `true` 时隐藏藏经阁入口并对联网功能给出友好提示；本地开发与桌面/移动壳不要设置 |
 
 示例：改用自定义入阁口令并关闭无限制模式：
 

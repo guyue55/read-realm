@@ -14,6 +14,8 @@ import { SettingsCard } from "@/components/settings/SettingsCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { isValidShareToken, normalizeShareToken } from "@/lib/api";
 import { strings } from "@/lib/i18n";
+import { isStaticMode } from "@/lib/static-mode";
+import { StatusNotice } from "@/components/ui/StatusNotice";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import {
   SYNC_CONFIG_EVENT,
@@ -233,6 +235,13 @@ export function SyncSettingsCard() {
             </span>
           )}
         </div>
+
+        {/* 静态站无后端，私人云同步不可用：在功能使用处明确告知，避免反复无效重试 */}
+        {isStaticMode && (
+          <StatusNotice tone="warning" className="mb-5">
+            当前为网页静态版，私人云同步需要本地服务暂不可用；本机书籍与进度不受影响。
+          </StatusNotice>
+        )}
 
         {/* 手动同步：同步引擎依赖书架的本机书目与进度，故由常驻书架执行 */}
         <div className="mb-5 flex flex-col gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:flex-row sm:items-center sm:justify-between">

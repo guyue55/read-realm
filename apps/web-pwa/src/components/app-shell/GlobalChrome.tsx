@@ -153,10 +153,12 @@ export function GlobalChrome() {
         </div>
       </aside>
 
-      {/* 移动端底部导航 */}
+      {/* 移动端底部导航：导航项数量随静态模式收敛（隐藏藏经阁），用内联列数
+          替代写死的 grid-cols-6，保持每项等宽铺满底栏；非静态模式仍为 6 列，视觉与历史一致。 */}
       <nav
         aria-label="主导航"
-        className="fixed inset-x-2 bottom-[calc(8px+env(safe-area-inset-bottom))] z-50 grid grid-cols-6 gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-raised)] md:hidden"
+        style={{ gridTemplateColumns: `repeat(${APP_NAV_ITEMS.length}, minmax(0, 1fr))` }}
+        className="fixed inset-x-2 bottom-[calc(8px+env(safe-area-inset-bottom))] z-50 grid gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-raised)] md:hidden"
       >
         {APP_NAV_ITEMS.map((item) => {
           const active = isActiveItem(currentView, item);

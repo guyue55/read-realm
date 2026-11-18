@@ -9,6 +9,7 @@ import {
   DEFAULT_AI_CONFIG,
   type AIUserConfig,
 } from "@/lib/ai-config";
+import { isStaticMode } from "@/lib/static-mode";
 
 export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
   const [apiKey, setApiKey] = useState("");
@@ -77,6 +78,12 @@ export function AIConfigPanel({ isDark = false }: { isDark?: boolean }) {
 
   return (
     <div className="space-y-4">
+      {/* 静态站无后端：即使配置了个人密钥，请求也无法到达服务端，需就地说明 */}
+      {isStaticMode && (
+        <div className={`text-xs leading-relaxed p-3 rounded-[var(--radius-field)] border ${inputBg} ${mutedText}`}>
+          当前为网页静态版，AI 伴读需要本地服务暂不可用；配置可先行保存，待使用本地版时自动生效。已缓存的章节总结仍可查看。
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h3 className={`text-sm font-bold ${textColor}`}>AI 配置</h3>
         <span

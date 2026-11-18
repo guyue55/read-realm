@@ -57,6 +57,8 @@ jobs:
         env:
           EXPORT_MODE: "true"
           NEXT_PUBLIC_BASE_PATH: "/read-realm"
+          # 纯静态站无后端：隐藏藏经阁等不可用入口并给友好提示（详见 static-mode.ts）
+          NEXT_PUBLIC_STATIC_MODE: "true"
         run: pnpm --filter web-pwa build
 
       # 兜底：即使 Next 未把 public/.nojekyll 复制进 out，也确保产物含该文件，

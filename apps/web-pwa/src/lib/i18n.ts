@@ -1,3 +1,5 @@
+import { isStaticMode } from "./static-mode";
+
 /**
  * 集中化的 i18n 字典，包含所有中文 UI 字符串。
  * 用于 MVP 本地执行版本的 UI 国际化。
@@ -61,7 +63,10 @@ export const strings = {
     quickQuestions: "快捷提问",
     aiInputPlaceholder: "问问 AI 助手...",
     send: "发送",
-    aiError: "伴读失败，请检查后端服务是否启动。",
+    // 静态站无后端，"检查后端服务"会误导用户；给出环境相关的明确提示。
+    aiError: isStaticMode
+      ? "当前为网页静态版，AI 伴读需要本地服务暂不可用；已缓存的总结仍可查看。"
+      : "伴读失败，请检查后端服务是否启动。",
     aiNotConfigured:
       "AI 服务未配置。请在设置中配置你的 API 密钥，或联系管理员配置服务端 AI。",
     questionCharacters: "解释本章的关键人物关系",
@@ -125,7 +130,10 @@ export const strings = {
     notConfiguredDesc: "未开启；设置访问口令后可备份到私人云。",
     configuredBadge: "访问口令已设置",
     syncSuccess: "本次同步完成，并已重新读取云端书目。",
-    syncFailed: "同步未完成，请检查私人云服务后重试。",
+    // 静态站无后端，私人云同步不可用；避免让用户反复重试一个必然失败的操作。
+    syncFailed: isStaticMode
+      ? "当前为网页静态版，私人云同步需要本地服务暂不可用；本机数据不受影响。"
+      : "同步未完成，请检查私人云服务后重试。",
     uploading: "正在备份「{title}」至云端... {progress}%",
     downloading: "正在拉取「{title}」到本地... {progress}%",
     localOnly: "本地专享",

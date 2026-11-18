@@ -16,4 +16,11 @@ describe("settings page persistence contract", () => {
     expect(source).toContain('role="alert"');
     expect(source).toContain("restoreMutexRef");
   });
+
+  it("静态模式显示运行环境说明卡，列出可用与不可用功能", () => {
+    expect(source).toContain("isStaticMode");
+    expect(source).toContain("运行环境");
+    expect(source).toContain("此静态环境不可用");
+    expect(source).toContain("网址导入说明");
+  });
 });
